@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String        @id @default(cuid())
+  email              String        @unique
+  hashedPassword     String
+  name               String
+  phone              String?
+  birthday           DateTime?
+  gender             String?
+  stylePreferences   Json?
+  role               Role          @default(MEMBER)
+  branchId           String?
+  isActive           Boolean       @default(true)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  lastLogin          DateTime?
+  status             String        @default("ACTIVE")
+  artistAppointments Appointment[] @relation("ArtistAppointments")
+  appointments       Appointment[]
+  orders             Order[]
+  artist             TattooArtist?
+  branch             Branch?       @relation(fields: [branchId], references: [id])
+}
+
+model Branch {
+  id            String         @id @default(cuid())
+  name          String
+  address       String
+  phone         String?
+  businessHours Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  appointments  Appointment[]
+  orders        Order[]
+  artists       TattooArtist[]
+  users         User[]
+}
+
+model TattooArtist {
+  id           String               @id @default(cuid())
+  userId       String               @unique
+  displayName  String
+  bio          String?
+  styles       Json?
+  branchId     String
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  availability ArtistAvailability[]
+  branch       Branch               @relation(fields: [branchId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id])
+}
+
+model ArtistAvailability {
+  id           String       @id @default(cuid())
+  artistId     String
+  weekday      Int?
+  specificDate DateTime?
+  startTime    String
+  endTime      String
+  isBlocked    Boolean      @default(false)
+  repeatRule   String?
+  artist       TattooArtist @relation(fields: [artistId], references: [id])
+}
+
+model Service {
+  id           String           @id @default(cuid())
+  name         String
+  description  String
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  category     String?
+  currency     String           @default("TWD")
+  durationMin  Int
+  imageUrl     String?
+  price        Int
+  appointments Appointment[]
+  history      ServiceHistory[]
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  branchId  String
+  artistId  String?
+  serviceId String?
+  startAt   DateTime
+  endAt     DateTime
+  status    AppointmentStatus @default(PENDING)
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  userId    String
+  artist    User?             @relation("ArtistAppointments", fields: [artistId], references: [id])
+  branch    Branch            @relation(fields: [branchId], references: [id])
+  service   Service?          @relation(fields: [serviceId], references: [id])
+  user      User              @relation(fields: [userId], references: [id])
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  memberId      String
+  branchId      String
+  appointmentId String?       @unique
+  totalAmount   Int
+  paymentType   PaymentType
+  status        OrderStatus   @default(UNPAID)
+  createdAt     DateTime      @default(now())
+  installments  Installment[]
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  member        User          @relation(fields: [memberId], references: [id])
+}
+
+model Installment {
+  id            String            @id @default(cuid())
+  orderId       String
+  installmentNo Int
+  dueDate       DateTime
+  amount        Int
+  status        InstallmentStatus @default(UNPAID)
+  paidAt        DateTime?
+  note          String?
+  order         Order             @relation(fields: [orderId], references: [id])
+
+  @@unique([orderId, installmentNo])
+}
+
+model ServiceHistory {
+  id        String   @id @default(cuid())
+  serviceId String
+  field     String
+  oldValue  String?
+  newValue  String?
+  updatedBy String
+  updatedAt DateTime @default(now())
+  service   Service  @relation(fields: [serviceId], references: [id])
+}
+
+enum Role {
+  BOSS
+  BRANCH_MANAGER
+  ARTIST
+  MEMBER
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELED
+}
+
+enum PaymentType {
+  ONE_TIME
+  INSTALLMENT
+}
+
+enum OrderStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+}
+
+enum InstallmentStatus {
+  PAID
+  UNPAID
+}
