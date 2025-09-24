@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AdminController } from './admin.controller';
 import { AdminAppointmentsService } from './admin-appointments.service';
+import { AdminMembersService } from './admin-members.service';
 import { AdminServicesController } from './admin-services.controller';
 import { AdminArtistsController } from './admin-artists.controller';
 import { AdminOrdersController } from './admin-orders.controller';
@@ -23,6 +24,6 @@ import { ServicesModule } from '../services/services.module';
     AdminMembersController,
     DiagnosticsController
   ],
-  providers: [AdminAppointmentsService],
+  providers: [AdminAppointmentsService, AdminMembersService],
 })
 export class AdminModule {}

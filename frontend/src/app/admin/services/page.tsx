@@ -55,7 +55,7 @@ export default function AdminServicesPage() {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/services');
+      const data = await getJsonWithAuth('/admin/services');
       setServices(data);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -83,7 +83,7 @@ export default function AdminServicesPage() {
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newService = await postJsonWithAuth('/services', {
+      const newService = await postJsonWithAuth('/admin/services', {
         ...formData,
         price: parseInt(formData.price),
         durationMin: parseInt(formData.durationMin)
@@ -117,7 +117,7 @@ export default function AdminServicesPage() {
     if (!editingService) return;
 
     try {
-      const updatedService = await putJsonWithAuth(`/services/${editingService.id}`, {
+      const updatedService = await putJsonWithAuth(`/admin/services/${editingService.id}`, {
         ...formData,
         price: parseInt(formData.price),
         durationMin: parseInt(formData.durationMin)
@@ -139,7 +139,7 @@ export default function AdminServicesPage() {
     }
 
     try {
-      await deleteJsonWithAuth(`/services/${serviceId}`);
+      await deleteJsonWithAuth(`/admin/services/${serviceId}`);
       setServices(services.filter(service => service.id !== serviceId));
       setError(null);
     } catch (err) {

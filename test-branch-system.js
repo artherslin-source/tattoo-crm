@@ -1,7 +1,7 @@
 // 測試分店架構與權限隔離功能
 const fetch = require('node-fetch');
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'http://localhost:4000';
 
 async function testBranchSystem() {
   console.log('🧪 開始測試分店架構與權限隔離功能...\n');

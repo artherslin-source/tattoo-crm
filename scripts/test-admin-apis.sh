@@ -1,95 +1,82 @@
 #!/bin/bash
 
-# API Smoke Test Script for Admin Endpoints
-# This script tests all admin API endpoints
-
 BASE_URL="http://localhost:4000"
-ADMIN_EMAIL="admin@test.com"
-ADMIN_PASSWORD="12345678"
+FRONTEND_URL="http://localhost:4001"
 
 echo "🔍 Starting Admin API Smoke Test..."
 echo "=================================="
 
-# Function to get access token
-get_token() {
-    echo "🔐 Getting access token..."
-    local response=$(curl -s -X POST "$BASE_URL/auth/login" \
-        -H "Content-Type: application/json" \
-        -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")
-    
-    local token=$(echo "$response" | jq -r '.accessToken // empty')
-    
-    if [ -z "$token" ] || [ "$token" = "null" ]; then
-        echo "❌ Failed to get access token"
-        echo "Response: $response"
-        exit 1
-    fi
-    
-    echo "✅ Access token obtained"
-    echo "$token"
-}
+# 1. Attempt to login and get a token
+echo "Attempting to login as BOSS to get token..."
+LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@test.com", "password": "12345678"}')
 
-# Function to test endpoint
+ACCESS_TOKEN=$(echo "${LOGIN_RESPONSE}" | jq -r '.accessToken')
+
+if [ "${ACCESS_TOKEN}" == "null" ] || [ -z "${ACCESS_TOKEN}" ]; then
+  echo "❌ Failed to get access token. Please ensure backend is running and seed data is correct."
+  echo "Login Response: ${LOGIN_RESPONSE}"
+  exit 1
+else
+  echo "✅ Successfully obtained access token."
+  # echo "Access Token: ${ACCESS_TOKEN}" # Uncomment to debug token
+fi
+
+echo ""
+echo "🚀 Testing Admin API Endpoints..."
+echo "=================================="
+
+# Function to test an endpoint
 test_endpoint() {
-    local method="$1"
-    local endpoint="$2"
-    local token="$3"
-    local description="$4"
-    
-    echo ""
-    echo "🧪 Testing: $description"
-    echo "   $method $endpoint"
-    
-    local response=$(curl -s -w "\n%{http_code}" -X "$method" "$BASE_URL$endpoint" \
-        -H "Authorization: Bearer $token" \
-        -H "Content-Type: application/json")
-    
-    local body=$(echo "$response" | head -n -1)
-    local status_code=$(echo "$response" | tail -n 1)
-    
-    echo "   Status: $status_code"
-    
-    if [ "$status_code" = "200" ]; then
-        echo "   ✅ Success"
-        # Show first 100 characters of response
-        echo "   Response: $(echo "$body" | head -c 100)..."
-    elif [ "$status_code" = "401" ]; then
-        echo "   ⚠️  Unauthorized"
-    elif [ "$status_code" = "404" ]; then
-        echo "   ❌ Not Found"
-    else
-        echo "   ❌ Error ($status_code)"
-        echo "   Response: $body"
-    fi
+  local METHOD=$1
+  local PATH=$2
+  local EXPECTED_STATUS=$3
+  local DESCRIPTION=$4
+
+  echo "🧪 Testing: ${DESCRIPTION}"
+  echo "   ${METHOD} ${PATH}"
+
+  RESPONSE=$(curl -s -X "${METHOD}" "${BASE_URL}${PATH}" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -w "%{http_code}" \
+    -o /dev/stdout)
+
+  HTTP_STATUS=$(echo "${RESPONSE}" | tail -n 1)
+  BODY=$(echo "${RESPONSE}" | head -n -1 | head -c 200) # Get first 200 chars of body
+
+  if [ "${HTTP_STATUS}" == "${EXPECTED_STATUS}" ]; then
+    echo "   Status: ${HTTP_STATUS}"
+    echo "   ✅ OK"
+  else
+    echo "   Status: ${HTTP_STATUS}"
+    echo "   ❌ Error (${HTTP_STATUS})"
+  fi
+  echo "   Response: ${BODY}..."
+  echo ""
 }
 
-# Main execution
-main() {
-    # Get access token
-    TOKEN=$(get_token)
-    
-    if [ -z "$TOKEN" ]; then
-        echo "❌ Cannot proceed without access token"
-        exit 1
-    fi
-    
-    echo ""
-    echo "🚀 Testing Admin API Endpoints..."
-    echo "=================================="
-    
-    # Test all admin endpoints
-    test_endpoint "GET" "/admin/services" "$TOKEN" "Admin Services"
-    test_endpoint "GET" "/admin/members" "$TOKEN" "Admin Members"
-    test_endpoint "GET" "/admin/artists" "$TOKEN" "Admin Artists"
-    test_endpoint "GET" "/admin/appointments" "$TOKEN" "Admin Appointments"
-    test_endpoint "GET" "/admin/orders" "$TOKEN" "Admin Orders"
-    test_endpoint "GET" "/admin/diag/ping" "$TOKEN" "Diagnostics Ping"
-    test_endpoint "GET" "/admin/diag/routes" "$TOKEN" "Diagnostics Routes"
-    
-    echo ""
-    echo "🎉 Admin API Smoke Test Complete!"
-    echo "=================================="
-}
+# Test Admin Services
+test_endpoint "GET" "/admin/services" "200" "Admin Services"
 
-# Run main function
-main
+# Test Admin Members
+test_endpoint "GET" "/admin/members" "200" "Admin Members"
+
+# Test Admin Artists
+test_endpoint "GET" "/admin/artists" "200" "Admin Artists"
+
+# Test Admin Appointments
+test_endpoint "GET" "/admin/appointments" "200" "Admin Appointments"
+
+# Test Admin Orders
+test_endpoint "GET" "/admin/orders" "200" "Admin Orders"
+
+# Test Diagnostics Ping
+test_endpoint "GET" "/admin/diag/ping" "200" "Diagnostics Ping"
+
+# Test Diagnostics Routes
+test_endpoint "GET" "/admin/diag/routes" "200" "Diagnostics Routes"
+
+echo "🎉 Admin API Smoke Test Complete!"
+echo "=================================="
