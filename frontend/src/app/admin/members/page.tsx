@@ -63,7 +63,7 @@ export default function AdminMembersPage() {
     }
 
     try {
-      await deleteJsonWithAuth(`/users/${userId}`);
+      await deleteJsonWithAuth(`/admin/members/${userId}`);
       setUsers(users.filter(user => user.id !== userId));
       setError(null);
     } catch (err) {
@@ -76,7 +76,7 @@ export default function AdminMembersPage() {
     const newRole = currentRole === 'ADMIN' ? 'MEMBER' : 'ADMIN';
     
     try {
-      await patchJsonWithAuth(`/users/${userId}/role`, { role: newRole });
+      await patchJsonWithAuth(`/admin/members/${userId}/role`, { role: newRole });
       setUsers(users.map(user => 
         user.id === userId ? { ...user, role: newRole as 'MEMBER' | 'ADMIN' } : user
       ));

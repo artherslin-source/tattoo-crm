@@ -52,7 +52,7 @@ export default function AdminAppointmentsPage() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/appointments/all');
+      const data = await getJsonWithAuth('/admin/appointments');
       setAppointments(data);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -64,7 +64,7 @@ export default function AdminAppointmentsPage() {
 
   const handleUpdateStatus = async (appointmentId: string, newStatus: string) => {
     try {
-      await patchJsonWithAuth(`/appointments/${appointmentId}/status`, { status: newStatus });
+      await patchJsonWithAuth(`/admin/appointments/${appointmentId}/status`, { status: newStatus });
       setAppointments(appointments.map(appointment => 
         appointment.id === appointmentId ? { ...appointment, status: newStatus as any } : appointment
       ));
@@ -81,7 +81,7 @@ export default function AdminAppointmentsPage() {
     }
 
     try {
-      await deleteJsonWithAuth(`/appointments/${appointmentId}`);
+      await deleteJsonWithAuth(`/admin/appointments/${appointmentId}`);
       setAppointments(appointments.filter(appointment => appointment.id !== appointmentId));
       setError(null);
     } catch (err) {
