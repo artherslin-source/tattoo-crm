@@ -8,18 +8,64 @@ interface GetOrdersQuery {
   limit?: number;
 }
 
+interface CreateOrderInput {
+  memberId: string;
+  branchId: string;
+  appointmentId?: string | null;
+  totalAmount: number;
+  paymentType: 'ONE_TIME' | 'INSTALLMENT';
+  useStoredValue?: boolean;
+}
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(input: { memberId: string; branchId: string; appointmentId?: string | null; totalAmount: number; paymentType: 'ONE_TIME' | 'INSTALLMENT' }) {
-    return this.prisma.order.create({ 
-      data: input,
-      include: {
-        member: { select: { id: true, name: true, email: true } },
-        branch: { select: { id: true, name: true } },
-        installments: true,
-      },
+  async create(input: CreateOrderInput) {
+    return this.prisma.$transaction(async (tx) => {
+      // 檢查用戶儲值餘額（如果使用儲值付款）
+      if (input.useStoredValue) {
+        const user = await tx.user.findUnique({
+          where: { id: input.memberId },
+          select: { storedValueBalance: true },
+        });
+
+        if (!user || user.storedValueBalance < input.totalAmount) {
+          throw new Error('Insufficient stored value balance');
+        }
+      }
+
+      // 建立訂單
+      const order = await tx.order.create({ 
+        data: {
+          memberId: input.memberId,
+          branchId: input.branchId,
+          appointmentId: input.appointmentId,
+          totalAmount: input.totalAmount,
+          paymentType: input.paymentType,
+        },
+        include: {
+          member: { select: { id: true, name: true, email: true } },
+          branch: { select: { id: true, name: true } },
+          installments: true,
+        },
+      });
+
+      // 更新用戶財務資料
+      const updateData: any = {
+        totalSpent: { increment: input.totalAmount },
+      };
+
+      if (input.useStoredValue) {
+        updateData.storedValueBalance = { decrement: input.totalAmount };
+      }
+
+      await tx.user.update({
+        where: { id: input.memberId },
+        data: updateData,
+      });
+
+      return order;
     });
   }
 

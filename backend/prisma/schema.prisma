@@ -23,6 +23,9 @@ model User {
   updatedAt          DateTime      @updatedAt
   lastLogin          DateTime?
   status             String        @default("ACTIVE")
+  totalSpent         Int           @default(0)
+  storedValueTotal   Int           @default(0)
+  storedValueBalance Int           @default(0)
   artistAppointments Appointment[] @relation("ArtistAppointments")
   appointments       Appointment[]
   orders             Order[]

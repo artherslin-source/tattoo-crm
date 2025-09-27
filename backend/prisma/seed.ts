@@ -75,34 +75,51 @@ async function main() {
   }
   console.log('✅ 建立 3 個分店經理');
 
-  // 4. 建立 5 個會員（分配到不同分店）
+  // 4. 建立 5 個會員（分配到不同分店，包含財務資料）
   const members: any[] = [];
+  const memberData = [
+    { name: "User One", email: "user1@test.com", totalSpent: 5000, storedValueTotal: 3000, storedValueBalance: 1000 },
+    { name: "User Two", email: "user2@test.com", totalSpent: 12000, storedValueTotal: 5000, storedValueBalance: 2500 },
+    { name: "User Three", email: "user3@test.com", totalSpent: 8000, storedValueTotal: 2000, storedValueBalance: 500 },
+    { name: "User Four", email: "user4@test.com", totalSpent: 15000, storedValueTotal: 8000, storedValueBalance: 3000 },
+    { name: "User Five", email: "user5@test.com", totalSpent: 3000, storedValueTotal: 1000, storedValueBalance: 800 },
+  ];
+  
   for (let i = 0; i < 5; i++) {
     const member = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: memberData[i].email,
         hashedPassword,
-        name: faker.person.fullName(),
+        name: memberData[i].name,
         role: 'MEMBER',
         phone: faker.phone.number(),
         birthday: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }),
         gender: faker.helpers.arrayElement(['MALE', 'FEMALE', 'OTHER']),
         branchId: branches[i % 3].id, // 輪流分配到3個分店
+        totalSpent: memberData[i].totalSpent,
+        storedValueTotal: memberData[i].storedValueTotal,
+        storedValueBalance: memberData[i].storedValueBalance,
         createdAt: faker.date.past(),
       },
     });
     members.push(member);
   }
-  console.log('✅ 建立 5 個會員帳號');
+  console.log('✅ 建立 5 個會員帳號（包含財務資料）');
 
   // 5. 建立 3 個刺青師
   const artists: any[] = [];
+  const artistData = [
+    { name: "Tattoo Master A", bio: "專精日式刺青" },
+    { name: "Tattoo Master B", bio: "專精幾何圖騰" },
+    { name: "Tattoo Master C", bio: "專精黑灰寫實" },
+  ];
+  
   for (let i = 0; i < 3; i++) {
     const artistUser = await prisma.user.create({
       data: {
-        email: faker.internet.email(),
+        email: `artist${i + 1}@test.com`,
         hashedPassword,
-        name: faker.person.fullName(),
+        name: artistData[i].name,
         role: 'ARTIST',
         phone: faker.phone.number(),
         branchId: branches[i].id,
@@ -113,8 +130,8 @@ async function main() {
     const artist = await prisma.tattooArtist.create({
       data: {
         userId: artistUser.id,
-        displayName: faker.person.fullName(),
-        bio: faker.lorem.paragraph(),
+        displayName: artistData[i].name,
+        bio: artistData[i].bio,
         styles: [
           faker.helpers.arrayElement(['Traditional', 'Realistic', 'Japanese', 'Blackwork', 'Watercolor']),
           faker.helpers.arrayElement(['Geometric', 'Minimalist', 'Portrait', 'Nature', 'Abstract']),
@@ -217,6 +234,27 @@ async function main() {
     });
     orders.push(order);
 
+    // 更新會員的財務資料
+    // 如果是儲值訂單（隨機 20% 機率），更新儲值相關欄位
+    const isStoredValueOrder = Math.random() < 0.2;
+    if (isStoredValueOrder) {
+      await prisma.user.update({
+        where: { id: member.id },
+        data: {
+          storedValueTotal: { increment: totalAmount },
+          storedValueBalance: { increment: totalAmount },
+        },
+      });
+    } else {
+      // 一般消費訂單，更新累計消費金額
+      await prisma.user.update({
+        where: { id: member.id },
+        data: {
+          totalSpent: { increment: totalAmount },
+        },
+      });
+    }
+
     // 如果是分期付款，建立分期記錄
     if (paymentType === 'INSTALLMENT') {
       const installmentCount = faker.number.int({ min: 3, max: 6 });
@@ -249,14 +287,15 @@ async function main() {
 
   console.log('🎉 Seeding 完成！');
   console.log('📊 資料統計：');
-  console.log(`   - BOSS: 1 個 (admin@test.com / 123456)`);
-  console.log(`   - 分店經理: ${managers.length} 個 (manager1@test.com, manager2@test.com, manager3@test.com / 123456)`);
-  console.log(`   - 會員: ${members.length} 個`);
-  console.log(`   - 刺青師: ${artists.length} 個`);
+  console.log(`   - BOSS: 1 個 (admin@test.com / 12345678)`);
+  console.log(`   - 分店經理: ${managers.length} 個 (manager1@test.com, manager2@test.com, manager3@test.com / 12345678)`);
+  console.log(`   - 會員: ${members.length} 個 (user1@test.com ~ user5@test.com / 12345678)`);
+  console.log(`   - 刺青師: ${artists.length} 個 (artist1@test.com ~ artist3@test.com / 12345678)`);
   console.log(`   - 分店: ${branches.length} 個`);
   console.log(`   - 服務: ${services.length} 個`);
   console.log(`   - 預約: ${appointments.length} 個`);
   console.log(`   - 訂單: ${orders.length} 個`);
+  console.log('💰 財務資料已更新到會員帳號中');
 }
 
 main()

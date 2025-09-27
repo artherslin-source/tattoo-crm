@@ -35,6 +35,9 @@ export class UsersService {
             address: true,
           }
         },
+        totalSpent: true,
+        storedValueTotal: true,
+        storedValueBalance: true,
         createdAt: true,
         lastLogin: true,
         status: true,
@@ -78,6 +81,9 @@ export class UsersService {
               name: true,
             }
           },
+          totalSpent: true,
+          storedValueTotal: true,
+          storedValueBalance: true,
           createdAt: true,
           lastLogin: true,
           status: true,
@@ -123,6 +129,93 @@ export class UsersService {
     });
 
     return updatedUser;
+  }
+
+  // 財務相關方法
+  async updateUserFinancials(userId: string, updates: {
+    totalSpent?: number;
+    storedValueTotal?: number;
+    storedValueBalance?: number;
+  }) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: updates,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        totalSpent: true,
+        storedValueTotal: true,
+        storedValueBalance: true,
+      },
+    });
+  }
+
+  async addTopUp(userId: string, amount: number) {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { storedValueTotal: true, storedValueBalance: true },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      return tx.user.update({
+        where: { id: userId },
+        data: {
+          storedValueTotal: { increment: amount },
+          storedValueBalance: { increment: amount },
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          totalSpent: true,
+          storedValueTotal: true,
+          storedValueBalance: true,
+        },
+      });
+    });
+  }
+
+  async processPayment(userId: string, amount: number, useStoredValue: boolean = false) {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { storedValueBalance: true },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      if (useStoredValue && user.storedValueBalance < amount) {
+        throw new Error('Insufficient stored value balance');
+      }
+
+      const updateData: any = {
+        totalSpent: { increment: amount },
+      };
+
+      if (useStoredValue) {
+        updateData.storedValueBalance = { decrement: amount };
+      }
+
+      return tx.user.update({
+        where: { id: userId },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          totalSpent: true,
+          storedValueTotal: true,
+          storedValueBalance: true,
+        },
+      });
+    });
   }
 }
 

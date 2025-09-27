@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Req, UseGuards, Body, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Req, UseGuards, Body, Query, Param } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { RolesGuard } from '../common/roles.guard';
@@ -16,6 +16,15 @@ interface GetUsersQuery {
   role?: string;
   page?: number;
   limit?: number;
+}
+
+interface TopUpDto {
+  amount: number;
+}
+
+interface AdjustBalanceDto {
+  amount: number;
+  reason?: string;
 }
 
 @Controller('users')
@@ -37,6 +46,30 @@ export class UsersController {
   @Roles('BOSS', 'BRANCH_MANAGER')
   async getUsers(@Query() query: GetUsersQuery, @Req() req: any) {
     return this.usersService.getUsers(query, req.user.role, req.user.branchId);
+  }
+
+  // 財務相關端點
+  @Post(':id/topup')
+  @Roles('BOSS', 'BRANCH_MANAGER')
+  async topUp(@Param('id') userId: string, @Body() topUpDto: TopUpDto) {
+    if (topUpDto.amount <= 0) {
+      throw new Error('Top-up amount must be positive');
+    }
+    return this.usersService.addTopUp(userId, topUpDto.amount);
+  }
+
+  @Patch(':id/balance')
+  @Roles('BOSS', 'BRANCH_MANAGER')
+  async adjustBalance(@Param('id') userId: string, @Body() adjustBalanceDto: AdjustBalanceDto) {
+    return this.usersService.updateUserFinancials(userId, {
+      storedValueBalance: adjustBalanceDto.amount,
+    });
+  }
+
+  @Get(':id/financials')
+  @Roles('BOSS', 'BRANCH_MANAGER')
+  async getUserFinancials(@Param('id') userId: string) {
+    return this.usersService.me(userId);
   }
 }
 

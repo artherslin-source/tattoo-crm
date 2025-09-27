@@ -16,6 +16,9 @@ type Me = {
   isActive?: boolean; // status source (if backend provides)
   status?: string; // alternative status name if backend provides
   avatar?: string | null;
+  totalSpent?: number;
+  storedValueTotal?: number;
+  storedValueBalance?: number;
 };
 
 export default function ProfilePage() {
@@ -77,6 +80,12 @@ export default function ProfilePage() {
   const lastLogin = me.lastLogin ? new Date(me.lastLogin).toLocaleString() : "N/A";
   const role = me.role || "N/A";
   const status = typeof me.status === "string" ? me.status : (me.isActive === true ? "Active" : me.isActive === false ? "Inactive" : "Unknown");
+  
+  // 格式化金額
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined || amount === null) return "NT$ 0";
+    return `NT$ ${amount.toLocaleString()}`;
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-6">
@@ -112,6 +121,25 @@ export default function ProfilePage() {
           <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
             <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">狀態</div>
             <div className="font-medium">{status}</div>
+          </div>
+        </div>
+
+        {/* 財務資訊區塊 */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">財務資訊</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-4 bg-blue-50 dark:bg-blue-900/20">
+              <div className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">累計消費金額</div>
+              <div className="font-bold text-blue-900 dark:text-blue-100 text-lg">{formatCurrency(me.totalSpent)}</div>
+            </div>
+            <div className="rounded-lg border border-green-200 dark:border-green-800 p-4 bg-green-50 dark:bg-green-900/20">
+              <div className="text-xs uppercase tracking-wide text-green-600 dark:text-green-400 mb-1">儲值金額總額</div>
+              <div className="font-bold text-green-900 dark:text-green-100 text-lg">{formatCurrency(me.storedValueTotal)}</div>
+            </div>
+            <div className="rounded-lg border border-purple-200 dark:border-purple-800 p-4 bg-purple-50 dark:bg-purple-900/20">
+              <div className="text-xs uppercase tracking-wide text-purple-600 dark:text-purple-400 mb-1">儲值餘額</div>
+              <div className="font-bold text-purple-900 dark:text-purple-100 text-lg">{formatCurrency(me.storedValueBalance)}</div>
+            </div>
           </div>
         </div>
 
