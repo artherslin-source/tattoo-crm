@@ -16,9 +16,11 @@ type Me = {
   isActive?: boolean; // status source (if backend provides)
   status?: string; // alternative status name if backend provides
   avatar?: string | null;
-  totalSpent?: number;
-  storedValueTotal?: number;
-  storedValueBalance?: number;
+  member?: {
+    totalSpent: number;
+    balance: number;
+    membershipLevel?: string;
+  } | null;
 };
 
 export default function ProfilePage() {
@@ -125,23 +127,25 @@ export default function ProfilePage() {
         </div>
 
         {/* 財務資訊區塊 */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">財務資訊</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-4 bg-blue-50 dark:bg-blue-900/20">
-              <div className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">累計消費金額</div>
-              <div className="font-bold text-blue-900 dark:text-blue-100 text-lg">{formatCurrency(me.totalSpent)}</div>
-            </div>
-            <div className="rounded-lg border border-green-200 dark:border-green-800 p-4 bg-green-50 dark:bg-green-900/20">
-              <div className="text-xs uppercase tracking-wide text-green-600 dark:text-green-400 mb-1">儲值金額總額</div>
-              <div className="font-bold text-green-900 dark:text-green-100 text-lg">{formatCurrency(me.storedValueTotal)}</div>
-            </div>
-            <div className="rounded-lg border border-purple-200 dark:border-purple-800 p-4 bg-purple-50 dark:bg-purple-900/20">
-              <div className="text-xs uppercase tracking-wide text-purple-600 dark:text-purple-400 mb-1">儲值餘額</div>
-              <div className="font-bold text-purple-900 dark:text-purple-100 text-lg">{formatCurrency(me.storedValueBalance)}</div>
+        {me.member && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">財務資訊</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-4 bg-blue-50 dark:bg-blue-900/20">
+                <div className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">累計消費金額</div>
+                <div className="font-bold text-blue-900 dark:text-blue-100 text-lg">{formatCurrency(me.member.totalSpent)}</div>
+              </div>
+              <div className="rounded-lg border border-orange-200 dark:border-orange-800 p-4 bg-orange-50 dark:bg-orange-900/20">
+                <div className="text-xs uppercase tracking-wide text-orange-600 dark:text-orange-400 mb-1">會員等級</div>
+                <div className="font-bold text-orange-900 dark:text-orange-100 text-lg">{me.member.membershipLevel || '未設定'}</div>
+              </div>
+              <div className="rounded-lg border border-purple-200 dark:border-purple-800 p-4 bg-purple-50 dark:bg-purple-900/20">
+                <div className="text-xs uppercase tracking-wide text-purple-600 dark:text-purple-400 mb-1">儲值餘額</div>
+                <div className="font-bold text-purple-900 dark:text-purple-100 text-lg">{formatCurrency(me.member.balance)}</div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <button

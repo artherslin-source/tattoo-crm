@@ -3,10 +3,12 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ArtistsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    console.log('ArtistsService constructor called, prisma:', !!this.prisma);
+  }
 
   async listByBranch(branchId: string) {
-    return this.prisma.tattooArtist.findMany({ where: { branchId }, include: { user: true } });
+    return this.prisma.artist.findMany({ where: { branchId }, include: { user: true } });
   }
 
   async availability(artistId: string, date: string, durationMinutes: number) {
@@ -51,6 +53,9 @@ export class ArtistsService {
 
   // 管理功能方法
   async getAllArtists(userRole: string, userBranchId?: string) {
+    console.log('getAllArtists called, prisma:', !!this.prisma);
+    console.log('getAllArtists called, prisma.artist:', !!this.prisma?.artist);
+    
     const where: any = {};
     
     // 如果不是 BOSS，只能查看自己分店的刺青師
@@ -58,7 +63,7 @@ export class ArtistsService {
       where.branchId = userBranchId;
     }
 
-    return this.prisma.tattooArtist.findMany({
+    return this.prisma.artist.findMany({
       where,
       include: {
         user: { select: { id: true, name: true, email: true, isActive: true } },
@@ -68,7 +73,7 @@ export class ArtistsService {
     });
   }
 
-  async createArtist(data: { name: string; email: string; branchId: string; specialties?: string[] }) {
+  async createArtist(data: { name: string; email: string; branchId: string; speciality?: string; specialties?: string[] }) {
     // 創建用戶
     const user = await this.prisma.user.create({
       data: {
@@ -82,11 +87,12 @@ export class ArtistsService {
     });
 
     // 創建刺青師
-    return this.prisma.tattooArtist.create({
+    return this.prisma.artist.create({
       data: {
         userId: user.id,
         branchId: data.branchId,
         displayName: data.name,
+        speciality: data.speciality,
       },
       include: {
         user: { select: { id: true, name: true, email: true, isActive: true } },
@@ -95,8 +101,8 @@ export class ArtistsService {
     });
   }
 
-  async updateArtist(artistId: string, data: { name?: string; email?: string; specialties?: string[] }) {
-    const artist = await this.prisma.tattooArtist.findUnique({
+  async updateArtist(artistId: string, data: { name?: string; email?: string; speciality?: string; specialties?: string[] }) {
+    const artist = await this.prisma.artist.findUnique({
       where: { id: artistId },
       include: { user: true },
     });
@@ -117,9 +123,11 @@ export class ArtistsService {
     }
 
     // 更新刺青師信息
-    return this.prisma.tattooArtist.update({
+    return this.prisma.artist.update({
       where: { id: artistId },
-      data: {},
+      data: {
+        ...(data.speciality !== undefined && { speciality: data.speciality }),
+      },
       include: {
         user: { select: { id: true, name: true, email: true, isActive: true } },
         branch: { select: { id: true, name: true } },
@@ -128,7 +136,7 @@ export class ArtistsService {
   }
 
   async deleteArtist(artistId: string) {
-    const artist = await this.prisma.tattooArtist.findUnique({
+    const artist = await this.prisma.artist.findUnique({
       where: { id: artistId },
       include: { user: true },
     });
@@ -138,7 +146,7 @@ export class ArtistsService {
     }
 
     // 刪除刺青師記錄
-    await this.prisma.tattooArtist.delete({
+    await this.prisma.artist.delete({
       where: { id: artistId },
     });
 

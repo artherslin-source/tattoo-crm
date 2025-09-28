@@ -8,30 +8,39 @@ datasource db {
 }
 
 model User {
-  id                 String        @id @default(cuid())
-  email              String        @unique
-  hashedPassword     String
-  name               String
-  phone              String?
-  birthday           DateTime?
-  gender             String?
-  stylePreferences   Json?
-  role               Role          @default(MEMBER)
-  branchId           String?
-  isActive           Boolean       @default(true)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  lastLogin          DateTime?
-  status             String        @default("ACTIVE")
-  totalSpent         Int           @default(0)
-  storedValueTotal   Int           @default(0)
-  storedValueBalance Int           @default(0)
+  id        String  @id @default(cuid())
+  email     String  @unique
+  hashedPassword String
+  name      String
+  phone     String?
+  birthday  DateTime?
+  gender    String?
+  stylePreferences Json?
+  role      Role    @default(MEMBER)
+  branchId  String?
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+  status    String  @default("ACTIVE")
   artistAppointments Appointment[] @relation("ArtistAppointments")
   appointments       Appointment[]
   orders             Order[]
-  artist             TattooArtist?
+  member             Member?
+  artist             Artist?
   branch             Branch?       @relation(fields: [branchId], references: [id])
 }
+
+model Member {
+  id              Int    @id @default(autoincrement())
+  userId          String @unique
+  totalSpent      Int    @default(0)    // 累計消費
+  balance         Int    @default(0)    // 儲值餘額
+  membershipLevel String?               // 會員等級
+
+  user User @relation(fields: [userId], references: [id])
+}
+
 
 model Branch {
   id            String         @id @default(cuid())
@@ -43,22 +52,27 @@ model Branch {
   updatedAt     DateTime       @updatedAt
   appointments  Appointment[]
   orders        Order[]
-  artists       TattooArtist[]
+  artists       Artist[]
   users         User[]
 }
 
-model TattooArtist {
-  id           String               @id @default(cuid())
-  userId       String               @unique
-  displayName  String
-  bio          String?
-  styles       Json?
-  branchId     String
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+model Artist {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String?
+  bio         String?
+  styles      Json?
+  speciality  String?
+  portfolioUrl String?
+  branchId    String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   availability ArtistAvailability[]
-  branch       Branch               @relation(fields: [branchId], references: [id])
-  user         User                 @relation(fields: [userId], references: [id])
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("TattooArtist")   // 讓 Artist 模型對應到既有的 TattooArtist 表
 }
 
 model ArtistAvailability {
@@ -70,7 +84,7 @@ model ArtistAvailability {
   endTime      String
   isBlocked    Boolean      @default(false)
   repeatRule   String?
-  artist       TattooArtist @relation(fields: [artistId], references: [id])
+  artist       Artist @relation(fields: [artistId], references: [id])
 }
 
 model Service {

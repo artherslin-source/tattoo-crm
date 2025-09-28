@@ -36,7 +36,7 @@ export class AppointmentsController {
     
     // 如果用戶沒有分店 ID，嘗試從 artist 獲取
     if (!branchId && input.artistId) {
-      const artist = await this.appointments['prisma'].tattooArtist.findUnique({
+      const artist = await this.appointments['prisma'].artist.findUnique({
         where: { userId: input.artistId },
         select: { branchId: true }
       });

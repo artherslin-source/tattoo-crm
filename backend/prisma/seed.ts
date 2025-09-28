@@ -11,7 +11,8 @@ async function main() {
   await prisma.installment.deleteMany();
   await prisma.order.deleteMany();
   await prisma.appointment.deleteMany();
-  await prisma.tattooArtist.deleteMany();
+  await prisma.artist.deleteMany();
+  await prisma.member.deleteMany();
   await prisma.serviceHistory.deleteMany();
   await prisma.service.deleteMany();
   await prisma.branch.deleteMany();
@@ -78,15 +79,15 @@ async function main() {
   // 4. 建立 5 個會員（分配到不同分店，包含財務資料）
   const members: any[] = [];
   const memberData = [
-    { name: "User One", email: "user1@test.com", totalSpent: 5000, storedValueTotal: 3000, storedValueBalance: 1000 },
-    { name: "User Two", email: "user2@test.com", totalSpent: 12000, storedValueTotal: 5000, storedValueBalance: 2500 },
-    { name: "User Three", email: "user3@test.com", totalSpent: 8000, storedValueTotal: 2000, storedValueBalance: 500 },
-    { name: "User Four", email: "user4@test.com", totalSpent: 15000, storedValueTotal: 8000, storedValueBalance: 3000 },
-    { name: "User Five", email: "user5@test.com", totalSpent: 3000, storedValueTotal: 1000, storedValueBalance: 800 },
+    { name: "User One", email: "user1@test.com", totalSpent: 5000, balance: 1000, membershipLevel: "Gold" },
+    { name: "User Two", email: "user2@test.com", totalSpent: 12000, balance: 2500, membershipLevel: "Platinum" },
+    { name: "User Three", email: "user3@test.com", totalSpent: 8000, balance: 500, membershipLevel: "Silver" },
+    { name: "User Four", email: "user4@test.com", totalSpent: 15000, balance: 3000, membershipLevel: "Platinum" },
+    { name: "User Five", email: "user5@test.com", totalSpent: 3000, balance: 800, membershipLevel: "Bronze" },
   ];
   
   for (let i = 0; i < 5; i++) {
-    const member = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email: memberData[i].email,
         hashedPassword,
@@ -96,22 +97,30 @@ async function main() {
         birthday: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }),
         gender: faker.helpers.arrayElement(['MALE', 'FEMALE', 'OTHER']),
         branchId: branches[i % 3].id, // 輪流分配到3個分店
-        totalSpent: memberData[i].totalSpent,
-        storedValueTotal: memberData[i].storedValueTotal,
-        storedValueBalance: memberData[i].storedValueBalance,
         createdAt: faker.date.past(),
       },
     });
-    members.push(member);
+
+    // 建立對應的 Member 記錄
+    const member = await prisma.member.create({
+      data: {
+        userId: user.id,
+        totalSpent: memberData[i].totalSpent,
+        balance: memberData[i].balance,
+        membershipLevel: memberData[i].membershipLevel,
+      },
+    });
+
+    members.push({ ...user, member });
   }
   console.log('✅ 建立 5 個會員帳號（包含財務資料）');
 
   // 5. 建立 3 個刺青師
   const artists: any[] = [];
   const artistData = [
-    { name: "Tattoo Master A", bio: "專精日式刺青" },
-    { name: "Tattoo Master B", bio: "專精幾何圖騰" },
-    { name: "Tattoo Master C", bio: "專精黑灰寫實" },
+    { name: "Tattoo Master A", bio: "專精日式刺青", speciality: "日式傳統刺青" },
+    { name: "Tattoo Master B", bio: "專精幾何圖騰", speciality: "幾何圖騰設計" },
+    { name: "Tattoo Master C", bio: "專精黑灰寫實", speciality: "黑灰寫實風格" },
   ];
   
   for (let i = 0; i < 3; i++) {
@@ -127,11 +136,12 @@ async function main() {
       },
     });
 
-    const artist = await prisma.tattooArtist.create({
+    const artist = await prisma.artist.create({
       data: {
         userId: artistUser.id,
         displayName: artistData[i].name,
         bio: artistData[i].bio,
+        speciality: artistData[i].speciality,
         styles: [
           faker.helpers.arrayElement(['Traditional', 'Realistic', 'Japanese', 'Blackwork', 'Watercolor']),
           faker.helpers.arrayElement(['Geometric', 'Minimalist', 'Portrait', 'Nature', 'Abstract']),
@@ -143,6 +153,7 @@ async function main() {
     artists.push({ ...artist, user: artistUser });
   }
   console.log('✅ 建立 3 個刺青師');
+
 
   // 6. 建立 6 個服務
   const services: any[] = [];
@@ -238,17 +249,17 @@ async function main() {
     // 如果是儲值訂單（隨機 20% 機率），更新儲值相關欄位
     const isStoredValueOrder = Math.random() < 0.2;
     if (isStoredValueOrder) {
-      await prisma.user.update({
-        where: { id: member.id },
+      // 儲值訂單：增加餘額
+      await prisma.member.update({
+        where: { userId: member.id },
         data: {
-          storedValueTotal: { increment: totalAmount },
-          storedValueBalance: { increment: totalAmount },
+          balance: { increment: totalAmount },
         },
       });
     } else {
-      // 一般消費訂單，更新累計消費金額
-      await prisma.user.update({
-        where: { id: member.id },
+      // 一般消費訂單：更新累計消費金額
+      await prisma.member.update({
+        where: { userId: member.id },
         data: {
           totalSpent: { increment: totalAmount },
         },

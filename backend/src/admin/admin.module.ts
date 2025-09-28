@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AdminController } from './admin.controller';
 import { AdminAppointmentsService } from './admin-appointments.service';
-import { AdminMembersService } from './admin-members.service';
 import { AdminServicesController } from './admin-services.controller';
 import { AdminArtistsController } from './admin-artists.controller';
 import { AdminOrdersController } from './admin-orders.controller';
 import { AdminAppointmentsController } from './admin-appointments.controller';
-import { AdminMembersController } from './admin-members.controller';
 import { DiagnosticsController } from './diagnostics.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { OrdersModule } from '../orders/orders.module';
@@ -21,9 +19,8 @@ import { ServicesModule } from '../services/services.module';
     AdminArtistsController, 
     AdminOrdersController,
     AdminAppointmentsController,
-    AdminMembersController,
     DiagnosticsController
   ],
-  providers: [AdminAppointmentsService, AdminMembersService],
+  providers: [AdminAppointmentsService],
 })
 export class AdminModule {}

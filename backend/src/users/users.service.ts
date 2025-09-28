@@ -35,9 +35,13 @@ export class UsersService {
             address: true,
           }
         },
-        totalSpent: true,
-        storedValueTotal: true,
-        storedValueBalance: true,
+        member: {
+          select: {
+            totalSpent: true,
+            balance: true,
+            membershipLevel: true,
+          }
+        },
         createdAt: true,
         lastLogin: true,
         status: true,
@@ -81,9 +85,13 @@ export class UsersService {
               name: true,
             }
           },
-          totalSpent: true,
-          storedValueTotal: true,
-          storedValueBalance: true,
+          member: {
+            select: {
+              totalSpent: true,
+              balance: true,
+              membershipLevel: true,
+            }
+          },
           createdAt: true,
           lastLogin: true,
           status: true,
@@ -134,64 +142,111 @@ export class UsersService {
   // 財務相關方法
   async updateUserFinancials(userId: string, updates: {
     totalSpent?: number;
-    storedValueTotal?: number;
-    storedValueBalance?: number;
+    balance?: number;
+    membershipLevel?: string;
   }) {
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: updates,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        totalSpent: true,
-        storedValueTotal: true,
-        storedValueBalance: true,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      // 確保用戶有 Member 記錄
+      const member = await tx.member.findUnique({
+        where: { userId },
+      });
+
+      if (!member) {
+        // 如果沒有 Member 記錄，創建一個
+        await tx.member.create({
+          data: {
+            userId,
+            totalSpent: 0,
+            balance: 0,
+          },
+        });
+      }
+
+      // 更新 Member 記錄
+      const updatedMember = await tx.member.update({
+        where: { userId },
+        data: updates,
+      });
+
+      // 返回用戶和財務資訊
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          member: {
+            select: {
+              totalSpent: true,
+              balance: true,
+              membershipLevel: true,
+            }
+          }
+        },
+      });
+
+      return user;
     });
   }
 
   async addTopUp(userId: string, amount: number) {
     return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { storedValueTotal: true, storedValueBalance: true },
+      // 確保用戶有 Member 記錄
+      const member = await tx.member.findUnique({
+        where: { userId },
       });
 
-      if (!user) {
-        throw new Error('User not found');
+      if (!member) {
+        // 如果沒有 Member 記錄，創建一個
+        await tx.member.create({
+          data: {
+            userId,
+            totalSpent: 0,
+            balance: amount,
+          },
+        });
+      } else {
+        // 更新餘額
+        await tx.member.update({
+          where: { userId },
+          data: {
+            balance: { increment: amount },
+          },
+        });
       }
 
-      return tx.user.update({
+      // 返回用戶和財務資訊
+      const user = await tx.user.findUnique({
         where: { id: userId },
-        data: {
-          storedValueTotal: { increment: amount },
-          storedValueBalance: { increment: amount },
-        },
         select: {
           id: true,
           email: true,
           name: true,
-          totalSpent: true,
-          storedValueTotal: true,
-          storedValueBalance: true,
+          member: {
+            select: {
+              totalSpent: true,
+              balance: true,
+              membershipLevel: true,
+            }
+          }
         },
       });
+
+      return user;
     });
   }
 
   async processPayment(userId: string, amount: number, useStoredValue: boolean = false) {
     return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { storedValueBalance: true },
+      const member = await tx.member.findUnique({
+        where: { userId },
       });
 
-      if (!user) {
-        throw new Error('User not found');
+      if (!member) {
+        throw new Error('Member record not found');
       }
 
-      if (useStoredValue && user.storedValueBalance < amount) {
+      if (useStoredValue && member.balance < amount) {
         throw new Error('Insufficient stored value balance');
       }
 
@@ -200,21 +255,32 @@ export class UsersService {
       };
 
       if (useStoredValue) {
-        updateData.storedValueBalance = { decrement: amount };
+        updateData.balance = { decrement: amount };
       }
 
-      return tx.user.update({
-        where: { id: userId },
+      await tx.member.update({
+        where: { userId },
         data: updateData,
+      });
+
+      // 返回用戶和財務資訊
+      const user = await tx.user.findUnique({
+        where: { id: userId },
         select: {
           id: true,
           email: true,
           name: true,
-          totalSpent: true,
-          storedValueTotal: true,
-          storedValueBalance: true,
+          member: {
+            select: {
+              totalSpent: true,
+              balance: true,
+              membershipLevel: true,
+            }
+          }
         },
       });
+
+      return user;
     });
   }
 }

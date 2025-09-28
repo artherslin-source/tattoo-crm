@@ -7,29 +7,43 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCheck, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
 
-interface TattooArtist {
+interface Artist {
   id: string;
-  name: string;
-  email: string;
-  stylePreferences: string | null;
-  isActive: boolean;
+  speciality?: string;
+  portfolioUrl?: string;
+  active: boolean;
   createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+    createdAt: string;
+  };
+  branch?: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function AdminArtistsPage() {
   const router = useRouter();
-  const [artists, setArtists] = useState<TattooArtist[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingArtist, setEditingArtist] = useState<TattooArtist | null>(null);
+  const [editingArtist, setEditingArtist] = useState<Artist | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    stylePreferences: '',
-    isActive: true
+    password: '',
+    speciality: '',
+    portfolioUrl: '',
+    active: true,
   });
 
   useEffect(() => {
@@ -61,8 +75,10 @@ export default function AdminArtistsPage() {
     setFormData({
       name: '',
       email: '',
-      stylePreferences: '',
-      isActive: true
+      password: '',
+      speciality: '',
+      portfolioUrl: '',
+      active: true,
     });
     setEditingArtist(null);
     setShowCreateForm(false);
@@ -81,13 +97,15 @@ export default function AdminArtistsPage() {
     }
   };
 
-  const handleEditArtist = (artist: TattooArtist) => {
+  const handleEditArtist = (artist: Artist) => {
     setEditingArtist(artist);
     setFormData({
-      name: artist.name,
-      email: artist.email,
-      stylePreferences: artist.stylePreferences || '',
-      isActive: artist.isActive
+      name: artist.user.name,
+      email: artist.user.email,
+      password: '', // 編輯時不預填密碼
+      speciality: artist.speciality || '',
+      portfolioUrl: artist.portfolioUrl || '',
+      active: artist.active,
     });
     setShowCreateForm(true);
   };
@@ -97,7 +115,7 @@ export default function AdminArtistsPage() {
     if (!editingArtist) return;
 
     try {
-      const updatedArtist = await putJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData);
+      const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData);
       setArtists(artists.map(artist => 
         artist.id === editingArtist.id ? updatedArtist : artist
       ));
@@ -195,7 +213,7 @@ export default function AdminArtistsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {artists.filter(artist => artist.isActive).length}
+              {artists.filter(artist => artist.active).length}
             </div>
           </CardContent>
         </Card>
@@ -207,7 +225,7 @@ export default function AdminArtistsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {artists.filter(artist => !artist.isActive).length}
+              {artists.filter(artist => !artist.active).length}
             </div>
           </CardContent>
         </Card>
@@ -253,31 +271,64 @@ export default function AdminArtistsPage() {
                 </div>
               </div>
               
+              {!editingArtist && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    密碼 *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="請輸入密碼（至少8個字符）"
+                    minLength={8}
+                  />
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    專長
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.speciality}
+                    onChange={(e) => setFormData({ ...formData, speciality: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="例如：傳統刺青、寫實風格、水彩風格等"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    作品集連結
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.portfolioUrl}
+                    onChange={(e) => setFormData({ ...formData, portfolioUrl: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="https://example.com/portfolio"
+                  />
+                </div>
+              </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  專長風格
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.active}
+                    onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    啟用狀態
+                  </span>
                 </label>
-                <textarea
-                  value={formData.stylePreferences}
-                  onChange={(e) => setFormData({ ...formData, stylePreferences: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  placeholder="例如：傳統刺青、寫實風格、水彩風格等"
-                />
               </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  啟用狀態
-                </label>
-              </div>
 
               <div className="flex space-x-2">
                 <Button type="submit">
@@ -307,7 +358,8 @@ export default function AdminArtistsPage() {
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">姓名</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Email</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">專長風格</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">專長</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">作品集</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">狀態</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">建立時間</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
@@ -318,22 +370,36 @@ export default function AdminArtistsPage() {
                   <tr key={artist.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="py-3 px-4">
                       <div className="font-medium text-gray-900 dark:text-white">
-                        {artist.name}
+                        {artist.user.name}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {artist.email}
+                      {artist.user.email}
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {artist.stylePreferences || '未設定'}
+                      {artist.speciality || '未設定'}
+                    </td>
+                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                      {artist.portfolioUrl ? (
+                        <a 
+                          href={artist.portfolioUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          查看作品集
+                        </a>
+                      ) : (
+                        '未設定'
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        artist.isActive 
+                        artist.active 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
                           : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                       }`}>
-                        {artist.isActive ? '啟用' : '停用'}
+                        {artist.active ? '啟用' : '停用'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-300">

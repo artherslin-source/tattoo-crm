@@ -8,49 +8,54 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Modal } from "@/components/ui/modal";
 import { Users, Edit, Trash2, ArrowLeft, Key, DollarSign, Wallet } from "lucide-react";
 
-interface User {
-  id: string;
-  email: string;
-  name: string | null;
-  role: 'MEMBER' | 'ADMIN';
-  createdAt: string;
-  totalSpent?: number;
-  storedValueTotal?: number;
-  storedValueBalance?: number;
+interface Member {
+  id: number;
+  totalSpent: number;
+  balance: number;
+  membershipLevel?: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: 'MEMBER' | 'ADMIN';
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 export default function AdminMembersPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resetPasswordModal, setResetPasswordModal] = useState<{
     isOpen: boolean;
-    user: User | null;
+    member: Member | null;
     newPassword: string;
   }>({
     isOpen: false,
-    user: null,
+    member: null,
     newPassword: '',
   });
 
   const [topUpModal, setTopUpModal] = useState<{
     isOpen: boolean;
-    user: User | null;
+    member: Member | null;
     amount: string;
   }>({
     isOpen: false,
-    user: null,
+    member: null,
     amount: '',
   });
 
   const [adjustBalanceModal, setAdjustBalanceModal] = useState<{
     isOpen: boolean;
-    user: User | null;
+    member: Member | null;
     amount: string;
   }>({
     isOpen: false,
-    user: null,
+    member: null,
     amount: '',
   });
 
@@ -63,15 +68,15 @@ export default function AdminMembersPage() {
       return;
     }
 
-    fetchUsers();
+    fetchMembers();
   }, [router]);
 
-  const fetchUsers = async () => {
+  const fetchMembers = async () => {
     try {
       setLoading(true);
       // 使用 admin/members API
       const data = await getJsonWithAuth('/admin/members');
-      setUsers(data);
+      setMembers(data);
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "載入會員資料失敗");
@@ -80,14 +85,14 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteMember = async (memberId: number) => {
     if (!confirm('確定要刪除這個會員嗎？此操作無法復原。')) {
       return;
     }
 
     try {
-      await deleteJsonWithAuth(`/admin/members/${userId}`);
-      setUsers(users.filter(user => user.id !== userId));
+      await deleteJsonWithAuth(`/admin/members/${memberId}`);
+      setMembers(members.filter(member => member.id !== memberId));
       setError(null);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -95,13 +100,16 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleToggleRole = async (userId: string, currentRole: string) => {
+  const handleToggleRole = async (memberId: number, currentRole: string) => {
     const newRole = currentRole === 'ADMIN' ? 'MEMBER' : 'ADMIN';
     
     try {
-      await patchJsonWithAuth(`/admin/members/${userId}/role`, { role: newRole });
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, role: newRole as 'MEMBER' | 'ADMIN' } : user
+      await patchJsonWithAuth(`/admin/members/${memberId}/role`, { role: newRole });
+      setMembers(members.map(member => 
+        member.id === memberId ? { 
+          ...member, 
+          user: { ...member.user, role: newRole as 'MEMBER' | 'ADMIN' }
+        } : member
       ));
       setError(null);
     } catch (err) {
@@ -110,10 +118,10 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleOpenResetPasswordModal = (user: User) => {
+  const handleOpenResetPasswordModal = (member: Member) => {
     setResetPasswordModal({
       isOpen: true,
-      user,
+      member,
       newPassword: '',
     });
   };
@@ -121,13 +129,13 @@ export default function AdminMembersPage() {
   const handleCloseResetPasswordModal = () => {
     setResetPasswordModal({
       isOpen: false,
-      user: null,
+      member: null,
       newPassword: '',
     });
   };
 
   const handleResetPassword = async () => {
-    if (!resetPasswordModal.user || !resetPasswordModal.newPassword) {
+    if (!resetPasswordModal.member || !resetPasswordModal.newPassword) {
       setError('請輸入新密碼');
       return;
     }
@@ -138,7 +146,7 @@ export default function AdminMembersPage() {
     }
 
     try {
-      await patchJsonWithAuth(`/admin/members/${resetPasswordModal.user.id}/password`, {
+      await patchJsonWithAuth(`/admin/members/${resetPasswordModal.member.id}/password`, {
         password: resetPasswordModal.newPassword,
       });
       
@@ -152,10 +160,10 @@ export default function AdminMembersPage() {
   };
 
   // 財務相關處理函數
-  const handleOpenTopUpModal = (user: User) => {
+  const handleOpenTopUpModal = (member: Member) => {
     setTopUpModal({
       isOpen: true,
-      user,
+      member,
       amount: '',
     });
   };
@@ -163,13 +171,13 @@ export default function AdminMembersPage() {
   const handleCloseTopUpModal = () => {
     setTopUpModal({
       isOpen: false,
-      user: null,
+      member: null,
       amount: '',
     });
   };
 
   const handleTopUp = async () => {
-    if (!topUpModal.user || !topUpModal.amount) {
+    if (!topUpModal.member || !topUpModal.amount) {
       setError('請輸入儲值金額');
       return;
     }
@@ -181,13 +189,13 @@ export default function AdminMembersPage() {
     }
 
     try {
-      await patchJsonWithAuth(`/users/${topUpModal.user.id}/topup`, {
+      await patchJsonWithAuth(`/users/${topUpModal.member.user.id}/topup`, {
         amount: amount,
       });
       
       setError(null);
       handleCloseTopUpModal();
-      fetchUsers(); // 重新載入用戶資料
+      fetchMembers(); // 重新載入會員資料
       alert('儲值成功！');
     } catch (err) {
       const apiErr = err as ApiError;
@@ -195,24 +203,24 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleOpenAdjustBalanceModal = (user: User) => {
+  const handleOpenAdjustBalanceModal = (member: Member) => {
     setAdjustBalanceModal({
       isOpen: true,
-      user,
-      amount: user.storedValueBalance?.toString() || '0',
+      member,
+      amount: member.balance?.toString() || '0',
     });
   };
 
   const handleCloseAdjustBalanceModal = () => {
     setAdjustBalanceModal({
       isOpen: false,
-      user: null,
+      member: null,
       amount: '',
     });
   };
 
   const handleAdjustBalance = async () => {
-    if (!adjustBalanceModal.user || !adjustBalanceModal.amount) {
+    if (!adjustBalanceModal.member || !adjustBalanceModal.amount) {
       setError('請輸入餘額金額');
       return;
     }
@@ -224,13 +232,13 @@ export default function AdminMembersPage() {
     }
 
     try {
-      await patchJsonWithAuth(`/users/${adjustBalanceModal.user.id}/balance`, {
+      await patchJsonWithAuth(`/users/${adjustBalanceModal.member.user.id}/balance`, {
         amount: amount,
       });
       
       setError(null);
       handleCloseAdjustBalanceModal();
-      fetchUsers(); // 重新載入用戶資料
+      fetchMembers(); // 重新載入會員資料
       alert('餘額調整成功！');
     } catch (err) {
       const apiErr = err as ApiError;
@@ -295,7 +303,7 @@ export default function AdminMembersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">{members.length}</div>
           </CardContent>
         </Card>
 
@@ -306,7 +314,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {users.filter(user => user.role === 'ADMIN').length}
+              {members.filter(member => member.user.role === 'ADMIN').length}
             </div>
           </CardContent>
         </Card>
@@ -318,7 +326,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {users.filter(user => user.role === 'MEMBER').length}
+              {members.filter(member => member.user.role === 'MEMBER').length}
             </div>
           </CardContent>
         </Card>
@@ -341,65 +349,65 @@ export default function AdminMembersPage() {
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Email</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">角色</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">累計消費</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">儲值總額</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">會員等級</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">儲值餘額</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">註冊時間</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
                     </tr>
                   </thead>
               <tbody>
-                {users.map((user) => (
-                    <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                {members.map((member) => (
+                    <tr key={member.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="py-3 px-4">
                         <div className="font-medium text-gray-900 dark:text-white">
-                          {user.name || '未設定'}
+                          {member.user.name || '未設定'}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        {user.email}
+                        {member.user.email}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === 'ADMIN' 
+                          member.user.role === 'ADMIN' 
                             ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' 
                             : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                         }`}>
-                          {user.role === 'ADMIN' ? '管理員' : '會員'}
+                          {member.user.role === 'ADMIN' ? '管理員' : '會員'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
                         <span className="font-medium text-blue-600 dark:text-blue-400">
-                          {formatCurrency(user.totalSpent)}
+                          {formatCurrency(member.totalSpent)}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        <span className="font-medium text-green-600 dark:text-green-400">
-                          {formatCurrency(user.storedValueTotal)}
+                        <span className="font-medium text-orange-600 dark:text-orange-400">
+                          {member.membershipLevel || '未設定'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
                         <span className="font-medium text-purple-600 dark:text-purple-400">
-                          {formatCurrency(user.storedValueBalance)}
+                          {formatCurrency(member.balance)}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        {new Date(user.createdAt).toLocaleDateString('zh-TW')}
+                        {new Date(member.user.createdAt).toLocaleDateString('zh-TW')}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleToggleRole(user.id, user.role)}
+                            onClick={() => handleToggleRole(member.id, member.user.role)}
                             className="flex items-center space-x-1"
                           >
                             <Edit className="h-3 w-3" />
-                            <span>{user.role === 'ADMIN' ? '降為會員' : '升為管理員'}</span>
+                            <span>{member.user.role === 'ADMIN' ? '降為會員' : '升為管理員'}</span>
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleOpenTopUpModal(user)}
+                            onClick={() => handleOpenTopUpModal(member)}
                             className="flex items-center space-x-1 text-green-600 hover:text-green-700"
                           >
                             <DollarSign className="h-3 w-3" />
@@ -408,7 +416,7 @@ export default function AdminMembersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleOpenAdjustBalanceModal(user)}
+                            onClick={() => handleOpenAdjustBalanceModal(member)}
                             className="flex items-center space-x-1 text-purple-600 hover:text-purple-700"
                           >
                             <Wallet className="h-3 w-3" />
@@ -417,7 +425,7 @@ export default function AdminMembersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleOpenResetPasswordModal(user)}
+                            onClick={() => handleOpenResetPasswordModal(member)}
                             className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
                           >
                             <Key className="h-3 w-3" />
@@ -426,7 +434,7 @@ export default function AdminMembersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
+                            onClick={() => handleDeleteMember(member.id)}
                             className="flex items-center space-x-1 text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -440,7 +448,7 @@ export default function AdminMembersPage() {
             </table>
           </div>
           
-          {users.length === 0 && (
+          {members.length === 0 && (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               目前沒有會員資料
             </div>
@@ -454,11 +462,11 @@ export default function AdminMembersPage() {
             onClose={handleCloseResetPasswordModal}
             title="重設密碼"
           >
-            {resetPasswordModal.user && (
+            {resetPasswordModal.member && (
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    為用戶 <strong>{resetPasswordModal.user.name || resetPasswordModal.user.email}</strong> 重設密碼
+                    為用戶 <strong>{resetPasswordModal.member.user.name || resetPasswordModal.member.user.email}</strong> 重設密碼
                   </p>
                 </div>
                 
@@ -507,14 +515,14 @@ export default function AdminMembersPage() {
             onClose={handleCloseTopUpModal}
             title="儲值"
           >
-            {topUpModal.user && (
+            {topUpModal.member && (
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    為用戶 <strong>{topUpModal.user.name || topUpModal.user.email}</strong> 儲值
+                    為用戶 <strong>{topUpModal.member.user.name || topUpModal.member.user.email}</strong> 儲值
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    目前儲值餘額：{formatCurrency(topUpModal.user.storedValueBalance)}
+                    目前儲值餘額：{formatCurrency(topUpModal.member.balance || 0)}
                   </p>
                 </div>
                 
@@ -564,14 +572,14 @@ export default function AdminMembersPage() {
             onClose={handleCloseAdjustBalanceModal}
             title="調整餘額"
           >
-            {adjustBalanceModal.user && (
+            {adjustBalanceModal.member && (
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    為用戶 <strong>{adjustBalanceModal.user.name || adjustBalanceModal.user.email}</strong> 調整儲值餘額
+                    為用戶 <strong>{adjustBalanceModal.member.user.name || adjustBalanceModal.member.user.email}</strong> 調整儲值餘額
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    目前儲值餘額：{formatCurrency(adjustBalanceModal.user.storedValueBalance)}
+                    目前儲值餘額：{formatCurrency(adjustBalanceModal.member.balance || 0)}
                   </p>
                 </div>
                 

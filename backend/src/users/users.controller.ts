@@ -62,7 +62,7 @@ export class UsersController {
   @Roles('BOSS', 'BRANCH_MANAGER')
   async adjustBalance(@Param('id') userId: string, @Body() adjustBalanceDto: AdjustBalanceDto) {
     return this.usersService.updateUserFinancials(userId, {
-      storedValueBalance: adjustBalanceDto.amount,
+      balance: adjustBalanceDto.amount,
     });
   }
 

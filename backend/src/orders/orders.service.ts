@@ -25,12 +25,12 @@ export class OrdersService {
     return this.prisma.$transaction(async (tx) => {
       // 檢查用戶儲值餘額（如果使用儲值付款）
       if (input.useStoredValue) {
-        const user = await tx.user.findUnique({
-          where: { id: input.memberId },
-          select: { storedValueBalance: true },
+        const member = await tx.member.findUnique({
+          where: { userId: input.memberId },
+          select: { balance: true },
         });
 
-        if (!user || user.storedValueBalance < input.totalAmount) {
+        if (!member || member.balance < input.totalAmount) {
           throw new Error('Insufficient stored value balance');
         }
       }
@@ -57,13 +57,30 @@ export class OrdersService {
       };
 
       if (input.useStoredValue) {
-        updateData.storedValueBalance = { decrement: input.totalAmount };
+        updateData.balance = { decrement: input.totalAmount };
       }
 
-      await tx.user.update({
-        where: { id: input.memberId },
-        data: updateData,
+      // 確保用戶有 Member 記錄
+      const member = await tx.member.findUnique({
+        where: { userId: input.memberId },
       });
+
+      if (!member) {
+        // 如果沒有 Member 記錄，創建一個
+        await tx.member.create({
+          data: {
+            userId: input.memberId,
+            totalSpent: input.totalAmount,
+            balance: input.useStoredValue ? -input.totalAmount : 0,
+          },
+        });
+      } else {
+        // 更新現有的 Member 記錄
+        await tx.member.update({
+          where: { userId: input.memberId },
+          data: updateData,
+        });
+      }
 
       return order;
     });

@@ -7,66 +7,91 @@ export class AdminMembersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(filters?: { search?: string; role?: string; status?: string }) {
+    console.log('AdminMembersService.findAll called with filters:', filters);
+    
     const where: any = {};
 
+    // 構建 user 條件
+    const userConditions: any = {};
+    
     if (filters?.search) {
-      where.OR = [
+      userConditions.OR = [
         { name: { contains: filters.search, mode: 'insensitive' } },
         { email: { contains: filters.search, mode: 'insensitive' } },
       ];
     }
 
     if (filters?.role) {
-      where.role = filters.role;
+      userConditions.role = filters.role;
     }
 
     if (filters?.status) {
-      where.status = filters.status;
+      userConditions.status = filters.status;
     }
 
-    return this.prisma.user.findMany({
+    // 只有在有條件時才設置 where.user
+    if (Object.keys(userConditions).length > 0) {
+      where.user = userConditions;
+    }
+
+    console.log('AdminMembersService.findAll where clause:', where);
+
+    const result = await this.prisma.member.findMany({
       where,
       select: {
         id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
         totalSpent: true,
-        storedValueTotal: true,
-        storedValueBalance: true,
-        createdAt: true,
-        updatedAt: true,
+        balance: true,
+        membershipLevel: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          }
+        },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { id: 'desc' },
     });
+
+    console.log('AdminMembersService.findAll result:', result.length, 'records');
+    return result;
   }
 
   async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+    const member = await this.prisma.member.findUnique({
+      where: { id: parseInt(id) },
       select: {
         id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        status: true,
         totalSpent: true,
-        storedValueTotal: true,
-        storedValueBalance: true,
-        createdAt: true,
-        updatedAt: true,
+        balance: true,
+        membershipLevel: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          }
+        },
       },
     });
 
-    if (!user) {
+    if (!member) {
       throw new NotFoundException('會員不存在');
     }
 
     // 取得會員的預約紀錄
     const appointments = await this.prisma.appointment.findMany({
-      where: { userId: id },
+      where: { userId: member.user.id },
       include: {
         service: { select: { name: true, price: true } },
         artist: { select: { name: true } },
@@ -76,12 +101,12 @@ export class AdminMembersService {
 
     // 取得會員的訂單紀錄
     const orders = await this.prisma.order.findMany({
-      where: { memberId: id },
+      where: { memberId: member.user.id },
       orderBy: { createdAt: 'desc' },
     });
 
     return {
-      ...user,
+      ...member,
       appointments,
       orders,
     };
@@ -92,13 +117,16 @@ export class AdminMembersService {
       throw new BadRequestException('無效的角色');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) {
+    const member = await this.prisma.member.findUnique({ 
+      where: { id: parseInt(id) },
+      include: { user: true }
+    });
+    if (!member) {
       throw new NotFoundException('會員不存在');
     }
 
     return this.prisma.user.update({
-      where: { id },
+      where: { id: member.user.id },
       data: { role: role as any },
       select: {
         id: true,
@@ -115,13 +143,16 @@ export class AdminMembersService {
       throw new BadRequestException('無效的狀態');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) {
+    const member = await this.prisma.member.findUnique({ 
+      where: { id: parseInt(id) },
+      include: { user: true }
+    });
+    if (!member) {
       throw new NotFoundException('會員不存在');
     }
 
     return this.prisma.user.update({
-      where: { id },
+      where: { id: member.user.id },
       data: { status: status as any },
       select: {
         id: true,
@@ -138,15 +169,18 @@ export class AdminMembersService {
       throw new BadRequestException('密碼長度至少需要 8 個字符');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) {
+    const member = await this.prisma.member.findUnique({ 
+      where: { id: parseInt(id) },
+      include: { user: true }
+    });
+    if (!member) {
       throw new NotFoundException('會員不存在');
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
     return this.prisma.user.update({
-      where: { id },
+      where: { id: member.user.id },
       data: { hashedPassword },
       select: {
         id: true,
@@ -155,6 +189,138 @@ export class AdminMembersService {
         role: true,
         status: true,
       },
+    });
+  }
+
+  async createMember(data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    totalSpent?: number;
+    balance?: number;
+    membershipLevel?: string;
+  }) {
+    const hashedPassword = await bcrypt.hash(data.password, 12);
+
+    return this.prisma.$transaction(async (tx) => {
+      // 創建 User
+      const user = await tx.user.create({
+        data: {
+          name: data.name,
+          email: data.email,
+          hashedPassword,
+          phone: data.phone,
+          role: 'MEMBER',
+        },
+      });
+
+      // 創建 Member
+      const member = await tx.member.create({
+        data: {
+          userId: user.id,
+          totalSpent: data.totalSpent || 0,
+          balance: data.balance || 0,
+          membershipLevel: data.membershipLevel,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              role: true,
+              status: true,
+              createdAt: true,
+            }
+          }
+        },
+      });
+
+      return member;
+    });
+  }
+
+  async updateMember(id: string, data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    totalSpent?: number;
+    balance?: number;
+    membershipLevel?: string;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const member = await tx.member.findUnique({
+        where: { id: parseInt(id) },
+        include: { user: true }
+      });
+
+      if (!member) {
+        throw new NotFoundException('會員不存在');
+      }
+
+      // 更新 User
+      if (data.name || data.email || data.phone) {
+        await tx.user.update({
+          where: { id: member.user.id },
+          data: {
+            ...(data.name && { name: data.name }),
+            ...(data.email && { email: data.email }),
+            ...(data.phone && { phone: data.phone }),
+          },
+        });
+      }
+
+      // 更新 Member
+      const updatedMember = await tx.member.update({
+        where: { id: parseInt(id) },
+        data: {
+          ...(data.totalSpent !== undefined && { totalSpent: data.totalSpent }),
+          ...(data.balance !== undefined && { balance: data.balance }),
+          ...(data.membershipLevel && { membershipLevel: data.membershipLevel }),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              role: true,
+              status: true,
+              createdAt: true,
+            }
+          }
+        },
+      });
+
+      return updatedMember;
+    });
+  }
+
+  async deleteMember(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const member = await tx.member.findUnique({
+        where: { id: parseInt(id) },
+        include: { user: true }
+      });
+
+      if (!member) {
+        throw new NotFoundException('會員不存在');
+      }
+
+      // 刪除 Member
+      await tx.member.delete({
+        where: { id: parseInt(id) },
+      });
+
+      // 刪除 User
+      await tx.user.delete({
+        where: { id: member.user.id },
+      });
+
+      return { message: '會員已刪除' };
     });
   }
 }
