@@ -8,37 +8,39 @@ datasource db {
 }
 
 model User {
-  id        String  @id @default(cuid())
-  email     String  @unique
-  hashedPassword String
-  name      String
-  phone     String?
-  birthday  DateTime?
-  gender    String?
-  stylePreferences Json?
-  role      Role    @default(MEMBER)
-  branchId  String?
-  isActive  Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lastLogin DateTime?
-  status    String  @default("ACTIVE")
+  id              String   @id @default(cuid())
+  email           String   @unique
+  hashedPassword  String
+  name            String?
+  phone           String?
+  birthday        DateTime?
+  gender          String?
+  stylePreferences String?
+  role            String?
+  branchId        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastLogin       DateTime?
+  status          String?
   artistAppointments Appointment[] @relation("ArtistAppointments")
   appointments       Appointment[]
   orders             Order[]
   member             Member?
   artist             Artist?
   branch             Branch?       @relation(fields: [branchId], references: [id])
+  topupHistory       TopupHistory[]
 }
 
 model Member {
-  id              Int    @id @default(autoincrement())
+  id              String @id @default(cuid())
   userId          String @unique
   totalSpent      Int    @default(0)    // 累計消費
   balance         Int    @default(0)    // 儲值餘額
   membershipLevel String?               // 會員等級
 
   user User @relation(fields: [userId], references: [id])
+  topupHistory TopupHistory[]
 }
 
 
@@ -189,4 +191,14 @@ enum OrderStatus {
 enum InstallmentStatus {
   PAID
   UNPAID
+}
+
+model TopupHistory {
+  id          String   @id @default(cuid())
+  member      Member   @relation(fields: [memberId], references: [id])
+  memberId    String
+  operator    User     @relation(fields: [operatorId], references: [id])
+  operatorId  String
+  amount      Int
+  createdAt   DateTime @default(now())
 }

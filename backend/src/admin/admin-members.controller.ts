@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, BadRequestException, Req } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { AdminMembersService } from "./admin-members.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -12,29 +12,14 @@ export class AdminMembersController {
   constructor(
     private readonly service: AdminMembersService,
     private readonly prisma: PrismaService
-  ) {}
-
-  @Get()
-  findAll(@Query() query: any) {
-    console.log('AdminMembersController.findAll called');
-    return this.service.findAll({
-      search: query.search,
-      role: query.role,
-      status: query.status,
-    });
+  ) {
+    console.log('🏗️ AdminMembersController constructor called');
   }
 
-  @Post()
-  createMember(@Body() data: {
-    name: string;
-    email: string;
-    password: string;
-    phone?: string;
-    totalSpent?: number;
-    balance?: number;
-    membershipLevel?: string;
-  }) {
-    return this.service.createMember(data);
+  @Get('test')
+  async testEndpoint() {
+    console.log('🎯 AdminMembersController.testEndpoint called');
+    return { message: 'AdminMembersController is working', timestamp: new Date().toISOString() };
   }
 
   @Get('direct-test')
@@ -61,6 +46,76 @@ export class AdminMembersController {
     });
     console.log('Direct Prisma query result:', result);
     return result;
+  }
+
+  @Get()
+  findAll(@Query() query: any) {
+    console.log('🎯 AdminMembersController.findAll called');
+    try {
+      return this.service.findAll({
+        search: query.search,
+        role: query.role,
+        status: query.status,
+      });
+    } catch (error) {
+      console.error('❌ Error in AdminMembersController.findAll:', error);
+      throw error;
+    }
+  }
+
+  @Post()
+  createMember(@Body() data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    totalSpent?: number;
+    balance?: number;
+    membershipLevel?: string;
+  }) {
+    return this.service.createMember(data);
+  }
+
+  @Get('simple-test')
+  async simpleTest() {
+    console.log('✅ SIMPLE TEST Controller method called');
+    return { message: '簡單測試路由正常工作' };
+  }
+
+  @Get(':id/test-topups')
+  async testTopupHistory(@Param('id') id: string) {
+    console.log('✅ TEST Controller method called with id:', id);
+    return { message: 'TEST 路由正常工作', id };
+  }
+
+  @Get(':id/topups')
+  async getTopupHistory(@Param('id') id: string) {
+    console.log('🎯 Controller getTopupHistory called with id:', id);
+    const result = await this.service.getTopupHistory(id);
+    console.log('TopupHistory response:', result);   // ✅ Debug
+    return result;
+  }
+
+  @Patch(':id/topup')
+  @UseGuards(AuthGuard('jwt'))
+  async topupUser(
+    @Param('id') id: string,
+    @Body() body: { amount: number },
+    @Req() req
+  ) {
+    console.log('DEBUG req.user:', req.user); // Debug 用，確認是否有登入的 user 資訊
+
+    const amount = Number(body.amount);
+    if (amount <= 0) {
+      throw new BadRequestException('儲值金額必須大於 0');
+    }
+
+    if (!req.user || !req.user.id) {
+      throw new BadRequestException('操作人員未登入或缺少 ID');
+    }
+
+    const operatorId = req.user.id;
+    return this.service.topupUser(id, amount, operatorId);
   }
 
   @Get(':id')

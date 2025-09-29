@@ -97,18 +97,18 @@ export default function AdminArtistsPage() {
     }
   };
 
-  const handleEditArtist = (artist: Artist) => {
-    setEditingArtist(artist);
-    setFormData({
-      name: artist.user.name,
-      email: artist.user.email,
-      password: '', // 編輯時不預填密碼
-      speciality: artist.speciality || '',
-      portfolioUrl: artist.portfolioUrl || '',
-      active: artist.active,
-    });
-    setShowCreateForm(true);
-  };
+      const handleEditArtist = (artist: Artist) => {
+        setEditingArtist(artist);
+        setFormData({
+          name: artist.user?.name || '',
+          email: artist.user?.email || '',
+          password: '', // 編輯時不預填密碼
+          speciality: artist.speciality || '',
+          portfolioUrl: artist.portfolioUrl || '',
+          active: artist.active,
+        });
+        setShowCreateForm(true);
+      };
 
   const handleUpdateArtist = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -368,40 +368,40 @@ export default function AdminArtistsPage() {
               <tbody>
                 {artists.map((artist) => (
                   <tr key={artist.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {artist.user.name}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {artist.user.email}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {artist.speciality || '未設定'}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {artist.portfolioUrl ? (
-                        <a 
-                          href={artist.portfolioUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 underline"
-                        >
-                          查看作品集
-                        </a>
-                      ) : (
-                        '未設定'
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        artist.active 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                      }`}>
-                        {artist.active ? '啟用' : '停用'}
-                      </span>
-                    </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {artist.user?.name || '未設定'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          {artist.user?.email || 'N/A'}
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          {artist.speciality || '未設定'}
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          {artist.portfolioUrl ? (
+                            <a 
+                              href={artist.portfolioUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 underline"
+                            >
+                              查看作品集
+                            </a>
+                          ) : (
+                            '未設定'
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            artist.active 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                          }`}>
+                            {artist.active ? '啟用' : '停用'}
+                          </span>
+                        </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
                       {new Date(artist.createdAt).toLocaleDateString('zh-TW')}
                     </td>

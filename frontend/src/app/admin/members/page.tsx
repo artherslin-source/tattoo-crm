@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Modal } from "@/components/ui/modal";
-import { Users, Edit, Trash2, ArrowLeft, Key, DollarSign, Wallet } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Users, Edit, Trash2, ArrowLeft, Key, DollarSign, Wallet, History } from "lucide-react";
 
 interface Member {
-  id: number;
+  id: string;
   totalSpent: number;
   balance: number;
   membershipLevel?: string;
@@ -21,6 +21,16 @@ interface Member {
     status: string;
     createdAt: string;
     updatedAt: string;
+  };
+}
+
+interface TopupHistory {
+  id: string;
+  amount: number;
+  createdAt: string;
+  operator?: {
+    email: string;
+    name: string;
   };
 }
 
@@ -59,6 +69,9 @@ export default function AdminMembersPage() {
     amount: '',
   });
 
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupHistory, setTopupHistory] = useState<TopupHistory[]>([]);
+
   useEffect(() => {
     const userRole = getUserRole();
     const token = getAccessToken();
@@ -85,7 +98,7 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleDeleteMember = async (memberId: number) => {
+  const handleDeleteMember = async (memberId: string) => {
     if (!confirm('確定要刪除這個會員嗎？此操作無法復原。')) {
       return;
     }
@@ -100,23 +113,6 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleToggleRole = async (memberId: number, currentRole: string) => {
-    const newRole = currentRole === 'ADMIN' ? 'MEMBER' : 'ADMIN';
-    
-    try {
-      await patchJsonWithAuth(`/admin/members/${memberId}/role`, { role: newRole });
-      setMembers(members.map(member => 
-        member.id === memberId ? { 
-          ...member, 
-          user: { ...member.user, role: newRole as 'MEMBER' | 'ADMIN' }
-        } : member
-      ));
-      setError(null);
-    } catch (err) {
-      const apiErr = err as ApiError;
-      setError(apiErr.message || "更新角色失敗");
-    }
-  };
 
   const handleOpenResetPasswordModal = (member: Member) => {
     setResetPasswordModal({
@@ -189,7 +185,7 @@ export default function AdminMembersPage() {
     }
 
     try {
-      await patchJsonWithAuth(`/users/${topUpModal.member.user.id}/topup`, {
+      await patchJsonWithAuth(`/admin/members/${topUpModal.member.id}/topup`, {
         amount: amount,
       });
       
@@ -243,6 +239,17 @@ export default function AdminMembersPage() {
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "餘額調整失敗");
+    }
+  };
+
+  const handleViewTopups = async (memberId: string) => {
+    try {
+      const res = await getJsonWithAuth(`/admin/members/${memberId}/topups`);
+      setTopupHistory(res);
+      setShowTopupModal(true);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "獲取儲值紀錄失敗");
     }
   };
 
@@ -314,7 +321,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {members.filter(member => member.user.role === 'ADMIN').length}
+              {members.filter(member => member.user?.role === 'ADMIN').length}
             </div>
           </CardContent>
         </Card>
@@ -326,7 +333,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {members.filter(member => member.user.role === 'MEMBER').length}
+              {members.filter(member => member.user?.role === 'MEMBER').length}
             </div>
           </CardContent>
         </Card>
@@ -360,19 +367,19 @@ export default function AdminMembersPage() {
                     <tr key={member.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="py-3 px-4">
                         <div className="font-medium text-gray-900 dark:text-white">
-                          {member.user.name || '未設定'}
+                          {member.user?.name || '未設定'}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        {member.user.email}
+                        {member.user?.email || 'N/A'}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          member.user.role === 'ADMIN' 
+                          member.user?.role === 'ADMIN' 
                             ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' 
                             : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                         }`}>
-                          {member.user.role === 'ADMIN' ? '管理員' : '會員'}
+                          {member.user?.role === 'ADMIN' ? '管理員' : '會員'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
@@ -391,19 +398,10 @@ export default function AdminMembersPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        {new Date(member.user.createdAt).toLocaleDateString('zh-TW')}
+                        {member.user?.createdAt ? new Date(member.user.createdAt).toLocaleDateString('zh-TW') : 'N/A'}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleRole(member.id, member.user.role)}
-                            className="flex items-center space-x-1"
-                          >
-                            <Edit className="h-3 w-3" />
-                            <span>{member.user.role === 'ADMIN' ? '降為會員' : '升為管理員'}</span>
-                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -421,6 +419,15 @@ export default function AdminMembersPage() {
                           >
                             <Wallet className="h-3 w-3" />
                             <span>調整餘額</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewTopups(member.id)}
+                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
+                          >
+                            <History className="h-3 w-3" />
+                            <span>查看儲值紀錄</span>
                           </Button>
                           <Button
                             variant="outline"
@@ -456,20 +463,16 @@ export default function AdminMembersPage() {
         </CardContent>
       </Card>
 
-          {/* Reset Password Modal */}
-          <Modal
-            isOpen={resetPasswordModal.isOpen}
-            onClose={handleCloseResetPasswordModal}
-            title="重設密碼"
-          >
-            {resetPasswordModal.member && (
+          {/* Reset Password Dialog */}
+          <Dialog open={resetPasswordModal.isOpen} onOpenChange={handleCloseResetPasswordModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>重設密碼</DialogTitle>
+                <DialogDescription>
+                  為用戶 <strong>{resetPasswordModal.member?.user?.name || resetPasswordModal.member?.user?.email}</strong> 重設密碼
+                </DialogDescription>
+              </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    為用戶 <strong>{resetPasswordModal.member.user.name || resetPasswordModal.member.user.email}</strong> 重設密碼
-                  </p>
-                </div>
-                
                 <div>
                   <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     新密碼
@@ -490,42 +493,36 @@ export default function AdminMembersPage() {
                     密碼長度至少需要 8 個字符
                   </p>
                 </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={handleCloseResetPasswordModal}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    onClick={handleResetPassword}
-                    disabled={!resetPasswordModal.newPassword || resetPasswordModal.newPassword.length < 8}
-                  >
-                    重設密碼
-                  </Button>
-                </div>
               </div>
-            )}
-          </Modal>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseResetPasswordModal}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleResetPassword}
+                  disabled={!resetPasswordModal.newPassword || resetPasswordModal.newPassword.length < 8}
+                >
+                  重設密碼
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-          {/* Top Up Modal */}
-          <Modal
-            isOpen={topUpModal.isOpen}
-            onClose={handleCloseTopUpModal}
-            title="儲值"
-          >
-            {topUpModal.member && (
+          {/* Top Up Dialog */}
+          <Dialog open={topUpModal.isOpen} onOpenChange={handleCloseTopUpModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>儲值</DialogTitle>
+                <DialogDescription>
+                  為用戶 <strong>{topUpModal.member?.user?.name || topUpModal.member?.user?.email}</strong> 儲值
+                  <br />
+                  目前儲值餘額：{formatCurrency(topUpModal.member?.balance || 0)}
+                </DialogDescription>
+              </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    為用戶 <strong>{topUpModal.member.user.name || topUpModal.member.user.email}</strong> 儲值
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    目前儲值餘額：{formatCurrency(topUpModal.member.balance || 0)}
-                  </p>
-                </div>
-                
                 <div>
                   <label htmlFor="topUpAmount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     儲值金額
@@ -546,43 +543,37 @@ export default function AdminMembersPage() {
                     儲值金額必須大於 0
                   </p>
                 </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={handleCloseTopUpModal}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    onClick={handleTopUp}
-                    disabled={!topUpModal.amount || parseInt(topUpModal.amount) <= 0}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    確認儲值
-                  </Button>
-                </div>
               </div>
-            )}
-          </Modal>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseTopUpModal}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleTopUp}
+                  disabled={!topUpModal.amount || parseInt(topUpModal.amount) <= 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  確認儲值
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-          {/* Adjust Balance Modal */}
-          <Modal
-            isOpen={adjustBalanceModal.isOpen}
-            onClose={handleCloseAdjustBalanceModal}
-            title="調整餘額"
-          >
-            {adjustBalanceModal.member && (
+          {/* Adjust Balance Dialog */}
+          <Dialog open={adjustBalanceModal.isOpen} onOpenChange={handleCloseAdjustBalanceModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>調整餘額</DialogTitle>
+                <DialogDescription>
+                  為用戶 <strong>{adjustBalanceModal.member?.user?.name || adjustBalanceModal.member?.user?.email}</strong> 調整儲值餘額
+                  <br />
+                  目前儲值餘額：{formatCurrency(adjustBalanceModal.member?.balance || 0)}
+                </DialogDescription>
+              </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    為用戶 <strong>{adjustBalanceModal.member.user.name || adjustBalanceModal.member.user.email}</strong> 調整儲值餘額
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    目前儲值餘額：{formatCurrency(adjustBalanceModal.member.balance || 0)}
-                  </p>
-                </div>
-                
                 <div>
                   <label htmlFor="adjustAmount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     新餘額
@@ -603,25 +594,54 @@ export default function AdminMembersPage() {
                     餘額不能為負數
                   </p>
                 </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={handleCloseAdjustBalanceModal}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    onClick={handleAdjustBalance}
-                    disabled={!adjustBalanceModal.amount || parseInt(adjustBalanceModal.amount) < 0}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    確認調整
-                  </Button>
-                </div>
               </div>
-            )}
-          </Modal>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseAdjustBalanceModal}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleAdjustBalance}
+                  disabled={!adjustBalanceModal.amount || parseInt(adjustBalanceModal.amount) < 0}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  確認調整
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* 儲值紀錄 Modal */}
+          {showTopupModal && (
+            <Dialog open={showTopupModal} onOpenChange={setShowTopupModal}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>儲值紀錄</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {topupHistory.length === 0 ? (
+                    <p>尚無儲值紀錄</p>
+                  ) : (
+                    topupHistory.map((t) => (
+                      <div key={t.id} className="flex justify-between items-center">
+                        <div className="flex flex-col">
+                          <span>{new Date(t.createdAt).toLocaleString()}</span>
+                          <span className="text-sm text-gray-500">
+                            {t.operator?.name 
+                               ? `${t.operator.name} (${t.operator.email})` 
+                               : t.operator?.email ?? '未知'}
+                          </span>
+                        </div>
+                        <span className="text-sm text-green-600">+ NT${t.amount}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
     </div>
   );
 }

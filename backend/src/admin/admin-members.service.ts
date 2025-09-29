@@ -4,85 +4,28 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AdminMembersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    console.log('🏗️ AdminMembersService constructor called');
+  }
 
   async findAll(filters?: { search?: string; role?: string; status?: string }) {
-    console.log('AdminMembersService.findAll called with filters:', filters);
-    
-    const where: any = {};
-
-    // 構建 user 條件
-    const userConditions: any = {};
-    
-    if (filters?.search) {
-      userConditions.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { email: { contains: filters.search, mode: 'insensitive' } },
-      ];
+    try {
+      const members = await this.prisma.member.findMany({
+        include: { user: true },
+        orderBy: { id: 'desc' },
+      });
+      console.log('DEBUG members:', JSON.stringify(members, null, 2));
+      return members;
+    } catch (error) {
+      console.error('ERROR in findAll members:', error);
+      throw error;
     }
-
-    if (filters?.role) {
-      userConditions.role = filters.role;
-    }
-
-    if (filters?.status) {
-      userConditions.status = filters.status;
-    }
-
-    // 只有在有條件時才設置 where.user
-    if (Object.keys(userConditions).length > 0) {
-      where.user = userConditions;
-    }
-
-    console.log('AdminMembersService.findAll where clause:', where);
-
-    const result = await this.prisma.member.findMany({
-      where,
-      select: {
-        id: true,
-        totalSpent: true,
-        balance: true,
-        membershipLevel: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            status: true,
-            createdAt: true,
-            updatedAt: true,
-          }
-        },
-      },
-      orderBy: { id: 'desc' },
-    });
-
-    console.log('AdminMembersService.findAll result:', result.length, 'records');
-    return result;
   }
 
   async findOne(id: string) {
     const member = await this.prisma.member.findUnique({
-      where: { id: parseInt(id) },
-      select: {
-        id: true,
-        totalSpent: true,
-        balance: true,
-        membershipLevel: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            role: true,
-            status: true,
-            createdAt: true,
-            updatedAt: true,
-          }
-        },
-      },
+      where: { id },
+      include: { user: true },
     });
 
     if (!member) {
@@ -91,7 +34,7 @@ export class AdminMembersService {
 
     // 取得會員的預約紀錄
     const appointments = await this.prisma.appointment.findMany({
-      where: { userId: member.user.id },
+      where: { userId: member.userId },
       include: {
         service: { select: { name: true, price: true } },
         artist: { select: { name: true } },
@@ -101,7 +44,7 @@ export class AdminMembersService {
 
     // 取得會員的訂單紀錄
     const orders = await this.prisma.order.findMany({
-      where: { memberId: member.user.id },
+      where: { memberId: member.userId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -118,7 +61,7 @@ export class AdminMembersService {
     }
 
     const member = await this.prisma.member.findUnique({ 
-      where: { id: parseInt(id) },
+      where: { id },
       include: { user: true }
     });
     if (!member) {
@@ -126,7 +69,7 @@ export class AdminMembersService {
     }
 
     return this.prisma.user.update({
-      where: { id: member.user.id },
+      where: { id: member.userId },
       data: { role: role as any },
       select: {
         id: true,
@@ -144,7 +87,7 @@ export class AdminMembersService {
     }
 
     const member = await this.prisma.member.findUnique({ 
-      where: { id: parseInt(id) },
+      where: { id },
       include: { user: true }
     });
     if (!member) {
@@ -152,7 +95,7 @@ export class AdminMembersService {
     }
 
     return this.prisma.user.update({
-      where: { id: member.user.id },
+      where: { id: member.userId },
       data: { status: status as any },
       select: {
         id: true,
@@ -170,7 +113,7 @@ export class AdminMembersService {
     }
 
     const member = await this.prisma.member.findUnique({ 
-      where: { id: parseInt(id) },
+      where: { id },
       include: { user: true }
     });
     if (!member) {
@@ -180,7 +123,7 @@ export class AdminMembersService {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     return this.prisma.user.update({
-      where: { id: member.user.id },
+      where: { id: member.userId },
       data: { hashedPassword },
       select: {
         id: true,
@@ -252,7 +195,7 @@ export class AdminMembersService {
   }) {
     return this.prisma.$transaction(async (tx) => {
       const member = await tx.member.findUnique({
-        where: { id: parseInt(id) },
+        where: { id },
         include: { user: true }
       });
 
@@ -263,7 +206,7 @@ export class AdminMembersService {
       // 更新 User
       if (data.name || data.email || data.phone) {
         await tx.user.update({
-          where: { id: member.user.id },
+          where: { id: member.userId },
           data: {
             ...(data.name && { name: data.name }),
             ...(data.email && { email: data.email }),
@@ -274,7 +217,7 @@ export class AdminMembersService {
 
       // 更新 Member
       const updatedMember = await tx.member.update({
-        where: { id: parseInt(id) },
+        where: { id },
         data: {
           ...(data.totalSpent !== undefined && { totalSpent: data.totalSpent }),
           ...(data.balance !== undefined && { balance: data.balance }),
@@ -302,7 +245,7 @@ export class AdminMembersService {
   async deleteMember(id: string) {
     return this.prisma.$transaction(async (tx) => {
       const member = await tx.member.findUnique({
-        where: { id: parseInt(id) },
+        where: { id },
         include: { user: true }
       });
 
@@ -312,15 +255,56 @@ export class AdminMembersService {
 
       // 刪除 Member
       await tx.member.delete({
-        where: { id: parseInt(id) },
+        where: { id },
       });
 
       // 刪除 User
       await tx.user.delete({
-        where: { id: member.user.id },
+        where: { id: member.userId },
       });
 
       return { message: '會員已刪除' };
     });
+  }
+
+  async topupUser(memberId: string, amount: number, operatorId: string) {
+    // 如果沒有 operatorId，使用預設的管理員 ID
+    const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
+    
+    return this.prisma.$transaction(async (tx) => {
+      const member = await tx.member.update({
+        where: { id: memberId },
+        data: { balance: { increment: amount } },
+      });
+
+      await tx.topupHistory.create({
+        data: {
+          memberId,
+          operatorId: finalOperatorId,
+          amount,
+        },
+      });
+
+      return member;
+    });
+  }
+
+  async getTopupHistory(id: string) {
+    console.log('🔍 getTopupHistory called with id:', id);
+    const result = await this.prisma.topupHistory.findMany({
+      where: { memberId: id },
+      include: {
+        operator: {
+          select: {
+            id: true,
+            email: true,
+            name: true,   // ✅ 確保回傳 name
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    console.log('🔍 getTopupHistory result:', JSON.stringify(result, null, 2));
+    return result;
   }
 }

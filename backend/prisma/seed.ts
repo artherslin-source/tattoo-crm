@@ -8,15 +8,59 @@ async function main() {
   console.log('🌱 開始執行 Prisma seeding...');
 
   // 清理現有資料（按外鍵約束順序）
-  await prisma.installment.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.appointment.deleteMany();
-  await prisma.artist.deleteMany();
-  await prisma.member.deleteMany();
-  await prisma.serviceHistory.deleteMany();
-  await prisma.service.deleteMany();
-  await prisma.branch.deleteMany();
-  await prisma.user.deleteMany();
+  try {
+    await prisma.installment.deleteMany();
+  } catch (e) {
+    console.log('⚠️ Installment 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.order.deleteMany();
+  } catch (e) {
+    console.log('⚠️ Order 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.appointment.deleteMany();
+  } catch (e) {
+    console.log('⚠️ Appointment 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.artist.deleteMany();
+  } catch (e) {
+    console.log('⚠️ Artist 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.member.deleteMany();
+  } catch (e) {
+    console.log('⚠️ Member 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.serviceHistory.deleteMany();
+  } catch (e) {
+    console.log('⚠️ ServiceHistory 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.service.deleteMany();
+  } catch (e) {
+    console.log('⚠️ Service 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.branch.deleteMany();
+  } catch (e) {
+    console.log('⚠️ Branch 表不存在，跳過清理');
+  }
+  
+  try {
+    await prisma.user.deleteMany();
+  } catch (e) {
+    console.log('⚠️ User 表不存在，跳過清理');
+  }
 
   console.log('✅ 清理現有資料完成');
 
@@ -79,17 +123,17 @@ async function main() {
   // 4. 建立 5 個會員（分配到不同分店，包含財務資料）
   const members: any[] = [];
   const memberData = [
-    { name: "User One", email: "user1@test.com", totalSpent: 5000, balance: 1000, membershipLevel: "Gold" },
-    { name: "User Two", email: "user2@test.com", totalSpent: 12000, balance: 2500, membershipLevel: "Platinum" },
-    { name: "User Three", email: "user3@test.com", totalSpent: 8000, balance: 500, membershipLevel: "Silver" },
-    { name: "User Four", email: "user4@test.com", totalSpent: 15000, balance: 3000, membershipLevel: "Platinum" },
-    { name: "User Five", email: "user5@test.com", totalSpent: 3000, balance: 800, membershipLevel: "Bronze" },
+    { name: "Member One", totalSpent: 5000, balance: 1000, membershipLevel: "Gold" },
+    { name: "Member Two", totalSpent: 12000, balance: 2500, membershipLevel: "Platinum" },
+    { name: "Member Three", totalSpent: 8000, balance: 500, membershipLevel: "Silver" },
+    { name: "Member Four", totalSpent: 15000, balance: 3000, membershipLevel: "Platinum" },
+    { name: "Member Five", totalSpent: 3000, balance: 800, membershipLevel: "Bronze" },
   ];
   
   for (let i = 0; i < 5; i++) {
     const user = await prisma.user.create({
       data: {
-        email: memberData[i].email,
+        email: `member${i + 1}@test.com`,
         hashedPassword,
         name: memberData[i].name,
         role: 'MEMBER',
@@ -118,9 +162,9 @@ async function main() {
   // 5. 建立 3 個刺青師
   const artists: any[] = [];
   const artistData = [
-    { name: "Tattoo Master A", bio: "專精日式刺青", speciality: "日式傳統刺青" },
-    { name: "Tattoo Master B", bio: "專精幾何圖騰", speciality: "幾何圖騰設計" },
-    { name: "Tattoo Master C", bio: "專精黑灰寫實", speciality: "黑灰寫實風格" },
+    { name: "Artist One", bio: "專精日式刺青，擁有10年經驗", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1" },
+    { name: "Artist Two", bio: "專精幾何圖騰，現代風格專家", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2" },
+    { name: "Artist Three", bio: "專精黑灰寫實，細節完美主義者", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3" },
   ];
   
   for (let i = 0; i < 3; i++) {
@@ -142,11 +186,13 @@ async function main() {
         displayName: artistData[i].name,
         bio: artistData[i].bio,
         speciality: artistData[i].speciality,
+        portfolioUrl: artistData[i].portfolioUrl,
         styles: [
           faker.helpers.arrayElement(['Traditional', 'Realistic', 'Japanese', 'Blackwork', 'Watercolor']),
           faker.helpers.arrayElement(['Geometric', 'Minimalist', 'Portrait', 'Nature', 'Abstract']),
         ],
         branchId: branches[i].id,
+        active: true,
         createdAt: faker.date.past(),
       },
     });
@@ -300,7 +346,7 @@ async function main() {
   console.log('📊 資料統計：');
   console.log(`   - BOSS: 1 個 (admin@test.com / 12345678)`);
   console.log(`   - 分店經理: ${managers.length} 個 (manager1@test.com, manager2@test.com, manager3@test.com / 12345678)`);
-  console.log(`   - 會員: ${members.length} 個 (user1@test.com ~ user5@test.com / 12345678)`);
+  console.log(`   - 會員: ${members.length} 個 (member1@test.com ~ member5@test.com / 12345678)`);
   console.log(`   - 刺青師: ${artists.length} 個 (artist1@test.com ~ artist3@test.com / 12345678)`);
   console.log(`   - 分店: ${branches.length} 個`);
   console.log(`   - 服務: ${services.length} 個`);

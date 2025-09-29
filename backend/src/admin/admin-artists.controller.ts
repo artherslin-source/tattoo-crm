@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req } fro
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { ArtistsService } from '../artists/artists.service';
+import { AdminArtistsService } from './admin-artists.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { z } from 'zod';
 
@@ -11,7 +11,8 @@ const CreateArtistSchema = z.object({
   email: z.string().email(),
   branchId: z.string().optional(),
   speciality: z.string().optional(),
-  specialties: z.array(z.string()).optional(),
+  portfolioUrl: z.string().optional(),
+  active: z.boolean().optional(),
 });
 
 const UpdateArtistSchema = CreateArtistSchema.partial();
@@ -21,42 +22,33 @@ const UpdateArtistSchema = CreateArtistSchema.partial();
 @Roles('BOSS', 'BRANCH_MANAGER')
 export class AdminArtistsController {
   constructor(
-    private readonly artistsService: ArtistsService,
+    private readonly adminArtistsService: AdminArtistsService,
     private readonly prisma: PrismaService
   ) {}
 
-  @Get()
-  async findAll(@Req() req: any) {
-    const where: any = {};
-    
-    // 如果不是 BOSS，只能查看自己分店的刺青師
-    if (req.user.role !== 'BOSS') {
-      where.branchId = req.user.branchId;
-    }
-
+  @Get('direct-test')
+  async directTest() {
+    console.log('🧪 Direct Prisma test');
     return this.prisma.artist.findMany({
-      where,
-      select: {
-        id: true,
-        speciality: true,
-        portfolioUrl: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-        user: { 
-          select: { 
-            id: true, 
-            name: true, 
-            email: true, 
-            role: true,
-            status: true,
-            createdAt: true 
-          } 
-        },
-        branch: { select: { id: true, name: true } },
-      },
+      include: { user: true },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  @Get()
+  async findAll(@Req() req: any) {
+    console.log('🎯 AdminArtistsController.findAll called');
+    try {
+      console.log('🔧 Trying to call adminArtistsService.findAll()');
+      return this.adminArtistsService.findAll();
+    } catch (error) {
+      console.log('❌ Error calling adminArtistsService:', error);
+      console.log('🔧 Trying direct Prisma query as fallback');
+      return this.prisma.artist.findMany({
+        include: { user: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
   }
 
   @Post()
@@ -70,164 +62,36 @@ export class AdminArtistsController {
       throw new Error('需要指定分店 ID');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      // 創建 User
-      const user = await tx.user.create({
-        data: {
-          name: input.name,
-          email: input.email,
-          hashedPassword: 'temp_password_12345678', // 臨時密碼，需要後續修改
-          role: 'ARTIST',
-          branchId,
-        },
-      });
-
-      // 創建 Artist
-      const artist = await tx.artist.create({
-        data: {
-          userId: user.id,
-          branchId,
-          displayName: input.name,
-          speciality: input.speciality,
-        },
-        select: {
-          id: true,
-          speciality: true,
-          portfolioUrl: true,
-          active: true,
-          createdAt: true,
-          updatedAt: true,
-          user: { 
-            select: { 
-              id: true, 
-              name: true, 
-              email: true, 
-              role: true,
-              status: true,
-              createdAt: true 
-            } 
-          },
-          branch: { select: { id: true, name: true } },
-        },
-      });
-
-      return artist;
+    return this.adminArtistsService.create({
+      name: input.name,
+      email: input.email,
+      password: 'temp_password_12345678', // 臨時密碼，需要後續修改
+      branchId,
+      speciality: input.speciality,
+      portfolioUrl: input.portfolioUrl,
     });
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    const artist = await this.prisma.artist.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        speciality: true,
-        portfolioUrl: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-        user: { 
-          select: { 
-            id: true, 
-            name: true, 
-            email: true, 
-            phone: true,
-            role: true,
-            status: true,
-            createdAt: true 
-          } 
-        },
-        branch: { select: { id: true, name: true } },
-      },
-    });
-
-    if (!artist) {
-      throw new Error('刺青師不存在');
-    }
-
-    return artist;
+    return this.adminArtistsService.findOne(id);
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() body: unknown) {
     const input = UpdateArtistSchema.parse(body);
 
-    return this.prisma.$transaction(async (tx) => {
-      const artist = await tx.artist.findUnique({
-        where: { id },
-        include: { user: true }
-      });
-
-      if (!artist) {
-        throw new Error('刺青師不存在');
-      }
-
-      // 更新 User
-      if (input.name || input.email) {
-        await tx.user.update({
-          where: { id: artist.user.id },
-          data: {
-            ...(input.name && { name: input.name }),
-            ...(input.email && { email: input.email }),
-          },
-        });
-      }
-
-      // 更新 Artist
-      const updatedArtist = await tx.artist.update({
-        where: { id },
-        data: {
-          ...(input.speciality && { speciality: input.speciality }),
-          ...(input.name && { displayName: input.name }),
-        },
-        select: {
-          id: true,
-          speciality: true,
-          portfolioUrl: true,
-          active: true,
-          createdAt: true,
-          updatedAt: true,
-          user: { 
-            select: { 
-              id: true, 
-              name: true, 
-              email: true, 
-              role: true,
-              status: true,
-              createdAt: true 
-            } 
-          },
-          branch: { select: { id: true, name: true } },
-        },
-      });
-
-      return updatedArtist;
+    return this.adminArtistsService.update(id, {
+      name: input.name,
+      email: input.email,
+      speciality: input.speciality,
+      portfolioUrl: input.portfolioUrl,
+      active: input.active,
     });
   }
 
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const artist = await tx.artist.findUnique({
-        where: { id },
-        include: { user: true }
-      });
-
-      if (!artist) {
-        throw new Error('刺青師不存在');
-      }
-
-      // 刪除 Artist
-      await tx.artist.delete({
-        where: { id },
-      });
-
-      // 刪除 User
-      await tx.user.delete({
-        where: { id: artist.user.id },
-      });
-
-      return { message: '刺青師已刪除' };
-    });
+    return this.adminArtistsService.delete(id);
   }
 }
