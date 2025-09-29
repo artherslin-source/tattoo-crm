@@ -34,7 +34,7 @@ export class AuthService {
         phone: input.phone ?? null,
       },
     });
-    return this.issueTokens(user.id, user.email, user.role);
+    return this.issueTokens(user.id, user.email, user.role || 'USER');
   }
 
   async login(input: LoginDto) {
@@ -52,7 +52,7 @@ export class AuthService {
       data: { lastLogin: new Date() },
     });
     
-    return this.issueTokens(user.id, user.email, user.role, user.branchId || undefined);
+    return this.issueTokens(user.id, user.email, user.role || 'USER', user.branchId || undefined);
   }
 
   async refresh(refreshToken: string) {

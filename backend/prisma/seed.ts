@@ -120,17 +120,20 @@ async function main() {
   }
   console.log('✅ 建立 3 個分店經理');
 
-  // 4. 建立 5 個會員（分配到不同分店，包含財務資料）
+  // 4. 建立 8 個會員（分配到不同分店，包含財務資料）
   const members: any[] = [];
   const memberData = [
-    { name: "Member One", totalSpent: 5000, balance: 1000, membershipLevel: "Gold" },
-    { name: "Member Two", totalSpent: 12000, balance: 2500, membershipLevel: "Platinum" },
-    { name: "Member Three", totalSpent: 8000, balance: 500, membershipLevel: "Silver" },
-    { name: "Member Four", totalSpent: 15000, balance: 3000, membershipLevel: "Platinum" },
-    { name: "Member Five", totalSpent: 3000, balance: 800, membershipLevel: "Bronze" },
+    { name: "張小明", totalSpent: 25000, balance: 5000, membershipLevel: "Gold" },
+    { name: "李美華", totalSpent: 45000, balance: 8000, membershipLevel: "Platinum" },
+    { name: "王大偉", totalSpent: 15000, balance: 2000, membershipLevel: "Silver" },
+    { name: "陳雅婷", totalSpent: 60000, balance: 12000, membershipLevel: "Platinum" },
+    { name: "林志強", totalSpent: 8000, balance: 1500, membershipLevel: "Bronze" },
+    { name: "黃淑芬", totalSpent: 35000, balance: 6000, membershipLevel: "Gold" },
+    { name: "劉建國", totalSpent: 20000, balance: 3000, membershipLevel: "Silver" },
+    { name: "吳佳玲", totalSpent: 50000, balance: 10000, membershipLevel: "Platinum" },
   ];
   
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     const user = await prisma.user.create({
       data: {
         email: `member${i + 1}@test.com`,
@@ -157,17 +160,20 @@ async function main() {
 
     members.push({ ...user, member });
   }
-  console.log('✅ 建立 5 個會員帳號（包含財務資料）');
+  console.log('✅ 建立 8 個會員帳號（包含財務資料）');
 
-  // 5. 建立 3 個刺青師
+  // 5. 建立 6 個刺青師
   const artists: any[] = [];
   const artistData = [
-    { name: "Artist One", bio: "專精日式刺青，擁有10年經驗", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1" },
-    { name: "Artist Two", bio: "專精幾何圖騰，現代風格專家", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2" },
-    { name: "Artist Three", bio: "專精黑灰寫實，細節完美主義者", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3" },
+    { name: "阿龍師傅", bio: "專精日式刺青，擁有15年經驗，擅長龍鳳、櫻花等傳統圖案", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1" },
+    { name: "小美設計師", bio: "專精幾何圖騰，現代風格專家，擅長線條藝術", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2" },
+    { name: "黑灰大師", bio: "專精黑灰寫實，細節完美主義者，擅長肖像刺青", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3" },
+    { name: "彩色達人", bio: "專精彩色刺青，色彩搭配專家，擅長水彩風格", speciality: "彩色刺青", portfolioUrl: "https://portfolio.example.com/artist4" },
+    { name: "小圖專家", bio: "專精小圖案刺青，精細工藝，擅長文字和符號", speciality: "小圖案刺青", portfolioUrl: "https://portfolio.example.com/artist5" },
+    { name: "修復師傅", bio: "專精刺青修復和覆蓋，讓舊刺青重獲新生", speciality: "刺青修復", portfolioUrl: "https://portfolio.example.com/artist6" },
   ];
   
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 6; i++) {
     const artistUser = await prisma.user.create({
       data: {
         email: `artist${i + 1}@test.com`,
@@ -175,7 +181,7 @@ async function main() {
         name: artistData[i].name,
         role: 'ARTIST',
         phone: faker.phone.number(),
-        branchId: branches[i].id,
+        branchId: branches[i % 3].id,
         createdAt: faker.date.past(),
       },
     });
@@ -191,45 +197,49 @@ async function main() {
           faker.helpers.arrayElement(['Traditional', 'Realistic', 'Japanese', 'Blackwork', 'Watercolor']),
           faker.helpers.arrayElement(['Geometric', 'Minimalist', 'Portrait', 'Nature', 'Abstract']),
         ],
-        branchId: branches[i].id,
+        branchId: branches[i % 3].id,
         active: true,
         createdAt: faker.date.past(),
       },
     });
     artists.push({ ...artist, user: artistUser });
   }
-  console.log('✅ 建立 3 個刺青師');
+  console.log('✅ 建立 6 個刺青師');
 
 
-  // 6. 建立 6 個服務
+  // 6. 建立 10 個服務
   const services: any[] = [];
-  const serviceNames = [
-    '小圖案刺青',
-    '大圖案刺青',
-    '刺青修復',
-    '彩色刺青',
-    '黑白刺青',
-    '文字刺青',
+  const serviceData = [
+    { name: '小圖案刺青', price: 3000, duration: 60, category: 'Basic' },
+    { name: '大圖案刺青', price: 15000, duration: 300, category: 'Advanced' },
+    { name: '刺青修復', price: 8000, duration: 180, category: 'Repair' },
+    { name: '彩色刺青', price: 12000, duration: 240, category: 'Color' },
+    { name: '黑白刺青', price: 10000, duration: 200, category: 'Blackwork' },
+    { name: '文字刺青', price: 2500, duration: 45, category: 'Text' },
+    { name: '日式傳統刺青', price: 20000, duration: 360, category: 'Traditional' },
+    { name: '幾何圖騰', price: 8000, duration: 150, category: 'Geometric' },
+    { name: '肖像刺青', price: 25000, duration: 480, category: 'Portrait' },
+    { name: '水彩風格', price: 18000, duration: 300, category: 'Watercolor' },
   ];
   
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 10; i++) {
     const service = await prisma.service.create({
       data: {
-        name: serviceNames[i],
-        description: faker.lorem.sentence(),
-        price: faker.number.int({ min: 2000, max: 15000 }),
-        durationMin: faker.number.int({ min: 60, max: 300 }),
-        category: faker.helpers.arrayElement(['Traditional', 'Modern', 'Custom']),
+        name: serviceData[i].name,
+        description: `${serviceData[i].name}服務，專業技術，品質保證`,
+        price: serviceData[i].price,
+        durationMin: serviceData[i].duration,
+        category: serviceData[i].category,
         createdAt: faker.date.past(),
       },
     });
     services.push(service);
   }
-  console.log('✅ 建立 6 個服務');
+  console.log('✅ 建立 10 個服務');
 
-  // 7. 建立 6 個預約
+  // 7. 建立 15 個預約
   const appointments: any[] = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 15; i++) {
     const member = faker.helpers.arrayElement(members);
     const artist = faker.helpers.arrayElement(artists);
     const service = faker.helpers.arrayElement(services);
@@ -253,13 +263,13 @@ async function main() {
     });
     appointments.push(appointment);
   }
-  console.log('✅ 建立 6 個預約');
+  console.log('✅ 建立 15 個預約');
 
-  // 8. 建立 15 個訂單
+  // 8. 建立 25 個訂單
   const orders: any[] = [];
   const usedAppointments = new Set();
   
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 25; i++) {
     const member = faker.helpers.arrayElement(members);
     const branch = faker.helpers.arrayElement(branches);
     const service = faker.helpers.arrayElement(services);
@@ -340,14 +350,14 @@ async function main() {
       }
     }
   }
-  console.log('✅ 建立 15 個訂單（包含分期記錄）');
+  console.log('✅ 建立 25 個訂單（包含分期記錄）');
 
   console.log('🎉 Seeding 完成！');
   console.log('📊 資料統計：');
   console.log(`   - BOSS: 1 個 (admin@test.com / 12345678)`);
   console.log(`   - 分店經理: ${managers.length} 個 (manager1@test.com, manager2@test.com, manager3@test.com / 12345678)`);
-  console.log(`   - 會員: ${members.length} 個 (member1@test.com ~ member5@test.com / 12345678)`);
-  console.log(`   - 刺青師: ${artists.length} 個 (artist1@test.com ~ artist3@test.com / 12345678)`);
+  console.log(`   - 會員: ${members.length} 個 (member1@test.com ~ member8@test.com / 12345678)`);
+  console.log(`   - 刺青師: ${artists.length} 個 (artist1@test.com ~ artist6@test.com / 12345678)`);
   console.log(`   - 分店: ${branches.length} 個`);
   console.log(`   - 服務: ${services.length} 個`);
   console.log(`   - 預約: ${appointments.length} 個`);

@@ -28,18 +28,28 @@ interface AdjustBalanceDto {
 }
 
 @Controller('users')
-@UseGuards(AuthGuard('jwt'), RolesGuard, BranchGuard)
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
   async me(@Req() req: any) {
-    return this.usersService.me(req.user.userId);
+    console.log('DEBUG req.user:', req.user);
+    console.log('DEBUG req.user.id:', req.user?.id);
+    console.log('DEBUG req.user type:', typeof req.user);
+    console.log('DEBUG req.user keys:', req.user ? Object.keys(req.user) : 'req.user is null/undefined');
+    
+    if (!req.user || !req.user.id) {
+      console.log('ERROR: req.user or req.user.id is missing');
+      throw new Error('User not authenticated or missing ID');
+    }
+    
+    return this.usersService.me(req.user.id);
   }
 
   @Patch('me')
   async updateMe(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.updateMe(req.user.userId, updateUserDto);
+    return this.usersService.updateMe(req.user.id, updateUserDto);
   }
 
   @Get()
