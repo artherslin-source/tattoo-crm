@@ -30,9 +30,9 @@ interface PortfolioItem {
 }
 
 const AVAILABLE_TAGS = [
-  '黑白', '彩色', '日系', '美式', '小清新', '寫實', '幾何', '水彩',
-  '傳統', '現代', '極簡', '復古', '卡通', '動物', '植物', '人物',
-  '文字', '圖騰', '曼陀羅', '其他'
+  '背後左或右圖', '半胛圖', '排胛圖', '腹肚圖', '大背到大腿圖', '大背後圖', '大腿表面', '大腿全包',
+  '大小腿包全肢', '單胸腹肚圖', '單胸到包全手', '單胸口', '前手臂', '小腿表面', '小腿全包', 
+  '上下手臂全肢', '上手臂', '雙前胸口圖', '雙胸到腹肚圖'
 ];
 
 export default function ArtistPortfolio() {
@@ -225,17 +225,17 @@ export default function ArtistPortfolio() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8">
       {/* 頁面標題和操作 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">作品管理</h1>
-          <p className="text-gray-600 mt-2">管理您的刺青作品集</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">作品管理</h1>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">管理您的刺青作品集</p>
         </div>
         
         <Button
           onClick={() => setShowUploadForm(true)}
-          className="mt-4 sm:mt-0"
+          className="w-full sm:w-auto"
         >
           <Plus className="mr-2 h-4 w-4" />
           新增作品
@@ -243,7 +243,7 @@ export default function ArtistPortfolio() {
       </div>
 
       {/* 搜尋和篩選 */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4">
         <div className="relative flex-1">
           <Input
             placeholder="搜尋作品標題或描述..."
@@ -252,23 +252,30 @@ export default function ArtistPortfolio() {
           />
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          {AVAILABLE_TAGS.map(tag => (
-            <Badge
-              key={tag}
-              variant={selectedTags.includes(tag) ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => {
-                setSelectedTags(prev => 
-                  prev.includes(tag) 
-                    ? prev.filter(t => t !== tag)
-                    : [...prev, tag]
-                );
-              }}
-            >
-              {tag}
-            </Badge>
-          ))}
+        {/* 標籤篩選 - 響應式佈局 */}
+        <div className="w-full">
+          <div className="grid grid-rows-2 grid-flow-col gap-2 sm:gap-3 md:gap-4 max-w-full overflow-x-auto">
+            {AVAILABLE_TAGS.map(tag => (
+              <Badge
+                key={tag}
+                variant="outline"
+                className={`cursor-pointer transition-all duration-200 text-center text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 whitespace-nowrap ${
+                  selectedTags.includes(tag) 
+                    ? 'bg-orange-500 border-white text-white hover:bg-orange-600' 
+                    : 'hover:bg-gray-100'
+                }`}
+                onClick={() => {
+                  setSelectedTags(prev => 
+                    prev.includes(tag) 
+                      ? prev.filter(t => t !== tag)
+                      : [...prev, tag]
+                  );
+                }}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -310,12 +317,16 @@ export default function ArtistPortfolio() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   標籤
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-rows-2 grid-flow-col gap-2 sm:gap-3 md:gap-4 max-w-full overflow-x-auto">
                   {AVAILABLE_TAGS.map(tag => (
                     <Badge
                       key={tag}
-                      variant={formData.tags.includes(tag) ? "default" : "outline"}
-                      className="cursor-pointer"
+                      variant="outline"
+                      className={`cursor-pointer transition-all duration-200 text-center text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 whitespace-nowrap ${
+                        formData.tags.includes(tag) 
+                          ? 'bg-orange-500 border-white text-white hover:bg-orange-600' 
+                          : 'hover:bg-gray-100'
+                      }`}
                       onClick={() => handleTagToggle(tag)}
                     >
                       {tag}
@@ -401,7 +412,7 @@ export default function ArtistPortfolio() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {filteredItems.map((item) => (
             <Card key={item.id} className="overflow-hidden">
               <div className="aspect-square relative">

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CalendarView from "@/components/CalendarView";
+import SimpleCalendarView from "@/components/SimpleCalendarView";
 import { 
   Calendar, 
   Clock, 
@@ -52,9 +52,14 @@ export default function ArtistAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
+  // 移除 period 狀態，因為現在顯示所有行程
   const [updating, setUpdating] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  
+  // 分頁相關狀態
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     appointment: Appointment | null;
@@ -67,13 +72,30 @@ export default function ArtistAppointments() {
 
   useEffect(() => {
     fetchAppointments();
-  }, [period]);
+  }, []); // 只在組件掛載時獲取一次
+
+  // 當切換到日曆檢視時，獲取更廣泛的行程數據
+  useEffect(() => {
+    if (viewMode === 'calendar') {
+      // 獲取未來 3 個月的行程數據
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 3, 0, 23, 59, 59);
+      
+      fetchAppointmentsByRange(startDate.toISOString(), endDate.toISOString());
+    }
+  }, [viewMode]);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth(`/artist/appointments?period=${period}`);
+      console.log('Fetching all appointments');
+      // 獲取所有行程，不再限制於特定期間
+      const data = await getJsonWithAuth(`/artist/appointments`);
+      console.log('Fetched appointments data:', data);
       setAppointments(data);
+      setTotalItems(data.length);
+      setCurrentPage(1); // 重置到第一頁
     } catch (err) {
       setError('載入行程失敗');
       console.error('Appointments fetch error:', err);
@@ -86,8 +108,14 @@ export default function ArtistAppointments() {
     try {
       console.log('Fetching appointments for range:', { startDate, endDate });
       const data = await getJsonWithAuth(`/artist/appointments/range?startDate=${startDate}&endDate=${endDate}`);
-      console.log('Fetched appointments:', data);
-      setAppointments(data);
+      console.log('Fetched appointments for range:', data);
+      
+      // 合併新獲取的數據與現有數據，避免重複
+      setAppointments(prevAppointments => {
+        const existingIds = new Set(prevAppointments.map(apt => apt.id));
+        const newAppointments = data.filter(apt => !existingIds.has(apt.id));
+        return [...prevAppointments, ...newAppointments];
+      });
     } catch (err) {
       setError('載入行程失敗');
       console.error('Appointments range fetch error:', err);
@@ -143,6 +171,31 @@ export default function ArtistAppointments() {
   const handleCancelComplete = () => {
     setConfirmDialog({ isOpen: false, appointment: null, action: '' });
   };
+
+  // 分頁計算函數
+  const getPaginatedAppointments = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return appointments.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    return Math.ceil(totalItems / itemsPerPage);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // 重置到第一頁
+  };
+
+  // 當 itemsPerPage 改變時，重新計算總頁數
+  useEffect(() => {
+    setTotalItems(appointments.length);
+  }, [appointments]);
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('zh-TW', {
@@ -247,17 +300,8 @@ export default function ArtistAppointments() {
           <p className="text-gray-600 mt-3">管理您的預約和服務安排</p>
         </div>
         
-        <div className="mt-6 sm:mt-0 flex gap-4">
-          <Select value={period} onValueChange={(value: 'today' | 'week' | 'month') => setPeriod(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">今日</SelectItem>
-              <SelectItem value="week">本週</SelectItem>
-              <SelectItem value="month">本月</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="mt-6 sm:mt-0">
+          <span className="text-sm text-gray-600">顯示所有行程</span>
         </div>
       </div>
 
@@ -275,21 +319,41 @@ export default function ArtistAppointments() {
         </TabsList>
 
         <TabsContent value="list" className="mt-6">
+          {/* 分頁控制欄 */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">每頁顯示：</span>
+                <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <span className="text-sm text-gray-600">
+                共 {totalItems} 個行程，第 {currentPage} / {getTotalPages()} 頁
+              </span>
+            </div>
+          </div>
 
-      {/* 行程列表 */}
-      {appointments.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-16">
-            <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-            <h3 className="text-lg font-medium text-gray-900 mb-3">沒有預約</h3>
-            <p className="text-gray-500">
-              {period === 'today' ? '今日' : period === 'week' ? '本週' : '本月'}沒有預約安排
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {appointments.map((appointment) => (
+          {/* 行程列表 */}
+          {appointments.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-16">
+                <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+                <h3 className="text-lg font-medium text-gray-900 mb-3">沒有預約</h3>
+                <p className="text-gray-500">目前沒有任何預約安排</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {getPaginatedAppointments().map((appointment) => (
             <Card key={appointment.id}>
               <CardHeader className="pt-6 pb-2">
                 <div className="flex items-center justify-between">
@@ -382,18 +446,68 @@ export default function ArtistAppointments() {
               </CardContent>
             </Card>
           ))}
-        </div>
-      )}
+            
+            {/* 分頁導航 */}
+            {getTotalPages() > 1 && (
+              <div className="flex items-center justify-center space-x-2 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  上一頁
+                </Button>
+                
+                {/* 頁碼按鈕 */}
+                {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map((page) => {
+                  // 只顯示當前頁前後幾頁
+                  if (
+                    page === 1 ||
+                    page === getTotalPages() ||
+                    (page >= currentPage - 2 && page <= currentPage + 2)
+                  ) {
+                    return (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        className="w-10"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  } else if (
+                    page === currentPage - 3 ||
+                    page === currentPage + 3
+                  ) {
+                    return <span key={page} className="text-gray-500">...</span>;
+                  }
+                  return null;
+                })}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === getTotalPages()}
+                >
+                  下一頁
+                </Button>
+              </div>
+            )}
+          )}
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6">
-          <CalendarView 
+          <SimpleCalendarView 
             appointments={appointments}
+            onDateRangeChange={fetchAppointmentsByRange}
             onAppointmentClick={(appointment) => {
               // 點擊日曆事件時顯示詳細資訊
               console.log('Calendar appointment clicked:', appointment);
             }}
-            onDateRangeChange={fetchAppointmentsByRange}
           />
         </TabsContent>
       </Tabs>

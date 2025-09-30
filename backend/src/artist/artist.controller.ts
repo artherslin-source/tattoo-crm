@@ -40,6 +40,52 @@ export class ArtistController {
     return this.artistService.getAppointmentsByRange(artistId, startDate, endDate);
   }
 
+  // 客戶標註相關 API
+  @Get("customers/:customerId/notes")
+  async getCustomerNotes(@Req() req, @Param('customerId') customerId: string) {
+    const artistId = req.user.id;
+    return this.artistService.getCustomerNotes(artistId, customerId);
+  }
+
+  @Post("customers/:customerId/notes")
+  async createCustomerNote(
+    @Req() req,
+    @Param('customerId') customerId: string,
+    @Body() body: { content: string }
+  ) {
+    const artistId = req.user.id;
+    return this.artistService.createCustomerNote(artistId, customerId, body.content);
+  }
+
+  @Delete("customers/notes/:noteId")
+  async deleteCustomerNote(@Req() req, @Param('noteId') noteId: string) {
+    const artistId = req.user.id;
+    return this.artistService.deleteCustomerNote(artistId, noteId);
+  }
+
+  // 客戶提醒相關 API
+  @Get("customers/:customerId/reminders")
+  async getCustomerReminders(@Req() req, @Param('customerId') customerId: string) {
+    const artistId = req.user.id;
+    return this.artistService.getCustomerReminders(artistId, customerId);
+  }
+
+  @Post("customers/:customerId/reminders")
+  async createCustomerReminder(
+    @Req() req,
+    @Param('customerId') customerId: string,
+    @Body() body: { title: string; date: string; note?: string }
+  ) {
+    const artistId = req.user.id;
+    return this.artistService.createCustomerReminder(artistId, customerId, body);
+  }
+
+  @Delete("customers/reminders/:reminderId")
+  async deleteCustomerReminder(@Req() req, @Param('reminderId') reminderId: string) {
+    const artistId = req.user.id;
+    return this.artistService.deleteCustomerReminder(artistId, reminderId);
+  }
+
   @Patch("appointments/:id/status")
   async updateAppointmentStatus(
     @Param('id') appointmentId: string,

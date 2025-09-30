@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getJsonWithAuth } from "@/lib/api";
+import { getJsonWithAuth, postJsonWithAuth, deleteJsonWithAuth } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Search,
   User,
@@ -14,7 +16,12 @@ import {
   Calendar,
   MapPin,
   FileText,
-  Users
+  Users,
+  Plus,
+  X,
+  AlertCircle,
+  Clock,
+  CheckCircle
 } from "lucide-react";
 
 interface Customer {
@@ -37,6 +44,30 @@ interface Customer {
   }[];
 }
 
+interface CustomerNote {
+  id: string;
+  content: string;
+  createdAt: string;
+  creator: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface CustomerReminder {
+  id: string;
+  title: string;
+  date: string;
+  note?: string;
+  createdAt: string;
+  creator: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 export default function ArtistCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
@@ -44,10 +75,30 @@ export default function ArtistCustomers() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  
+  // 標註和提醒相關狀態
+  const [customerNotes, setCustomerNotes] = useState<CustomerNote[]>([]);
+  const [customerReminders, setCustomerReminders] = useState<CustomerReminder[]>([]);
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [newReminder, setNewReminder] = useState({
+    title: '',
+    date: '',
+    note: ''
+  });
 
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  // 當選擇客戶時，獲取標註和提醒
+  useEffect(() => {
+    if (selectedCustomer) {
+      fetchCustomerNotes();
+      fetchCustomerReminders();
+    }
+  }, [selectedCustomer]);
 
   useEffect(() => {
     // 搜尋功能
@@ -77,6 +128,74 @@ export default function ArtistCustomers() {
     }
   };
 
+  const fetchCustomerNotes = async () => {
+    if (!selectedCustomer) return;
+    try {
+      const data = await getJsonWithAuth(`/artist/customers/${selectedCustomer.id}/notes`);
+      setCustomerNotes(data);
+    } catch (err) {
+      console.error('Customer notes fetch error:', err);
+    }
+  };
+
+  const fetchCustomerReminders = async () => {
+    if (!selectedCustomer) return;
+    try {
+      const data = await getJsonWithAuth(`/artist/customers/${selectedCustomer.id}/reminders`);
+      setCustomerReminders(data);
+    } catch (err) {
+      console.error('Customer reminders fetch error:', err);
+    }
+  };
+
+  const createCustomerNote = async () => {
+    if (!selectedCustomer || !newNoteContent.trim()) return;
+    try {
+      await postJsonWithAuth(`/artist/customers/${selectedCustomer.id}/notes`, {
+        content: newNoteContent
+      });
+      setNewNoteContent('');
+      setShowNoteDialog(false);
+      fetchCustomerNotes();
+    } catch (err) {
+      console.error('Create note error:', err);
+    }
+  };
+
+  const createCustomerReminder = async () => {
+    if (!selectedCustomer || !newReminder.title.trim() || !newReminder.date) return;
+    try {
+      await postJsonWithAuth(`/artist/customers/${selectedCustomer.id}/reminders`, {
+        title: newReminder.title,
+        date: newReminder.date,
+        note: newReminder.note
+      });
+      setNewReminder({ title: '', date: '', note: '' });
+      setShowReminderDialog(false);
+      fetchCustomerReminders();
+    } catch (err) {
+      console.error('Create reminder error:', err);
+    }
+  };
+
+  const deleteCustomerNote = async (noteId: string) => {
+    try {
+      await deleteJsonWithAuth(`/artist/customers/notes/${noteId}`);
+      fetchCustomerNotes();
+    } catch (err) {
+      console.error('Delete note error:', err);
+    }
+  };
+
+  const deleteCustomerReminder = async (reminderId: string) => {
+    try {
+      await deleteJsonWithAuth(`/artist/customers/reminders/${reminderId}`);
+      fetchCustomerReminders();
+    } catch (err) {
+      console.error('Delete reminder error:', err);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('zh-TW', {
       year: 'numeric',
@@ -93,6 +212,21 @@ export default function ArtistCustomers() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const getReminderStatus = (dateString: string) => {
+    const reminderDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    reminderDate.setHours(0, 0, 0, 0);
+    
+    if (reminderDate < today) {
+      return { status: 'overdue', text: '已到期', color: 'text-red-600' };
+    } else if (reminderDate.getTime() === today.getTime()) {
+      return { status: 'today', text: '今日到期', color: 'text-orange-600' };
+    } else {
+      return { status: 'upcoming', text: '即將到期', color: 'text-blue-600' };
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -348,10 +482,212 @@ export default function ArtistCustomers() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* 客戶標註 */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-5 w-5" />
+                      <span>客戶標註</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowNoteDialog(true)}
+                      className="flex items-center space-x-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>新增標註</span>
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {customerNotes.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">尚無標註</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {customerNotes.map((note) => (
+                        <div key={note.id} className="border rounded-lg p-3 bg-gray-50">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-gray-900">{note.content}</p>
+                              <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500">
+                                <span>建立者：{note.creator.name}</span>
+                                <span>•</span>
+                                <span>{formatDateTime(note.createdAt)}</span>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteCustomerNote(note.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 客戶提醒 */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="h-5 w-5" />
+                      <span>客戶提醒</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowReminderDialog(true)}
+                      className="flex items-center space-x-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>新增提醒</span>
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {customerReminders.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">尚無提醒</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {customerReminders.map((reminder) => {
+                        const status = getReminderStatus(reminder.date);
+                        return (
+                          <div key={reminder.id} className="border rounded-lg p-3 bg-gray-50">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <h4 className="font-medium text-gray-900">{reminder.title}</h4>
+                                  <Badge className={`text-xs ${status.color}`}>
+                                    {status.text}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>{formatDate(reminder.date)}</span>
+                                </div>
+                                {reminder.note && (
+                                  <p className="text-sm text-gray-600 bg-white p-2 rounded mt-2">
+                                    {reminder.note}
+                                  </p>
+                                )}
+                                <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500">
+                                  <span>建立者：{reminder.creator.name}</span>
+                                  <span>•</span>
+                                  <span>{formatDateTime(reminder.createdAt)}</span>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteCustomerReminder(reminder.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
       )}
+
+      {/* 新增標註對話框 */}
+      <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新增客戶標註</DialogTitle>
+            <DialogDescription>
+              為 {selectedCustomer?.name} 新增標註，記錄重要資訊或偏好
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700">標註內容</label>
+              <Textarea
+                value={newNoteContent}
+                onChange={(e) => setNewNoteContent(e.target.value)}
+                placeholder="例如：偏好黑灰寫實風格、皮膚敏感、耐痛度低..."
+                className="mt-1"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNoteDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={createCustomerNote} disabled={!newNoteContent.trim()}>
+              新增標註
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增提醒對話框 */}
+      <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新增客戶提醒</DialogTitle>
+            <DialogDescription>
+              為 {selectedCustomer?.name} 設定提醒事項
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700">提醒標題</label>
+              <Input
+                value={newReminder.title}
+                onChange={(e) => setNewReminder({ ...newReminder, title: e.target.value })}
+                placeholder="例如：下次回訪提醒、傷口修護回診"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">提醒日期</label>
+              <Input
+                type="date"
+                value={newReminder.date}
+                onChange={(e) => setNewReminder({ ...newReminder, date: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">備註（選填）</label>
+              <Textarea
+                value={newReminder.note}
+                onChange={(e) => setNewReminder({ ...newReminder, note: e.target.value })}
+                placeholder="額外的提醒資訊..."
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReminderDialog(false)}>
+              取消
+            </Button>
+            <Button 
+              onClick={createCustomerReminder} 
+              disabled={!newReminder.title.trim() || !newReminder.date}
+            >
+              新增提醒
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -60,6 +60,7 @@ export class ArtistService {
 
   // 2. 我的行程
   async getMyAppointments(artistId: string, period?: 'today' | 'week' | 'month') {
+    console.log('getMyAppointments called with period:', period);
     const now = new Date();
     let startDate: Date;
     let endDate: Date;
@@ -83,6 +84,8 @@ export class ArtistService {
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         endDate = new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 預設顯示未來 30 天
     }
+
+    console.log('Date range:', { startDate, endDate, period });
 
     const appointments = await this.prisma.appointment.findMany({
       where: {
@@ -168,6 +171,126 @@ export class ArtistService {
     });
 
     return appointments;
+  }
+
+  // 客戶標註相關方法
+  async getCustomerNotes(artistId: string, customerId: string) {
+    return this.prisma.customerNote.findMany({
+      where: {
+        customerId,
+        createdBy: artistId,
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async createCustomerNote(artistId: string, customerId: string, content: string) {
+    return this.prisma.customerNote.create({
+      data: {
+        content,
+        customerId,
+        createdBy: artistId,
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  async deleteCustomerNote(artistId: string, noteId: string) {
+    // 確保只有創建者可以刪除
+    const note = await this.prisma.customerNote.findFirst({
+      where: {
+        id: noteId,
+        createdBy: artistId,
+      },
+    });
+
+    if (!note) {
+      throw new Error('標註不存在或您沒有權限刪除此標註');
+    }
+
+    return this.prisma.customerNote.delete({
+      where: { id: noteId },
+    });
+  }
+
+  // 客戶提醒相關方法
+  async getCustomerReminders(artistId: string, customerId: string) {
+    return this.prisma.customerReminder.findMany({
+      where: {
+        customerId,
+        createdBy: artistId,
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        date: 'asc',
+      },
+    });
+  }
+
+  async createCustomerReminder(artistId: string, customerId: string, data: { title: string; date: string; note?: string }) {
+    return this.prisma.customerReminder.create({
+      data: {
+        title: data.title,
+        date: new Date(data.date),
+        note: data.note,
+        customerId,
+        createdBy: artistId,
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  async deleteCustomerReminder(artistId: string, reminderId: string) {
+    // 確保只有創建者可以刪除
+    const reminder = await this.prisma.customerReminder.findFirst({
+      where: {
+        id: reminderId,
+        createdBy: artistId,
+      },
+    });
+
+    if (!reminder) {
+      throw new Error('提醒不存在或您沒有權限刪除此提醒');
+    }
+
+    return this.prisma.customerReminder.delete({
+      where: { id: reminderId },
+    });
   }
 
   async updateAppointmentStatus(

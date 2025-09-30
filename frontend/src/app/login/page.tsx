@@ -32,6 +32,7 @@ export default function LoginPage() {
         console.error('Failed to fetch user data:', userErr);
       }
       
+      // 登入後統一跳轉到 Profile 頁面
       router.push("/profile");
     } catch (err) {
       const apiErr = err as ApiError;
