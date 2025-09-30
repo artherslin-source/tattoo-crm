@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Palette, Settings } from "lucide-react";
+import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Palette, Settings, Building2 } from "lucide-react";
 
 interface DashboardStats {
   totalUsers: number;
@@ -15,9 +15,15 @@ interface DashboardStats {
   monthlyRevenue: number;
 }
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 export default function BranchDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [branchInfo, setBranchInfo] = useState<Branch | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalServices: 0,
@@ -37,6 +43,18 @@ export default function BranchDashboardPage() {
 
     async function fetchDashboardData() {
       try {
+        const userBranchId = getUserBranchId();
+        
+        // 獲取分店資訊
+        if (userBranchId) {
+          try {
+            const branchData = await getJsonWithAuth(`/branches/${userBranchId}`);
+            setBranchInfo(branchData);
+          } catch (err) {
+            console.error('Failed to fetch branch info:', err);
+          }
+        }
+
         // 這裡可以調用多個 API 來獲取統計數據
         const [dashboardData, appointmentsData] = await Promise.all([
           getJsonWithAuth('/admin/stats'),
@@ -118,10 +136,21 @@ export default function BranchDashboardPage() {
       <div className="mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              分店管理後台
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <div className="flex items-center space-x-3 mb-2">
+              <Building2 className="h-8 w-8 text-blue-600" />
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                分店管理後台
+              </h1>
+            </div>
+            {branchInfo && (
+              <div className="mb-2">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  <Building2 className="h-4 w-4 mr-1" />
+                  {branchInfo.name}
+                </span>
+              </div>
+            )}
+            <p className="text-gray-600 dark:text-gray-400">
               歡迎回到分店管理後台，這裡是您的控制中心
             </p>
           </div>
@@ -215,7 +244,7 @@ export default function BranchDashboardPage() {
         </div>
 
         {/* Back Button */}
-        <div className="flex justify-start">
+        <div className="flex justify-end">
           <Button 
             variant="outline" 
             onClick={() => router.back()}

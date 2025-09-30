@@ -14,6 +14,7 @@ import { ServicesModule } from './services/services.module';
 import { AdminModule } from './admin/admin.module';
 import { AdminMembersModule } from './admin/admin-members.module';
 import { BranchModule } from './branch/branch.module';
+import { ArtistModule } from './artist/artist.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { BranchModule } from './branch/branch.module';
     PrismaModule,
     AuthModule,
     UsersModule,
+    ArtistModule,
     ArtistsModule,
     AppointmentsModule,
     OrdersModule,

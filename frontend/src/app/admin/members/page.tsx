@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Users, Edit, Trash2, ArrowLeft, Key, DollarSign, Wallet, History } from "lucide-react";
+import { Users, Edit, Trash2, ArrowLeft, Key, DollarSign, Wallet, History, ShoppingCart } from "lucide-react";
 
 interface Member {
   id: string;
@@ -27,6 +27,7 @@ interface Member {
 interface TopupHistory {
   id: string;
   amount: number;
+  type?: string;  // "TOPUP" | "SPEND"
   createdAt: string;
   operator?: {
     email: string;
@@ -60,6 +61,16 @@ export default function AdminMembersPage() {
   });
 
   const [adjustBalanceModal, setAdjustBalanceModal] = useState<{
+    isOpen: boolean;
+    member: Member | null;
+    amount: string;
+  }>({
+    isOpen: false,
+    member: null,
+    amount: '',
+  });
+
+  const [spendModal, setSpendModal] = useState<{
     isOpen: boolean;
     member: Member | null;
     amount: string;
@@ -253,6 +264,55 @@ export default function AdminMembersPage() {
     }
   };
 
+  // 消費相關處理函數
+  const handleOpenSpendModal = (member: Member) => {
+    setSpendModal({
+      isOpen: true,
+      member,
+      amount: '',
+    });
+  };
+
+  const handleCloseSpendModal = () => {
+    setSpendModal({
+      isOpen: false,
+      member: null,
+      amount: '',
+    });
+  };
+
+  const handleSpend = async () => {
+    if (!spendModal.member || !spendModal.amount) {
+      setError('請輸入消費金額');
+      return;
+    }
+
+    const amount = parseInt(spendModal.amount);
+    if (isNaN(amount) || amount <= 0) {
+      setError('請輸入有效的消費金額');
+      return;
+    }
+
+    if (amount > (spendModal.member.balance || 0)) {
+      setError('消費金額不能超過餘額');
+      return;
+    }
+
+    try {
+      await postJsonWithAuth(`/admin/members/${spendModal.member.id}/spend`, {
+        amount: amount,
+      });
+      
+      setError(null);
+      handleCloseSpendModal();
+      fetchMembers(); // 重新載入會員資料
+      alert('消費成功！');
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "消費失敗");
+    }
+  };
+
   // 格式化金額
   const formatCurrency = (amount: number | undefined) => {
     if (amount === undefined || amount === null) return "NT$ 0";
@@ -402,24 +462,44 @@ export default function AdminMembersPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenTopUpModal(member)}
-                            className="flex items-center space-x-1 text-green-600 hover:text-green-700"
-                          >
-                            <DollarSign className="h-3 w-3" />
-                            <span>儲值</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenAdjustBalanceModal(member)}
-                            className="flex items-center space-x-1 text-purple-600 hover:text-purple-700"
-                          >
-                            <Wallet className="h-3 w-3" />
-                            <span>調整餘額</span>
-                          </Button>
+                          {/* 儲值按鈕 - 只有管理員可以操作 */}
+                          {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenTopUpModal(member)}
+                              className="flex items-center space-x-1 text-green-600 hover:text-green-700"
+                            >
+                              <DollarSign className="h-3 w-3" />
+                              <span>儲值</span>
+                            </Button>
+                          )}
+                          {/* 消費按鈕 - 只有管理員可以操作 */}
+                          {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenSpendModal(member)}
+                              className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                              disabled={!member.balance || member.balance <= 0}
+                            >
+                              <ShoppingCart className="h-3 w-3" />
+                              <span>消費</span>
+                            </Button>
+                          )}
+                          {/* 調整餘額按鈕 - 只有管理員可以操作 */}
+                          {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenAdjustBalanceModal(member)}
+                              className="flex items-center space-x-1 text-purple-600 hover:text-purple-700"
+                            >
+                              <Wallet className="h-3 w-3" />
+                              <span>調整餘額</span>
+                            </Button>
+                          )}
+                          {/* 查看紀錄按鈕 - 所有角色都可以查看 */}
                           <Button
                             variant="outline"
                             size="sm"
@@ -562,6 +642,58 @@ export default function AdminMembersPage() {
             </DialogContent>
           </Dialog>
 
+          {/* Spend Dialog */}
+          <Dialog open={spendModal.isOpen} onOpenChange={handleCloseSpendModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>消費</DialogTitle>
+                <DialogDescription>
+                  為用戶 <strong>{spendModal.member?.user?.name || spendModal.member?.user?.email}</strong> 進行消費
+                  <br />
+                  目前儲值餘額：{formatCurrency(spendModal.member?.balance || 0)}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="spendAmount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    消費金額
+                  </label>
+                  <input
+                    type="number"
+                    id="spendAmount"
+                    value={spendModal.amount}
+                    onChange={(e) => setSpendModal(prev => ({
+                      ...prev,
+                      amount: e.target.value
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="請輸入消費金額"
+                    min="1"
+                    max={spendModal.member?.balance || 0}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    消費金額不能超過餘額
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseSpendModal}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleSpend}
+                  disabled={!spendModal.amount || parseInt(spendModal.amount) <= 0 || parseInt(spendModal.amount) > (spendModal.member?.balance || 0)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  確認消費
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Adjust Balance Dialog */}
           <Dialog open={adjustBalanceModal.isOpen} onOpenChange={handleCloseAdjustBalanceModal}>
             <DialogContent>
@@ -618,23 +750,36 @@ export default function AdminMembersPage() {
             <Dialog open={showTopupModal} onOpenChange={setShowTopupModal}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>儲值紀錄</DialogTitle>
+                  <DialogTitle>儲值與消費紀錄</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-2">
                   {topupHistory.length === 0 ? (
-                    <p>尚無儲值紀錄</p>
+                    <p>尚無儲值或消費紀錄</p>
                   ) : (
                     topupHistory.map((t) => (
-                      <div key={t.id} className="flex justify-between items-center">
+                      <div key={t.id} className="flex justify-between items-center p-3 border rounded-lg">
                         <div className="flex flex-col">
-                          <span>{new Date(t.createdAt).toLocaleString()}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">{new Date(t.createdAt).toLocaleString()}</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              t.type === 'SPEND' 
+                                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' 
+                                : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            }`}>
+                              {t.type === 'SPEND' ? '消費' : '儲值'}
+                            </span>
+                          </div>
                           <span className="text-sm text-gray-500">
                             {t.operator?.name 
                                ? `${t.operator.name} (${t.operator.email})` 
                                : t.operator?.email ?? '未知'}
                           </span>
                         </div>
-                        <span className="text-sm text-green-600">+ NT${t.amount}</span>
+                        <span className={`text-sm font-medium ${
+                          t.type === 'SPEND' ? 'text-red-600' : 'text-green-600'
+                        }`}>
+                          {t.type === 'SPEND' ? '-' : '+'} NT${t.amount.toLocaleString()}
+                        </span>
                       </div>
                     ))
                   )}

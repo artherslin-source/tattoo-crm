@@ -4,6 +4,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AdminArtistsService } from './admin-artists.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { BranchesService } from '../branches/branches.service';
 import { z } from 'zod';
 
 const CreateArtistSchema = z.object({
@@ -23,7 +24,8 @@ const UpdateArtistSchema = CreateArtistSchema.partial();
 export class AdminArtistsController {
   constructor(
     private readonly adminArtistsService: AdminArtistsService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly branchesService: BranchesService
   ) {}
 
   @Get('direct-test')
@@ -35,17 +37,44 @@ export class AdminArtistsController {
     });
   }
 
+  @Get('branches')
+  async getBranches(@Req() req: any) {
+    console.log('🎯 AdminArtistsController.getBranches called');
+    console.log('🔍 User info:', { role: req.user?.role, branchId: req.user?.branchId });
+    
+    // 如果是分店經理，只返回自己的分店
+    if (req.user?.role === 'BRANCH_MANAGER' && req.user?.branchId) {
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: req.user.branchId },
+        select: { id: true, name: true }
+      });
+      return branch ? [branch] : [];
+    }
+    
+    // BOSS 可以看到所有分店
+    return this.branchesService.list();
+  }
+
   @Get()
   async findAll(@Req() req: any) {
     console.log('🎯 AdminArtistsController.findAll called');
+    console.log('🔍 User info:', { role: req.user?.role, branchId: req.user?.branchId });
     try {
       console.log('🔧 Trying to call adminArtistsService.findAll()');
-      return this.adminArtistsService.findAll();
+      return this.adminArtistsService.findAll(req.user?.role, req.user?.branchId);
     } catch (error) {
       console.log('❌ Error calling adminArtistsService:', error);
       console.log('🔧 Trying direct Prisma query as fallback');
       return this.prisma.artist.findMany({
-        include: { user: true },
+        include: { 
+          user: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
+        },
         orderBy: { createdAt: 'desc' },
       });
     }
@@ -79,15 +108,21 @@ export class AdminArtistsController {
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() body: unknown) {
+    console.log('🎯 AdminArtistsController.update called with:', { id, body });
     const input = UpdateArtistSchema.parse(body);
+    console.log('🔍 Parsed input:', input);
 
-    return this.adminArtistsService.update(id, {
+    const result = await this.adminArtistsService.update(id, {
       name: input.name,
       email: input.email,
+      branchId: input.branchId,
       speciality: input.speciality,
       portfolioUrl: input.portfolioUrl,
       active: input.active,
     });
+    
+    console.log('✅ Update result:', result);
+    return result;
   }
 
   @Delete(':id')

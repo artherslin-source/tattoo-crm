@@ -30,6 +30,8 @@ model User {
   artist             Artist?
   branch             Branch?       @relation(fields: [branchId], references: [id])
   topupHistory       TopupHistory[]
+  portfolioItems     PortfolioItem[]
+  notifications      Notification[]
 }
 
 model Member {
@@ -130,7 +132,7 @@ model Order {
   appointmentId String?       @unique
   totalAmount   Int
   paymentType   PaymentType
-  status        OrderStatus   @default(UNPAID)
+  status        OrderStatus   @default(PENDING)
   createdAt     DateTime      @default(now())
   installments  Installment[]
   branch        Branch        @relation(fields: [branchId], references: [id])
@@ -165,6 +167,7 @@ model ServiceHistory {
 enum Role {
   BOSS
   BRANCH_MANAGER
+  SUPER_ADMIN
   ARTIST
   MEMBER
 }
@@ -172,6 +175,7 @@ enum Role {
 enum AppointmentStatus {
   PENDING
   CONFIRMED
+  IN_PROGRESS
   COMPLETED
   CANCELED
 }
@@ -182,10 +186,10 @@ enum PaymentType {
 }
 
 enum OrderStatus {
-  UNPAID
-  PARTIALLY_PAID
+  PENDING
   PAID
-  REFUNDED
+  CANCELLED
+  COMPLETED
 }
 
 enum InstallmentStatus {
@@ -200,5 +204,30 @@ model TopupHistory {
   operator    User     @relation(fields: [operatorId], references: [id])
   operatorId  String
   amount      Int
+  type        String   @default("TOPUP")  // "TOPUP" | "SPEND"
   createdAt   DateTime @default(now())
+}
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  artistId    String
+  title       String
+  description String?
+  imageUrl    String
+  tags        Json     // Array of strings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  artist      User     @relation(fields: [artistId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // "APPOINTMENT" | "MESSAGE" | "SYSTEM"
+  isRead    Boolean  @default(false)
+  data      Json?    // Additional data for the notification
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }

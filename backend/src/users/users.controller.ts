@@ -69,7 +69,7 @@ export class UsersController {
   }
 
   @Patch(':id/balance')
-  @Roles('BOSS', 'BRANCH_MANAGER')
+  @Roles('BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN')
   async adjustBalance(@Param('id') userId: string, @Body() adjustBalanceDto: AdjustBalanceDto) {
     return this.usersService.updateUserFinancials(userId, {
       balance: adjustBalanceDto.amount,

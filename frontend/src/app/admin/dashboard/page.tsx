@@ -232,17 +232,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Back Button */}
-        <div className="flex justify-start">
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="flex items-center space-x-2"
-          >
-            <span>←</span>
-            <span>回上一頁</span>
-          </Button>
-        </div>
     </div>
   );
 }

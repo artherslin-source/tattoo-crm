@@ -97,6 +97,36 @@ export async function postJsonWithAuth<TBody extends Record<string, unknown>, TR
   return (await res.json()) as TResp;
 }
 
+export async function postFormDataWithAuth<TResp = unknown>(
+  path: string,
+  formData: FormData,
+): Promise<TResp> {
+  const token = getAccessToken();
+  if (!token) {
+    throw { message: 'No access token', status: 401 } as ApiError;
+  }
+
+  const res = await fetch(`${getApiBase()}${path}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  
+  if (!res.ok) {
+    let message = 'Request failed';
+    try {
+      const data = (await res.json()) as { message?: string; error?: string };
+      message = data.message || data.error || message;
+    } catch {
+      // ignore parse errors
+    }
+    throw { message, status: res.status } as ApiError;
+  }
+  return (await res.json()) as TResp;
+}
+
 export async function patchJsonWithAuth<TBody extends Record<string, unknown>, TResp = unknown>(
   path: string,
   body: TBody,

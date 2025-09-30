@@ -237,11 +237,105 @@ async function main() {
   }
   console.log('✅ 建立 10 個服務');
 
-  // 7. 建立 15 個預約
+  // 7. 建立預約（包含為 artist1@test.com 創建的特定時間預約）
   const appointments: any[] = [];
-  for (let i = 0; i < 15; i++) {
+  
+  // 找到 artist1@test.com 的刺青師
+  const artist1 = artists.find((a: any) => a.user.email === 'artist1@test.com');
+  const artist1Branch = branches.find((b: any) => b.id === artist1.branchId);
+  
+  // 為 artist1@test.com 創建特定時間的預約
+  const today = new Date();
+  const thisWeek = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000); // 3天後
+  const thisMonth = new Date(today.getTime() + 15 * 24 * 60 * 60 * 1000); // 15天後
+  
+  // 今日預約
+  const todayAppointments = [
+    { time: 9, service: services[0], member: members[0], status: 'CONFIRMED' },
+    { time: 14, service: services[1], member: members[1], status: 'IN_PROGRESS' },
+    { time: 16, service: services[2], member: members[2], status: 'PENDING' },
+  ];
+  
+  for (const apt of todayAppointments) {
+    const startAt = new Date(today);
+    startAt.setHours(apt.time, 0, 0, 0);
+    const endAt = new Date(startAt.getTime() + apt.service.durationMin * 60000);
+    
+    const appointment = await prisma.appointment.create({
+      data: {
+        userId: apt.member.id,
+        artistId: artist1.user.id,
+        serviceId: apt.service.id,
+        branchId: artist1Branch.id,
+        startAt,
+        endAt,
+        status: apt.status as any,
+        notes: `今日預約 - ${apt.service.name}`,
+        createdAt: faker.date.past(),
+      },
+    });
+    appointments.push(appointment);
+  }
+  
+  // 本週預約
+  const weekAppointments = [
+    { time: 10, service: services[3], member: members[3], status: 'CONFIRMED' },
+    { time: 15, service: services[4], member: members[4], status: 'CONFIRMED' },
+  ];
+  
+  for (const apt of weekAppointments) {
+    const startAt = new Date(thisWeek);
+    startAt.setHours(apt.time, 0, 0, 0);
+    const endAt = new Date(startAt.getTime() + apt.service.durationMin * 60000);
+    
+    const appointment = await prisma.appointment.create({
+      data: {
+        userId: apt.member.id,
+        artistId: artist1.user.id,
+        serviceId: apt.service.id,
+        branchId: artist1Branch.id,
+        startAt,
+        endAt,
+        status: apt.status as any,
+        notes: `本週預約 - ${apt.service.name}`,
+        createdAt: faker.date.past(),
+      },
+    });
+    appointments.push(appointment);
+  }
+  
+  // 本月預約
+  const monthAppointments = [
+    { time: 11, service: services[5], member: members[5], status: 'CONFIRMED' },
+    { time: 13, service: services[6], member: members[6], status: 'PENDING' },
+    { time: 17, service: services[7], member: members[7], status: 'CONFIRMED' },
+  ];
+  
+  for (const apt of monthAppointments) {
+    const startAt = new Date(thisMonth);
+    startAt.setHours(apt.time, 0, 0, 0);
+    const endAt = new Date(startAt.getTime() + apt.service.durationMin * 60000);
+    
+    const appointment = await prisma.appointment.create({
+      data: {
+        userId: apt.member.id,
+        artistId: artist1.user.id,
+        serviceId: apt.service.id,
+        branchId: artist1Branch.id,
+        startAt,
+        endAt,
+        status: apt.status as any,
+        notes: `本月預約 - ${apt.service.name}`,
+        createdAt: faker.date.past(),
+      },
+    });
+    appointments.push(appointment);
+  }
+  
+  // 為其他刺青師創建隨機預約
+  for (let i = 0; i < 10; i++) {
     const member = faker.helpers.arrayElement(members);
-    const artist = faker.helpers.arrayElement(artists);
+    const artist = faker.helpers.arrayElement(artists.filter((a: any) => a.user.email !== 'artist1@test.com'));
     const service = faker.helpers.arrayElement(services);
     const branch = branches.find((b: any) => b.id === artist.branchId)!;
     
@@ -263,7 +357,7 @@ async function main() {
     });
     appointments.push(appointment);
   }
-  console.log('✅ 建立 15 個預約');
+  console.log('✅ 建立預約（包含 artist1@test.com 的特定時間預約）');
 
   // 8. 建立 25 個訂單
   const orders: any[] = [];
@@ -295,7 +389,7 @@ async function main() {
         appointmentId,
         totalAmount,
         paymentType: paymentType as any,
-        status: faker.helpers.arrayElement(['UNPAID', 'PARTIALLY_PAID', 'PAID']),
+        status: faker.helpers.arrayElement(['PENDING', 'PAID', 'CANCELLED', 'COMPLETED']),
         createdAt: faker.date.past(),
       },
     });

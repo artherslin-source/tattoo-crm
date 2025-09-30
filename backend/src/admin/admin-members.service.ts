@@ -307,4 +307,49 @@ export class AdminMembersService {
     console.log('🔍 getTopupHistory result:', JSON.stringify(result, null, 2));
     return result;
   }
+
+  async spend(memberId: string, amount: number, operatorId: string) {
+    if (amount <= 0) {
+      throw new BadRequestException('消費金額必須大於 0');
+    }
+
+    // 如果沒有 operatorId，使用預設的管理員 ID
+    const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
+
+    return this.prisma.$transaction(async (tx) => {
+      // 檢查會員餘額是否足夠
+      const member = await tx.member.findUnique({
+        where: { id: memberId },
+      });
+
+      if (!member) {
+        throw new NotFoundException('會員不存在');
+      }
+
+      if (member.balance < amount) {
+        throw new BadRequestException('餘額不足，無法完成消費');
+      }
+
+      // 扣減餘額
+      const updatedMember = await tx.member.update({
+        where: { id: memberId },
+        data: { 
+          balance: { decrement: amount },
+          totalSpent: { increment: amount }  // 同時增加累計消費
+        },
+      });
+
+      // 記錄消費歷史
+      await tx.topupHistory.create({
+        data: {
+          memberId,
+          operatorId: finalOperatorId,
+          amount,
+          type: 'SPEND',
+        },
+      });
+
+      return updatedMember;
+    });
+  }
 }

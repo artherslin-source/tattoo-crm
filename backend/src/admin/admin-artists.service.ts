@@ -6,10 +6,28 @@ import * as bcrypt from 'bcrypt';
 export class AdminArtistsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(userRole?: string, userBranchId?: string) {
     try {
+      // 構建查詢條件
+      const whereCondition: any = {};
+      
+      // 如果是分店經理，只能看到自己分店的刺青師
+      if (userRole === 'BRANCH_MANAGER' && userBranchId) {
+        whereCondition.branchId = userBranchId;
+      }
+      // BOSS 可以看到所有分店的刺青師，不需要額外條件
+
       const artists = await this.prisma.artist.findMany({
-        include: { user: true },
+        where: whereCondition,
+        include: { 
+          user: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
+        },
         orderBy: { createdAt: 'desc' },
       });
       console.log('DEBUG artists:', JSON.stringify(artists, null, 2));
@@ -23,7 +41,15 @@ export class AdminArtistsService {
   async findOne(id: string) {
     const artist = await this.prisma.artist.findUnique({
       where: { id },
-      include: { user: true },
+      include: { 
+        user: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
+      },
     });
 
     if (!artist) {
@@ -74,10 +100,12 @@ export class AdminArtistsService {
   async update(id: string, data: {
     name?: string;
     email?: string;
+    branchId?: string;
     speciality?: string;
     portfolioUrl?: string;
     active?: boolean;
   }) {
+    console.log('🔧 AdminArtistsService.update called with:', { id, data });
     return this.prisma.$transaction(async (tx) => {
       const artist = await tx.artist.findUnique({
         where: { id },
@@ -89,17 +117,20 @@ export class AdminArtistsService {
       }
 
       // 更新 User
-      if (data.name || data.email) {
+      if (data.name || data.email || data.branchId !== undefined) {
+        console.log('🔄 Updating user with data:', { name: data.name, email: data.email, branchId: data.branchId });
         await tx.user.update({
           where: { id: artist.user.id },
           data: {
             ...(data.name && { name: data.name }),
             ...(data.email && { email: data.email }),
+            ...(data.branchId !== undefined && { branchId: data.branchId }),
           },
         });
       }
 
       // 更新 Artist
+      console.log('🔄 Updating artist with data:', { speciality: data.speciality, portfolioUrl: data.portfolioUrl, active: data.active, name: data.name, branchId: data.branchId });
       const updatedArtist = await tx.artist.update({
         where: { id },
         data: {
@@ -107,8 +138,17 @@ export class AdminArtistsService {
           ...(data.portfolioUrl && { portfolioUrl: data.portfolioUrl }),
           ...(data.active !== undefined && { active: data.active }),
           ...(data.name && { displayName: data.name }),
+          ...(data.branchId !== undefined && { branchId: data.branchId }),
         },
-        include: { user: true },
+        include: { 
+          user: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
+        },
       });
 
       return updatedArtist;

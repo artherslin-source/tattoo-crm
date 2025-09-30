@@ -10,9 +10,10 @@ import { DiagnosticsController } from './diagnostics.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { OrdersModule } from '../orders/orders.module';
 import { ServicesModule } from '../services/services.module';
+import { BranchesModule } from '../branches/branches.module';
 
 @Module({
-  imports: [PrismaModule, OrdersModule, ServicesModule],
+  imports: [PrismaModule, OrdersModule, ServicesModule, BranchesModule],
   controllers: [
     AdminController, 
     AdminServicesController, 

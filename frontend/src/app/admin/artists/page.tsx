@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCheck, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
@@ -28,9 +28,15 @@ interface Artist {
   };
 }
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 export default function AdminArtistsPage() {
   const router = useRouter();
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -41,6 +47,7 @@ export default function AdminArtistsPage() {
     name: '',
     email: '',
     password: '',
+    branchId: '',
     speciality: '',
     portfolioUrl: '',
     active: true,
@@ -56,6 +63,7 @@ export default function AdminArtistsPage() {
     }
 
     fetchArtists();
+    fetchBranches();
   }, [router]);
 
   const fetchArtists = async () => {
@@ -71,11 +79,22 @@ export default function AdminArtistsPage() {
     }
   };
 
+  const fetchBranches = async () => {
+    try {
+      const data = await getJsonWithAuth('/admin/artists/branches');
+      setBranches(data);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      console.error('載入分店資料失敗:', apiErr.message);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
       email: '',
       password: '',
+      branchId: '',
       speciality: '',
       portfolioUrl: '',
       active: true,
@@ -103,6 +122,7 @@ export default function AdminArtistsPage() {
           name: artist.user?.name || '',
           email: artist.user?.email || '',
           password: '', // 編輯時不預填密碼
+          branchId: artist.branch?.id || '',
           speciality: artist.speciality || '',
           portfolioUrl: artist.portfolioUrl || '',
           active: artist.active,
@@ -115,7 +135,9 @@ export default function AdminArtistsPage() {
     if (!editingArtist) return;
 
     try {
+      console.log('🔧 發送更新請求:', formData);
       const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData);
+      console.log('✅ 收到更新回應:', updatedArtist);
       setArtists(artists.map(artist => 
         artist.id === editingArtist.id ? updatedArtist : artist
       ));
@@ -288,6 +310,31 @@ export default function AdminArtistsPage() {
                 </div>
               )}
               
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  所屬分店 {!editingArtist ? '*' : ''}
+                </label>
+                <select
+                  required={!editingArtist}
+                  value={formData.branchId}
+                  onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  disabled={editingArtist && branches.length === 1} // 如果只有一個分店且是編輯模式，禁用選擇
+                >
+                  <option value="">請選擇分店</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+                {editingArtist && branches.length === 1 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    分店經理只能管理自己分店的刺青師
+                  </p>
+                )}
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -358,6 +405,7 @@ export default function AdminArtistsPage() {
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">姓名</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Email</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">所屬分店</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">專長</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">作品集</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">狀態</th>
@@ -375,6 +423,11 @@ export default function AdminArtistsPage() {
                         </td>
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
                           {artist.user?.email || 'N/A'}
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          <span className="font-medium text-blue-600 dark:text-blue-400">
+                            {artist.branch?.name || '未分配'}
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
                           {artist.speciality || '未設定'}

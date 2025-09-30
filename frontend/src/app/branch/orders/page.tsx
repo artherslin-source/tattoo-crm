@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock, Building2 } from "lucide-react";
 
 interface Order {
   id: string;
@@ -23,12 +23,18 @@ interface Order {
   };
 }
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 export default function BranchOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [branchInfo, setBranchInfo] = useState<Branch | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -41,13 +47,21 @@ export default function BranchOrdersPage() {
     }
 
     setUserBranchId(branchId);
+    
+    // 獲取分店資訊
+    if (branchId) {
+      getJsonWithAuth(`/branches/${branchId}`)
+        .then((data: any) => setBranchInfo(data))
+        .catch(err => console.error('Failed to fetch branch info:', err));
+    }
+    
     fetchOrders();
   }, [router]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/branch/orders');
+      const data = await getJsonWithAuth('/branch/orders') as any;
       setOrders(data.orders || []);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -99,19 +113,30 @@ export default function BranchOrdersPage() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>返回</span>
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            分店訂單管理
-          </h1>
+        <div className="flex items-center space-x-3">
+          <Building2 className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              分店訂單管理
+            </h1>
+            {branchInfo && (
+              <div className="mt-2">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  <Building2 className="h-4 w-4 mr-1" />
+                  {branchInfo.name}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => router.back()}
+          className="flex items-center space-x-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>返回</span>
+        </Button>
       </div>
 
       {error && (

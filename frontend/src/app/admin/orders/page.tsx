@@ -267,40 +267,54 @@ export default function AdminOrdersPage() {
                       {new Date(order.createdAt).toLocaleDateString('zh-TW')}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex space-x-2">
-                        {order.status === 'PENDING' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateStatus(order.id, 'PAID')}
-                              className="flex items-center space-x-1 text-green-600 hover:text-green-700"
-                            >
-                              <CheckCircle className="h-3 w-3" />
-                              <span>標記已付款</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateStatus(order.id, 'CANCELLED')}
-                              className="flex items-center space-x-1 text-red-600 hover:text-red-700"
-                            >
-                              <XCircle className="h-3 w-3" />
-                              <span>取消訂單</span>
-                            </Button>
-                          </>
-                        )}
-                        {order.status === 'PAID' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
-                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            <span>標記完成</span>
-                          </Button>
-                        )}
+                      <div className="flex flex-wrap gap-2">
+                        {/* 標記已付款 - 只有待付款狀態可以操作 */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(order.id, 'PAID')}
+                          disabled={order.status === 'PAID' || order.status === 'COMPLETED' || order.status === 'CANCELLED'}
+                          className="flex items-center space-x-1 text-green-600 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          <span>標記已付款</span>
+                        </Button>
+                        
+                        {/* 標記完成 - 只有已付款狀態可以操作 */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
+                          disabled={order.status !== 'PAID'}
+                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          <span>標記完成</span>
+                        </Button>
+                        
+                        {/* 取消訂單 - 只有待付款和已付款狀態可以操作 */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(order.id, 'CANCELLED')}
+                          disabled={order.status === 'COMPLETED' || order.status === 'CANCELLED'}
+                          className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <XCircle className="h-3 w-3" />
+                          <span>取消訂單</span>
+                        </Button>
+                        
+                        {/* 重新開啟 - 只有已取消狀態可以操作 */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(order.id, 'PENDING')}
+                          disabled={order.status !== 'CANCELLED'}
+                          className="flex items-center space-x-1 text-yellow-600 hover:text-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Clock className="h-3 w-3" />
+                          <span>重新開啟</span>
+                        </Button>
                       </div>
                     </td>
                   </tr>

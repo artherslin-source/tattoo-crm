@@ -114,8 +114,42 @@ export class AdminMembersController {
       throw new BadRequestException('操作人員未登入或缺少 ID');
     }
 
+    // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行儲值操作
+    const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
+    if (!allowedRoles.includes(req.user.role)) {
+      throw new BadRequestException('權限不足：只有管理員才能執行儲值操作');
+    }
+
     const operatorId = req.user.id;
     return this.service.topupUser(id, amount, operatorId);
+  }
+
+  @Post(':id/spend')
+  @UseGuards(AuthGuard('jwt'))
+  async spend(
+    @Param('id') id: string,
+    @Body() body: { amount: number },
+    @Req() req
+  ) {
+    console.log('DEBUG req.user for spend:', req.user);
+
+    const amount = Number(body.amount);
+    if (amount <= 0) {
+      throw new BadRequestException('消費金額必須大於 0');
+    }
+
+    if (!req.user || !req.user.id) {
+      throw new BadRequestException('操作人員未登入或缺少 ID');
+    }
+
+    // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行消費操作
+    const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
+    if (!allowedRoles.includes(req.user.role)) {
+      throw new BadRequestException('權限不足：只有管理員才能執行消費操作');
+    }
+
+    const operatorId = req.user.id;
+    return this.service.spend(id, amount, operatorId);
   }
 
   @Get(':id')

@@ -109,7 +109,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-6">
-      <div className="w-full max-w-2xl mb-6">
+      <div className="w-full max-w-2xl mb-6 flex justify-end">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
