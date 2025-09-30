@@ -125,6 +125,51 @@ export class ArtistService {
     return appointments;
   }
 
+  async getAppointmentsByRange(artistId: string, startDate: string, endDate: string) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        artistId,
+        startAt: {
+          gte: start,
+          lt: end,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+          },
+        },
+        service: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            durationMin: true,
+            price: true,
+          },
+        },
+        branch: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        startAt: 'asc',
+      },
+    });
+
+    return appointments;
+  }
+
   async updateAppointmentStatus(
     appointmentId: string,
     status: 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED',

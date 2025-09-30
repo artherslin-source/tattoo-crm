@@ -30,6 +30,16 @@ export class ArtistController {
     return this.artistService.getMyAppointments(artistId, period);
   }
 
+  @Get("appointments/range")
+  async getAppointmentsByRange(
+    @Req() req,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string
+  ) {
+    const artistId = req.user.id;
+    return this.artistService.getAppointmentsByRange(artistId, startDate, endDate);
+  }
+
   @Patch("appointments/:id/status")
   async updateAppointmentStatus(
     @Param('id') appointmentId: string,

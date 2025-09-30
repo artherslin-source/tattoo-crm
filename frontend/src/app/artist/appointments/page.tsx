@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CalendarView from "@/components/CalendarView";
 import { 
   Calendar, 
   Clock, 
@@ -16,7 +18,9 @@ import {
   CheckCircle,
   AlertCircle,
   Play,
-  Pause
+  Pause,
+  List,
+  CalendarDays
 } from "lucide-react";
 
 interface Appointment {
@@ -50,6 +54,7 @@ export default function ArtistAppointments() {
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     appointment: Appointment | null;
@@ -74,6 +79,18 @@ export default function ArtistAppointments() {
       console.error('Appointments fetch error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAppointmentsByRange = async (startDate: string, endDate: string) => {
+    try {
+      console.log('Fetching appointments for range:', { startDate, endDate });
+      const data = await getJsonWithAuth(`/artist/appointments/range?startDate=${startDate}&endDate=${endDate}`);
+      console.log('Fetched appointments:', data);
+      setAppointments(data);
+    } catch (err) {
+      setError('載入行程失敗');
+      console.error('Appointments range fetch error:', err);
     }
   };
 
@@ -230,7 +247,7 @@ export default function ArtistAppointments() {
           <p className="text-gray-600 mt-3">管理您的預約和服務安排</p>
         </div>
         
-        <div className="mt-6 sm:mt-0">
+        <div className="mt-6 sm:mt-0 flex gap-4">
           <Select value={period} onValueChange={(value: 'today' | 'week' | 'month') => setPeriod(value)}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -243,6 +260,21 @@ export default function ArtistAppointments() {
           </Select>
         </div>
       </div>
+
+      {/* 檢視模式切換 */}
+      <Tabs value={viewMode} onValueChange={(value: 'list' | 'calendar') => setViewMode(value)}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="list" className="flex items-center gap-2">
+            <List className="h-4 w-4" />
+            清單檢視
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            日曆檢視
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" className="mt-6">
 
       {/* 行程列表 */}
       {appointments.length === 0 ? (
@@ -352,6 +384,19 @@ export default function ArtistAppointments() {
           ))}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-6">
+          <CalendarView 
+            appointments={appointments}
+            onAppointmentClick={(appointment) => {
+              // 點擊日曆事件時顯示詳細資訊
+              console.log('Calendar appointment clicked:', appointment);
+            }}
+            onDateRangeChange={fetchAppointmentsByRange}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* 完成服務確認框 */}
       <Dialog open={confirmDialog.isOpen} onOpenChange={handleCancelComplete}>
