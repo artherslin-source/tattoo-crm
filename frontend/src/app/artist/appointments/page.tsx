@@ -91,7 +91,7 @@ export default function ArtistAppointments() {
       setLoading(true);
       console.log('Fetching all appointments');
       // 獲取所有行程，不再限制於特定期間
-      const data = await getJsonWithAuth(`/artist/appointments`);
+      const data = await getJsonWithAuth(`/artist/appointments`) as Appointment[];
       console.log('Fetched appointments data:', data);
       setAppointments(data);
       setTotalItems(data.length);
@@ -107,13 +107,13 @@ export default function ArtistAppointments() {
   const fetchAppointmentsByRange = async (startDate: string, endDate: string) => {
     try {
       console.log('Fetching appointments for range:', { startDate, endDate });
-      const data = await getJsonWithAuth(`/artist/appointments/range?startDate=${startDate}&endDate=${endDate}`);
+      const data = await getJsonWithAuth(`/artist/appointments/range?startDate=${startDate}&endDate=${endDate}`) as Appointment[];
       console.log('Fetched appointments for range:', data);
       
       // 合併新獲取的數據與現有數據，避免重複
       setAppointments(prevAppointments => {
-        const existingIds = new Set(prevAppointments.map(apt => apt.id));
-        const newAppointments = data.filter(apt => !existingIds.has(apt.id));
+        const existingIds = new Set(prevAppointments.map((apt: Appointment) => apt.id));
+        const newAppointments = data.filter((apt: Appointment) => !existingIds.has(apt.id));
         return [...prevAppointments, ...newAppointments];
       });
     } catch (err) {
@@ -306,18 +306,16 @@ export default function ArtistAppointments() {
       </div>
 
       {/* 檢視模式切換 */}
-      <Tabs value={viewMode} onValueChange={(value: 'list' | 'calendar') => setViewMode(value)}>
+      <Tabs
+        value={viewMode}
+        onValueChange={(v) => setViewMode(v as 'list' | 'calendar')}
+        className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="list" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
-            清單檢視
-          </TabsTrigger>
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            日曆檢視
-          </TabsTrigger>
+          <TabsTrigger value="list">清單</TabsTrigger>
+          <TabsTrigger value="calendar">日曆</TabsTrigger>
         </TabsList>
 
+        {/* List View */}
         <TabsContent value="list" className="mt-6">
           {/* 分頁控制欄 */}
           <div className="flex items-center justify-between mb-6">
@@ -328,7 +326,7 @@ export default function ArtistAppointments() {
                   <SelectTrigger className="w-20">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white/85">
                     <SelectItem value="5">5</SelectItem>
                     <SelectItem value="10">10</SelectItem>
                     <SelectItem value="20">20</SelectItem>
@@ -446,6 +444,8 @@ export default function ArtistAppointments() {
               </CardContent>
             </Card>
           ))}
+            </div>
+          )}
             
             {/* 分頁導航 */}
             {getTotalPages() > 1 && (
@@ -497,16 +497,15 @@ export default function ArtistAppointments() {
                 </Button>
               </div>
             )}
-          )}
         </TabsContent>
 
+        {/* Calendar View */}
         <TabsContent value="calendar" className="mt-6">
-          <SimpleCalendarView 
+          <SimpleCalendarView
             appointments={appointments}
             onDateRangeChange={fetchAppointmentsByRange}
             onAppointmentClick={(appointment) => {
-              // 點擊日曆事件時顯示詳細資訊
-              console.log('Calendar appointment clicked:', appointment);
+              console.log("Calendar appointment clicked:", appointment);
             }}
           />
         </TabsContent>
