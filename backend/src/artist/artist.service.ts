@@ -136,15 +136,6 @@ export class ArtistService {
         id: appointmentId,
         artistId,
       },
-    });
-
-    if (!appointment) {
-      throw new NotFoundException('預約不存在或您沒有權限修改此預約');
-    }
-
-    return this.prisma.appointment.update({
-      where: { id: appointmentId },
-      data: { status },
       include: {
         user: {
           select: {
@@ -157,24 +148,102 @@ export class ArtistService {
           select: {
             id: true,
             name: true,
+            durationMin: true,
+            price: true,
           },
         },
+        branch: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        completedService: true, // 檢查是否已經有完成紀錄
       },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('預約不存在或您沒有權限修改此預約');
+    }
+
+    // 防呆設計：如果已經是完成狀態，檢查是否重複操作
+    if (status === 'COMPLETED' && appointment.status === 'COMPLETED') {
+      if (appointment.completedService) {
+        throw new Error('此服務已完成，無法重複操作');
+      }
+    }
+
+    // 使用事務來確保數據一致性
+    return this.prisma.$transaction(async (tx) => {
+      // 更新預約狀態
+      const updatedAppointment = await tx.appointment.update({
+        where: { id: appointmentId },
+        data: { status },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+            },
+          },
+          service: {
+            select: {
+              id: true,
+              name: true,
+              durationMin: true,
+              price: true,
+            },
+          },
+          branch: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      // 如果是完成服務，創建服務完成紀錄
+      if (status === 'COMPLETED' && !appointment.completedService) {
+        await tx.completedService.create({
+          data: {
+            appointmentId: appointment.id,
+            customerId: appointment.userId,
+            artistId: appointment.artistId!,
+            serviceId: appointment.serviceId!,
+            branchId: appointment.branchId,
+            serviceName: appointment.service!.name,
+            servicePrice: appointment.service!.price,
+            serviceDuration: appointment.service!.durationMin,
+            notes: appointment.notes,
+          },
+        });
+
+        // 更新會員的累計消費
+        await tx.member.updateMany({
+          where: { userId: appointment.userId },
+          data: {
+            totalSpent: {
+              increment: appointment.service!.price,
+            },
+          },
+        });
+      }
+
+      return updatedAppointment;
     });
   }
 
   // 3. 顧客資訊
   async getMyCustomers(artistId: string) {
-    // 獲取所有曾經服務過的顧客
-    const customers = await this.prisma.appointment.findMany({
+    // 獲取所有曾經服務過的顧客（從 CompletedService 表）
+    const completedServices = await this.prisma.completedService.findMany({
       where: {
         artistId,
-        status: {
-          in: ['CONFIRMED', 'COMPLETED'],
-        },
       },
       include: {
-        user: {
+        customer: {
           select: {
             id: true,
             name: true,
@@ -183,94 +252,68 @@ export class ArtistService {
           },
         },
       },
-      distinct: ['userId'],
+      distinct: ['customerId'],
     });
 
     // 為每個顧客添加統計資訊
     const customersWithStats = await Promise.all(
-      customers.map(async (appointment) => {
-        const customerId = appointment.userId;
+      completedServices.map(async (completedService) => {
+        const customerId = completedService.customerId;
         
-        const [lastService, serviceCount, totalSpent, allAppointments] = await Promise.all([
-          this.prisma.appointment.findFirst({
+        const [lastService, serviceCount, totalSpent, allCompletedServices] = await Promise.all([
+          this.prisma.completedService.findFirst({
             where: {
               artistId,
-              userId: customerId,
-              status: 'COMPLETED',
+              customerId,
             },
             orderBy: {
-              startAt: 'desc',
-            },
-            include: {
-              service: {
-                select: {
-                  name: true,
-                },
-              },
+              completedAt: 'desc',
             },
           }),
-          this.prisma.appointment.count({
+          this.prisma.completedService.count({
             where: {
               artistId,
-              userId: customerId,
-              status: 'COMPLETED',
+              customerId,
             },
           }),
-          // 計算總消費金額 - 先獲取所有已完成的預約，然後計算總金額
-          this.prisma.appointment.findMany({
+          this.prisma.completedService.aggregate({
             where: {
               artistId,
-              userId: customerId,
-              status: 'COMPLETED',
+              customerId,
             },
-            include: {
-              service: {
-                select: {
-                  price: true,
-                },
-              },
+            _sum: {
+              servicePrice: true,
             },
           }),
-          // 獲取所有預約記錄
-          this.prisma.appointment.findMany({
+          this.prisma.completedService.findMany({
             where: {
               artistId,
-              userId: customerId,
-            },
-            include: {
-              service: {
-                select: {
-                  name: true,
-                  price: true,
-                },
-              },
+              customerId,
             },
             orderBy: {
-              startAt: 'desc',
+              completedAt: 'desc',
             },
+            take: 5, // 最近5次服務
           }),
         ]);
 
-        // 計算總消費金額
-        const totalSpentAmount = totalSpent.reduce((sum, apt) => sum + (apt.service?.price || 0), 0);
-
         return {
-          id: appointment.user.id,
-          name: appointment.user.name,
-          phone: appointment.user.phone,
-          email: appointment.user.email,
+          id: completedService.customer.id,
+          name: completedService.customer.name,
+          phone: completedService.customer.phone,
+          email: completedService.customer.email,
           totalAppointments: serviceCount,
-          totalSpent: totalSpentAmount,
-          lastVisit: lastService?.startAt || appointment.startAt,
-          appointments: allAppointments.map(apt => ({
-            id: apt.id,
-            startAt: apt.startAt,
-            status: apt.status,
+          totalSpent: totalSpent._sum.servicePrice || 0,
+          lastVisit: lastService?.completedAt || null,
+          appointments: allCompletedServices.map(service => ({
+            id: service.id,
+            startAt: service.completedAt,
+            status: 'COMPLETED',
             service: {
-              name: apt.service?.name || '未知服務',
-              price: apt.service?.price || 0,
+              name: service.serviceName,
+              price: service.servicePrice,
             },
-            notes: apt.notes,
+            notes: service.notes,
           })),
         };
       })

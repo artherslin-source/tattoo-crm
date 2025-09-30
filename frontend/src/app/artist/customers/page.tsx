@@ -189,20 +189,22 @@ export default function ArtistCustomers() {
         <div className="grid gap-4">
           {filteredCustomers.map((customer) => (
             <Card key={customer.id} className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
+              <CardHeader className="pt-6 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-5 w-5 text-gray-500" />
+                    <CardTitle className="text-lg font-semibold">
+                      {customer.name}
+                    </CardTitle>
+                  </div>
+                  <Badge variant="outline">
+                    {customer.totalAppointments} 次服務
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-4 mb-3">
-                      <div className="flex items-center space-x-2">
-                        <User className="h-5 w-5 text-gray-500" />
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {customer.name}
-                        </h3>
-                      </div>
-                      <Badge variant="outline">
-                        {customer.totalAppointments} 次服務
-                      </Badge>
-                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                       <div className="flex items-center space-x-2">

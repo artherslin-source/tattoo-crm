@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Calendar, 
   Clock, 
@@ -49,6 +50,15 @@ export default function ArtistAppointments() {
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    appointment: Appointment | null;
+    action: string;
+  }>({
+    isOpen: false,
+    appointment: null,
+    action: '',
+  });
 
   useEffect(() => {
     fetchAppointments();
@@ -68,6 +78,24 @@ export default function ArtistAppointments() {
   };
 
   const updateAppointmentStatus = async (appointmentId: string, status: string) => {
+    // 如果是完成服務，先顯示確認框
+    if (status === 'COMPLETED') {
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+      if (appointment) {
+        setConfirmDialog({
+          isOpen: true,
+          appointment,
+          action: status,
+        });
+        return;
+      }
+    }
+    
+    // 其他狀態直接更新
+    await performStatusUpdate(appointmentId, status);
+  };
+
+  const performStatusUpdate = async (appointmentId: string, status: string) => {
     try {
       setUpdating(appointmentId);
       await patchJsonWithAuth(`/artist/appointments/${appointmentId}/status`, { status });
@@ -86,6 +114,17 @@ export default function ArtistAppointments() {
     } finally {
       setUpdating(null);
     }
+  };
+
+  const handleConfirmComplete = async () => {
+    if (confirmDialog.appointment) {
+      await performStatusUpdate(confirmDialog.appointment.id, confirmDialog.action);
+      setConfirmDialog({ isOpen: false, appointment: null, action: '' });
+    }
+  };
+
+  const handleCancelComplete = () => {
+    setConfirmDialog({ isOpen: false, appointment: null, action: '' });
   };
 
   const formatTime = (dateString: string) => {
@@ -220,28 +259,24 @@ export default function ArtistAppointments() {
         <div className="space-y-4">
           {appointments.map((appointment) => (
             <Card key={appointment.id}>
-              <CardContent className="px-6 py-10">
+              <CardHeader className="pt-6 pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-semibold">
+                      {formatTime(appointment.startAt)} - {formatTime(appointment.endAt)}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {formatDate(appointment.startAt)}
+                    </CardDescription>
+                  </div>
+                  <Badge className={getStatusColor(appointment.status)}>
+                    {getStatusText(appointment.status)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-2">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex-1">
-                    {/* 時間和狀態 */}
-                    <div className="flex items-center space-x-4 mb-6">
-                      <div className="flex items-center space-x-3">
-                        <Clock className="h-5 w-5 text-gray-500" />
-                        <span className="font-medium text-lg">
-                          {formatTime(appointment.startAt)} - {formatTime(appointment.endAt)}
-                        </span>
-                      </div>
-                      <Badge className={getStatusColor(appointment.status)}>
-                        {getStatusText(appointment.status)}
-                      </Badge>
-                    </div>
-
-                    {/* 日期 */}
-                    <div className="mb-6">
-                      <span className="text-sm text-gray-600">
-                        {formatDate(appointment.startAt)}
-                      </span>
-                    </div>
 
                     {/* 顧客資訊 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -317,6 +352,75 @@ export default function ArtistAppointments() {
           ))}
         </div>
       )}
+
+      {/* 完成服務確認框 */}
+      <Dialog open={confirmDialog.isOpen} onOpenChange={handleCancelComplete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span>確認完成服務</span>
+            </DialogTitle>
+            <DialogDescription>
+              您確認要將此服務標記為完成嗎？
+            </DialogDescription>
+          </DialogHeader>
+          
+          {confirmDialog.appointment && (
+            <div className="py-4">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">顧客：</span>
+                  <span className="text-sm font-medium">{confirmDialog.appointment.user.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">服務：</span>
+                  <span className="text-sm font-medium">{confirmDialog.appointment.service.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">時間：</span>
+                  <span className="text-sm font-medium">
+                    {formatTime(confirmDialog.appointment.startAt)} - {formatTime(confirmDialog.appointment.endAt)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">金額：</span>
+                  <span className="text-sm font-medium text-green-600">
+                    NT$ {confirmDialog.appointment.service.price.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex space-x-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelComplete}
+              disabled={updating === confirmDialog.appointment?.id}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmComplete}
+              disabled={updating === confirmDialog.appointment?.id}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {updating === confirmDialog.appointment?.id ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  處理中...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  確認完成
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

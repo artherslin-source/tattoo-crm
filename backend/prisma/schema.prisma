@@ -32,6 +32,8 @@ model User {
   topupHistory       TopupHistory[]
   portfolioItems     PortfolioItem[]
   notifications      Notification[]
+  completedServicesAsCustomer CompletedService[] @relation("CustomerCompletedServices")
+  completedServicesAsArtist   CompletedService[] @relation("ArtistCompletedServices")
 }
 
 model Member {
@@ -58,6 +60,7 @@ model Branch {
   orders        Order[]
   artists       Artist[]
   users         User[]
+  completedServices CompletedService[]
 }
 
 model Artist {
@@ -105,6 +108,7 @@ model Service {
   price        Int
   appointments Appointment[]
   history      ServiceHistory[]
+  completedServices CompletedService[]
 }
 
 model Appointment {
@@ -123,6 +127,7 @@ model Appointment {
   branch    Branch            @relation(fields: [branchId], references: [id])
   service   Service?          @relation(fields: [serviceId], references: [id])
   user      User              @relation(fields: [userId], references: [id])
+  completedService CompletedService?
 }
 
 model Order {
@@ -230,4 +235,25 @@ model Notification {
   data      Json?    // Additional data for the notification
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model CompletedService {
+  id            String   @id @default(cuid())
+  appointmentId String   @unique
+  customerId    String
+  artistId      String
+  serviceId     String
+  branchId      String
+  serviceName   String
+  servicePrice  Int
+  serviceDuration Int
+  completedAt   DateTime @default(now())
+  notes         String?
+  
+  // Relations
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  customer      User        @relation("CustomerCompletedServices", fields: [customerId], references: [id])
+  artist        User        @relation("ArtistCompletedServices", fields: [artistId], references: [id])
+  service       Service     @relation(fields: [serviceId], references: [id])
+  branch        Branch      @relation(fields: [branchId], references: [id])
 }
