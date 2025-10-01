@@ -35,10 +35,14 @@ export class AdminAppointmentsService {
       where,
       include: {
         user: { select: { id: true, name: true, email: true } },
-        service: { select: { id: true, name: true, price: true } },
+        service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
       },
-      orderBy: { startAt: 'desc' },
+      orderBy: [
+        { branch: { name: 'asc' } },
+        { startAt: 'desc' }
+      ],
     });
   }
 
@@ -49,6 +53,7 @@ export class AdminAppointmentsService {
         user: { select: { id: true, name: true, email: true, phone: true } },
         service: { select: { id: true, name: true, description: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
       },
     });
 
@@ -74,8 +79,9 @@ export class AdminAppointmentsService {
       data: { status: status as any },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        service: { select: { id: true, name: true, price: true } },
+        service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
       },
     });
   }
@@ -115,8 +121,9 @@ export class AdminAppointmentsService {
       data,
       include: {
         user: { select: { id: true, name: true, email: true } },
-        service: { select: { id: true, name: true, price: true } },
+        service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
       },
     });
   }

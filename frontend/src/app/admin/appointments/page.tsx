@@ -29,6 +29,10 @@ interface Appointment {
     id: string;
     name: string;
   } | null;
+  branch: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function AdminAppointmentsPage() {
@@ -241,6 +245,7 @@ export default function AdminAppointmentsPage() {
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">客戶</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">分店</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">服務項目</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">刺青師</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">預約時間</th>
@@ -260,6 +265,11 @@ export default function AdminAppointmentsPage() {
                           {appointment.user.email}
                         </div>
                       </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                        {appointment.branch?.name || '未分配'}
+                      </span>
                     </td>
                     <td className="py-3 px-4">
                       {appointment.service ? (

@@ -11,8 +11,22 @@ export class AdminMembersService {
   async findAll(filters?: { search?: string; role?: string; status?: string }) {
     try {
       const members = await this.prisma.member.findMany({
-        include: { user: true },
-        orderBy: { id: 'desc' },
+        include: { 
+          user: {
+            include: {
+              branch: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: [
+          { user: { branch: { name: 'asc' } } },
+          { id: 'desc' }
+        ],
       });
       console.log('DEBUG members:', JSON.stringify(members, null, 2));
       return members;

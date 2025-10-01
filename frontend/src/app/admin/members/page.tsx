@@ -21,6 +21,10 @@ interface Member {
     status: string;
     createdAt: string;
     updatedAt: string;
+    branch?: {
+      id: string;
+      name: string;
+    };
   };
 }
 
@@ -414,6 +418,7 @@ export default function AdminMembersPage() {
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">姓名</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Email</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">分店</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">角色</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">累計消費</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">會員等級</th>
@@ -432,6 +437,11 @@ export default function AdminMembersPage() {
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
                         {member.user?.email || 'N/A'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                          {member.user?.branch?.name || '未分配'}
+                        </span>
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
