@@ -10,6 +10,7 @@ export class AdminAppointmentsService {
     status?: string; 
     startDate?: string; 
     endDate?: string;
+    branchId?: string;
     sortField?: string;
     sortOrder?: 'asc' | 'desc';
   }) {
@@ -28,6 +29,11 @@ export class AdminAppointmentsService {
       where.status = filters.status;
     }
 
+    if (filters?.branchId) {
+      where.branchId = filters.branchId;
+      console.log('🔍 Branch filter applied:', filters.branchId);
+    }
+
     if (filters?.startDate || filters?.endDate) {
       where.startAt = {};
       if (filters.startDate) {
@@ -40,6 +46,8 @@ export class AdminAppointmentsService {
 
     let orderBy: any[] = [];
     
+    console.log('🔍 Appointment filters:', filters);
+    console.log('🔍 Where conditions:', JSON.stringify(where, null, 2));
     console.log('🔍 Appointment sort filters:', { sortField: filters?.sortField, sortOrder: filters?.sortOrder });
     
     if (filters?.sortField && filters?.sortOrder) {
@@ -110,7 +118,7 @@ export class AdminAppointmentsService {
   }
 
   async updateStatus(id: string, status: string) {
-    if (!['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELED'].includes(status)) {
+    if (!['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED'].includes(status)) {
       throw new BadRequestException('無效的狀態');
     }
 

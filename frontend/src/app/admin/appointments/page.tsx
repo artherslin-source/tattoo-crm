@@ -5,14 +5,18 @@ import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, ArrowLeft, CheckCircle, XCircle, Clock, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Calendar } from "lucide-react";
+import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
+import AppointmentsTable from "@/components/admin/AppointmentsTable";
+import AppointmentsCards from "@/components/admin/AppointmentsCards";
 
 interface Appointment {
   id: string;
   startAt: string;
   endAt: string;
-  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED';
+  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
   notes: string | null;
   createdAt: string;
   user: {
@@ -41,34 +45,47 @@ export default function AdminAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // 排序和分頁狀態
   const [sortField, setSortField] = useState<string>('startAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  
-  // 分頁相關狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  
+  // 篩選狀態
+  const [search, setSearch] = useState('');
+  const [branchId, setBranchId] = useState('all');
+  const [status, setStatus] = useState('all');
+  
+  // 詳情模態框狀態
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
-      // 使用 admin/appointments API，包含排序參數
       const params = new URLSearchParams();
       if (sortField) params.append('sortField', sortField);
       if (sortOrder) params.append('sortOrder', sortOrder);
+      if (search) params.append('search', search);
+      if (branchId && branchId !== 'all') params.append('branchId', branchId);
+      if (status && status !== 'all') params.append('status', status);
+      if (currentPage) params.append('page', currentPage.toString());
+      if (itemsPerPage) params.append('limit', itemsPerPage.toString());
       
       const url = `/admin/appointments${params.toString() ? `?${params.toString()}` : ''}`;
-      const data = await getJsonWithAuth(url);
+      const data = await getJsonWithAuth(url) as Appointment[];
       setAppointments(data);
       setTotalItems(data.length);
-      setCurrentPage(1); // 重置到第一頁
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "載入預約資料失敗");
     } finally {
       setLoading(false);
     }
-  }, [sortField, sortOrder]);
+  }, [sortField, sortOrder, search, branchId, status, currentPage, itemsPerPage]);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -82,12 +99,10 @@ export default function AdminAppointmentsPage() {
     fetchAppointments();
   }, [router, fetchAppointments]);
 
-  // 當排序參數改變時重新載入資料
+  // 當篩選條件改變時重新載入資料
   useEffect(() => {
-    if (sortField && sortOrder) {
-      fetchAppointments();
-    }
-  }, [sortField, sortOrder, fetchAppointments]);
+    fetchAppointments();
+  }, [search, branchId, status, fetchAppointments]);
 
   const handleSortFieldChange = (field: string) => {
     setSortField(field);
@@ -97,17 +112,23 @@ export default function AdminAppointmentsPage() {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
-  // 分頁計算函數
-  const getPaginatedAppointments = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return appointments.slice(startIndex, endIndex);
+  // 篩選處理函數
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1); // 重置到第一頁
   };
 
-  const getTotalPages = () => {
-    return Math.ceil(totalItems / itemsPerPage);
+  const handleBranchChange = (value: string) => {
+    setBranchId(value);
+    setCurrentPage(1); // 重置到第一頁
   };
 
+  const handleStatusChange = (value: string) => {
+    setStatus(value);
+    setCurrentPage(1); // 重置到第一頁
+  };
+
+  // 分頁處理函數
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -117,45 +138,88 @@ export default function AdminAppointmentsPage() {
     setCurrentPage(1); // 重置到第一頁
   };
 
-  // 當 appointments 改變時，重新計算總項目數
-  useEffect(() => {
-    setTotalItems(appointments.length);
-  }, [appointments]);
+  // 分頁計算函數
+  const getTotalPages = () => {
+    return Math.ceil(totalItems / itemsPerPage);
+  };
 
-  const handleUpdateStatus = async (appointmentId: string, newStatus: string) => {
+  const getPageNumbers = () => {
+    const totalPages = getTotalPages();
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
+  };
+
+  // 預約詳情處理
+  const handleViewDetails = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setSelectedAppointment(null);
+    setIsDetailModalOpen(false);
+  };
+
+  // 更新預約狀態
+  const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
     try {
-      await patchJsonWithAuth(`/admin/appointments/${appointmentId}/status`, { status: newStatus });
-      setAppointments(appointments.map(appointment => 
-        appointment.id === appointmentId ? { ...appointment, status: newStatus as any } : appointment
-      ));
-      setError(null);
+      await patchJsonWithAuth(`/admin/appointments/${appointment.id}/status`, {
+        status: newStatus
+      });
+      
+      setSuccessMessage(`預約狀態已更新為：${getStatusText(newStatus)}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // 重新載入資料
+      fetchAppointments();
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "更新預約狀態失敗");
     }
   };
 
-  const handleDeleteAppointment = async (appointmentId: string) => {
+  // 刪除預約
+  const handleDelete = async (appointmentId: string) => {
     if (!confirm('確定要刪除這個預約嗎？此操作無法復原。')) {
       return;
     }
 
     try {
       await deleteJsonWithAuth(`/admin/appointments/${appointmentId}`);
-      setAppointments(appointments.filter(appointment => appointment.id !== appointmentId));
-      setError(null);
+      setSuccessMessage('預約已成功刪除');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // 重新載入資料
+      fetchAppointments();
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "刪除預約失敗");
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'CONFIRMED':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'IN_PROGRESS':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       case 'COMPLETED':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'CANCELED':
@@ -171,6 +235,8 @@ export default function AdminAppointmentsPage() {
         return '待確認';
       case 'CONFIRMED':
         return '已確認';
+      case 'IN_PROGRESS':
+        return '進行中';
       case 'COMPLETED':
         return '已完成';
       case 'CANCELED':
@@ -180,19 +246,21 @@ export default function AdminAppointmentsPage() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return <Clock className="h-4 w-4" />;
-      case 'CONFIRMED':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'COMPLETED':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'CANCELED':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('zh-TW', {
+      style: 'currency',
+      currency: 'TWD',
+    }).format(amount);
   };
 
   if (loading) {
@@ -207,348 +275,329 @@ export default function AdminAppointmentsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-              <Calendar className="mr-3 h-8 w-8" />
-              管理預約
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              管理系統中的所有客戶預約
-            </p>
-          </div>
-          <Button 
-            variant="outline" 
+    <div className="space-y-6">
+      {/* 頁面標題 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => router.back()}
-            className="flex items-center space-x-2"
+            className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>回上一頁</span>
+            回上一頁
           </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">管理預約</h1>
+            <p className="text-gray-600 dark:text-gray-400">管理所有預約記錄</p>
+          </div>
         </div>
       </div>
 
-      {/* Error message */}
+      {/* 錯誤訊息 */}
       {error && (
-        <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-200">{error}</p>
         </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {/* 成功訊息 */}
+      {successMessage && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <p className="text-green-800 dark:text-green-200">{successMessage}</p>
+        </div>
+      )}
+
+      {/* 統計卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總預約數</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{appointments.length}</div>
+            <div className="text-2xl font-bold">{totalItems}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">待確認</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <div className="h-4 w-4 rounded-full bg-yellow-500"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {appointments.filter(appointment => appointment.status === 'PENDING').length}
+              {appointments.filter(a => a.status === 'PENDING').length}
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">已確認</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <div className="h-4 w-4 rounded-full bg-blue-500"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {appointments.filter(appointment => appointment.status === 'CONFIRMED').length}
+              {appointments.filter(a => a.status === 'CONFIRMED').length}
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">已完成</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <div className="h-4 w-4 rounded-full bg-green-500"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {appointments.filter(appointment => appointment.status === 'COMPLETED').length}
+              {appointments.filter(a => a.status === 'COMPLETED').length}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* 排序控制介面 */}
-      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <ArrowUpDown className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">排序設定：</span>
+      {/* 工具欄 */}
+      <AppointmentsToolbar
+        sortField={sortField}
+        sortOrder={sortOrder}
+        itemsPerPage={itemsPerPage}
+        search={search}
+        branchId={branchId}
+        status={status}
+        onSortFieldChange={handleSortFieldChange}
+        onSortOrderToggle={handleSortOrderToggle}
+        onItemsPerPageChange={handleItemsPerPageChange}
+        onSearchChange={handleSearchChange}
+        onBranchChange={handleBranchChange}
+        onStatusChange={handleStatusChange}
+      />
+
+      {/* 預約列表 */}
+      {appointments.length === 0 ? (
+        <div className="text-center py-12">
+          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">沒有找到預約</h3>
+          <p className="text-gray-500 dark:text-gray-400">目前沒有任何預約記錄</p>
+        </div>
+      ) : (
+        <>
+          {/* 桌面版表格 */}
+          <AppointmentsTable
+            appointments={appointments}
+            onViewDetails={handleViewDetails}
+            onUpdateStatus={handleUpdateStatus}
+            onDelete={handleDelete}
+          />
+
+          {/* 平板和手機版卡片 */}
+          <AppointmentsCards
+            appointments={appointments}
+            onViewDetails={handleViewDetails}
+            onUpdateStatus={handleUpdateStatus}
+            onDelete={handleDelete}
+          />
+        </>
+      )}
+
+      {/* 分頁控制 */}
+      {totalItems > itemsPerPage && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            顯示第 {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} 項，共 {totalItems} 項
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">排序依據：</span>
-            <Select value={sortField} onValueChange={handleSortFieldChange}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white/85">
-                <SelectItem value="customerName">客戶姓名</SelectItem>
-                <SelectItem value="customerEmail">客戶Email</SelectItem>
-                <SelectItem value="branch">分店</SelectItem>
-                <SelectItem value="service">服務項目</SelectItem>
-                <SelectItem value="artist">刺青師</SelectItem>
-                <SelectItem value="startAt">預約時間</SelectItem>
-                <SelectItem value="status">狀態</SelectItem>
-                <SelectItem value="createdAt">建立時間</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">排序順序：</span>
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSortOrderToggle}
-              className="flex items-center space-x-1"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
             >
-              {sortOrder === 'asc' ? (
-                <>
-                  <ArrowUp className="h-3 w-3" />
-                  <span>升序</span>
-                </>
-              ) : (
-                <>
-                  <ArrowDown className="h-3 w-3" />
-                  <span>降序</span>
-                </>
-              )}
+              上一頁
+            </Button>
+            {getPageNumbers().map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => handlePageChange(page)}
+                className="w-8 h-8 p-0"
+              >
+                {page}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === getTotalPages()}
+            >
+              下一頁
             </Button>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 分頁控制欄 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">每頁顯示：</span>
-            <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white/85">
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          共 {totalItems} 個預約，第 {currentPage} / {getTotalPages()} 頁
-        </div>
-      </div>
+      {/* 預約詳情模態框 */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>預約詳情</DialogTitle>
+          </DialogHeader>
+          {selectedAppointment && (
+            <div className="space-y-4">
+              {/* 基本資訊 */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-900 dark:text-white">基本資訊</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">預約ID:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.id}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">狀態:</span>
+                    <Badge className={`ml-2 text-xs ${getStatusBadgeClass(selectedAppointment.status)}`}>
+                      {getStatusText(selectedAppointment.status)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-      {/* Appointments Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>預約列表</CardTitle>
-          <CardDescription>
-            管理系統中的所有客戶預約
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">客戶</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">分店</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">服務項目</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">刺青師</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">預約時間</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">狀態</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {getPaginatedAppointments().map((appointment) => (
-                  <tr key={appointment.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {appointment.user.name || '未設定'}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {appointment.user.email}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                        {appointment.branch?.name || '未分配'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {appointment.service ? (
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {appointment.service.name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            NT$ {appointment.service.price.toLocaleString()} · {appointment.service.durationMin} 分鐘
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500 dark:text-gray-400">未指定服務</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      {appointment.artist ? (
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {appointment.artist.name}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500 dark:text-gray-400">未指定刺青師</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-gray-900 dark:text-white">
-                        {new Date(appointment.startAt).toLocaleDateString('zh-TW')}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(appointment.startAt).toLocaleTimeString('zh-TW', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })} - {new Date(appointment.endAt).toLocaleTimeString('zh-TW', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                        {getStatusIcon(appointment.status)}
-                        <span className="ml-1">{getStatusText(appointment.status)}</span>
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex space-x-2">
-                        {appointment.status === 'PENDING' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateStatus(appointment.id, 'CONFIRMED')}
-                              className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
-                            >
-                              <CheckCircle className="h-3 w-3" />
-                              <span>確認</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateStatus(appointment.id, 'CANCELED')}
-                              className="flex items-center space-x-1 text-red-600 hover:text-red-700"
-                            >
-                              <XCircle className="h-3 w-3" />
-                              <span>取消</span>
-                            </Button>
-                          </>
-                        )}
-                        {appointment.status === 'CONFIRMED' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateStatus(appointment.id, 'COMPLETED')}
-                            className="flex items-center space-x-1 text-green-600 hover:text-green-700"
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            <span>完成</span>
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteAppointment(appointment.id)}
-                          className="flex items-center space-x-1 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>刪除</span>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {appointments.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              目前沒有預約資料
-            </div>
-          )}
-          
-          {/* 分頁導航 */}
-          {getTotalPages() > 1 && (
-            <div className="flex items-center justify-center space-x-2 mt-8">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                上一頁
-              </Button>
-              
-              {/* 頁碼按鈕 */}
-              {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map((page) => {
-                // 只顯示當前頁前後2頁的頁碼
-                if (page === 1 || page === getTotalPages() || 
-                    (page >= currentPage - 2 && page <= currentPage + 2)) {
-                  return (
+              {/* 時間資訊 */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-900 dark:text-white">時間資訊</h4>
+                <div className="space-y-1 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">開始時間:</span>
+                    <span className="ml-2 font-medium">{formatDate(selectedAppointment.startAt)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">結束時間:</span>
+                    <span className="ml-2 font-medium">{formatDate(selectedAppointment.endAt)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">服務時長:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.service?.durationMin || 'N/A'} 分鐘</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 客戶資訊 */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-900 dark:text-white">客戶資訊</h4>
+                <div className="space-y-1 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">姓名:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.user?.name || '未設定'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Email:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.user?.email || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 服務資訊 */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-900 dark:text-white">服務資訊</h4>
+                <div className="space-y-1 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">服務項目:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.service?.name || '未設定'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">服務價格:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.service?.price ? formatCurrency(selectedAppointment.service.price) : 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">刺青師:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.artist?.name || '未分配'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">分店:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.branch?.name || '未分配'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 備註 */}
+              {selectedAppointment.notes && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-900 dark:text-white">備註</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                    {selectedAppointment.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* 操作按鈕 */}
+              <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseDetailModal}
+                  className="flex-1"
+                >
+                  關閉
+                </Button>
+                {selectedAppointment.status === 'PENDING' && (
+                  <>
                     <Button
-                      key={page}
-                      variant={page === currentPage ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(page)}
-                      className={page === currentPage ? "bg-blue-600 text-white" : ""}
+                      onClick={() => handleUpdateStatus(selectedAppointment, 'CONFIRMED')}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
                     >
-                      {page}
+                      確認預約
                     </Button>
-                  );
-                } else if (page === currentPage - 3 || page === currentPage + 3) {
-                  return <span key={page} className="text-gray-500">...</span>;
-                }
-                return null;
-              })}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === getTotalPages()}
-              >
-                下一頁
-              </Button>
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedAppointment, 'CANCELED')}
+                      variant="destructive"
+                      className="flex-1"
+                    >
+                      取消預約
+                    </Button>
+                  </>
+                )}
+                {selectedAppointment.status === 'CONFIRMED' && (
+                  <>
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedAppointment, 'IN_PROGRESS')}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700"
+                    >
+                      開始進行
+                    </Button>
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedAppointment, 'COMPLETED')}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      標記完成
+                    </Button>
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedAppointment, 'CANCELED')}
+                      variant="destructive"
+                      className="flex-1"
+                    >
+                      取消預約
+                    </Button>
+                  </>
+                )}
+                {selectedAppointment.status === 'IN_PROGRESS' && (
+                  <>
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedAppointment, 'COMPLETED')}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      標記完成
+                    </Button>
+                    <Button
+                      onClick={() => handleUpdateStatus(selectedAppointment, 'CONFIRMED')}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      回到已確認
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

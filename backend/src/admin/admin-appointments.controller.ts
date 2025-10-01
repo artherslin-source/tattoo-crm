@@ -20,6 +20,7 @@ export class AdminAppointmentsController {
         status: query.status,
         startDate: query.startDate,
         endDate: query.endDate,
+        branchId: query.branchId,
         sortField: query.sortField,
         sortOrder: query.sortOrder,
       });
