@@ -6,7 +6,12 @@ import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, ApiErr
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, Package, AlertCircle } from "lucide-react";
+import OrdersToolbar from "@/components/admin/OrdersToolbar";
+import OrdersTable from "@/components/admin/OrdersTable";
+import OrdersCards from "@/components/admin/OrdersCards";
 
 interface Order {
   id: string;
@@ -37,6 +42,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
@@ -45,17 +51,29 @@ export default function AdminOrdersPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
+  // 篩選相關狀態
+  const [search, setSearch] = useState('');
+  const [branchId, setBranchId] = useState('all');
+  const [status, setStatus] = useState('all');
+
   // ✅ 統計相關狀態
   const [summary, setSummary] = useState<OrdersSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
+  // 訂單詳情模態框狀態
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      // 使用 admin/orders API，包含排序和分頁參數
+      // 使用 admin/orders API，包含排序、分頁和篩選參數
       const params = new URLSearchParams();
       if (sortField) params.append('sortField', sortField);
       if (sortOrder) params.append('sortOrder', sortOrder);
+      if (search) params.append('search', search);
+      if (branchId && branchId !== 'all') params.append('branchId', branchId);
+      if (status && status !== 'all') params.append('status', status);
       params.append('page', currentPage.toString());
       params.append('limit', itemsPerPage.toString());
       
@@ -69,21 +87,38 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [sortField, sortOrder, currentPage, itemsPerPage]);
+  }, [sortField, sortOrder, search, branchId, status, currentPage, itemsPerPage]);
 
   // ✅ 新增：抓取統計資料的方法
   const fetchSummary = useCallback(async () => {
     try {
       setSummaryLoading(true);
-      const data = await getJsonWithAuth('/admin/orders/summary');
+      
+      // 檢查是否有有效的 token
+      const token = getAccessToken();
+      if (!token) {
+        console.log('未登入，跳過統計資料載入');
+        return;
+      }
+      
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (branchId && branchId !== 'all') params.append('branchId', branchId);
+      if (status && status !== 'all') params.append('status', status);
+      
+      const url = `/admin/orders/summary${params.toString() ? `?${params.toString()}` : ''}`;
+      const data = await getJsonWithAuth(url);
       setSummary(data);
     } catch (err) {
       const apiErr = err as ApiError;
-      console.error('載入統計資料失敗:', apiErr.message);
+      // 如果是未授權錯誤，不顯示錯誤訊息，因為可能是 token 過期
+      if (apiErr.message !== 'Unauthorized') {
+        console.error('載入統計資料失敗:', apiErr.message);
+      }
     } finally {
       setSummaryLoading(false);
     }
-  }, []);
+  }, [search, branchId, status]);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -105,12 +140,46 @@ export default function AdminOrdersPage() {
     }
   }, [sortField, sortOrder, currentPage, itemsPerPage, fetchOrders]);
 
+  // 當篩選條件改變時重新載入資料和統計
+  useEffect(() => {
+    fetchOrders();
+    fetchSummary();
+  }, [search, branchId, status, fetchOrders, fetchSummary]);
+
   const handleSortFieldChange = (field: string) => {
     setSortField(field);
   };
 
   const handleSortOrderToggle = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  // 篩選處理函數
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1); // 重置到第一頁
+  };
+
+  const handleBranchChange = (value: string) => {
+    setBranchId(value);
+    setCurrentPage(1); // 重置到第一頁
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatus(value);
+    setCurrentPage(1); // 重置到第一頁
+  };
+
+  // 處理查看訂單詳情
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailModalOpen(true);
+  };
+
+  // 關閉詳情模態框
+  const handleCloseDetailModal = () => {
+    setSelectedOrder(null);
+    setIsDetailModalOpen(false);
   };
 
   // 分頁計算函數
@@ -133,10 +202,20 @@ export default function AdminOrdersPage() {
       setOrders(orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus as any } : order
       ));
+      
+      // 顯示成功訊息
+      const statusText = getStatusText(newStatus);
+      setSuccessMessage(`訂單狀態已更新為：${statusText}`);
       setError(null);
+      
+      // 3秒後自動清除成功訊息
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "更新訂單狀態失敗");
+      setSuccessMessage(null);
     }
   };
 
@@ -168,6 +247,39 @@ export default function AdminOrdersPage() {
       default:
         return status;
     }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'PAID':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('zh-TW', {
+      style: 'currency',
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const getStatusIcon = (status: string) => {
@@ -228,6 +340,13 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
+      {/* Success message */}
+      {successMessage && (
+        <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          {successMessage}
+        </div>
+      )}
+
       {/* ✅ 統計卡片 —— 直接吃 summary，不要再自行用當前頁面資料去算 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
@@ -279,54 +398,21 @@ export default function AdminOrdersPage() {
         </Card>
       </div>
 
-      {/* 排序控制介面 */}
-      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <ArrowUpDown className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">排序設定：</span>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">排序依據：</span>
-            <Select value={sortField} onValueChange={handleSortFieldChange}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white/85">
-                <SelectItem value="customerName">客戶姓名</SelectItem>
-                <SelectItem value="customerEmail">客戶Email</SelectItem>
-                <SelectItem value="branch">分店</SelectItem>
-                <SelectItem value="totalAmount">訂單金額</SelectItem>
-                <SelectItem value="status">訂單狀態</SelectItem>
-                <SelectItem value="createdAt">建立時間</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">排序順序：</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSortOrderToggle}
-              className="flex items-center space-x-1"
-            >
-              {sortOrder === 'asc' ? (
-                <>
-                  <ArrowUp className="h-3 w-3" />
-                  <span>升序</span>
-                </>
-              ) : (
-                <>
-                  <ArrowDown className="h-3 w-3" />
-                  <span>降序</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* 工具列 */}
+      <OrdersToolbar
+        sortField={sortField}
+        sortOrder={sortOrder}
+        itemsPerPage={itemsPerPage}
+        search={search}
+        branchId={branchId}
+        status={status}
+        onSortFieldChange={handleSortFieldChange}
+        onSortOrderToggle={handleSortOrderToggle}
+        onItemsPerPageChange={handleItemsPerPageChange}
+        onSearchChange={handleSearchChange}
+        onBranchChange={handleBranchChange}
+        onStatusChange={handleStatusChange}
+      />
 
       {/* 分頁控制欄 */}
       <div className="flex items-center justify-between mb-6">
@@ -361,112 +447,19 @@ export default function AdminOrdersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">訂單 ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">客戶</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">分店</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">金額</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">狀態</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">建立時間</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
-                </tr>
-              </thead>
-            <tbody>
-              {orders.map((order) => (
-                  <tr key={order.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="py-3 px-4">
-                      <div className="font-mono text-sm text-gray-900 dark:text-white">
-                        {order.id.slice(-8)}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {order.member.name || '未設定'}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {order.member.email}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {order.branch.name}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        NT$ {order.totalAmount.toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                        {getStatusIcon(order.status)}
-                        <span className="ml-1">{getStatusText(order.status)}</span>
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {new Date(order.createdAt).toLocaleDateString('zh-TW')}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-2">
-                        {/* 標記已付款 - 只有待付款狀態可以操作 */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUpdateStatus(order.id, 'PAID')}
-                          disabled={order.status === 'PAID' || order.status === 'COMPLETED' || order.status === 'CANCELLED'}
-                          className="flex items-center space-x-1 text-green-600 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          <span>標記已付款</span>
-                        </Button>
-                        
-                        {/* 標記完成 - 只有已付款狀態可以操作 */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
-                          disabled={order.status !== 'PAID'}
-                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          <span>標記完成</span>
-                        </Button>
-                        
-                        {/* 取消訂單 - 只有待付款和已付款狀態可以操作 */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUpdateStatus(order.id, 'CANCELLED')}
-                          disabled={order.status === 'COMPLETED' || order.status === 'CANCELLED'}
-                          className="flex items-center space-x-1 text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <XCircle className="h-3 w-3" />
-                          <span>取消訂單</span>
-                        </Button>
-                        
-                        {/* 重新開啟 - 只有已取消狀態可以操作 */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUpdateStatus(order.id, 'PENDING')}
-                          disabled={order.status !== 'CANCELLED'}
-                          className="flex items-center space-x-1 text-yellow-600 hover:text-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Clock className="h-3 w-3" />
-                          <span>重新開啟</span>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* 桌機版表格 */}
+          <OrdersTable
+            orders={orders}
+            onViewDetails={handleViewDetails}
+            onUpdateStatus={handleUpdateStatus}
+          />
+
+          {/* 平板和手機版卡片 */}
+          <OrdersCards
+            orders={orders}
+            onViewDetails={handleViewDetails}
+            onUpdateStatus={handleUpdateStatus}
+          />
           
           {orders.length === 0 && (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -520,6 +513,112 @@ export default function AdminOrdersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 訂單詳情模態框 */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>訂單詳情</DialogTitle>
+            <DialogDescription>
+              查看訂單的詳細資訊
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* 基本資訊 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">訂單ID</label>
+                  <p className="text-lg font-mono">{selectedOrder.id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">訂單狀態</label>
+                  <div className="mt-1">
+                    <Badge className={`rounded-full px-2 py-0.5 text-xs ${getStatusBadgeClass(selectedOrder.status)}`}>
+                      {getStatusText(selectedOrder.status)}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">訂單金額</label>
+                  <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                    {formatCurrency(selectedOrder.totalAmount)}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">建立時間</label>
+                  <p className="text-sm">{formatDate(selectedOrder.createdAt)}</p>
+                </div>
+              </div>
+
+              {/* 客戶資訊 */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-medium mb-3">客戶資訊</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">客戶姓名</label>
+                    <p className="text-sm">{selectedOrder.member.name || '未設定'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">客戶Email</label>
+                    <p className="text-sm">{selectedOrder.member.email}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 分店資訊 */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-medium mb-3">分店資訊</h3>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">所屬分店</label>
+                  <p className="text-sm">{selectedOrder.branch?.name || '未分配'}</p>
+                </div>
+              </div>
+
+              {/* 操作按鈕 */}
+              <div className="border-t pt-4 flex justify-end space-x-2">
+                <Button variant="outline" onClick={handleCloseDetailModal}>
+                  關閉
+                </Button>
+                {selectedOrder.status === 'PENDING' && (
+                  <Button 
+                    onClick={() => {
+                      handleUpdateStatus(selectedOrder.id, 'PAID');
+                      handleCloseDetailModal();
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    標記為已付款
+                  </Button>
+                )}
+                {selectedOrder.status === 'PAID' && (
+                  <Button 
+                    onClick={() => {
+                      handleUpdateStatus(selectedOrder.id, 'COMPLETED');
+                      handleCloseDetailModal();
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    標記為已完成
+                  </Button>
+                )}
+                {(selectedOrder.status === 'PENDING' || selectedOrder.status === 'PAID') && (
+                  <Button 
+                    onClick={() => {
+                      handleUpdateStatus(selectedOrder.id, 'CANCELLED');
+                      handleCloseDetailModal();
+                    }}
+                    variant="destructive"
+                  >
+                    取消訂單
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
