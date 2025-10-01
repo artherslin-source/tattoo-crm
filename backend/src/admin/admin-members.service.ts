@@ -8,8 +8,60 @@ export class AdminMembersService {
     console.log('🏗️ AdminMembersService constructor called');
   }
 
-  async findAll(filters?: { search?: string; role?: string; status?: string }) {
+  async findAll(filters?: { 
+    search?: string; 
+    role?: string; 
+    status?: string;
+    sortField?: string;
+    sortOrder?: 'asc' | 'desc';
+  }) {
     try {
+      // 建立排序條件
+      let orderBy: any[] = [];
+      
+      console.log('🔍 Sort filters:', { sortField: filters?.sortField, sortOrder: filters?.sortOrder });
+      
+      if (filters?.sortField && filters?.sortOrder) {
+        // 根據前端傳來的排序欄位和順序
+        switch (filters.sortField) {
+          case 'name':
+            orderBy.push({ user: { name: filters.sortOrder } });
+            break;
+          case 'email':
+            orderBy.push({ user: { email: filters.sortOrder } });
+            break;
+          case 'branch':
+            orderBy.push({ user: { branch: { name: filters.sortOrder } } });
+            break;
+          case 'role':
+            orderBy.push({ user: { role: filters.sortOrder } });
+            break;
+          case 'totalSpent':
+            orderBy.push({ totalSpent: filters.sortOrder });
+            break;
+          case 'membershipLevel':
+            orderBy.push({ membershipLevel: filters.sortOrder });
+            break;
+          case 'balance':
+            orderBy.push({ balance: filters.sortOrder });
+            break;
+          case 'createdAt':
+            orderBy.push({ user: { createdAt: filters.sortOrder } });
+            break;
+          default:
+            // 預設排序：註冊時間降序（最新在前）
+            orderBy.push({ user: { createdAt: 'desc' } });
+        }
+      } else {
+        // 預設排序：註冊時間降序（最新在前）
+        orderBy.push({ user: { createdAt: 'desc' } });
+      }
+      
+      // 添加次要排序條件（確保排序穩定）
+      orderBy.push({ id: 'desc' });
+
+      console.log('🔍 Final orderBy:', JSON.stringify(orderBy, null, 2));
+
       const members = await this.prisma.member.findMany({
         include: { 
           user: {
@@ -23,10 +75,7 @@ export class AdminMembersService {
             }
           }
         },
-        orderBy: [
-          { user: { branch: { name: 'asc' } } },
-          { id: 'desc' }
-        ],
+        orderBy,
       });
       console.log('DEBUG members:', JSON.stringify(members, null, 2));
       return members;

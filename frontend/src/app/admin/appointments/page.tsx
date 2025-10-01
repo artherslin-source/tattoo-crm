@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, ArrowLeft, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, ArrowLeft, CheckCircle, XCircle, Clock, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 interface Appointment {
   id: string;
@@ -40,6 +41,34 @@ export default function AdminAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<string>('startAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // 分頁相關狀態
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const fetchAppointments = useCallback(async () => {
+    try {
+      setLoading(true);
+      // 使用 admin/appointments API，包含排序參數
+      const params = new URLSearchParams();
+      if (sortField) params.append('sortField', sortField);
+      if (sortOrder) params.append('sortOrder', sortOrder);
+      
+      const url = `/admin/appointments${params.toString() ? `?${params.toString()}` : ''}`;
+      const data = await getJsonWithAuth(url);
+      setAppointments(data);
+      setTotalItems(data.length);
+      setCurrentPage(1); // 重置到第一頁
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "載入預約資料失敗");
+    } finally {
+      setLoading(false);
+    }
+  }, [sortField, sortOrder]);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -51,20 +80,47 @@ export default function AdminAppointmentsPage() {
     }
 
     fetchAppointments();
-  }, [router]);
+  }, [router, fetchAppointments]);
 
-  const fetchAppointments = async () => {
-    try {
-      setLoading(true);
-      const data = await getJsonWithAuth('/admin/appointments');
-      setAppointments(data);
-    } catch (err) {
-      const apiErr = err as ApiError;
-      setError(apiErr.message || "載入預約資料失敗");
-    } finally {
-      setLoading(false);
+  // 當排序參數改變時重新載入資料
+  useEffect(() => {
+    if (sortField && sortOrder) {
+      fetchAppointments();
     }
+  }, [sortField, sortOrder, fetchAppointments]);
+
+  const handleSortFieldChange = (field: string) => {
+    setSortField(field);
   };
+
+  const handleSortOrderToggle = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  // 分頁計算函數
+  const getPaginatedAppointments = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return appointments.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    return Math.ceil(totalItems / itemsPerPage);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // 重置到第一頁
+  };
+
+  // 當 appointments 改變時，重新計算總項目數
+  useEffect(() => {
+    setTotalItems(appointments.length);
+  }, [appointments]);
 
   const handleUpdateStatus = async (appointmentId: string, newStatus: string) => {
     try {
@@ -231,6 +287,81 @@ export default function AdminAppointmentsPage() {
         </Card>
       </div>
 
+      {/* 排序控制介面 */}
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <ArrowUpDown className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">排序設定：</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">排序依據：</span>
+            <Select value={sortField} onValueChange={handleSortFieldChange}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white/85">
+                <SelectItem value="customerName">客戶姓名</SelectItem>
+                <SelectItem value="customerEmail">客戶Email</SelectItem>
+                <SelectItem value="branch">分店</SelectItem>
+                <SelectItem value="service">服務項目</SelectItem>
+                <SelectItem value="artist">刺青師</SelectItem>
+                <SelectItem value="startAt">預約時間</SelectItem>
+                <SelectItem value="status">狀態</SelectItem>
+                <SelectItem value="createdAt">建立時間</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">排序順序：</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSortOrderToggle}
+              className="flex items-center space-x-1"
+            >
+              {sortOrder === 'asc' ? (
+                <>
+                  <ArrowUp className="h-3 w-3" />
+                  <span>升序</span>
+                </>
+              ) : (
+                <>
+                  <ArrowDown className="h-3 w-3" />
+                  <span>降序</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* 分頁控制欄 */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">每頁顯示：</span>
+            <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white/85">
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          共 {totalItems} 個預約，第 {currentPage} / {getTotalPages()} 頁
+        </div>
+      </div>
+
       {/* Appointments Table */}
       <Card>
         <CardHeader>
@@ -254,7 +385,7 @@ export default function AdminAppointmentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appointment) => (
+                {getPaginatedAppointments().map((appointment) => (
                   <tr key={appointment.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="py-3 px-4">
                       <div>
@@ -369,6 +500,51 @@ export default function AdminAppointmentsPage() {
           {appointments.length === 0 && (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               目前沒有預約資料
+            </div>
+          )}
+          
+          {/* 分頁導航 */}
+          {getTotalPages() > 1 && (
+            <div className="flex items-center justify-center space-x-2 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                上一頁
+              </Button>
+              
+              {/* 頁碼按鈕 */}
+              {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map((page) => {
+                // 只顯示當前頁前後2頁的頁碼
+                if (page === 1 || page === getTotalPages() || 
+                    (page >= currentPage - 2 && page <= currentPage + 2)) {
+                  return (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(page)}
+                      className={page === currentPage ? "bg-blue-600 text-white" : ""}
+                    >
+                      {page}
+                    </Button>
+                  );
+                } else if (page === currentPage - 3 || page === currentPage + 3) {
+                  return <span key={page} className="text-gray-500">...</span>;
+                }
+                return null;
+              })}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === getTotalPages()}
+              >
+                下一頁
+              </Button>
             </div>
           )}
         </CardContent>

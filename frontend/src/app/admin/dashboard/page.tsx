@@ -13,6 +13,7 @@ interface DashboardStats {
   totalServices: number;
   totalAppointments: number;
   todayAppointments: number;
+  totalRevenue: number;
   monthlyRevenue: number;
 }
 
@@ -25,6 +26,7 @@ export default function AdminDashboardPage() {
     totalServices: 0,
     totalAppointments: 0,
     todayAppointments: 0,
+    totalRevenue: 0,
     monthlyRevenue: 0,
   });
 
@@ -39,24 +41,28 @@ export default function AdminDashboardPage() {
 
     async function fetchDashboardData() {
       try {
-        // 這裡可以調用多個 API 來獲取統計數據
-        const [dashboardData, appointmentsData] = await Promise.all([
-          getJsonWithAuth('/admin/stats'),
-          getJsonWithAuth('/appointments/all').catch(() => [])
-        ]);
+        // 調用統計 API 獲取數據
+        const dashboardData = await getJsonWithAuth('/admin/stats');
 
         setStats({
           totalUsers: dashboardData.users?.total || 0,
           totalServices: dashboardData.services?.total || 0,
-          totalAppointments: appointmentsData.length || 0,
-          todayAppointments: appointmentsData.filter((apt: any) => {
-            const today = new Date().toDateString();
-            return new Date(apt.startAt).toDateString() === today;
-          }).length,
-          monthlyRevenue: 0, // 暫時設為 0，後續可以從訂單 API 計算
+          totalAppointments: dashboardData.appointments?.total || 0,
+          todayAppointments: dashboardData.appointments?.today || 0,
+          totalRevenue: dashboardData.revenue?.total || 0,
+          monthlyRevenue: dashboardData.revenue?.monthly || 0,
         });
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
+        // 如果 API 失敗，保持預設值
+        setStats({
+          totalUsers: 0,
+          totalServices: 0,
+          totalAppointments: 0,
+          todayAppointments: 0,
+          totalRevenue: 0,
+          monthlyRevenue: 0,
+        });
       } finally {
         setLoading(false);
       }
@@ -193,9 +199,9 @@ export default function AdminDashboardPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">NT$ {stats.monthlyRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">NT$ {(stats.totalRevenue || 0).toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
-                本月總營收
+                所有已完成訂單的總營收
               </p>
             </CardContent>
           </Card>

@@ -12,12 +12,21 @@ export class AdminAppointmentsController {
 
   @Get()
   async getAppointments(@Query() query: any) {
-    return this.adminAppointmentsService.findAll({
-      search: query.search,
-      status: query.status,
-      startDate: query.startDate,
-      endDate: query.endDate,
-    });
+    console.log('🎯 AdminAppointmentsController.getAppointments called');
+    console.log('🔍 Query params:', query);
+    try {
+      return this.adminAppointmentsService.findAll({
+        search: query.search,
+        status: query.status,
+        startDate: query.startDate,
+        endDate: query.endDate,
+        sortField: query.sortField,
+        sortOrder: query.sortOrder,
+      });
+    } catch (error) {
+      console.error('❌ Error in AdminAppointmentsController.getAppointments:', error);
+      throw error;
+    }
   }
 
   @Get(':id')

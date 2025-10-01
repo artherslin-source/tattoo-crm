@@ -5,7 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminAppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters?: { search?: string; status?: string; startDate?: string; endDate?: string }) {
+  async findAll(filters?: { 
+    search?: string; 
+    status?: string; 
+    startDate?: string; 
+    endDate?: string;
+    sortField?: string;
+    sortOrder?: 'asc' | 'desc';
+  }) {
     const where: any = {};
 
     if (filters?.search) {
@@ -31,6 +38,47 @@ export class AdminAppointmentsService {
       }
     }
 
+    let orderBy: any[] = [];
+    
+    console.log('🔍 Appointment sort filters:', { sortField: filters?.sortField, sortOrder: filters?.sortOrder });
+    
+    if (filters?.sortField && filters?.sortOrder) {
+      switch (filters.sortField) {
+        case 'customerName':
+          orderBy.push({ user: { name: filters.sortOrder } });
+          break;
+        case 'customerEmail':
+          orderBy.push({ user: { email: filters.sortOrder } });
+          break;
+        case 'branch':
+          orderBy.push({ branch: { name: filters.sortOrder } });
+          break;
+        case 'service':
+          orderBy.push({ service: { name: filters.sortOrder } });
+          break;
+        case 'artist':
+          orderBy.push({ artist: { name: filters.sortOrder } });
+          break;
+        case 'startAt':
+          orderBy.push({ startAt: filters.sortOrder });
+          break;
+        case 'status':
+          orderBy.push({ status: filters.sortOrder });
+          break;
+        case 'createdAt':
+          orderBy.push({ createdAt: filters.sortOrder });
+          break;
+        default:
+          orderBy.push({ startAt: 'desc' });
+      }
+    } else {
+      orderBy.push({ startAt: 'desc' });
+    }
+    
+    orderBy.push({ id: 'desc' });
+
+    console.log('🔍 Final appointment orderBy:', JSON.stringify(orderBy, null, 2));
+
     return this.prisma.appointment.findMany({
       where,
       include: {
@@ -39,10 +87,7 @@ export class AdminAppointmentsService {
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
       },
-      orderBy: [
-        { branch: { name: 'asc' } },
-        { startAt: 'desc' }
-      ],
+      orderBy,
     });
   }
 

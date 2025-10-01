@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 interface GetOrdersQuery {
   branchId?: string;
   status?: string;
   page?: number;
   limit?: number;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 interface CreateOrderInput {
@@ -20,6 +23,25 @@ interface CreateOrderInput {
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** 列表/統計 共用：把查詢參數轉成 Prisma where */
+  private buildWhere(query: GetOrdersQuery, userRole: string, userBranchId?: string): Prisma.OrderWhereInput {
+    const where: Prisma.OrderWhereInput = {};
+
+    // 如果不是 BOSS，只能查看自己分店的訂單
+    if (userRole !== 'BOSS') {
+      where.branchId = userBranchId;
+    } else if (query.branchId) {
+      // BOSS 可以指定分店查看
+      where.branchId = query.branchId;
+    }
+    
+    if (query.status) {
+      where.status = query.status as any;
+    }
+
+    return where;
+  }
 
   async create(input: CreateOrderInput) {
     return this.prisma.$transaction(async (tx) => {
@@ -87,27 +109,53 @@ export class OrdersService {
   }
 
   async getOrders(query: GetOrdersQuery, userRole: string, userBranchId?: string) {
-    const { branchId, status, page = 1, limit = 10 } = query;
-    
-    // 構建 where 條件
-    const where: any = {};
-    
-    // 如果不是 BOSS，只能查看自己分店的訂單
-    if (userRole !== 'BOSS') {
-      where.branchId = userBranchId;
-    } else if (branchId) {
-      // BOSS 可以指定分店查看
-      where.branchId = branchId;
-    }
-    
-    if (status) {
-      where.status = status;
-    }
+    try {
+      const { page = 1, limit = 10, sortField, sortOrder } = query;
+      
+      // 確保 page 和 limit 是數字
+      const pageNum = typeof page === 'string' ? parseInt(page) : page;
+      const limitNum = typeof limit === 'string' ? parseInt(limit) : limit;
+      
+      console.log('🔍 getOrders called with:', { query, userRole, userBranchId });
+      console.log('🔍 Page and limit types:', { pageType: typeof pageNum, limitType: typeof limitNum, pageNum, limitNum });
+      
+      // 使用共用的 where 構建邏輯
+      const where = this.buildWhere(query, userRole, userBranchId);
 
-    const skip = (page - 1) * limit;
-    
-    const [orders, total] = await Promise.all([
-      this.prisma.order.findMany({
+      // 構建排序條件 - 簡單版本，不使用關聯排序
+      let orderBy: any = { createdAt: 'desc' };
+      
+      console.log('🔍 Order sort filters:', { sortField, sortOrder });
+      
+      if (sortField && sortOrder) {
+        if (sortField === 'customerName' || sortField === 'customerEmail' || sortField === 'branch') {
+          // 暫時跳過關聯排序，使用默認排序
+          console.log('⚠️ Skipping relational sort for:', sortField);
+        } else {
+          switch (sortField) {
+            case 'totalAmount':
+              orderBy = { totalAmount: sortOrder };
+              break;
+            case 'status':
+              orderBy = { status: sortOrder };
+              break;
+            case 'createdAt':
+              orderBy = { createdAt: sortOrder };
+              break;
+            default:
+              orderBy = { createdAt: 'desc' };
+          }
+        }
+      }
+
+      console.log('🔍 Where condition:', JSON.stringify(where, null, 2));
+      console.log('🔍 Order by:', JSON.stringify(orderBy, null, 2));
+
+      const skip = (pageNum - 1) * limitNum;
+      console.log('🔍 Pagination:', { pageNum, limitNum, skip });
+      
+      // 先測試簡單查詢
+      const orders = await this.prisma.order.findMany({
         where,
         include: {
           member: { select: { id: true, name: true, email: true } },
@@ -115,21 +163,72 @@ export class OrdersService {
           installments: true,
         },
         skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.order.count({ where }),
-    ]);
+        take: limitNum,
+        orderBy,
+      });
+      
+      const total = await this.prisma.order.count({ where });
 
-    return {
-      orders,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    };
+      console.log('🔍 Query results:', { ordersCount: orders.length, total });
+
+      return {
+        orders,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum),
+        },
+      };
+    } catch (error) {
+      console.error('❌ Error in getOrders:', error);
+      console.error('❌ Error stack:', error.stack);
+      throw error;
+    }
+  }
+
+  /** ✅ 新增：彙總統計，不分頁、不排序（但沿用所有篩選） */
+  async getOrdersSummary(query: GetOrdersQuery, userRole: string, userBranchId?: string) {
+    try {
+      console.log('🔍 getOrdersSummary called with:', { query, userRole, userBranchId });
+      
+      // 使用共用的 where 構建邏輯
+      const where = this.buildWhere(query, userRole, userBranchId);
+      
+      console.log('🔍 Summary where condition:', JSON.stringify(where, null, 2));
+
+      const [totalCount, pendingCount, completedCount, cancelledCount, totalRevenue] =
+        await this.prisma.$transaction([
+          this.prisma.order.count({ where }),
+          this.prisma.order.count({ where: { ...where, status: 'PENDING' } }),
+          this.prisma.order.count({ where: { ...where, status: 'COMPLETED' } }),
+          this.prisma.order.count({ where: { ...where, status: 'CANCELLED' } }),
+          this.prisma.order.aggregate({
+            where: { ...where, status: 'COMPLETED' },
+            _sum: { totalAmount: true },
+          }),
+        ]);
+
+      console.log('🔍 Summary results:', { 
+        totalCount, 
+        pendingCount, 
+        completedCount, 
+        cancelledCount, 
+        totalRevenue: totalRevenue._sum.totalAmount 
+      });
+
+      return {
+        totalCount,
+        pendingCount,
+        completedCount,
+        cancelledCount,
+        totalRevenue: Number(totalRevenue._sum.totalAmount || 0), // Decimal 轉 number
+      };
+    } catch (error) {
+      console.error('❌ Error in getOrdersSummary:', error);
+      console.error('❌ Error stack:', error.stack);
+      throw error;
+    }
   }
 
   async myOrders(userId: string) {

@@ -51,11 +51,14 @@ export class AdminMembersController {
   @Get()
   findAll(@Query() query: any) {
     console.log('🎯 AdminMembersController.findAll called');
+    console.log('🔍 Query params:', query);
     try {
       return this.service.findAll({
         search: query.search,
         role: query.role,
         status: query.status,
+        sortField: query.sortField,
+        sortOrder: query.sortOrder,
       });
     } catch (error) {
       console.error('❌ Error in AdminMembersController.findAll:', error);

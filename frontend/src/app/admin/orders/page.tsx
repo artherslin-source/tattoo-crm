@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, Package, AlertCircle } from "lucide-react";
 
 interface Order {
   id: string;
@@ -23,11 +24,66 @@ interface Order {
   };
 }
 
+interface OrdersSummary {
+  totalCount: number;
+  pendingCount: number;
+  completedCount: number;
+  cancelledCount: number;
+  totalRevenue: number;
+}
+
 export default function AdminOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // 分頁相關狀態
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // ✅ 統計相關狀態
+  const [summary, setSummary] = useState<OrdersSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      // 使用 admin/orders API，包含排序和分頁參數
+      const params = new URLSearchParams();
+      if (sortField) params.append('sortField', sortField);
+      if (sortOrder) params.append('sortOrder', sortOrder);
+      params.append('page', currentPage.toString());
+      params.append('limit', itemsPerPage.toString());
+      
+      const url = `/admin/orders${params.toString() ? `?${params.toString()}` : ''}`;
+      const data = await getJsonWithAuth(url);
+      setOrders(data.orders || []);
+      setTotalItems(data.pagination?.total || 0);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "載入訂單資料失敗");
+    } finally {
+      setLoading(false);
+    }
+  }, [sortField, sortOrder, currentPage, itemsPerPage]);
+
+  // ✅ 新增：抓取統計資料的方法
+  const fetchSummary = useCallback(async () => {
+    try {
+      setSummaryLoading(true);
+      const data = await getJsonWithAuth('/admin/orders/summary');
+      setSummary(data);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      console.error('載入統計資料失敗:', apiErr.message);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -39,19 +95,36 @@ export default function AdminOrdersPage() {
     }
 
     fetchOrders();
-  }, [router]);
+    fetchSummary(); // ✅ 同時載入統計資料
+  }, [router, fetchOrders, fetchSummary]);
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const data = await getJsonWithAuth('/admin/orders');
-      setOrders(data.orders || []);
-    } catch (err) {
-      const apiErr = err as ApiError;
-      setError(apiErr.message || "載入訂單資料失敗");
-    } finally {
-      setLoading(false);
+  // 當排序或分頁參數改變時重新載入資料
+  useEffect(() => {
+    if (sortField && sortOrder) {
+      fetchOrders();
     }
+  }, [sortField, sortOrder, currentPage, itemsPerPage, fetchOrders]);
+
+  const handleSortFieldChange = (field: string) => {
+    setSortField(field);
+  };
+
+  const handleSortOrderToggle = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  // 分頁計算函數
+  const getTotalPages = () => {
+    return Math.ceil(totalItems / itemsPerPage);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // 重置到第一頁
   };
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -155,38 +228,40 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
-      {/* Stats Cards */}
+      {/* ✅ 統計卡片 —— 直接吃 summary，不要再自行用當前頁面資料去算 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總訂單數</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{orders.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">待付款</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {orders.filter(order => order.status === 'PENDING').length}
+              {summaryLoading ? '—' : (summary?.totalCount ?? 0)}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">已付款</CardTitle>
+            <CardTitle className="text-sm font-medium">待處理</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {summaryLoading ? '—' : (summary?.pendingCount ?? 0)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">已完成</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {orders.filter(order => order.status === 'PAID').length}
+              {summaryLoading ? '—' : (summary?.completedCount ?? 0)}
             </div>
           </CardContent>
         </Card>
@@ -194,17 +269,87 @@ export default function AdminOrdersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總營收</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              NT$ {orders
-                .filter(order => order.status === 'PAID' || order.status === 'COMPLETED')
-                .reduce((sum, order) => sum + order.totalAmount, 0)
-                .toLocaleString()}
+              {summaryLoading ? '—' : `NT$ ${(summary?.totalRevenue ?? 0).toLocaleString()}`}
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* 排序控制介面 */}
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <ArrowUpDown className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">排序設定：</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">排序依據：</span>
+            <Select value={sortField} onValueChange={handleSortFieldChange}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white/85">
+                <SelectItem value="customerName">客戶姓名</SelectItem>
+                <SelectItem value="customerEmail">客戶Email</SelectItem>
+                <SelectItem value="branch">分店</SelectItem>
+                <SelectItem value="totalAmount">訂單金額</SelectItem>
+                <SelectItem value="status">訂單狀態</SelectItem>
+                <SelectItem value="createdAt">建立時間</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">排序順序：</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSortOrderToggle}
+              className="flex items-center space-x-1"
+            >
+              {sortOrder === 'asc' ? (
+                <>
+                  <ArrowUp className="h-3 w-3" />
+                  <span>升序</span>
+                </>
+              ) : (
+                <>
+                  <ArrowDown className="h-3 w-3" />
+                  <span>降序</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* 分頁控制欄 */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">每頁顯示：</span>
+            <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white/85">
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          共 {totalItems} 個訂單，第 {currentPage} / {getTotalPages()} 頁
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -229,8 +374,8 @@ export default function AdminOrdersPage() {
                   <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
                 </tr>
               </thead>
-              <tbody>
-                {orders.map((order) => (
+            <tbody>
+              {orders.map((order) => (
                   <tr key={order.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="py-3 px-4">
                       <div className="font-mono text-sm text-gray-900 dark:text-white">
@@ -326,6 +471,51 @@ export default function AdminOrdersPage() {
           {orders.length === 0 && (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               目前沒有訂單資料
+            </div>
+          )}
+          
+          {/* 分頁導航 */}
+          {getTotalPages() > 1 && (
+            <div className="flex items-center justify-center space-x-2 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                上一頁
+              </Button>
+              
+              {/* 頁碼按鈕 */}
+              {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map((page) => {
+                // 只顯示當前頁前後2頁的頁碼
+                if (page === 1 || page === getTotalPages() || 
+                    (page >= currentPage - 2 && page <= currentPage + 2)) {
+                  return (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(page)}
+                      className={page === currentPage ? "bg-blue-600 text-white" : ""}
+                    >
+                      {page}
+                    </Button>
+                  );
+                } else if (page === currentPage - 3 || page === currentPage + 3) {
+                  return <span key={page} className="text-gray-500">...</span>;
+                }
+                return null;
+              })}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === getTotalPages()}
+              >
+                下一頁
+              </Button>
             </div>
           )}
         </CardContent>
