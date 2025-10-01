@@ -57,6 +57,8 @@ export class AdminMembersController {
         search: query.search,
         role: query.role,
         status: query.status,
+        branchId: query.branchId,
+        membershipLevel: query.membershipLevel,
         sortField: query.sortField,
         sortOrder: query.sortOrder,
       });

@@ -12,10 +12,51 @@ export class AdminMembersService {
     search?: string; 
     role?: string; 
     status?: string;
+    branchId?: string;
+    membershipLevel?: string;
     sortField?: string;
     sortOrder?: 'asc' | 'desc';
   }) {
     try {
+      // 建立篩選條件
+      const where: any = {};
+      const userWhere: any = {};
+      
+      // 搜尋條件
+      if (filters?.search) {
+        where.OR = [
+          { user: { name: { contains: filters.search, mode: 'insensitive' } } },
+          { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+        ];
+      }
+      
+      // 角色篩選
+      if (filters?.role && filters.role !== 'all') {
+        userWhere.role = filters.role;
+      }
+      
+      // 狀態篩選
+      if (filters?.status && filters.status !== 'all') {
+        userWhere.status = filters.status;
+      }
+      
+      // 分店篩選
+      if (filters?.branchId && filters.branchId !== 'all') {
+        userWhere.branchId = filters.branchId;
+      }
+      
+      // 會員等級篩選
+      if (filters?.membershipLevel && filters.membershipLevel !== 'all') {
+        where.membershipLevel = filters.membershipLevel;
+      }
+      
+      // 如果有 user 相關的篩選條件，添加到 where 中
+      if (Object.keys(userWhere).length > 0) {
+        where.user = userWhere;
+      }
+
+      console.log('🔍 Filter conditions:', JSON.stringify(where, null, 2));
+
       // 建立排序條件
       let orderBy: any[] = [];
       
@@ -63,6 +104,7 @@ export class AdminMembersService {
       console.log('🔍 Final orderBy:', JSON.stringify(orderBy, null, 2));
 
       const members = await this.prisma.member.findMany({
+        where,
         include: { 
           user: {
             include: {

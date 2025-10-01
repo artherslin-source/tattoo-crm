@@ -160,10 +160,10 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      {/* Main content area */}
-      <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
-        {/* Header */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+      {/* Main content area - this is the scrolling container */}
+      <main className="lg:pl-64 flex-1 overflow-y-auto">
+        {/* Header - now inside the scrolling container with sticky positioning */}
+        <header className="sticky top-0 z-20 bg-white/95 dark:bg-gray-800/95 backdrop-blur shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center">
@@ -178,24 +178,15 @@ export default function AdminLayout({
                   管理後台
                 </h2>
               </div>
-              <div className="flex items-center">
-                <button
-                  onClick={handleLogout}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  登出
-                </button>
-              </div>
             </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Page content - no need for overflow-y-auto here since main has it */}
+        <div className="flex-1">
           {children}
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

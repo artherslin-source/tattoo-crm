@@ -6,8 +6,10 @@ import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patch
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Edit, Trash2, ArrowLeft, Key, DollarSign, Wallet, History, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, ArrowLeft } from "lucide-react";
+import MembersToolbar from "@/components/admin/MembersToolbar";
+import MembersTable from "@/components/admin/MembersTable";
+import MembersCards from "@/components/admin/MembersCards";
 
 interface Member {
   id: string;
@@ -47,6 +49,12 @@ export default function AdminMembersPage() {
   const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // 篩選相關狀態
+  const [search, setSearch] = useState<string>('');
+  const [branchId, setBranchId] = useState<string>('all');
+  const [role, setRole] = useState<string>('all');
+  const [membershipLevel, setMembershipLevel] = useState<string>('all');
   
   // 分頁相關狀態
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,10 +118,14 @@ export default function AdminMembersPage() {
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true);
-      // 使用 admin/members API，包含排序參數
+      // 使用 admin/members API，包含排序和篩選參數
       const params = new URLSearchParams();
       if (sortField) params.append('sortField', sortField);
       if (sortOrder) params.append('sortOrder', sortOrder);
+      if (search) params.append('search', search);
+      if (branchId && branchId !== 'all') params.append('branchId', branchId);
+      if (role && role !== 'all') params.append('role', role);
+      if (membershipLevel && membershipLevel !== 'all') params.append('membershipLevel', membershipLevel);
       
       const url = `/admin/members${params.toString() ? `?${params.toString()}` : ''}`;
       const data = await getJsonWithAuth(url);
@@ -126,7 +138,7 @@ export default function AdminMembersPage() {
     } finally {
       setLoading(false);
     }
-  }, [sortField, sortOrder]);
+  }, [sortField, sortOrder, search, branchId, role, membershipLevel]);
 
   // 當排序參數改變時重新載入資料
   useEffect(() => {
@@ -162,6 +174,23 @@ export default function AdminMembersPage() {
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(parseInt(value));
     setCurrentPage(1); // 重置到第一頁
+  };
+
+  // 篩選處理函數
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+  };
+
+  const handleBranchChange = (value: string) => {
+    setBranchId(value);
+  };
+
+  const handleRoleChange = (value: string) => {
+    setRole(value);
+  };
+
+  const handleMembershipLevelChange = (value: string) => {
+    setMembershipLevel(value);
   };
 
   // 當 members 改變時，重新計算總項目數
@@ -392,8 +421,8 @@ export default function AdminMembersPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-6">
+      {/* Page Header - now sticky within the main scrolling container */}
+      <div className="sticky top-0 z-10 mb-6 pb-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
@@ -459,7 +488,32 @@ export default function AdminMembersPage() {
         </Card>
       </div>
 
-      {/* Users Table */}
+      {/* 工具列 */}
+      <MembersToolbar
+        sortField={sortField}
+        sortOrder={sortOrder}
+        itemsPerPage={itemsPerPage}
+        search={search}
+        branchId={branchId}
+        role={role}
+        membershipLevel={membershipLevel}
+        onSortFieldChange={handleSortFieldChange}
+        onSortOrderToggle={handleSortOrderToggle}
+        onItemsPerPageChange={handleItemsPerPageChange}
+        onSearchChange={handleSearchChange}
+        onBranchChange={handleBranchChange}
+        onRoleChange={handleRoleChange}
+        onMembershipLevelChange={handleMembershipLevelChange}
+      />
+
+      {/* 分頁資訊 */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          共 {totalItems} 個會員，第 {currentPage} / {getTotalPages()} 頁
+        </div>
+      </div>
+
+      {/* 響應式會員列表 */}
       <Card>
         <CardHeader>
           <CardTitle>會員列表</CardTitle>
@@ -468,212 +522,29 @@ export default function AdminMembersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* 排序控制介面 */}
-          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <ArrowUpDown className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">排序設定：</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">排序依據：</span>
-                <Select value={sortField} onValueChange={handleSortFieldChange}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white/85">
-                    <SelectItem value="name">姓名</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="branch">分店</SelectItem>
-                    <SelectItem value="role">角色</SelectItem>
-                    <SelectItem value="totalSpent">累計消費</SelectItem>
-                    <SelectItem value="membershipLevel">會員等級</SelectItem>
-                    <SelectItem value="balance">儲值餘額</SelectItem>
-                    <SelectItem value="createdAt">註冊時間</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">排序順序：</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSortOrderToggle}
-                  className="flex items-center space-x-1"
-                >
-                  {sortOrder === 'asc' ? (
-                    <>
-                      <ArrowUp className="h-3 w-3" />
-                      <span>升序</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDown className="h-3 w-3" />
-                      <span>降序</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* 桌機/平板表格 */}
+          <MembersTable
+            members={getPaginatedMembers()}
+            onTopUp={handleOpenTopUpModal}
+            onSpend={handleOpenSpendModal}
+            onAdjustBalance={handleOpenAdjustBalanceModal}
+            onViewHistory={handleViewTopups}
+            onResetPassword={handleOpenResetPasswordModal}
+            onDelete={handleDeleteMember}
+            getUserRole={getUserRole}
+          />
 
-          {/* 分頁控制欄 */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">每頁顯示：</span>
-                <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white/85">
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                共 {totalItems} 個會員，第 {currentPage} / {getTotalPages()} 頁
-              </span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">姓名</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Email</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">分店</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">角色</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">累計消費</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">會員等級</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">儲值餘額</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">註冊時間</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
-                    </tr>
-                  </thead>
-              <tbody>
-                {getPaginatedMembers().map((member) => (
-                    <tr key={member.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {member.user?.name || '未設定'}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        {member.user?.email || 'N/A'}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                          {member.user?.branch?.name || '未分配'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          member.user?.role === 'ADMIN' 
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' 
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                        }`}>
-                          {member.user?.role === 'ADMIN' ? '管理員' : '會員'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        <span className="font-medium text-blue-600 dark:text-blue-400">
-                          {formatCurrency(member.totalSpent)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        <span className="font-medium text-orange-600 dark:text-orange-400">
-                          {member.membershipLevel || '未設定'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        <span className="font-medium text-purple-600 dark:text-purple-400">
-                          {formatCurrency(member.balance)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                        {member.user?.createdAt ? new Date(member.user.createdAt).toLocaleDateString('zh-TW') : 'N/A'}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1">
-                          {/* 儲值按鈕 - 只有管理員可以操作 */}
-                          {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenTopUpModal(member)}
-                              className="flex items-center space-x-1 text-green-600 hover:text-green-700"
-                            >
-                              <DollarSign className="h-3 w-3" />
-                              <span>儲值</span>
-                            </Button>
-                          )}
-                          {/* 消費按鈕 - 只有管理員可以操作 */}
-                          {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenSpendModal(member)}
-                              className="flex items-center space-x-1 text-red-600 hover:text-red-700"
-                              disabled={!member.balance || member.balance <= 0}
-                            >
-                              <ShoppingCart className="h-3 w-3" />
-                              <span>消費</span>
-                            </Button>
-                          )}
-                          {/* 調整餘額按鈕 - 只有管理員可以操作 */}
-                          {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenAdjustBalanceModal(member)}
-                              className="flex items-center space-x-1 text-purple-600 hover:text-purple-700"
-                            >
-                              <Wallet className="h-3 w-3" />
-                              <span>調整餘額</span>
-                            </Button>
-                          )}
-                          {/* 查看紀錄按鈕 - 所有角色都可以查看 */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewTopups(member.id)}
-                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
-                          >
-                            <History className="h-3 w-3" />
-                            <span>查看儲值紀錄</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenResetPasswordModal(member)}
-                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
-                          >
-                            <Key className="h-3 w-3" />
-                            <span>重設密碼</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteMember(member.id)}
-                            className="flex items-center space-x-1 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            <span>刪除</span>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* 手機卡片 */}
+          <MembersCards
+            members={getPaginatedMembers()}
+            onTopUp={handleOpenTopUpModal}
+            onSpend={handleOpenSpendModal}
+            onAdjustBalance={handleOpenAdjustBalanceModal}
+            onViewHistory={handleViewTopups}
+            onResetPassword={handleOpenResetPasswordModal}
+            onDelete={handleDeleteMember}
+            getUserRole={getUserRole}
+          />
           
           {members.length === 0 && (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
