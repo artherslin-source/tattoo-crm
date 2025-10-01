@@ -94,11 +94,11 @@ export default function BranchDashboardPage() {
 
   const quickActions = [
     {
-      title: "管理會員",
-      description: "查看和管理分店會員資訊",
-      icon: Users,
-      href: "/admin/members",
-      color: "bg-blue-500"
+      title: "管理服務項目",
+      description: "管理分店刺青服務和價格",
+      icon: Settings,
+      href: "/branch/services",
+      color: "bg-red-500"
     },
     {
       title: "管理刺青師",
@@ -108,10 +108,17 @@ export default function BranchDashboardPage() {
       color: "bg-green-500"
     },
     {
+      title: "管理會員",
+      description: "查看和管理分店會員資訊",
+      icon: Users,
+      href: "/branch/members",
+      color: "bg-blue-500"
+    },
+    {
       title: "管理預約",
       description: "查看和管理分店預約",
       icon: Calendar,
-      href: "/admin/appointments",
+      href: "/branch/appointments",
       color: "bg-purple-500"
     },
     {
@@ -120,13 +127,6 @@ export default function BranchDashboardPage() {
       icon: ShoppingCart,
       href: "/branch/orders",
       color: "bg-orange-500"
-    },
-    {
-      title: "管理服務項目",
-      description: "管理分店刺青服務和價格",
-      icon: Settings,
-      href: "/admin/services",
-      color: "bg-red-500"
     }
   ];
 

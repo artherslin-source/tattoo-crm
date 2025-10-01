@@ -19,6 +19,7 @@ interface Appointment {
   status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
   notes: string | null;
   createdAt: string;
+  orderId: string | null;
   user: {
     id: string;
     name: string | null;
@@ -37,6 +38,13 @@ interface Appointment {
   branch: {
     id: string;
     name: string;
+  };
+  order?: {
+    id: string;
+    totalAmount: number;
+    finalAmount: number;
+    status: string;
+    paymentType: string;
   };
 }
 

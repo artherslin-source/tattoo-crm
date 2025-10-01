@@ -12,6 +12,7 @@ interface Appointment {
   status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
   notes: string | null;
   createdAt: string;
+  orderId: string | null;
   user: {
     id: string;
     name: string | null;
@@ -30,6 +31,13 @@ interface Appointment {
   branch: {
     id: string;
     name: string;
+  };
+  order?: {
+    id: string;
+    totalAmount: number;
+    finalAmount: number;
+    status: string;
+    paymentType: string;
   };
 }
 
@@ -80,6 +88,36 @@ export default function AppointmentsCards({
     }
   };
 
+  const getOrderStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'PAID':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'COMPLETED':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
+  const getOrderStatusText = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return '未付款';
+      case 'PAID':
+        return '已付款';
+      case 'COMPLETED':
+        return '已完成';
+      case 'CANCELLED':
+        return '已取消';
+      default:
+        return status;
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('zh-TW', {
       year: 'numeric',
@@ -119,6 +157,11 @@ export default function AppointmentsCards({
                       <Badge className={`text-xs ${getStatusBadgeClass(appointment.status)}`}>
                         {getStatusText(appointment.status)}
                       </Badge>
+                      {appointment.order && (
+                        <Badge className={`text-xs ${getOrderStatusBadgeClass(appointment.order.status)}`}>
+                          {getOrderStatusText(appointment.order.status)}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="text-sm text-gray-500">
@@ -253,6 +296,11 @@ export default function AppointmentsCards({
                       <Badge className={`text-xs ${getStatusBadgeClass(appointment.status)}`}>
                         {getStatusText(appointment.status)}
                       </Badge>
+                      {appointment.order && (
+                        <Badge className={`text-xs ${getOrderStatusBadgeClass(appointment.order.status)}`}>
+                          {getOrderStatusText(appointment.order.status)}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <DropdownMenu>

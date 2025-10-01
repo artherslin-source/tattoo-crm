@@ -92,11 +92,11 @@ export default function AdminDashboardPage() {
 
   const quickActions = [
     {
-      title: "管理會員",
-      description: "查看和管理所有會員資訊",
-      icon: Users,
-      href: "/admin/members",
-      color: "bg-blue-500"
+      title: "管理服務項目",
+      description: "管理刺青服務和價格",
+      icon: Settings,
+      href: "/admin/services",
+      color: "bg-red-500"
     },
     {
       title: "管理刺青師",
@@ -104,6 +104,13 @@ export default function AdminDashboardPage() {
       icon: UserCheck,
       href: "/admin/artists",
       color: "bg-green-500"
+    },
+    {
+      title: "管理會員",
+      description: "查看和管理所有會員資訊",
+      icon: Users,
+      href: "/admin/members",
+      color: "bg-blue-500"
     },
     {
       title: "管理預約",
@@ -118,13 +125,6 @@ export default function AdminDashboardPage() {
       icon: ShoppingCart,
       href: "/admin/orders",
       color: "bg-orange-500"
-    },
-    {
-      title: "管理服務項目",
-      description: "管理刺青服務和價格",
-      icon: Settings,
-      href: "/admin/services",
-      color: "bg-red-500"
     }
   ];
 

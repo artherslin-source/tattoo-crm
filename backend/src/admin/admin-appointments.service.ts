@@ -94,6 +94,7 @@ export class AdminAppointmentsService {
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
+        order: { select: { id: true, totalAmount: true, finalAmount: true, status: true, paymentType: true } },
       },
       orderBy,
     });
@@ -107,6 +108,7 @@ export class AdminAppointmentsService {
         service: { select: { id: true, name: true, description: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
+        order: { select: { id: true, totalAmount: true, finalAmount: true, status: true, paymentType: true } },
       },
     });
 
@@ -122,20 +124,72 @@ export class AdminAppointmentsService {
       throw new BadRequestException('無效的狀態');
     }
 
-    const appointment = await this.prisma.appointment.findUnique({ where: { id } });
-    if (!appointment) {
-      throw new NotFoundException('預約不存在');
-    }
-
-    return this.prisma.appointment.update({
+    const appointment = await this.prisma.appointment.findUnique({ 
       where: { id },
-      data: { status: status as any },
       include: {
         user: { select: { id: true, name: true, email: true } },
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
-      },
+        order: true
+      }
+    });
+    
+    if (!appointment) {
+      throw new NotFoundException('預約不存在');
+    }
+
+    // 使用事務來確保預約狀態更新和訂單創建的原子性
+    return await this.prisma.$transaction(async (tx) => {
+      // 更新預約狀態
+      const updatedAppointment = await tx.appointment.update({
+        where: { id },
+        data: { status: status as any },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          service: { select: { id: true, name: true, price: true, durationMin: true } },
+          artist: { select: { id: true, name: true } },
+          branch: { select: { id: true, name: true } },
+          order: true
+        },
+      });
+
+      // 如果狀態變為 COMPLETED 且還沒有關聯的訂單，則自動創建訂單
+      if (status === 'COMPLETED' && !appointment.order && appointment.service) {
+        console.log('🎯 預約完成，自動創建訂單:', {
+          appointmentId: id,
+          memberId: appointment.userId,
+          branchId: appointment.branchId,
+          servicePrice: appointment.service.price
+        });
+
+        const order = await tx.order.create({
+          data: {
+            memberId: appointment.userId,
+            branchId: appointment.branchId,
+            appointmentId: id,
+            totalAmount: appointment.service.price,
+            finalAmount: appointment.service.price,
+            paymentType: 'ONE_TIME',
+            status: 'PENDING',
+            notes: `自動生成訂單 - 預約ID: ${id}`
+          }
+        });
+
+        // 更新預約的 orderId
+        await tx.appointment.update({
+          where: { id },
+          data: { orderId: order.id }
+        });
+
+        console.log('✅ 訂單創建成功:', {
+          orderId: order.id,
+          appointmentId: id,
+          amount: order.finalAmount
+        });
+      }
+
+      return updatedAppointment;
     });
   }
 

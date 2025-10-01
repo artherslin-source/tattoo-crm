@@ -43,6 +43,39 @@ export class OrdersService {
     return where;
   }
 
+  /** 根據累計消費金額計算會員等級 */
+  private calculateMembershipLevel(totalSpent: number): string {
+    if (totalSpent >= 100000) {
+      return '鑽石會員';
+    } else if (totalSpent >= 50000) {
+      return '白金會員';
+    } else if (totalSpent >= 20000) {
+      return '黃金會員';
+    } else if (totalSpent >= 10000) {
+      return '銀級會員';
+    } else if (totalSpent >= 5000) {
+      return '銅級會員';
+    } else {
+      return '一般會員';
+    }
+  }
+
+  /** 更新會員等級 */
+  private async updateMembershipLevel(tx: any, userId: string, totalSpent: number) {
+    const membershipLevel = this.calculateMembershipLevel(totalSpent);
+    
+    await tx.member.update({
+      where: { userId },
+      data: { membershipLevel },
+    });
+
+    console.log('🎯 會員等級更新:', {
+      userId,
+      totalSpent,
+      membershipLevel
+    });
+  }
+
   async create(input: CreateOrderInput) {
     return this.prisma.$transaction(async (tx) => {
       // 檢查用戶儲值餘額（如果使用儲值付款）
@@ -64,6 +97,7 @@ export class OrdersService {
           branchId: input.branchId,
           appointmentId: input.appointmentId,
           totalAmount: input.totalAmount,
+          finalAmount: input.totalAmount,
           paymentType: input.paymentType,
         },
         include: {
@@ -89,18 +123,36 @@ export class OrdersService {
 
       if (!member) {
         // 如果沒有 Member 記錄，創建一個
-        await tx.member.create({
+        const newMember = await tx.member.create({
           data: {
             userId: input.memberId,
             totalSpent: input.totalAmount,
             balance: input.useStoredValue ? -input.totalAmount : 0,
+            membershipLevel: this.calculateMembershipLevel(input.totalAmount),
           },
+        });
+        
+        console.log('🎯 新會員創建:', {
+          userId: input.memberId,
+          totalSpent: input.totalAmount,
+          membershipLevel: newMember.membershipLevel
         });
       } else {
         // 更新現有的 Member 記錄
+        const newTotalSpent = member.totalSpent + input.totalAmount;
         await tx.member.update({
           where: { userId: input.memberId },
-          data: updateData,
+          data: {
+            ...updateData,
+            membershipLevel: this.calculateMembershipLevel(newTotalSpent),
+          },
+        });
+        
+        console.log('🎯 會員資料更新:', {
+          userId: input.memberId,
+          oldTotalSpent: member.totalSpent,
+          newTotalSpent,
+          membershipLevel: this.calculateMembershipLevel(newTotalSpent)
         });
       }
 

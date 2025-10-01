@@ -22,9 +22,9 @@ const navigationItems = [
     icon: LayoutDashboard,
   },
   {
-    name: "管理會員",
-    href: "/admin/members",
-    icon: Users,
+    name: "管理服務項目",
+    href: "/admin/services",
+    icon: Settings,
   },
   {
     name: "管理刺青師",
@@ -32,19 +32,19 @@ const navigationItems = [
     icon: UserCheck,
   },
   {
-    name: "管理訂單",
-    href: "/admin/orders",
-    icon: ShoppingCart,
-  },
-  {
-    name: "管理服務項目",
-    href: "/admin/services",
-    icon: Settings,
+    name: "管理會員",
+    href: "/admin/members",
+    icon: Users,
   },
   {
     name: "管理預約",
     href: "/admin/appointments",
     icon: Calendar,
+  },
+  {
+    name: "管理訂單",
+    href: "/admin/orders",
+    icon: ShoppingCart,
   },
 ];
 
