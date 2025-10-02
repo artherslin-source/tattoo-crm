@@ -271,7 +271,7 @@ export default function AdminAppointmentsPage() {
       
       // 當選擇刺青師時，自動設定對應的分店
       if (field === 'artistId' && value) {
-        const selectedArtist = artists.find(artist => artist.id === value);
+        const selectedArtist = artists.find(artist => (artist.user?.id || artist.id) === value);
         if (selectedArtist && selectedArtist.branchId) {
           newFormData.branchId = selectedArtist.branchId;
         }
@@ -314,7 +314,31 @@ export default function AdminAppointmentsPage() {
       handleCloseCreateAppointmentModal();
     } catch (err) {
       const apiErr = err as ApiError;
-      setError(apiErr.message || "新增預約失敗");
+      
+      // 處理 409 Conflict 錯誤（時間衝突）
+      if (apiErr.statusCode === 409 && apiErr.response?.conflicts) {
+        const conflicts = apiErr.response.conflicts;
+        const conflictMessages = conflicts.map((conflict: any) => {
+          const startTime = new Date(conflict.startTime).toLocaleString('zh-TW', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          const endTime = new Date(conflict.endTime).toLocaleString('zh-TW', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          return `客戶：${conflict.member}，時間：${startTime} - ${endTime}`;
+        }).join('\n');
+        
+        setError(`⚠️ 該時段已被預約：\n${conflictMessages}\n\n請調整時間後再提交。`);
+      } else {
+        setError(apiErr.message || "新增預約失敗");
+      }
     }
   };
 
@@ -678,7 +702,7 @@ export default function AdminAppointmentsPage() {
                 >
                   <option value="">請選擇刺青師</option>
                   {artists.map((artist) => (
-                    <option key={artist.id} value={artist.id}>
+                    <option key={artist.id} value={artist.user?.id || artist.id}>
                       {artist.user?.name || artist.displayName || '未知刺青師'}
                     </option>
                   ))}

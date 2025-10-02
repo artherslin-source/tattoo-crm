@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -128,57 +128,100 @@ export class AdminAppointmentsService {
     branchId: string; 
     notes?: string; 
   }) {
-    // 驗證所有外鍵是否存在
-    const [user, service, artist, branch] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: input.userId } }),
-      this.prisma.service.findUnique({ where: { id: input.serviceId } }),
-      this.prisma.user.findUnique({ where: { id: input.artistId } }),
-      this.prisma.branch.findUnique({ where: { id: input.branchId } }),
-    ]);
-
-    if (!user) {
-      throw new BadRequestException("用戶不存在");
-    }
-    if (!service) {
-      throw new BadRequestException("服務項目不存在");
-    }
-    if (!artist) {
-      throw new BadRequestException("刺青師不存在");
-    }
-    if (!branch) {
-      throw new BadRequestException("分店不存在");
-    }
-
-    // 檢查時間衝突：同一個 artistId，時間區間重疊的預約狀態為 PENDING 或 CONFIRMED
-    const conflict = await this.prisma.appointment.findFirst({
-      where: {
+    try {
+      console.log('🔍 開始驗證外鍵:', {
+        userId: input.userId,
+        serviceId: input.serviceId,
         artistId: input.artistId,
-        status: { in: ["PENDING", "CONFIRMED"] },
-        OR: [
-          {
-            startAt: { lte: input.endAt },
-            endAt: { gte: input.startAt },
-          },
-        ],
-      },
-    });
+        branchId: input.branchId
+      });
 
-    if (conflict) {
-      throw new BadRequestException("該刺青師在該時段已有預約，請選擇其他時間");
+      // 驗證所有外鍵是否存在
+      const [user, service, artist, branch] = await Promise.all([
+        this.prisma.user.findUnique({ where: { id: input.userId } }),
+        this.prisma.service.findUnique({ where: { id: input.serviceId } }),
+        this.prisma.user.findUnique({ where: { id: input.artistId } }), // 修正：artistId 實際上是 User 表的 ID
+        this.prisma.branch.findUnique({ where: { id: input.branchId } }),
+      ]);
+
+      console.log('🔍 外鍵驗證結果:', {
+        user: user ? '存在' : '不存在',
+        service: service ? '存在' : '不存在',
+        artist: artist ? '存在' : '不存在',
+        branch: branch ? '存在' : '不存在'
+      });
+
+      if (!user) {
+        throw new BadRequestException("用戶不存在");
+      }
+      if (!service) {
+        throw new BadRequestException("服務項目不存在");
+      }
+      if (!artist) {
+        throw new BadRequestException("刺青師不存在");
+      }
+      if (!branch) {
+        throw new BadRequestException("分店不存在");
+      }
+
+      // 檢查時間衝突：同一個 artistId，時間區間重疊的預約狀態為 PENDING、CONFIRMED 或 IN_PROGRESS
+      console.log('🔍 檢查時間衝突:', {
+        artistId: input.artistId,
+        startAt: input.startAt,
+        endAt: input.endAt
+      });
+      
+      const conflicts = await this.prisma.appointment.findMany({
+        where: {
+          artistId: input.artistId,
+          status: { in: ["PENDING", "CONFIRMED", "IN_PROGRESS"] },
+          OR: [
+            {
+              startAt: { lte: input.endAt },
+              endAt: { gte: input.startAt },
+            },
+          ],
+        },
+        include: {
+          user: { select: { name: true } },
+        },
+      });
+
+      console.log('🔍 衝突檢查結果:', conflicts.length, '個衝突');
+
+      if (conflicts.length > 0) {
+        const conflictInfo = conflicts.map(conflict => ({
+          member: conflict.user.name,
+          startTime: conflict.startAt,
+          endTime: conflict.endAt,
+        }));
+
+        console.log('🚨 發現衝突，拋出 ConflictException:', conflictInfo);
+        throw new ConflictException({
+          message: "該時段已被預約",
+          conflicts: conflictInfo,
+        });
+      }
+
+      return this.prisma.appointment.create({ 
+        data: {
+          ...input,
+          status: "PENDING",
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          artist: { select: { id: true, name: true } },
+          service: { select: { id: true, name: true, price: true, durationMin: true } },
+          branch: { select: { id: true, name: true } },
+        },
+      });
+    } catch (error) {
+      console.error('❌ CreateAppointment Error:', error);
+      if (error instanceof BadRequestException || error instanceof ConflictException) {
+        throw error;
+      }
+      throw new BadRequestException('創建預約失敗: ' + error.message);
     }
-
-    return this.prisma.appointment.create({ 
-      data: {
-        ...input,
-        status: "PENDING",
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        artist: { select: { id: true, name: true } },
-        service: { select: { id: true, name: true, price: true, durationMin: true } },
-        branch: { select: { id: true, name: true } },
-      },
-    });
   }
 
   async updateStatus(id: string, status: string) {
