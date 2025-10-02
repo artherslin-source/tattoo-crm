@@ -2,22 +2,28 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, Package, AlertCircle } from "lucide-react";
+import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown, DollarSign, Package, AlertCircle, Plus } from "lucide-react";
 import OrdersToolbar from "@/components/admin/OrdersToolbar";
 import OrdersTable from "@/components/admin/OrdersTable";
 import OrdersCards from "@/components/admin/OrdersCards";
+import InstallmentManager from "@/components/admin/InstallmentManager";
+import InstallmentPaymentSelector from "@/components/admin/InstallmentPaymentSelector";
 
 interface Order {
   id: string;
   totalAmount: number;
-  status: 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED';
+  finalAmount: number;
+  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'COMPLETED';
   createdAt: string;
+  paymentType: string;
+  isInstallment: boolean;
+  paidAt?: string;
   member: {
     id: string;
     name: string | null;
@@ -27,6 +33,16 @@ interface Order {
     id: string;
     name: string;
   };
+  installments?: {
+    id: string;
+    installmentNo: number;
+    dueDate: string;
+    amount: number;
+    status: 'UNPAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+    paidAt?: string;
+    paymentMethod?: string;
+    notes?: string;
+  }[];
 }
 
 interface OrdersSummary {
@@ -63,6 +79,17 @@ export default function AdminOrdersPage() {
   // 訂單詳情模態框狀態
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // 創建訂單模態框狀態
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createOrderData, setCreateOrderData] = useState({
+    memberId: '',
+    branchId: '',
+    totalAmount: '',
+    paymentType: 'ONE_TIME' as 'ONE_TIME' | 'INSTALLMENT',
+    installmentPeriods: 3,
+    notes: ''
+  });
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -219,10 +246,118 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // 分期付款相關處理函數
+  const handlePaymentRecorded = async (installmentId: string, paymentData: any) => {
+    try {
+      await patchJsonWithAuth(`/installments/${installmentId}/payment`, paymentData);
+      
+      // 重新獲取訂單詳情
+      if (selectedOrder) {
+        const updatedOrder = await getJsonWithAuth(`/admin/orders/${selectedOrder.id}`);
+        setSelectedOrder(updatedOrder);
+        
+        // 更新訂單列表中的對應訂單
+        setOrders(orders.map(order => 
+          order.id === selectedOrder.id ? updatedOrder : order
+        ));
+      }
+      
+      setSuccessMessage('付款記錄成功');
+      setError(null);
+      
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "記錄付款失敗");
+      setSuccessMessage(null);
+    }
+  };
+
+  const handleInstallmentUpdated = async (installmentId: string, updateData: any) => {
+    try {
+      await patchJsonWithAuth(`/installments/${installmentId}`, updateData);
+      
+      // 重新獲取訂單詳情
+      if (selectedOrder) {
+        const updatedOrder = await getJsonWithAuth(`/admin/orders/${selectedOrder.id}`);
+        setSelectedOrder(updatedOrder);
+        
+        // 更新訂單列表中的對應訂單
+        setOrders(orders.map(order => 
+          order.id === selectedOrder.id ? updatedOrder : order
+        ));
+      }
+      
+      setSuccessMessage('分期付款更新成功');
+      setError(null);
+      
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "更新分期付款失敗");
+      setSuccessMessage(null);
+    }
+  };
+
+  // 創建訂單處理函數
+  const handleCreateOrder = async () => {
+    try {
+      const orderData = {
+        memberId: createOrderData.memberId,
+        branchId: createOrderData.branchId,
+        totalAmount: parseInt(createOrderData.totalAmount),
+        paymentType: createOrderData.paymentType,
+        notes: createOrderData.notes
+      };
+
+      const newOrder = await postJsonWithAuth('/orders', orderData);
+
+      // 如果是分期付款，創建分期計劃
+      if (createOrderData.paymentType === 'INSTALLMENT') {
+        await postJsonWithAuth('/installments/plan', {
+          orderId: newOrder.id,
+          periods: createOrderData.installmentPeriods
+        });
+      }
+
+      // 重新獲取訂單列表
+      await fetchOrders();
+      await fetchSummary();
+
+      // 關閉模態框並重置表單
+      setIsCreateModalOpen(false);
+      setCreateOrderData({
+        memberId: '',
+        branchId: '',
+        totalAmount: '',
+        paymentType: 'ONE_TIME',
+        installmentPeriods: 3,
+        notes: ''
+      });
+
+      setSuccessMessage('訂單創建成功');
+      setError(null);
+
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "創建訂單失敗");
+      setSuccessMessage(null);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'PARTIALLY_PAID':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'PAID':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'COMPLETED':
@@ -238,6 +373,8 @@ export default function AdminOrdersPage() {
     switch (status) {
       case 'PENDING':
         return '待付款';
+      case 'PARTIALLY_PAID':
+        return '部分付款';
       case 'PAID':
         return '已付款';
       case 'COMPLETED':
@@ -253,6 +390,8 @@ export default function AdminOrdersPage() {
     switch (status) {
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'PARTIALLY_PAID':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'PAID':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'COMPLETED':
@@ -322,14 +461,23 @@ export default function AdminOrdersPage() {
               管理系統中的所有客戶訂單
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>回上一頁</span>
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>創建訂單</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => router.back()}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>回上一頁</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -576,6 +724,17 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
 
+              {/* 分期付款管理 */}
+              {selectedOrder.isInstallment && selectedOrder.installments && (
+                <div className="border-t pt-4">
+                  <InstallmentManager
+                    order={selectedOrder}
+                    onPaymentRecorded={handlePaymentRecorded}
+                    onInstallmentUpdated={handleInstallmentUpdated}
+                  />
+                </div>
+              )}
+
               {/* 操作按鈕 */}
               <div className="border-t pt-4 flex justify-end space-x-2">
                 <Button variant="outline" onClick={handleCloseDetailModal}>
@@ -617,6 +776,102 @@ export default function AdminOrdersPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 創建訂單模態框 */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>創建新訂單</DialogTitle>
+            <DialogDescription>
+              為客戶創建新的訂單，可選擇一次付清或分期付款
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* 基本資訊 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  會員ID *
+                </label>
+                <input
+                  type="text"
+                  value={createOrderData.memberId}
+                  onChange={(e) => setCreateOrderData({ ...createOrderData, memberId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  placeholder="輸入會員ID"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  分店ID *
+                </label>
+                <input
+                  type="text"
+                  value={createOrderData.branchId}
+                  onChange={(e) => setCreateOrderData({ ...createOrderData, branchId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  placeholder="輸入分店ID"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                訂單金額 *
+              </label>
+              <input
+                type="number"
+                value={createOrderData.totalAmount}
+                onChange={(e) => setCreateOrderData({ ...createOrderData, totalAmount: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="輸入訂單金額"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                備註
+              </label>
+              <textarea
+                value={createOrderData.notes}
+                onChange={(e) => setCreateOrderData({ ...createOrderData, notes: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="輸入訂單備註"
+                rows={3}
+              />
+            </div>
+
+            {/* 付款方式選擇 */}
+            <InstallmentPaymentSelector
+              paymentType={createOrderData.paymentType}
+              onPaymentTypeChange={(type) => setCreateOrderData({ ...createOrderData, paymentType: type })}
+              installmentPeriods={createOrderData.installmentPeriods}
+              onInstallmentPeriodsChange={(periods) => setCreateOrderData({ ...createOrderData, installmentPeriods: periods })}
+              totalAmount={parseInt(createOrderData.totalAmount) || 0}
+            />
+
+            {/* 操作按鈕 */}
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCreateModalOpen(false)}
+              >
+                取消
+              </Button>
+              <Button 
+                onClick={handleCreateOrder}
+                disabled={!createOrderData.memberId || !createOrderData.branchId || !createOrderData.totalAmount}
+              >
+                創建訂單
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

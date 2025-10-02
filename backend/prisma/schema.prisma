@@ -149,6 +149,7 @@ model Order {
   paymentMethod String?       // 現金、信用卡、匯款等
   paidAt        DateTime?
   notes         String?
+  isInstallment Boolean       @default(false) // 是否為分期付款
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @default(now()) @updatedAt
   installments  Installment[]
@@ -165,7 +166,8 @@ model Installment {
   amount        Int
   status        InstallmentStatus @default(UNPAID)
   paidAt        DateTime?
-  note          String?
+  paymentMethod String?           // 付款方式：現金、信用卡、匯款等
+  notes         String?           // 備註，可記錄交易碼
   order         Order             @relation(fields: [orderId], references: [id])
 
   @@unique([orderId, installmentNo])
@@ -205,14 +207,17 @@ enum PaymentType {
 
 enum OrderStatus {
   PENDING
+  PARTIALLY_PAID  // 部分付款（分期付款中）
   PAID
   CANCELLED
   COMPLETED
 }
 
 enum InstallmentStatus {
-  PAID
   UNPAID
+  PAID
+  OVERDUE    // 逾期
+  CANCELLED  // 取消
 }
 
 model TopupHistory {

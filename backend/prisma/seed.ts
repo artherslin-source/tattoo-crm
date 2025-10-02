@@ -384,7 +384,7 @@ async function main() {
               amount,
               status: isPaid ? 'PAID' : 'UNPAID',
               paidAt: isPaid ? faker.date.past() : null,
-              note: faker.lorem.sentence(),
+              notes: faker.lorem.sentence(),
             },
           });
         }

@@ -99,6 +99,7 @@ export class OrdersService {
           totalAmount: input.totalAmount,
           finalAmount: input.totalAmount,
           paymentType: input.paymentType,
+          isInstallment: input.paymentType === 'INSTALLMENT',
         },
         include: {
           member: { select: { id: true, name: true, email: true } },
@@ -107,53 +108,77 @@ export class OrdersService {
         },
       });
 
-      // 更新用戶財務資料
-      const updateData: any = {
-        totalSpent: { increment: input.totalAmount },
-      };
+      // 只有一次付清時才立即更新會員累計消費
+      if (input.paymentType === 'ONE_TIME') {
+        // 更新用戶財務資料
+        const updateData: any = {
+          totalSpent: { increment: input.totalAmount },
+        };
 
-      if (input.useStoredValue) {
-        updateData.balance = { decrement: input.totalAmount };
-      }
+        if (input.useStoredValue) {
+          updateData.balance = { decrement: input.totalAmount };
+        }
 
-      // 確保用戶有 Member 記錄
-      const member = await tx.member.findUnique({
-        where: { userId: input.memberId },
-      });
+        // 確保用戶有 Member 記錄
+        const member = await tx.member.findUnique({
+          where: { userId: input.memberId },
+        });
 
-      if (!member) {
-        // 如果沒有 Member 記錄，創建一個
-        const newMember = await tx.member.create({
-          data: {
+        if (!member) {
+          // 如果沒有 Member 記錄，創建一個
+          const newMember = await tx.member.create({
+            data: {
+              userId: input.memberId,
+              totalSpent: input.totalAmount,
+              balance: input.useStoredValue ? -input.totalAmount : 0,
+              membershipLevel: this.calculateMembershipLevel(input.totalAmount),
+            },
+          });
+          
+          console.log('🎯 新會員創建:', {
             userId: input.memberId,
             totalSpent: input.totalAmount,
-            balance: input.useStoredValue ? -input.totalAmount : 0,
-            membershipLevel: this.calculateMembershipLevel(input.totalAmount),
-          },
-        });
-        
-        console.log('🎯 新會員創建:', {
-          userId: input.memberId,
-          totalSpent: input.totalAmount,
-          membershipLevel: newMember.membershipLevel
-        });
+            membershipLevel: newMember.membershipLevel
+          });
+        } else {
+          // 更新現有的 Member 記錄
+          const newTotalSpent = member.totalSpent + input.totalAmount;
+          await tx.member.update({
+            where: { userId: input.memberId },
+            data: {
+              ...updateData,
+              membershipLevel: this.calculateMembershipLevel(newTotalSpent),
+            },
+          });
+          
+          console.log('🎯 會員資料更新:', {
+            userId: input.memberId,
+            oldTotalSpent: member.totalSpent,
+            newTotalSpent,
+            membershipLevel: this.calculateMembershipLevel(newTotalSpent)
+          });
+        }
       } else {
-        // 更新現有的 Member 記錄
-        const newTotalSpent = member.totalSpent + input.totalAmount;
-        await tx.member.update({
+        // 分期付款：只創建會員記錄，不更新累計消費
+        const member = await tx.member.findUnique({
           where: { userId: input.memberId },
-          data: {
-            ...updateData,
-            membershipLevel: this.calculateMembershipLevel(newTotalSpent),
-          },
         });
-        
-        console.log('🎯 會員資料更新:', {
-          userId: input.memberId,
-          oldTotalSpent: member.totalSpent,
-          newTotalSpent,
-          membershipLevel: this.calculateMembershipLevel(newTotalSpent)
-        });
+
+        if (!member) {
+          await tx.member.create({
+            data: {
+              userId: input.memberId,
+              totalSpent: 0,
+              balance: 0,
+              membershipLevel: '一般會員',
+            },
+          });
+          
+          console.log('🎯 分期付款新會員創建:', {
+            userId: input.memberId,
+            membershipLevel: '一般會員'
+          });
+        }
       }
 
       return order;
