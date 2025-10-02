@@ -245,6 +245,8 @@ export class AdminMembersService {
     email: string;
     password: string;
     phone?: string;
+    branchId?: string;
+    role?: 'MEMBER' | 'ADMIN';
     totalSpent?: number;
     balance?: number;
     membershipLevel?: string;
@@ -259,7 +261,8 @@ export class AdminMembersService {
           email: data.email,
           hashedPassword,
           phone: data.phone,
-          role: 'MEMBER',
+          role: data.role || 'MEMBER',
+          branchId: data.branchId,
         },
       });
 
@@ -281,6 +284,12 @@ export class AdminMembersService {
               role: true,
               status: true,
               createdAt: true,
+              branch: {
+                select: {
+                  id: true,
+                  name: true,
+                }
+              }
             }
           }
         },

@@ -42,7 +42,12 @@ export default function AdminDashboardPage() {
     async function fetchDashboardData() {
       try {
         // 調用統計 API 獲取數據
-        const dashboardData = await getJsonWithAuth('/admin/stats');
+        const dashboardData = await getJsonWithAuth<{
+          users?: { total: number };
+          services?: { total: number };
+          appointments?: { total: number; today: number };
+          revenue?: { total: number; monthly: number };
+        }>('/admin/stats');
 
         setStats({
           totalUsers: dashboardData.users?.total || 0,

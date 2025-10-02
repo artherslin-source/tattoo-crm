@@ -298,100 +298,108 @@ async function main() {
   }
   console.log('✅ 建立預約（按照刺青師平均分配，每位刺青師8個預約）');
 
-  // 8. 建立 30 個訂單（按照刺青師平均分配）
+  // 8. 模擬預約完成流程：將部分預約標記為 COMPLETED，自動生成訂單
   const orders: any[] = [];
-  const usedAppointments = new Set();
+  const completedAppointments: any[] = [];
   
-  // 為每個刺青師創建訂單
-  for (let artistIndex = 0; artistIndex < artists.length; artistIndex++) {
-    const artist = artists[artistIndex];
-    const branch = branches.find((b: any) => b.id === artist.branchId)!;
+  // 隨機選擇 15 個預約標記為 COMPLETED（約 50% 的預約會完成）
+  const appointmentsToComplete = faker.helpers.arrayElements(appointments, 15);
+  
+  for (const appointment of appointmentsToComplete) {
+    // 更新預約狀態為 COMPLETED
+    const updatedAppointment = await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: { status: 'COMPLETED' },
+    });
+    completedAppointments.push(updatedAppointment);
     
-    // 每個刺青師分配 10 個訂單
-    for (let i = 0; i < 10; i++) {
-      const member = faker.helpers.arrayElement(members.filter((m: any) => m.branchId === artist.branchId));
-      const service = faker.helpers.arrayElement(services);
-      
-      // 隨機選擇是否關聯預約（避免重複）
-      let appointmentId = null;
-      if (Math.random() > 0.3 && usedAppointments.size < appointments.length) {
-        const availableAppointments = appointments.filter((apt: any) => 
-          !usedAppointments.has(apt.id) && apt.artistId === artist.user.id
-        );
-        if (availableAppointments.length > 0) {
-          const appointment = faker.helpers.arrayElement(availableAppointments);
-          appointmentId = appointment.id;
-          usedAppointments.add(appointment.id);
-        }
-      }
-      
-      const paymentType = faker.helpers.arrayElement(['ONE_TIME', 'INSTALLMENT']);
+    // 為完成的預約自動生成訂單
+    const service = services.find((s: any) => s.id === appointment.serviceId);
+    if (service) {
       const totalAmount = service.price + faker.number.int({ min: 0, max: 5000 });
       
       const order = await prisma.order.create({
         data: {
-          memberId: member.id,
-          branchId: branch.id,
-          appointmentId,
+          memberId: appointment.userId,
+          branchId: appointment.branchId,
+          appointmentId: appointment.id,
           totalAmount,
-          paymentType: paymentType as any,
-          status: faker.helpers.arrayElement(['PENDING', 'PAID', 'CANCELLED', 'COMPLETED']),
+          finalAmount: totalAmount,
+          paymentType: 'ONE_TIME', // 預設為一次付清，結帳時再決定
+          status: 'PENDING_PAYMENT', // 預設為待結帳狀態
+          isInstallment: false,
           createdAt: faker.date.past(),
         },
       });
       orders.push(order);
 
-      // 更新會員的財務資料
-      // 如果是儲值訂單（隨機 20% 機率），更新儲值相關欄位
-      const isStoredValueOrder = Math.random() < 0.2;
-      if (isStoredValueOrder) {
-        // 儲值訂單：增加餘額
-        await prisma.member.update({
-          where: { userId: member.id },
-          data: {
-            balance: { increment: totalAmount },
-          },
-        });
-      } else {
-        // 一般消費訂單：更新累計消費金額
-        await prisma.member.update({
-          where: { userId: member.id },
-          data: {
-            totalSpent: { increment: totalAmount },
-          },
-        });
-      }
-
-      // 如果是分期付款，建立分期記錄
-      if (paymentType === 'INSTALLMENT') {
-        const installmentCount = faker.number.int({ min: 3, max: 6 });
-        const installmentAmount = Math.floor(totalAmount / installmentCount);
-        const remainder = totalAmount - (installmentAmount * installmentCount);
+      // 更新預約的 orderId
+      await prisma.appointment.update({
+        where: { id: appointment.id },
+        data: { orderId: order.id },
+      });
+    }
+  }
+  
+  console.log('✅ 模擬預約完成流程：15 個預約標記為 COMPLETED，自動生成對應訂單');
+  
+  // 9. 為部分訂單模擬結帳流程（一次付清和分期付款）
+  const ordersToCheckout = faker.helpers.arrayElements(orders, 10); // 隨機選擇 10 個訂單進行結帳
+  
+  for (const order of ordersToCheckout) {
+    const paymentType = faker.helpers.arrayElement(['ONE_TIME', 'INSTALLMENT']);
+    
+    if (paymentType === 'ONE_TIME') {
+      // 一次付清
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { 
+          status: 'PAID',
+          paymentType: 'ONE_TIME',
+          paidAt: faker.date.past(),
+        },
+      });
+    } else {
+      // 分期付款
+      const installmentCount = faker.number.int({ min: 3, max: 6 });
+      const installmentAmount = Math.floor(order.totalAmount / installmentCount);
+      const remainder = order.totalAmount - (installmentAmount * installmentCount);
+      
+      // 更新訂單狀態
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { 
+          status: 'INSTALLMENT_ACTIVE',
+          paymentType: 'INSTALLMENT',
+          isInstallment: true,
+        },
+      });
+      
+      // 創建分期記錄
+      for (let j = 0; j < installmentCount; j++) {
+        const amount = j === installmentCount - 1 ? installmentAmount + remainder : installmentAmount;
+        const dueDate = new Date();
+        dueDate.setMonth(dueDate.getMonth() + j + 1);
         
-        for (let j = 0; j < installmentCount; j++) {
-          const amount = j === installmentCount - 1 ? installmentAmount + remainder : installmentAmount;
-          const dueDate = new Date();
-          dueDate.setMonth(dueDate.getMonth() + j + 1);
-          
-          // 隨機標記部分已付款
-          const isPaid = faker.datatype.boolean({ probability: 0.3 });
-          
-          await prisma.installment.create({
-            data: {
-              orderId: order.id,
-              installmentNo: j + 1,
-              dueDate,
-              amount,
-              status: isPaid ? 'PAID' : 'UNPAID',
-              paidAt: isPaid ? faker.date.past() : null,
-              notes: faker.lorem.sentence(),
-            },
-          });
-        }
+        // 隨機標記部分已付款
+        const isPaid = faker.datatype.boolean({ probability: 0.3 });
+        
+        await prisma.installment.create({
+          data: {
+            orderId: order.id,
+            installmentNo: j + 1,
+            dueDate,
+            amount,
+            status: isPaid ? 'PAID' : 'UNPAID',
+            paidAt: isPaid ? faker.date.past() : null,
+            notes: faker.lorem.sentence(),
+          },
+        });
       }
     }
   }
-  console.log('✅ 建立 30 個訂單（按照刺青師平均分配，每位刺青師10個訂單，包含分期記錄）');
+  
+  console.log('✅ 模擬結帳流程：10 個訂單完成結帳（一次付清和分期付款）');
 
   console.log('🎉 Seeding 完成！');
   console.log('📊 資料統計：');
@@ -402,7 +410,8 @@ async function main() {
   console.log(`   - 分店: ${branches.length} 個 (三重店、東港店)`);
   console.log(`   - 服務: ${services.length} 個`);
   console.log(`   - 預約: ${appointments.length} 個 (每位刺青師8個預約)`);
-  console.log(`   - 訂單: ${orders.length} 個 (每位刺青師10個訂單)`);
+  console.log(`   - 完成預約: ${completedAppointments.length} 個 (自動生成訂單)`);
+  console.log(`   - 訂單: ${orders.length} 個 (待結帳和已結帳)`);
   console.log('💰 財務資料已更新到會員帳號中');
   console.log('🏪 分店配置：');
   console.log('   - 東港店：阿龍師傅 (1位刺青師)');

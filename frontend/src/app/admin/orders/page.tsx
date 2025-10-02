@@ -19,9 +19,9 @@ interface Order {
   id: string;
   totalAmount: number;
   finalAmount: number;
-  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'COMPLETED';
+  status: 'PENDING_PAYMENT' | 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
   createdAt: string;
-  paymentType: string;
+  paymentType: 'ONE_TIME' | 'INSTALLMENT';
   isInstallment: boolean;
   paidAt?: string;
   member: {
@@ -33,7 +33,7 @@ interface Order {
     id: string;
     name: string;
   };
-  installments?: {
+  installments: {
     id: string;
     installmentNo: number;
     dueDate: string;
@@ -107,7 +107,7 @@ export default function AdminOrdersPage() {
       params.append('limit', itemsPerPage.toString());
       
       const url = `/admin/orders${params.toString() ? `?${params.toString()}` : ''}`;
-      const data = await getJsonWithAuth(url);
+      const data = await getJsonWithAuth<{ orders: Order[]; pagination?: { total: number } }>(url);
       setOrders(data.orders || []);
       setTotalItems(data.pagination?.total || 0);
     } catch (err) {
@@ -136,7 +136,7 @@ export default function AdminOrdersPage() {
       if (status && status !== 'all') params.append('status', status);
       
       const url = `/admin/orders/summary${params.toString() ? `?${params.toString()}` : ''}`;
-      const data = await getJsonWithAuth(url);
+      const data = await getJsonWithAuth<OrdersSummary>(url);
       setSummary(data);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -229,7 +229,7 @@ export default function AdminOrdersPage() {
     try {
       await patchJsonWithAuth(`/admin/orders/${order.id}/status`, { status: newStatus });
       setOrders(orders.map(o => 
-        o.id === order.id ? { ...o, status: newStatus as any } : o
+        o.id === order.id ? { ...o, status: newStatus as Order['status'] } : o
       ));
       
       // 顯示成功訊息
@@ -249,13 +249,13 @@ export default function AdminOrdersPage() {
   };
 
   // 分期付款相關處理函數
-  const handlePaymentRecorded = async (installmentId: string, paymentData: any) => {
+  const handlePaymentRecorded = async (installmentId: string, paymentData: { paymentMethod: string; notes?: string }) => {
     try {
       await postJsonWithAuth(`/installments/${installmentId}/payment`, paymentData);
       
       // 重新獲取訂單詳情
       if (selectedOrder) {
-        const updatedOrder = await getJsonWithAuth(`/admin/orders/${selectedOrder.id}`);
+        const updatedOrder = await getJsonWithAuth<Order>(`/admin/orders/${selectedOrder.id}`);
         setSelectedOrder(updatedOrder);
         
         // 更新訂單列表中的對應訂單
@@ -277,13 +277,13 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleInstallmentUpdated = async (installmentId: string, updateData: any) => {
+  const handleInstallmentUpdated = async (installmentId: string, updateData: { dueDate: string; notes?: string }) => {
     try {
       await putJsonWithAuth(`/installments/${installmentId}`, updateData);
       
       // 重新獲取訂單詳情
       if (selectedOrder) {
-        const updatedOrder = await getJsonWithAuth(`/admin/orders/${selectedOrder.id}`);
+        const updatedOrder = await getJsonWithAuth<Order>(`/admin/orders/${selectedOrder.id}`);
         setSelectedOrder(updatedOrder);
         
         // 更新訂單列表中的對應訂單
@@ -313,7 +313,7 @@ export default function AdminOrdersPage() {
       
       // 重新獲取訂單詳情
       if (selectedOrder) {
-        const updatedOrder = await getJsonWithAuth(`/admin/orders/${selectedOrder.id}`);
+        const updatedOrder = await getJsonWithAuth<Order>(`/admin/orders/${selectedOrder.id}`);
         setSelectedOrder(updatedOrder);
         
         // 更新訂單列表中的對應訂單
@@ -435,10 +435,14 @@ export default function AdminOrdersPage() {
         return '待結帳';
       case 'PENDING':
         return '待付款';
+      case 'INSTALLMENT_ACTIVE':
+        return '分期中';
       case 'PARTIALLY_PAID':
         return '部分付款';
       case 'PAID':
         return '已付款';
+      case 'PAID_COMPLETE':
+        return '分期完成';
       case 'COMPLETED':
         return '已完成';
       case 'CANCELLED':
@@ -454,10 +458,14 @@ export default function AdminOrdersPage() {
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'INSTALLMENT_ACTIVE':
+        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
       case 'PARTIALLY_PAID':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'PAID':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'PAID_COMPLETE':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'COMPLETED':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'CANCELLED':
@@ -673,6 +681,10 @@ export default function AdminOrdersPage() {
             onViewDetails={handleViewDetails}
             onUpdateStatus={handleUpdateStatus}
             onCheckout={handleOpenCheckout}
+            onPaymentRecorded={handlePaymentRecorded}
+            onInstallmentUpdated={handleInstallmentUpdated}
+            onInstallmentAmountAdjusted={handleInstallmentAmountAdjusted}
+            userRole={getUserRole() || ''}
           />
           
           {orders.length === 0 && (
@@ -798,7 +810,7 @@ export default function AdminOrdersPage() {
                     onPaymentRecorded={handlePaymentRecorded}
                     onInstallmentUpdated={handleInstallmentUpdated}
                     onInstallmentAmountAdjusted={handleInstallmentAmountAdjusted}
-                    userRole={getUserRole()}
+                    userRole={getUserRole() || ''}
                   />
                 </div>
               )}
@@ -941,7 +953,7 @@ export default function AdminOrdersPage() {
         isOpen={isCheckoutModalOpen}
         onClose={handleCloseCheckout}
         onCheckout={handleCheckout}
-        userRole={getUserRole()}
+        userRole={getUserRole() || ''}
       />
     </div>
   );

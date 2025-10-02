@@ -40,7 +40,7 @@ export default function InstallmentPaymentSelector({
 
     const baseAmount = Math.floor(totalAmount / installmentCount);
     const remainder = totalAmount - (baseAmount * installmentCount);
-    const firstAmount = firstPaymentAmount ? parseInt(firstPaymentAmount) : baseAmount;
+    const firstAmount = firstPaymentAmount ? parseInt(String(firstPaymentAmount)) : baseAmount;
 
     const amounts = [];
     let remainingAmount = totalAmount - firstAmount;
@@ -76,7 +76,7 @@ export default function InstallmentPaymentSelector({
     if (newPaymentType === 'INSTALLMENT') {
       onPaymentTypeChange(newPaymentType, {
         installmentCount,
-        firstPaymentAmount: firstPaymentAmount ? parseInt(firstPaymentAmount) : undefined,
+        firstPaymentAmount: firstPaymentAmount ? parseInt(String(firstPaymentAmount)) : undefined,
         notes: notes || undefined
       });
     } else {
@@ -88,7 +88,7 @@ export default function InstallmentPaymentSelector({
     if (paymentType === 'INSTALLMENT') {
       onPaymentTypeChange(paymentType, {
         installmentCount,
-        firstPaymentAmount: firstPaymentAmount ? parseInt(firstPaymentAmount) : undefined,
+        firstPaymentAmount: firstPaymentAmount ? parseInt(String(firstPaymentAmount)) : undefined,
         notes: notes || undefined
       });
     }

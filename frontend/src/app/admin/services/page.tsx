@@ -55,7 +55,7 @@ export default function AdminServicesPage() {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/admin/services');
+      const data = await getJsonWithAuth<Service[]>('/admin/services');
       setServices(data);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -87,7 +87,7 @@ export default function AdminServicesPage() {
         ...formData,
         price: parseInt(formData.price),
         durationMin: parseInt(formData.durationMin)
-      });
+      }) as Service;
       setServices([...services, newService]);
       resetForm();
       setError(null);
@@ -121,7 +121,7 @@ export default function AdminServicesPage() {
         ...formData,
         price: parseInt(formData.price),
         durationMin: parseInt(formData.durationMin)
-      });
+      }) as Service;
       setServices(services.map(service => 
         service.id === editingService.id ? updatedService : service
       ));

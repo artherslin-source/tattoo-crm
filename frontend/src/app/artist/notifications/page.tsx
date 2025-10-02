@@ -46,7 +46,7 @@ export default function ArtistNotifications() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/artist/notifications');
+      const data = await getJsonWithAuth<Notification[]>('/artist/notifications');
       setNotifications(data);
     } catch (err) {
       setError('載入通知失敗');

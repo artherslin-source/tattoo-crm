@@ -110,19 +110,85 @@ export class AppointmentsService {
 
   // 管理員專用：更新預約狀態
   async updateStatus(id: string, status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED') {
-    const appointment = await this.prisma.appointment.findUnique({ where: { id } });
-    if (!appointment) {
-      throw new NotFoundException('Appointment not found');
-    }
+    return this.prisma.$transaction(async (tx) => {
+      const appointment = await tx.appointment.findUnique({ 
+        where: { id },
+        include: {
+          service: { select: { id: true, name: true, price: true } },
+          user: { select: { id: true, name: true, email: true } },
+          artist: { select: { id: true, name: true, email: true } },
+        }
+      });
+      
+      if (!appointment) {
+        throw new NotFoundException('Appointment not found');
+      }
 
-    return this.prisma.appointment.update({
-      where: { id },
-      data: { status },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        artist: { select: { id: true, name: true, email: true } },
-        service: { select: { id: true, name: true, price: true, durationMin: true } },
-      },
+      // 如果預約狀態變為 COMPLETED 且還沒有關聯的訂單，自動生成訂單
+      let orderId: string | null = null;
+      if (status === 'COMPLETED' && !appointment.orderId && appointment.service) {
+        try {
+          // 確保用戶有 Member 記錄
+          const member = await tx.member.findUnique({
+            where: { userId: appointment.userId },
+          });
+
+          if (!member) {
+            await tx.member.create({
+              data: {
+                userId: appointment.userId,
+                totalSpent: 0,
+                balance: 0,
+                membershipLevel: 'BRONZE',
+              },
+            });
+          }
+
+          // 直接在事務中創建訂單
+          const order = await tx.order.create({
+            data: {
+              memberId: appointment.userId,
+              branchId: appointment.branchId,
+              appointmentId: appointment.id,
+              totalAmount: appointment.service.price,
+              finalAmount: appointment.service.price,
+              status: 'PENDING_PAYMENT',
+              paymentType: 'ONE_TIME',
+              isInstallment: false,
+            },
+          });
+
+          orderId = order.id;
+
+          console.log('🎯 預約完成，自動生成訂單:', {
+            appointmentId: appointment.id,
+            orderId: order.id,
+            totalAmount: appointment.service.price,
+            serviceName: appointment.service.name
+          });
+        } catch (error) {
+          console.error('❌ 自動生成訂單失敗:', error);
+          // 不拋出錯誤，避免影響預約狀態更新
+        }
+      }
+
+      // 更新預約狀態和 orderId
+      const updateData: { status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED'; orderId?: string } = { status: status as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED' };
+      if (orderId) {
+        updateData.orderId = orderId;
+      }
+
+      const updatedAppointment = await tx.appointment.update({
+        where: { id },
+        data: updateData,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          artist: { select: { id: true, name: true, email: true } },
+          service: { select: { id: true, name: true, price: true, durationMin: true } },
+        },
+      });
+
+      return updatedAppointment;
     });
   }
 }

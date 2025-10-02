@@ -60,7 +60,7 @@ export default function ArtistPortfolio() {
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/artist/portfolio');
+      const data = await getJsonWithAuth<PortfolioItem[]>('/artist/portfolio');
       setPortfolioItems(data);
     } catch (err) {
       setError('載入作品失敗');
@@ -123,7 +123,7 @@ export default function ArtistPortfolio() {
 
       if (editingItem) {
         // 更新現有作品
-        await postJsonWithAuth(`/artist/portfolio/${editingItem.id}`, submitData);
+        await postFormDataWithAuth(`/artist/portfolio/${editingItem.id}`, submitData);
       } else {
         // 新增作品
         await postFormDataWithAuth('/artist/portfolio', submitData);
@@ -424,7 +424,7 @@ export default function ArtistPortfolio() {
                 <div className="absolute top-3 right-3 flex space-x-2">
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => handleEdit(item)}
                     className="h-10 w-10 p-0 bg-white/90 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-200"
                     title="編輯作品"

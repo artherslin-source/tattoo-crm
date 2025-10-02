@@ -6,7 +6,7 @@ import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patch
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Users, ArrowLeft } from "lucide-react";
+import { Users, ArrowLeft, Plus } from "lucide-react";
 import MembersToolbar from "@/components/admin/MembersToolbar";
 import MembersTable from "@/components/admin/MembersTable";
 import MembersCards from "@/components/admin/MembersCards";
@@ -100,6 +100,28 @@ export default function AdminMembersPage() {
     amount: '',
   });
 
+  const [createMemberModal, setCreateMemberModal] = useState<{
+    isOpen: boolean;
+    formData: {
+      name: string;
+      email: string;
+      password: string;
+      phone: string;
+      branchId: string;
+      role: 'MEMBER' | 'ADMIN';
+    };
+  }>({
+    isOpen: false,
+    formData: {
+      name: '',
+      email: '',
+      password: '',
+      phone: '',
+      branchId: '',
+      role: 'MEMBER',
+    },
+  });
+
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupHistory, setTopupHistory] = useState<TopupHistory[]>([]);
 
@@ -128,7 +150,7 @@ export default function AdminMembersPage() {
       if (membershipLevel && membershipLevel !== 'all') params.append('membershipLevel', membershipLevel);
       
       const url = `/admin/members${params.toString() ? `?${params.toString()}` : ''}`;
-      const data = await getJsonWithAuth(url);
+      const data = await getJsonWithAuth<Member[]>(url);
       setMembers(data);
       setTotalItems(data.length);
       setCurrentPage(1); // 重置到第一頁
@@ -210,6 +232,72 @@ export default function AdminMembersPage() {
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "刪除會員失敗");
+    }
+  };
+
+  // 新增會員相關函數
+  const handleOpenCreateMemberModal = () => {
+    setCreateMemberModal({
+      isOpen: true,
+      formData: {
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        branchId: '',
+        role: 'MEMBER',
+      },
+    });
+  };
+
+  const handleCloseCreateMemberModal = () => {
+    setCreateMemberModal({
+      isOpen: false,
+      formData: {
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        branchId: '',
+        role: 'MEMBER',
+      },
+    });
+  };
+
+  const handleCreateMemberFormChange = (field: string, value: string) => {
+    setCreateMemberModal(prev => ({
+      ...prev,
+      formData: {
+        ...prev.formData,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleCreateMember = async () => {
+    try {
+      const { name, email, password, phone, branchId, role } = createMemberModal.formData;
+      
+      if (!name || !email || !password || !phone || !branchId) {
+        setError('請填寫所有必填欄位');
+        return;
+      }
+
+      const newMember = await postJsonWithAuth('/admin/members', {
+        name,
+        email,
+        password,
+        phone,
+        branchId,
+        role,
+      }) as Member;
+
+      setMembers([newMember, ...members]);
+      setError(null);
+      handleCloseCreateMemberModal();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "新增會員失敗");
     }
   };
 
@@ -344,7 +432,7 @@ export default function AdminMembersPage() {
 
   const handleViewTopups = async (memberId: string) => {
     try {
-      const res = await getJsonWithAuth(`/admin/members/${memberId}/topups`);
+      const res = await getJsonWithAuth<TopupHistory[]>(`/admin/members/${memberId}/topups`);
       setTopupHistory(res);
       setShowTopupModal(true);
     } catch (err) {
@@ -433,14 +521,23 @@ export default function AdminMembersPage() {
               管理系統中的所有會員帳號
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>回上一頁</span>
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Button 
+              onClick={handleOpenCreateMemberModal}
+              className="flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>新增會員</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => router.back()}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>回上一頁</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -531,7 +628,7 @@ export default function AdminMembersPage() {
             onViewHistory={handleViewTopups}
             onResetPassword={handleOpenResetPasswordModal}
             onDelete={handleDeleteMember}
-            getUserRole={getUserRole}
+            getUserRole={() => getUserRole() || ''}
           />
 
           {/* 手機卡片 */}
@@ -543,7 +640,7 @@ export default function AdminMembersPage() {
             onViewHistory={handleViewTopups}
             onResetPassword={handleOpenResetPasswordModal}
             onDelete={handleDeleteMember}
-            getUserRole={getUserRole}
+            getUserRole={() => getUserRole() || ''}
           />
           
           {members.length === 0 && (
@@ -802,6 +899,115 @@ export default function AdminMembersPage() {
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   確認調整
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Create Member Modal */}
+          <Dialog open={createMemberModal.isOpen} onOpenChange={handleCloseCreateMemberModal}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>新增會員</DialogTitle>
+                <DialogDescription>
+                  填寫以下資訊來新增一個新的會員帳號
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="memberName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    姓名 *
+                  </label>
+                  <input
+                    type="text"
+                    id="memberName"
+                    value={createMemberModal.formData.name}
+                    onChange={(e) => handleCreateMemberFormChange('name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="請輸入會員姓名"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    id="memberEmail"
+                    value={createMemberModal.formData.email}
+                    onChange={(e) => handleCreateMemberFormChange('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="請輸入會員Email"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="memberPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    密碼 *
+                  </label>
+                  <input
+                    type="password"
+                    id="memberPassword"
+                    value={createMemberModal.formData.password}
+                    onChange={(e) => handleCreateMemberFormChange('password', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="請輸入密碼"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="memberPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    電話 *
+                  </label>
+                  <input
+                    type="tel"
+                    id="memberPhone"
+                    value={createMemberModal.formData.phone}
+                    onChange={(e) => handleCreateMemberFormChange('phone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="請輸入電話號碼"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="memberBranch" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    分店 *
+                  </label>
+                  <select
+                    id="memberBranch"
+                    value={createMemberModal.formData.branchId}
+                    onChange={(e) => handleCreateMemberFormChange('branchId', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">請選擇分店</option>
+                    <option value="cmg9i8wsb0001sbc1oh5vfetl">三重店</option>
+                    <option value="cmg9i8wse0002sbc1rci6gl0c">東港店</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="memberRole" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    角色
+                  </label>
+                  <select
+                    id="memberRole"
+                    value={createMemberModal.formData.role}
+                    onChange={(e) => handleCreateMemberFormChange('role', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="MEMBER">會員</option>
+                    <option value="ADMIN">管理員</option>
+                  </select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseCreateMemberModal}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleCreateMember}
+                  disabled={!createMemberModal.formData.name || !createMemberModal.formData.email || !createMemberModal.formData.password || !createMemberModal.formData.phone || !createMemberModal.formData.branchId}
+                >
+                  新增會員
                 </Button>
               </DialogFooter>
             </DialogContent>

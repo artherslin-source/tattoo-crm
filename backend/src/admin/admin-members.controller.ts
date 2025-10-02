@@ -74,6 +74,8 @@ export class AdminMembersController {
     email: string;
     password: string;
     phone?: string;
+    branchId?: string;
+    role?: 'MEMBER' | 'ADMIN';
     totalSpent?: number;
     balance?: number;
     membershipLevel?: string;

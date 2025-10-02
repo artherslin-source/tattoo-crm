@@ -48,7 +48,7 @@ export default function BranchDashboardPage() {
         // 獲取分店資訊
         if (userBranchId) {
           try {
-            const branchData = await getJsonWithAuth(`/branches/${userBranchId}`);
+            const branchData = await getJsonWithAuth<Branch>(`/branches/${userBranchId}`);
             setBranchInfo(branchData);
           } catch (err) {
             console.error('Failed to fetch branch info:', err);
@@ -57,15 +57,20 @@ export default function BranchDashboardPage() {
 
         // 這裡可以調用多個 API 來獲取統計數據
         const [dashboardData, appointmentsData] = await Promise.all([
-          getJsonWithAuth('/admin/stats'),
-          getJsonWithAuth('/appointments/all').catch(() => [])
+          getJsonWithAuth<{
+            users?: { total: number };
+            services?: { total: number };
+            appointments?: { total: number; today: number };
+            revenue?: { total: number; monthly: number };
+          }>('/admin/stats'),
+          getJsonWithAuth<{ startAt: string }[]>('/appointments/all').catch(() => [])
         ]);
 
         setStats({
           totalUsers: dashboardData.users?.total || 0,
           totalServices: dashboardData.services?.total || 0,
           totalAppointments: appointmentsData.length || 0,
-          todayAppointments: appointmentsData.filter((apt: any) => {
+          todayAppointments: appointmentsData.filter((apt: { startAt: string }) => {
             const today = new Date().toDateString();
             return new Date(apt.startAt).toDateString() === today;
           }).length,

@@ -69,7 +69,7 @@ export default function ArtistDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/artist/dashboard');
+      const data = await getJsonWithAuth<DashboardData>('/artist/dashboard');
       setDashboardData(data);
     } catch (err) {
       setError('載入資料失敗');

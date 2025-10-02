@@ -43,7 +43,7 @@ export default function ChangePasswordPage() {
       await postJsonWithAuth("/auth/change-password", {
         oldPassword,
         newPassword,
-      }, token);
+      });
 
       setSuccess("密碼修改成功！即將跳轉到登入頁面...");
       

@@ -50,8 +50,8 @@ export default function BranchOrdersPage() {
     
     // 獲取分店資訊
     if (branchId) {
-      getJsonWithAuth(`/branches/${branchId}`)
-        .then((data: any) => setBranchInfo(data))
+      getJsonWithAuth<{ id: string; name: string; address: string }>(`/branches/${branchId}`)
+        .then(setBranchInfo)
         .catch(err => console.error('Failed to fetch branch info:', err));
     }
     
@@ -61,7 +61,7 @@ export default function BranchOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/branch/orders') as any;
+      const data = await getJsonWithAuth<{ orders: Order[] }>('/branch/orders');
       setOrders(data.orders || []);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -86,14 +86,22 @@ export default function BranchOrdersPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'PAID':
-        return '已付款';
-      case 'CANCELLED':
-        return '已取消';
+      case 'PENDING_PAYMENT':
+        return '待結帳';
       case 'PENDING':
         return '待付款';
+      case 'INSTALLMENT_ACTIVE':
+        return '分期中';
+      case 'PARTIALLY_PAID':
+        return '部分付款';
+      case 'PAID':
+        return '已付款';
+      case 'PAID_COMPLETE':
+        return '分期完成';
       case 'COMPLETED':
         return '已完成';
+      case 'CANCELLED':
+        return '已取消';
       default:
         return status;
     }

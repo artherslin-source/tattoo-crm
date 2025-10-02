@@ -117,7 +117,7 @@ export default function ArtistCustomers() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/artist/customers');
+      const data = await getJsonWithAuth<Customer[]>('/artist/customers');
       setCustomers(data);
       setFilteredCustomers(data);
     } catch (err) {
@@ -131,7 +131,7 @@ export default function ArtistCustomers() {
   const fetchCustomerNotes = async () => {
     if (!selectedCustomer) return;
     try {
-      const data = await getJsonWithAuth(`/artist/customers/${selectedCustomer.id}/notes`);
+      const data = await getJsonWithAuth<CustomerNote[]>(`/artist/customers/${selectedCustomer.id}/notes`);
       setCustomerNotes(data);
     } catch (err) {
       console.error('Customer notes fetch error:', err);
@@ -141,7 +141,7 @@ export default function ArtistCustomers() {
   const fetchCustomerReminders = async () => {
     if (!selectedCustomer) return;
     try {
-      const data = await getJsonWithAuth(`/artist/customers/${selectedCustomer.id}/reminders`);
+      const data = await getJsonWithAuth<CustomerReminder[]>(`/artist/customers/${selectedCustomer.id}/reminders`);
       setCustomerReminders(data);
     } catch (err) {
       console.error('Customer reminders fetch error:', err);

@@ -8,6 +8,9 @@ import { MoreHorizontal, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
 interface Order {
   id: string;
   totalAmount: number;
+  finalAmount: number;
+  paymentType: 'ONE_TIME' | 'INSTALLMENT';
+  isInstallment: boolean;
   status: 'PENDING_PAYMENT' | 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
   createdAt: string;
   member: {
@@ -19,6 +22,16 @@ interface Order {
     id: string;
     name: string;
   };
+  installments: {
+    id: string;
+    installmentNo: number;
+    dueDate: string;
+    amount: number;
+    status: 'UNPAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+    paidAt?: string;
+    paymentMethod?: string;
+    notes?: string;
+  }[];
 }
 
 interface OrdersTableProps {

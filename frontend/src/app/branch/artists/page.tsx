@@ -28,6 +28,12 @@ interface Artist {
   };
 }
 
+interface Branch {
+  id: string;
+  name: string;
+  address: string;
+}
+
 export default function BranchArtistsPage() {
   const router = useRouter();
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -63,7 +69,7 @@ export default function BranchArtistsPage() {
     
     // 獲取分店資訊
     if (branchId) {
-      getJsonWithAuth(`/branches/${branchId}`)
+      getJsonWithAuth<Branch>(`/branches/${branchId}`)
         .then(setBranchInfo)
         .catch(err => console.error('Failed to fetch branch info:', err));
     }
@@ -74,7 +80,7 @@ export default function BranchArtistsPage() {
   const fetchArtists = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/admin/artists');
+      const data = await getJsonWithAuth<Artist[]>('/admin/artists');
       setArtists(data);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -131,7 +137,7 @@ export default function BranchArtistsPage() {
 
     try {
       console.log('🔧 發送更新請求:', formData);
-      const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData);
+      const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData) as Artist;
       console.log('✅ 收到更新回應:', updatedArtist);
       setArtists(artists.map(artist => 
         artist.id === editingArtist.id ? updatedArtist : artist

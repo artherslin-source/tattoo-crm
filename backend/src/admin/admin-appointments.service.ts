@@ -119,6 +119,68 @@ export class AdminAppointmentsService {
     return appointment;
   }
 
+  async create(input: { 
+    startAt: Date; 
+    endAt: Date; 
+    userId: string; 
+    serviceId: string; 
+    artistId: string; 
+    branchId: string; 
+    notes?: string; 
+  }) {
+    // 驗證所有外鍵是否存在
+    const [user, service, artist, branch] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: input.userId } }),
+      this.prisma.service.findUnique({ where: { id: input.serviceId } }),
+      this.prisma.user.findUnique({ where: { id: input.artistId } }),
+      this.prisma.branch.findUnique({ where: { id: input.branchId } }),
+    ]);
+
+    if (!user) {
+      throw new BadRequestException("用戶不存在");
+    }
+    if (!service) {
+      throw new BadRequestException("服務項目不存在");
+    }
+    if (!artist) {
+      throw new BadRequestException("刺青師不存在");
+    }
+    if (!branch) {
+      throw new BadRequestException("分店不存在");
+    }
+
+    // 檢查時間衝突：同一個 artistId，時間區間重疊的預約狀態為 PENDING 或 CONFIRMED
+    const conflict = await this.prisma.appointment.findFirst({
+      where: {
+        artistId: input.artistId,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        OR: [
+          {
+            startAt: { lte: input.endAt },
+            endAt: { gte: input.startAt },
+          },
+        ],
+      },
+    });
+
+    if (conflict) {
+      throw new BadRequestException("該刺青師在該時段已有預約，請選擇其他時間");
+    }
+
+    return this.prisma.appointment.create({ 
+      data: {
+        ...input,
+        status: "PENDING",
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        artist: { select: { id: true, name: true } },
+        service: { select: { id: true, name: true, price: true, durationMin: true } },
+        branch: { select: { id: true, name: true } },
+      },
+    });
+  }
+
   async updateStatus(id: string, status: string) {
     if (!['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED'].includes(status)) {
       throw new BadRequestException('無效的狀態');

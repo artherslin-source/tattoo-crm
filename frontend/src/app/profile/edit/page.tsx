@@ -71,7 +71,7 @@ export default function EditProfilePage() {
         return;
       }
 
-      const updateData: any = {};
+      const updateData: { name?: string; phone?: string | null; avatarUrl?: string } = {};
       if (name !== user?.name) updateData.name = name;
       if (phone !== (user?.phone || "")) updateData.phone = phone || null;
       if (avatarUrl.trim()) updateData.avatarUrl = avatarUrl.trim();

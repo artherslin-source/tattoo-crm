@@ -4,10 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, CheckCircle, XCircle, Eye, Clock } from "lucide-react";
+import InstallmentManager from "./InstallmentManager";
 
 interface Order {
   id: string;
   totalAmount: number;
+  finalAmount: number;
+  paymentType: 'ONE_TIME' | 'INSTALLMENT';
+  isInstallment: boolean;
   status: 'PENDING_PAYMENT' | 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
   createdAt: string;
   member: {
@@ -19,13 +23,27 @@ interface Order {
     id: string;
     name: string;
   };
+  installments: {
+    id: string;
+    installmentNo: number;
+    dueDate: string;
+    amount: number;
+    status: 'UNPAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+    paidAt?: string;
+    paymentMethod?: string;
+    notes?: string;
+  }[];
 }
 
 interface OrdersCardsProps {
   orders: Order[];
   onViewDetails: (order: Order) => void;
   onUpdateStatus: (order: Order, status: string) => void;
-  onCheckout?: (order: Order) => void;
+  onCheckout: (order: Order) => void;
+  onPaymentRecorded: (installmentId: string, paymentData: { paymentMethod: string; notes?: string }) => Promise<void>;
+  onInstallmentUpdated: (installmentId: string, updateData: { dueDate: string; notes?: string }) => Promise<void>;
+  onInstallmentAmountAdjusted: (orderId: string, installmentNo: number, newAmount: number) => Promise<void>;
+  userRole: string;
 }
 
 const getStatusBadgeClass = (status: string) => {
@@ -92,7 +110,16 @@ const formatDate = (dateString: string) => {
   });
 };
 
-export default function OrdersCards({ orders, onViewDetails, onUpdateStatus, onCheckout }: OrdersCardsProps) {
+export default function OrdersCards({ 
+  orders, 
+  onViewDetails, 
+  onUpdateStatus, 
+  onCheckout,
+  onPaymentRecorded,
+  onInstallmentUpdated,
+  onInstallmentAmountAdjusted,
+  userRole
+}: OrdersCardsProps) {
   return (
     <div className="xl:hidden">
       {/* 平板版 - 橫向布局 */}
@@ -368,6 +395,25 @@ export default function OrdersCards({ orders, onViewDetails, onUpdateStatus, onC
           </div>
         ))}
       </div>
+
+      {/* InstallmentManager for managing installments */}
+      {orders.some(order => order.isInstallment && (order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID' || order.status === 'PAID_COMPLETE')) && (
+        <div className="mt-6">
+          {orders
+            .filter(order => order.isInstallment && (order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID' || order.status === 'PAID_COMPLETE'))
+            .map(order => (
+              <div key={order.id} className="mb-4">
+                <InstallmentManager
+                  order={order}
+                  onPaymentRecorded={onPaymentRecorded}
+                  onInstallmentUpdated={onInstallmentUpdated}
+                  onInstallmentAmountAdjusted={onInstallmentAmountAdjusted}
+                  userRole={userRole}
+                />
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

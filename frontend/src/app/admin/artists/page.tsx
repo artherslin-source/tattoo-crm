@@ -69,7 +69,7 @@ export default function AdminArtistsPage() {
   const fetchArtists = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth('/admin/artists');
+      const data = await getJsonWithAuth<Artist[]>('/admin/artists');
       setArtists(data);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -81,7 +81,7 @@ export default function AdminArtistsPage() {
 
   const fetchBranches = async () => {
     try {
-      const data = await getJsonWithAuth('/admin/artists/branches');
+      const data = await getJsonWithAuth<Branch[]>('/admin/artists/branches');
       setBranches(data);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -106,7 +106,7 @@ export default function AdminArtistsPage() {
   const handleCreateArtist = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newArtist = await postJsonWithAuth('/admin/artists', formData);
+      const newArtist = await postJsonWithAuth('/admin/artists', formData) as Artist;
       setArtists([...artists, newArtist]);
       resetForm();
       setError(null);
@@ -136,7 +136,7 @@ export default function AdminArtistsPage() {
 
     try {
       console.log('🔧 發送更新請求:', formData);
-      const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData);
+      const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData) as Artist;
       console.log('✅ 收到更新回應:', updatedArtist);
       setArtists(artists.map(artist => 
         artist.id === editingArtist.id ? updatedArtist : artist
@@ -319,7 +319,7 @@ export default function AdminArtistsPage() {
                   value={formData.branchId}
                   onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  disabled={editingArtist && branches.length === 1} // 如果只有一個分店且是編輯模式，禁用選擇
+                  disabled={!!(editingArtist && branches.length === 1)} // 如果只有一個分店且是編輯模式，禁用選擇
                 >
                   <option value="">請選擇分店</option>
                   {branches.map((branch) => (

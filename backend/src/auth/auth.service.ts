@@ -38,21 +38,67 @@ export class AuthService {
   }
 
   async login(input: LoginDto) {
-    const user = await this.prisma.user.findUnique({ 
-      where: { email: input.email },
-      include: { branch: true }
-    });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-    const ok = await bcrypt.compare(input.password, user.hashedPassword);
-    if (!ok) throw new UnauthorizedException('Invalid credentials');
+    console.log(`🔐 嘗試登入: ${input.email}`);
     
-    // Update lastLogin timestamp
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
-    
-    return this.issueTokens(user.id, user.email, user.role || 'USER', user.branchId || undefined);
+    try {
+      // 查找用戶
+      const user = await this.prisma.user.findUnique({ 
+        where: { email: input.email },
+        include: { branch: true }
+      });
+      
+      if (!user) {
+        console.log(`❌ 用戶不存在: ${input.email}`);
+        throw new UnauthorizedException('User not found');
+      }
+      
+      console.log(`✅ 找到用戶: ${user.email}, ID: ${user.id}`);
+      
+      // 驗證密碼
+      let passwordValid = false;
+      try {
+        passwordValid = await bcrypt.compare(input.password, user.hashedPassword);
+      } catch (bcryptError) {
+        console.error('❌ bcrypt.compare 錯誤:', bcryptError);
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      
+      if (!passwordValid) {
+        console.log(`❌ 密碼錯誤: ${input.email}`);
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      
+      console.log(`✅ 密碼驗證成功: ${input.email}`);
+      
+      // 更新最後登入時間
+      try {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() },
+        });
+        console.log(`✅ 更新最後登入時間: ${user.email}`);
+      } catch (updateError) {
+        console.error('⚠️ 更新最後登入時間失敗:', updateError);
+        // 不影響登入流程，繼續執行
+      }
+      
+      // 簽發 JWT tokens
+      try {
+        const tokens = await this.issueTokens(user.id, user.email, user.role || 'USER', user.branchId || undefined);
+        console.log(`✅ 登入成功: ${user.email}`);
+        return tokens;
+      } catch (jwtError) {
+        console.error('❌ JWT 簽發失敗:', jwtError);
+        throw new UnauthorizedException('Token generation failed');
+      }
+      
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      console.error('❌ 登入過程發生未預期錯誤:', error);
+      throw new UnauthorizedException('Login failed');
+    }
   }
 
   async refresh(refreshToken: string) {
@@ -103,15 +149,31 @@ export class AuthService {
   }
 
   private async issueTokens(userId: string, email: string, role: string, branchId?: string) {
-    const access = await this.jwtService.signAsync(
-      { sub: userId, email, role, branchId },
-      { secret: process.env.JWT_ACCESS_SECRET as string, expiresIn: process.env.JWT_ACCESS_TTL || '15m' },
-    );
-    const refresh = await this.jwtService.signAsync(
-      { sub: userId, email, role, branchId },
-      { secret: process.env.JWT_REFRESH_SECRET as string, expiresIn: process.env.JWT_REFRESH_TTL || '7d' },
-    );
-    return { accessToken: access, refreshToken: refresh };
+    try {
+      console.log(`🔑 開始簽發 JWT tokens for user: ${email}`);
+      
+      // 檢查 JWT secrets 是否存在
+      if (!process.env.JWT_ACCESS_SECRET || !process.env.JWT_REFRESH_SECRET) {
+        console.error('❌ JWT secrets 未設定');
+        throw new Error('JWT secrets not configured');
+      }
+      
+      const access = await this.jwtService.signAsync(
+        { sub: userId, email, role, branchId },
+        { secret: process.env.JWT_ACCESS_SECRET, expiresIn: process.env.JWT_ACCESS_TTL || '15m' },
+      );
+      
+      const refresh = await this.jwtService.signAsync(
+        { sub: userId, email, role, branchId },
+        { secret: process.env.JWT_REFRESH_SECRET, expiresIn: process.env.JWT_REFRESH_TTL || '7d' },
+      );
+      
+      console.log(`✅ JWT tokens 簽發成功 for user: ${email}`);
+      return { accessToken: access, refreshToken: refresh };
+    } catch (error) {
+      console.error('❌ JWT tokens 簽發失敗:', error);
+      throw error;
+    }
   }
 }
 

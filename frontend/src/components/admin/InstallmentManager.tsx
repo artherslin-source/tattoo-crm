@@ -33,8 +33,8 @@ interface Order {
 
 interface InstallmentManagerProps {
   order: Order;
-  onPaymentRecorded: (installmentId: string, paymentData: any) => Promise<void>;
-  onInstallmentUpdated: (installmentId: string, updateData: any) => Promise<void>;
+  onPaymentRecorded: (installmentId: string, paymentData: { paymentMethod: string; notes?: string }) => Promise<void>;
+  onInstallmentUpdated: (installmentId: string, updateData: { dueDate: string; notes?: string }) => Promise<void>;
   onInstallmentAmountAdjusted?: (orderId: string, installmentNo: number, newAmount: number) => Promise<void>;
   userRole?: string;
 }

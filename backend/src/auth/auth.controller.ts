@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Get, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Get, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
@@ -33,8 +33,25 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() body: unknown) {
-    const input = LoginSchema.parse(body);
-    return this.authService.login(input);
+    try {
+      console.log('📥 收到登入請求:', { email: (body as any)?.email });
+      
+      // 驗證輸入格式
+      let input;
+      try {
+        input = LoginSchema.parse(body);
+      } catch (validationError) {
+        console.error('❌ 輸入驗證失敗:', validationError);
+        throw new BadRequestException('Invalid input format');
+      }
+      
+      const result = await this.authService.login(input);
+      console.log('📤 登入請求處理完成');
+      return result;
+    } catch (error) {
+      console.error('❌ 登入請求處理失敗:', error);
+      throw error;
+    }
   }
 
   @HttpCode(HttpStatus.OK)

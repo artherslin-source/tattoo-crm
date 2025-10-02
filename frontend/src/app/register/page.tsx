@@ -27,7 +27,7 @@ export default function RegisterPage() {
       
       // 獲取用戶資訊並儲存 role
       try {
-        const userData = await getJsonWithAuth('/users/me');
+        const userData = await getJsonWithAuth<{ role: string }>('/users/me');
         saveTokens({ role: userData.role });
       } catch (userErr) {
         console.error('Failed to fetch user data:', userErr);

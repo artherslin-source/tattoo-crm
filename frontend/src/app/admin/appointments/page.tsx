@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar, Plus } from "lucide-react";
 import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
@@ -71,6 +71,37 @@ export default function AdminAppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
+  // 新增預約模態框狀態
+  const [createAppointmentModal, setCreateAppointmentModal] = useState<{
+    isOpen: boolean;
+    formData: {
+      startAt: string;
+      endAt: string;
+      userId: string;
+      serviceId: string;
+      artistId: string;
+      branchId: string;
+      notes: string;
+    };
+  }>({
+    isOpen: false,
+    formData: {
+      startAt: '',
+      endAt: '',
+      userId: '',
+      serviceId: '',
+      artistId: '',
+      branchId: '',
+      notes: '',
+    },
+  });
+
+  // 選項資料狀態
+  const [users, setUsers] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [artists, setArtists] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+
   const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
@@ -94,6 +125,25 @@ export default function AdminAppointmentsPage() {
       setLoading(false);
     }
   }, [sortField, sortOrder, search, branchId, status, currentPage, itemsPerPage]);
+
+  // 載入選項資料
+  const fetchOptionsData = useCallback(async () => {
+    try {
+      const [usersData, servicesData, artistsData, branchesData] = await Promise.all([
+        getJsonWithAuth('/admin/members') as Promise<any[]>,
+        getJsonWithAuth('/admin/services') as Promise<any[]>,
+        getJsonWithAuth('/admin/artists') as Promise<any[]>,
+        getJsonWithAuth('/branches') as Promise<any[]>,
+      ]);
+      
+      setUsers(usersData);
+      setServices(servicesData);
+      setArtists(artistsData);
+      setBranches(branchesData);
+    } catch (err) {
+      console.error('載入選項資料失敗:', err);
+    }
+  }, []);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -181,6 +231,91 @@ export default function AdminAppointmentsPage() {
   const handleCloseDetailModal = () => {
     setSelectedAppointment(null);
     setIsDetailModalOpen(false);
+  };
+
+  // 新增預約相關函數
+  const handleOpenCreateAppointmentModal = () => {
+    setCreateAppointmentModal({
+      isOpen: true,
+      formData: {
+        startAt: '',
+        endAt: '',
+        userId: '',
+        serviceId: '',
+        artistId: '',
+        branchId: '',
+        notes: '',
+      },
+    });
+    fetchOptionsData();
+  };
+
+  const handleCloseCreateAppointmentModal = () => {
+    setCreateAppointmentModal({
+      isOpen: false,
+      formData: {
+        startAt: '',
+        endAt: '',
+        userId: '',
+        serviceId: '',
+        artistId: '',
+        branchId: '',
+        notes: '',
+      },
+    });
+  };
+
+  const handleCreateAppointmentFormChange = (field: string, value: string) => {
+    setCreateAppointmentModal(prev => {
+      const newFormData = { ...prev.formData, [field]: value };
+      
+      // 當選擇刺青師時，自動設定對應的分店
+      if (field === 'artistId' && value) {
+        const selectedArtist = artists.find(artist => artist.id === value);
+        if (selectedArtist && selectedArtist.branchId) {
+          newFormData.branchId = selectedArtist.branchId;
+        }
+      }
+      
+      return {
+        ...prev,
+        formData: newFormData,
+      };
+    });
+  };
+
+  const handleCreateAppointment = async () => {
+    try {
+      const { startAt, endAt, userId, serviceId, artistId, branchId, notes } = createAppointmentModal.formData;
+      
+      if (!startAt || !endAt || !userId || !serviceId || !artistId || !branchId) {
+        setError('請填寫所有必填欄位');
+        return;
+      }
+
+      // 將日期時間轉換為完整的 ISO 格式
+      const startAtISO = new Date(startAt).toISOString();
+      const endAtISO = new Date(endAt).toISOString();
+
+      const newAppointment = await postJsonWithAuth('/admin/appointments', {
+        startAt: startAtISO,
+        endAt: endAtISO,
+        userId,
+        serviceId,
+        artistId,
+        branchId,
+        notes: notes || undefined,
+      }) as Appointment;
+
+      setAppointments([newAppointment, ...appointments]);
+      setError(null);
+      setSuccessMessage('預約新增成功！');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      handleCloseCreateAppointmentModal();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "新增預約失敗");
+    }
   };
 
   // 更新預約狀態
@@ -283,42 +418,55 @@ export default function AdminAppointmentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 頁面標題 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            回上一頁
-          </Button>
+    <div className="max-w-7xl mx-auto p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">管理預約</h1>
-            <p className="text-gray-600 dark:text-gray-400">管理所有預約記錄</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+              <Calendar className="mr-3 h-8 w-8" />
+              管理預約
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              管理系統中的所有預約記錄
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button 
+              onClick={handleOpenCreateAppointmentModal}
+              className="flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>新增預約</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => router.back()}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>回上一頁</span>
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* 錯誤訊息 */}
+      {/* Error message */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-800 dark:text-red-200">{error}</p>
+        <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
         </div>
       )}
 
-      {/* 成功訊息 */}
+      {/* Success message */}
       {successMessage && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <p className="text-green-800 dark:text-green-200">{successMessage}</p>
+        <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          {successMessage}
         </div>
       )}
 
-      {/* 統計卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總預約數</CardTitle>
@@ -363,7 +511,7 @@ export default function AdminAppointmentsPage() {
         </Card>
       </div>
 
-      {/* 工具欄 */}
+      {/* Toolbar */}
       <AppointmentsToolbar
         sortField={sortField}
         sortOrder={sortOrder}
@@ -379,7 +527,7 @@ export default function AdminAppointmentsPage() {
         onStatusChange={handleStatusChange}
       />
 
-      {/* 預約列表 */}
+      {/* Appointments List */}
       {appointments.length === 0 ? (
         <div className="text-center py-12">
           <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -388,7 +536,7 @@ export default function AdminAppointmentsPage() {
         </div>
       ) : (
         <>
-          {/* 桌面版表格 */}
+          {/* Desktop Table */}
           <AppointmentsTable
             appointments={appointments}
             onViewDetails={handleViewDetails}
@@ -396,7 +544,7 @@ export default function AdminAppointmentsPage() {
             onDelete={handleDelete}
           />
 
-          {/* 平板和手機版卡片 */}
+          {/* Mobile/Tablet Cards */}
           <AppointmentsCards
             appointments={appointments}
             onViewDetails={handleViewDetails}
@@ -406,9 +554,9 @@ export default function AdminAppointmentsPage() {
         </>
       )}
 
-      {/* 分頁控制 */}
+      {/* Pagination */}
       {totalItems > itemsPerPage && (
-        <div className="flex items-center justify-between">
+        <div className="mt-8 flex items-center justify-between">
           <div className="text-sm text-gray-700 dark:text-gray-300">
             顯示第 {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} 項，共 {totalItems} 項
           </div>
@@ -444,7 +592,167 @@ export default function AdminAppointmentsPage() {
         </div>
       )}
 
-      {/* 預約詳情模態框 */}
+      {/* Create Appointment Modal */}
+      <Dialog open={createAppointmentModal.isOpen} onOpenChange={handleCloseCreateAppointmentModal}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>新增預約</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="startAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  開始時間 *
+                </label>
+                <input
+                  type="datetime-local"
+                  id="startAt"
+                  value={createAppointmentModal.formData.startAt}
+                  onChange={(e) => handleCreateAppointmentFormChange('startAt', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="endAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  結束時間 *
+                </label>
+                <input
+                  type="datetime-local"
+                  id="endAt"
+                  value={createAppointmentModal.formData.endAt}
+                  onChange={(e) => handleCreateAppointmentFormChange('endAt', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  客戶 *
+                </label>
+                <select
+                  id="userId"
+                  value={createAppointmentModal.formData.userId}
+                  onChange={(e) => handleCreateAppointmentFormChange('userId', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">請選擇客戶</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.user?.id || user.id}>
+                      {user.user?.name || user.name} ({user.user?.email || user.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="serviceId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  服務項目 *
+                </label>
+                <select
+                  id="serviceId"
+                  value={createAppointmentModal.formData.serviceId}
+                  onChange={(e) => handleCreateAppointmentFormChange('serviceId', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">請選擇服務項目</option>
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} - {formatCurrency(service.price)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="artistId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  刺青師 *
+                </label>
+                <select
+                  id="artistId"
+                  value={createAppointmentModal.formData.artistId}
+                  onChange={(e) => handleCreateAppointmentFormChange('artistId', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">請選擇刺青師</option>
+                  {artists.map((artist) => (
+                    <option key={artist.id} value={artist.id}>
+                      {artist.user?.name || artist.displayName || '未知刺青師'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="branchId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  分店 *
+                </label>
+                <select
+                  id="branchId"
+                  value={createAppointmentModal.formData.branchId}
+                  onChange={(e) => handleCreateAppointmentFormChange('branchId', e.target.value)}
+                  disabled={!!createAppointmentModal.formData.artistId}
+                  className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                    createAppointmentModal.formData.artistId 
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                      : ''
+                  }`}
+                >
+                  <option value="">
+                    {createAppointmentModal.formData.artistId 
+                      ? '將根據選擇的刺青師自動設定' 
+                      : '請選擇分店'
+                    }
+                  </option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+                {createAppointmentModal.formData.artistId && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    分店將根據選擇的刺青師自動設定
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                備註
+              </label>
+              <textarea
+                id="notes"
+                value={createAppointmentModal.formData.notes}
+                onChange={(e) => handleCreateAppointmentFormChange('notes', e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="請輸入備註（選填）"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              variant="outline"
+              onClick={handleCloseCreateAppointmentModal}
+              className="flex-1"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleCreateAppointment}
+              disabled={!createAppointmentModal.formData.startAt || !createAppointmentModal.formData.endAt || !createAppointmentModal.formData.userId || !createAppointmentModal.formData.serviceId || !createAppointmentModal.formData.artistId || !createAppointmentModal.formData.branchId}
+              className="flex-1"
+            >
+              新增預約
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Appointment Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -481,12 +789,12 @@ export default function AdminAppointmentsPage() {
                     <span className="text-gray-500 dark:text-gray-400">結束時間:</span>
                     <span className="ml-2 font-medium">{formatDate(selectedAppointment.endAt)}</span>
                   </div>
-                  <div>
+                      <div>
                     <span className="text-gray-500 dark:text-gray-400">服務時長:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.service?.durationMin || 'N/A'} 分鐘</span>
-                  </div>
-                </div>
-              </div>
+                        </div>
+                        </div>
+                      </div>
 
               {/* 客戶資訊 */}
               <div className="space-y-2">
@@ -496,12 +804,12 @@ export default function AdminAppointmentsPage() {
                     <span className="text-gray-500 dark:text-gray-400">姓名:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.user?.name || '未設定'}</span>
                   </div>
-                  <div>
+                        <div>
                     <span className="text-gray-500 dark:text-gray-400">Email:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.user?.email || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
+                          </div>
+                          </div>
+                        </div>
 
               {/* 服務資訊 */}
               <div className="space-y-2">
@@ -523,8 +831,8 @@ export default function AdminAppointmentsPage() {
                     <span className="text-gray-500 dark:text-gray-400">分店:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.branch?.name || '未分配'}</span>
                   </div>
-                </div>
-              </div>
+                        </div>
+                      </div>
 
               {/* 備註 */}
               {selectedAppointment.notes && (
@@ -533,7 +841,7 @@ export default function AdminAppointmentsPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                     {selectedAppointment.notes}
                   </p>
-                </div>
+                      </div>
               )}
 
               {/* 操作按鈕 */}
@@ -546,22 +854,22 @@ export default function AdminAppointmentsPage() {
                   關閉
                 </Button>
                 {selectedAppointment.status === 'PENDING' && (
-                  <>
-                    <Button
+                          <>
+                            <Button
                       onClick={() => handleUpdateStatus(selectedAppointment, 'CONFIRMED')}
                       className="flex-1 bg-blue-600 hover:bg-blue-700"
                     >
                       確認預約
-                    </Button>
-                    <Button
+                            </Button>
+                            <Button
                       onClick={() => handleUpdateStatus(selectedAppointment, 'CANCELED')}
                       variant="destructive"
                       className="flex-1"
                     >
                       取消預約
-                    </Button>
-                  </>
-                )}
+                            </Button>
+                          </>
+                        )}
                 {selectedAppointment.status === 'CONFIRMED' && (
                   <>
                     <Button
@@ -576,13 +884,13 @@ export default function AdminAppointmentsPage() {
                     >
                       標記完成
                     </Button>
-                    <Button
+                          <Button
                       onClick={() => handleUpdateStatus(selectedAppointment, 'CANCELED')}
                       variant="destructive"
                       className="flex-1"
                     >
                       取消預約
-                    </Button>
+                          </Button>
                   </>
                 )}
                 {selectedAppointment.status === 'IN_PROGRESS' && (
@@ -593,15 +901,15 @@ export default function AdminAppointmentsPage() {
                     >
                       標記完成
                     </Button>
-                    <Button
+                        <Button
                       onClick={() => handleUpdateStatus(selectedAppointment, 'CONFIRMED')}
                       className="flex-1 bg-blue-600 hover:bg-blue-700"
                     >
                       回到已確認
-                    </Button>
+                        </Button>
                   </>
                 )}
-              </div>
+          </div>
             </div>
           )}
         </DialogContent>

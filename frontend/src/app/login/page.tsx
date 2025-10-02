@@ -26,7 +26,7 @@ export default function LoginPage() {
       
       // 獲取用戶資訊並儲存 role 和 branchId
       try {
-        const userData = await getJsonWithAuth('/users/me');
+        const userData = await getJsonWithAuth<{ role: string; branchId: string }>('/users/me');
         saveTokens({ role: userData.role, branchId: userData.branchId });
       } catch (userErr) {
         console.error('Failed to fetch user data:', userErr);
@@ -35,9 +35,9 @@ export default function LoginPage() {
       // 登入後統一跳轉到 Profile 頁面
       router.push("/profile");
     } catch (err) {
+      console.error('Login error:', err);
       const apiErr = err as ApiError;
-      console.error(apiErr);
-      setError("登入失敗");
+      setError(apiErr.message || "登入失敗");
     } finally {
       setLoading(false);
     }

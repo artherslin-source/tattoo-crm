@@ -16,7 +16,7 @@ interface Order {
   status: string;
   member: {
     id: string;
-    name: string;
+    name: string | null;
     email: string;
   };
   branch: {
@@ -130,8 +130,13 @@ export default function CheckoutModal({
 
     setLoading(true);
     try {
-      const checkoutData: any = {
-        paymentType
+      const checkoutData: {
+        paymentType: 'ONE_TIME' | 'INSTALLMENT';
+        installmentTerms?: number;
+        startDate?: string;
+        customPlan?: { [key: number]: number };
+      } = {
+        paymentType: paymentType as 'ONE_TIME' | 'INSTALLMENT'
       };
 
       if (paymentType === 'INSTALLMENT') {
