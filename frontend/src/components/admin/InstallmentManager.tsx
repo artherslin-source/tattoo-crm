@@ -17,6 +17,8 @@ interface Installment {
   paidAt?: string;
   paymentMethod?: string;
   notes?: string;
+  isCustom?: boolean;
+  autoAdjusted?: boolean;
 }
 
 interface Order {
@@ -33,16 +35,22 @@ interface InstallmentManagerProps {
   order: Order;
   onPaymentRecorded: (installmentId: string, paymentData: any) => Promise<void>;
   onInstallmentUpdated: (installmentId: string, updateData: any) => Promise<void>;
+  onInstallmentAmountAdjusted?: (orderId: string, installmentNo: number, newAmount: number) => Promise<void>;
+  userRole?: string;
 }
 
 export default function InstallmentManager({
   order,
   onPaymentRecorded,
-  onInstallmentUpdated
+  onInstallmentUpdated,
+  onInstallmentAmountAdjusted,
+  userRole
 }: InstallmentManagerProps) {
   const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAmountEditDialogOpen, setIsAmountEditDialogOpen] = useState(false);
+  const [editingAmount, setEditingAmount] = useState<number>(0);
   const [paymentData, setPaymentData] = useState({
     paymentMethod: '',
     notes: '',
@@ -116,6 +124,29 @@ export default function InstallmentManager({
     } catch (error) {
       console.error('更新分期失敗:', error);
     }
+  };
+
+  const handleAdjustAmount = async () => {
+    if (!selectedInstallment || !onInstallmentAmountAdjusted) return;
+    
+    // 檢查金額是否為0
+    if (editingAmount === 0) {
+      alert('分期付款金額不能為0，請輸入有效的金額。');
+      return;
+    }
+    
+    try {
+      await onInstallmentAmountAdjusted(order.id, selectedInstallment.installmentNo, editingAmount);
+      setIsAmountEditDialogOpen(false);
+    } catch (error) {
+      console.error('調整分期金額失敗:', error);
+    }
+  };
+
+  const openAmountEditDialog = (installment: Installment) => {
+    setSelectedInstallment(installment);
+    setEditingAmount(installment.amount);
+    setIsAmountEditDialogOpen(true);
   };
 
   const openPaymentDialog = (installment: Installment) => {
@@ -225,6 +256,17 @@ export default function InstallmentManager({
                           <CheckCircle className="h-4 w-4 mr-1" />
                           記錄付款
                         </Button>
+                        {(userRole === 'BOSS' || userRole === 'BRANCH_MANAGER') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openAmountEditDialog(installment)}
+                            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          >
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            調整金額
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -252,7 +294,7 @@ export default function InstallmentManager({
 
       {/* 記錄付款對話框 */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>記錄付款</DialogTitle>
           </DialogHeader>
@@ -270,7 +312,7 @@ export default function InstallmentManager({
                 <SelectTrigger>
                   <SelectValue placeholder="選擇付款方式" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white/80">
                   <SelectItem value="現金">現金</SelectItem>
                   <SelectItem value="信用卡">信用卡</SelectItem>
                   <SelectItem value="匯款">匯款</SelectItem>
@@ -313,7 +355,7 @@ export default function InstallmentManager({
 
       {/* 編輯分期對話框 */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>編輯分期付款</DialogTitle>
           </DialogHeader>
@@ -334,8 +376,13 @@ export default function InstallmentManager({
                 id="edit-amount"
                 type="number"
                 value={editData.amount}
-                onChange={(e) => setEditData({...editData, amount: parseInt(e.target.value)})}
+                disabled
+                className="bg-gray-100 text-gray-600 cursor-not-allowed"
+                readOnly
               />
+              <p className="text-xs text-gray-500">
+                分期金額只能透過「調整金額」功能修改
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -354,6 +401,111 @@ export default function InstallmentManager({
               </Button>
               <Button onClick={handleUpdateInstallment}>
                 更新
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 調整金額對話框 */}
+      <Dialog open={isAmountEditDialogOpen} onOpenChange={setIsAmountEditDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>調整分期金額</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="text-sm text-blue-600">第{selectedInstallment?.installmentNo}期</div>
+              <div className="text-lg font-medium text-blue-800">
+                原金額：{selectedInstallment && formatCurrency(selectedInstallment.amount)}
+              </div>
+            </div>
+
+            {/* 計算提示信息 */}
+            {selectedInstallment && (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="text-sm text-gray-700">
+                  <div className="flex justify-between mb-1">
+                    <span>訂單總額：</span>
+                    <span className="font-medium">{formatCurrency(order.finalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span>已付款：</span>
+                    <span className="font-medium">{formatCurrency(
+                      order.installments.filter(i => i.status === 'PAID').reduce((sum, i) => sum + i.amount, 0)
+                    )}</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span>未付總額：</span>
+                    <span className="font-medium">{formatCurrency(
+                      order.finalAmount - order.installments.filter(i => i.status === 'PAID').reduce((sum, i) => sum + i.amount, 0)
+                    )}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>其他固定金額：</span>
+                    <span className="font-medium">{formatCurrency(
+                      order.installments
+                        .filter(i => i.installmentNo !== selectedInstallment.installmentNo && 
+                                    (i.status === 'PAID' || i.isCustom === true))
+                        .reduce((sum, i) => sum + i.amount, 0)
+                    )}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="new-amount">新金額</Label>
+              <Input
+                id="new-amount"
+                type="number"
+                placeholder="輸入新金額"
+                value={isNaN(editingAmount) ? '' : (editingAmount === 0 ? '' : editingAmount)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    setEditingAmount(0);
+                  } else {
+                    const numValue = parseInt(value);
+                    setEditingAmount(isNaN(numValue) ? 0 : numValue);
+                  }
+                }}
+                min="0"
+              />
+              {selectedInstallment && (
+                <div className="text-xs text-gray-500">
+                  可輸入範圍：0 ~ {formatCurrency(
+                    (order.finalAmount - order.installments.filter(i => i.status === 'PAID').reduce((sum, i) => sum + i.amount, 0)) -
+                    order.installments
+                      .filter(i => i.installmentNo !== selectedInstallment.installmentNo && 
+                                  (i.status === 'PAID' || i.isCustom === true))
+                      .reduce((sum, i) => sum + i.amount, 0)
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center gap-2 text-yellow-800">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">注意</span>
+              </div>
+              <p className="text-sm text-yellow-700 mt-1">
+                調整此期金額後，其他未付款且未鎖定的分期金額將自動重新分配，確保總金額不變。
+                已付款和已手動鎖定的分期不會被影響。
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setIsAmountEditDialogOpen(false)}>
+                取消
+              </Button>
+              <Button 
+                onClick={handleAdjustAmount}
+                disabled={editingAmount < 0}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                確認調整
               </Button>
             </div>
           </div>

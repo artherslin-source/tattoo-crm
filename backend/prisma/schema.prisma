@@ -145,7 +145,7 @@ model Order {
   discount      Int?          @default(0)
   finalAmount   Int           @default(0)
   paymentType   PaymentType
-  status        OrderStatus   @default(PENDING)
+  status        OrderStatus   @default(PENDING_PAYMENT)
   paymentMethod String?       // 現金、信用卡、匯款等
   paidAt        DateTime?
   notes         String?
@@ -168,6 +168,8 @@ model Installment {
   paidAt        DateTime?
   paymentMethod String?           // 付款方式：現金、信用卡、匯款等
   notes         String?           // 備註，可記錄交易碼
+  isCustom      Boolean           @default(false)  // 是否為人工調整的金額
+  autoAdjusted  Boolean           @default(false)  // 是否經過系統自動重新分配
   order         Order             @relation(fields: [orderId], references: [id])
 
   @@unique([orderId, installmentNo])
@@ -206,9 +208,12 @@ enum PaymentType {
 }
 
 enum OrderStatus {
+  PENDING_PAYMENT  // 待結帳
   PENDING
   PARTIALLY_PAID  // 部分付款（分期付款中）
+  INSTALLMENT_ACTIVE  // 分期付款中
   PAID
+  PAID_COMPLETE  // 分期付款完成
   CANCELLED
   COMPLETED
 }

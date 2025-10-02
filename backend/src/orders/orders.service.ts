@@ -16,8 +16,14 @@ interface CreateOrderInput {
   branchId: string;
   appointmentId?: string | null;
   totalAmount: number;
-  paymentType: 'ONE_TIME' | 'INSTALLMENT';
   useStoredValue?: boolean;
+}
+
+interface CheckoutInput {
+  paymentType: 'ONE_TIME' | 'INSTALLMENT';
+  installmentTerms?: number;
+  startDate?: Date;
+  customPlan?: { [key: string]: number };
 }
 
 @Injectable()
@@ -98,8 +104,9 @@ export class OrdersService {
           appointmentId: input.appointmentId,
           totalAmount: input.totalAmount,
           finalAmount: input.totalAmount,
-          paymentType: input.paymentType,
-          isInstallment: input.paymentType === 'INSTALLMENT',
+          status: 'PENDING_PAYMENT', // 新建訂單預設為待結帳狀態
+          paymentType: 'ONE_TIME', // 預設為一次付清，結帳時再決定
+          isInstallment: false,
         },
         include: {
           member: { select: { id: true, name: true, email: true } },
@@ -108,81 +115,172 @@ export class OrdersService {
         },
       });
 
-      // 只有一次付清時才立即更新會員累計消費
-      if (input.paymentType === 'ONE_TIME') {
-        // 更新用戶財務資料
-        const updateData: any = {
-          totalSpent: { increment: input.totalAmount },
-        };
+      // 新建訂單時不更新會員累計消費，等到結帳時才處理
+      // 確保用戶有 Member 記錄
+      const member = await tx.member.findUnique({
+        where: { userId: input.memberId },
+      });
 
-        if (input.useStoredValue) {
-          updateData.balance = { decrement: input.totalAmount };
-        }
-
-        // 確保用戶有 Member 記錄
-        const member = await tx.member.findUnique({
-          where: { userId: input.memberId },
+      if (!member) {
+        await tx.member.create({
+          data: {
+            userId: input.memberId,
+            totalSpent: 0,
+            balance: 0,
+            membershipLevel: 'BRONZE',
+          },
         });
-
-        if (!member) {
-          // 如果沒有 Member 記錄，創建一個
-          const newMember = await tx.member.create({
-            data: {
-              userId: input.memberId,
-              totalSpent: input.totalAmount,
-              balance: input.useStoredValue ? -input.totalAmount : 0,
-              membershipLevel: this.calculateMembershipLevel(input.totalAmount),
-            },
-          });
-          
-          console.log('🎯 新會員創建:', {
-            userId: input.memberId,
-            totalSpent: input.totalAmount,
-            membershipLevel: newMember.membershipLevel
-          });
-        } else {
-          // 更新現有的 Member 記錄
-          const newTotalSpent = member.totalSpent + input.totalAmount;
-          await tx.member.update({
-            where: { userId: input.memberId },
-            data: {
-              ...updateData,
-              membershipLevel: this.calculateMembershipLevel(newTotalSpent),
-            },
-          });
-          
-          console.log('🎯 會員資料更新:', {
-            userId: input.memberId,
-            oldTotalSpent: member.totalSpent,
-            newTotalSpent,
-            membershipLevel: this.calculateMembershipLevel(newTotalSpent)
-          });
-        }
-      } else {
-        // 分期付款：只創建會員記錄，不更新累計消費
-        const member = await tx.member.findUnique({
-          where: { userId: input.memberId },
+        
+        console.log('🎯 新會員創建:', {
+          userId: input.memberId,
+          totalSpent: 0,
+          membershipLevel: 'BRONZE'
         });
-
-        if (!member) {
-          await tx.member.create({
-            data: {
-              userId: input.memberId,
-              totalSpent: 0,
-              balance: 0,
-              membershipLevel: '一般會員',
-            },
-          });
-          
-          console.log('🎯 分期付款新會員創建:', {
-            userId: input.memberId,
-            membershipLevel: '一般會員'
-          });
-        }
       }
 
       return order;
     });
+  }
+
+  async checkout(orderId: string, input: CheckoutInput) {
+    return await this.prisma.$transaction(async (tx) => {
+      // 檢查訂單是否存在且狀態為 PENDING_PAYMENT
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { installments: true }
+      });
+
+      if (!order) {
+        throw new Error('訂單不存在');
+      }
+
+      if (order.status !== 'PENDING_PAYMENT' && order.status !== 'PENDING') {
+        throw new Error('訂單狀態不正確，無法結帳');
+      }
+
+      if (input.paymentType === 'ONE_TIME') {
+        // 一次付清
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: 'PAID',
+            paymentType: 'ONE_TIME',
+            paidAt: new Date(),
+            isInstallment: false
+          }
+        });
+
+        // 更新會員累計消費
+        await this.updateMemberTotalSpent(tx, order.memberId, order.finalAmount);
+
+        return { message: '訂單已標記為已付款' };
+      } else {
+        // 分期付款
+        const installmentCount = input.installmentTerms || 3;
+        const startDate = input.startDate || new Date();
+        const totalAmount = order.finalAmount;
+
+        // 刪除現有的分期付款記錄（如果有的話）
+        if (order.installments.length > 0) {
+          await tx.installment.deleteMany({
+            where: { orderId }
+          });
+        }
+
+        // 創建分期付款記錄
+        const installments: any[] = [];
+        const customPlan = input.customPlan || {};
+
+        // 計算自定義金額的總和
+        const customTotal = Object.values(customPlan).reduce((sum, amount) => sum + amount, 0);
+        const remainingAmount = totalAmount - customTotal;
+        const nonCustomCount = installmentCount - Object.keys(customPlan).length;
+
+        // 計算非自定義期數的平均金額
+        const baseAmount = nonCustomCount > 0 ? Math.floor(remainingAmount / nonCustomCount) : 0;
+        const remainder = nonCustomCount > 0 ? remainingAmount - (baseAmount * nonCustomCount) : 0;
+        let nonCustomIndex = 0;
+
+        for (let i = 1; i <= installmentCount; i++) {
+          const dueDate = new Date(startDate);
+          dueDate.setMonth(dueDate.getMonth() + i - 1);
+
+          let amount: number;
+          let isCustom = false;
+
+          if (customPlan[i.toString()]) {
+            // 使用自定義金額
+            amount = customPlan[i.toString()];
+            isCustom = true;
+          } else {
+            // 計算剩餘金額的平均分配
+            nonCustomIndex++;
+            amount = baseAmount;
+            // 最後一個非自定義期數吸收尾差
+            if (nonCustomIndex === nonCustomCount && remainder > 0) {
+              amount += remainder;
+            }
+          }
+
+          const installment = await tx.installment.create({
+            data: {
+              orderId,
+              installmentNo: i,
+              dueDate,
+              amount,
+              status: 'UNPAID',
+              isCustom,
+              autoAdjusted: !isCustom
+            }
+          });
+
+          installments.push(installment);
+        }
+
+        // 更新訂單狀態
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: 'INSTALLMENT_ACTIVE',
+            paymentType: 'INSTALLMENT',
+            isInstallment: true
+          }
+        });
+
+        return {
+          message: '分期付款計劃已創建',
+          installments
+        };
+      }
+    });
+  }
+
+  private async updateMemberTotalSpent(tx: any, userId: string, amount: number) {
+    const member = await tx.member.findUnique({
+      where: { userId }
+    });
+
+    if (!member) {
+      // 如果沒有 Member 記錄，創建一個
+      await tx.member.create({
+        data: {
+          userId,
+          totalSpent: amount,
+          balance: 0,
+          membershipLevel: this.calculateMembershipLevel(amount),
+        },
+      });
+    } else {
+      // 更新現有的 Member 記錄
+      const newTotalSpent = member.totalSpent + amount;
+      await tx.member.update({
+        where: { userId },
+        data: {
+          totalSpent: newTotalSpent,
+          membershipLevel: this.calculateMembershipLevel(newTotalSpent),
+        },
+      });
+    }
   }
 
   async getOrders(query: GetOrdersQuery, userRole: string, userBranchId?: string) {

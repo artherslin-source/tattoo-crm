@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +13,7 @@ import OrdersToolbar from "@/components/admin/OrdersToolbar";
 import OrdersTable from "@/components/admin/OrdersTable";
 import OrdersCards from "@/components/admin/OrdersCards";
 import InstallmentManager from "@/components/admin/InstallmentManager";
-import InstallmentPaymentSelector from "@/components/admin/InstallmentPaymentSelector";
+import CheckoutModal from "@/components/admin/CheckoutModal";
 
 interface Order {
   id: string;
@@ -86,10 +86,12 @@ export default function AdminOrdersPage() {
     memberId: '',
     branchId: '',
     totalAmount: '',
-    paymentType: 'ONE_TIME' as 'ONE_TIME' | 'INSTALLMENT',
-    installmentPeriods: 3,
     notes: ''
   });
+
+  // 結帳模態框狀態
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [checkoutOrder, setCheckoutOrder] = useState<Order | null>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -223,11 +225,11 @@ export default function AdminOrdersPage() {
     setCurrentPage(1); // 重置到第一頁
   };
 
-  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+  const handleUpdateStatus = async (order: Order, newStatus: string) => {
     try {
-      await patchJsonWithAuth(`/admin/orders/${orderId}/status`, { status: newStatus });
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus as any } : order
+      await patchJsonWithAuth(`/admin/orders/${order.id}/status`, { status: newStatus });
+      setOrders(orders.map(o => 
+        o.id === order.id ? { ...o, status: newStatus as any } : o
       ));
       
       // 顯示成功訊息
@@ -249,7 +251,7 @@ export default function AdminOrdersPage() {
   // 分期付款相關處理函數
   const handlePaymentRecorded = async (installmentId: string, paymentData: any) => {
     try {
-      await patchJsonWithAuth(`/installments/${installmentId}/payment`, paymentData);
+      await postJsonWithAuth(`/installments/${installmentId}/payment`, paymentData);
       
       // 重新獲取訂單詳情
       if (selectedOrder) {
@@ -277,7 +279,7 @@ export default function AdminOrdersPage() {
 
   const handleInstallmentUpdated = async (installmentId: string, updateData: any) => {
     try {
-      await patchJsonWithAuth(`/installments/${installmentId}`, updateData);
+      await putJsonWithAuth(`/installments/${installmentId}`, updateData);
       
       // 重新獲取訂單詳情
       if (selectedOrder) {
@@ -303,6 +305,75 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleInstallmentAmountAdjusted = async (orderId: string, installmentNo: number, newAmount: number) => {
+    try {
+      await putJsonWithAuth(`/installments/order/${orderId}/installment/${installmentNo}/adjust`, {
+        newAmount
+      });
+      
+      // 重新獲取訂單詳情
+      if (selectedOrder) {
+        const updatedOrder = await getJsonWithAuth(`/admin/orders/${selectedOrder.id}`);
+        setSelectedOrder(updatedOrder);
+        
+        // 更新訂單列表中的對應訂單
+        setOrders(orders.map(order => 
+          order.id === selectedOrder.id ? updatedOrder : order
+        ));
+      }
+      
+      setSuccessMessage('分期金額調整成功');
+      setError(null);
+      
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "調整分期金額失敗");
+      setSuccessMessage(null);
+    }
+  };
+
+  // 結帳處理函數
+  const handleCheckout = async (orderId: string, checkoutData: {
+    paymentType: 'ONE_TIME' | 'INSTALLMENT';
+    installmentTerms?: number;
+    startDate?: string;
+    customPlan?: { [key: number]: number };
+  }) => {
+    try {
+      await putJsonWithAuth(`/orders/${orderId}/checkout`, checkoutData);
+      
+      // 重新獲取訂單列表和統計
+      await fetchOrders();
+      await fetchSummary();
+      
+      setSuccessMessage('結帳成功');
+      setError(null);
+      
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "結帳失敗");
+      setSuccessMessage(null);
+    }
+  };
+
+  // 開啟結帳對話框
+  const handleOpenCheckout = (order: Order) => {
+    setCheckoutOrder(order);
+    setIsCheckoutModalOpen(true);
+  };
+
+  // 關閉結帳對話框
+  const handleCloseCheckout = () => {
+    setCheckoutOrder(null);
+    setIsCheckoutModalOpen(false);
+  };
+
   // 創建訂單處理函數
   const handleCreateOrder = async () => {
     try {
@@ -310,19 +381,10 @@ export default function AdminOrdersPage() {
         memberId: createOrderData.memberId,
         branchId: createOrderData.branchId,
         totalAmount: parseInt(createOrderData.totalAmount),
-        paymentType: createOrderData.paymentType,
         notes: createOrderData.notes
       };
 
-      const newOrder = await postJsonWithAuth('/orders', orderData);
-
-      // 如果是分期付款，創建分期計劃
-      if (createOrderData.paymentType === 'INSTALLMENT') {
-        await postJsonWithAuth('/installments/plan', {
-          orderId: newOrder.id,
-          periods: createOrderData.installmentPeriods
-        });
-      }
+      await postJsonWithAuth('/orders', orderData);
 
       // 重新獲取訂單列表
       await fetchOrders();
@@ -334,8 +396,6 @@ export default function AdminOrdersPage() {
         memberId: '',
         branchId: '',
         totalAmount: '',
-        paymentType: 'ONE_TIME',
-        installmentPeriods: 3,
         notes: ''
       });
 
@@ -371,6 +431,8 @@ export default function AdminOrdersPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case 'PENDING_PAYMENT':
+        return '待結帳';
       case 'PENDING':
         return '待付款';
       case 'PARTIALLY_PAID':
@@ -388,6 +450,8 @@ export default function AdminOrdersPage() {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
+      case 'PENDING_PAYMENT':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'PARTIALLY_PAID':
@@ -596,17 +660,19 @@ export default function AdminOrdersPage() {
         </CardHeader>
         <CardContent>
           {/* 桌機版表格 */}
-          <OrdersTable
-            orders={orders}
-            onViewDetails={handleViewDetails}
-            onUpdateStatus={handleUpdateStatus}
-          />
+        <OrdersTable
+          orders={orders}
+          onViewDetails={handleViewDetails}
+          onUpdateStatus={handleUpdateStatus}
+          onCheckout={handleOpenCheckout}
+        />
 
           {/* 平板和手機版卡片 */}
           <OrdersCards
             orders={orders}
             onViewDetails={handleViewDetails}
             onUpdateStatus={handleUpdateStatus}
+            onCheckout={handleOpenCheckout}
           />
           
           {orders.length === 0 && (
@@ -664,7 +730,7 @@ export default function AdminOrdersPage() {
 
       {/* 訂單詳情模態框 */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>訂單詳情</DialogTitle>
             <DialogDescription>
@@ -731,6 +797,8 @@ export default function AdminOrdersPage() {
                     order={selectedOrder}
                     onPaymentRecorded={handlePaymentRecorded}
                     onInstallmentUpdated={handleInstallmentUpdated}
+                    onInstallmentAmountAdjusted={handleInstallmentAmountAdjusted}
+                    userRole={getUserRole()}
                   />
                 </div>
               )}
@@ -743,7 +811,7 @@ export default function AdminOrdersPage() {
                 {selectedOrder.status === 'PENDING' && (
                   <Button 
                     onClick={() => {
-                      handleUpdateStatus(selectedOrder.id, 'PAID');
+                      handleUpdateStatus(selectedOrder, 'PAID');
                       handleCloseDetailModal();
                     }}
                     className="bg-green-600 hover:bg-green-700 text-white"
@@ -754,7 +822,7 @@ export default function AdminOrdersPage() {
                 {selectedOrder.status === 'PAID' && (
                   <Button 
                     onClick={() => {
-                      handleUpdateStatus(selectedOrder.id, 'COMPLETED');
+                      handleUpdateStatus(selectedOrder, 'COMPLETED');
                       handleCloseDetailModal();
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -765,7 +833,7 @@ export default function AdminOrdersPage() {
                 {(selectedOrder.status === 'PENDING' || selectedOrder.status === 'PAID') && (
                   <Button 
                     onClick={() => {
-                      handleUpdateStatus(selectedOrder.id, 'CANCELLED');
+                      handleUpdateStatus(selectedOrder, 'CANCELLED');
                       handleCloseDetailModal();
                     }}
                     variant="destructive"
@@ -781,7 +849,7 @@ export default function AdminOrdersPage() {
 
       {/* 創建訂單模態框 */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>創建新訂單</DialogTitle>
             <DialogDescription>
@@ -789,7 +857,7 @@ export default function AdminOrdersPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-6 pb-4">
             {/* 基本資訊 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -847,14 +915,6 @@ export default function AdminOrdersPage() {
               />
             </div>
 
-            {/* 付款方式選擇 */}
-            <InstallmentPaymentSelector
-              paymentType={createOrderData.paymentType}
-              onPaymentTypeChange={(type) => setCreateOrderData({ ...createOrderData, paymentType: type })}
-              installmentPeriods={createOrderData.installmentPeriods}
-              onInstallmentPeriodsChange={(periods) => setCreateOrderData({ ...createOrderData, installmentPeriods: periods })}
-              totalAmount={parseInt(createOrderData.totalAmount) || 0}
-            />
 
             {/* 操作按鈕 */}
             <div className="flex justify-end space-x-2 pt-4 border-t">
@@ -874,6 +934,15 @@ export default function AdminOrdersPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 結帳模態框 */}
+      <CheckoutModal
+        order={checkoutOrder}
+        isOpen={isCheckoutModalOpen}
+        onClose={handleCloseCheckout}
+        onCheckout={handleCheckout}
+        userRole={getUserRole()}
+      />
     </div>
   );
 }

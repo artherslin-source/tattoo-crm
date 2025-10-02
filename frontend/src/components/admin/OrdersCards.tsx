@@ -8,7 +8,7 @@ import { MoreHorizontal, CheckCircle, XCircle, Eye, Clock } from "lucide-react";
 interface Order {
   id: string;
   totalAmount: number;
-  status: 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED';
+  status: 'PENDING_PAYMENT' | 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
   createdAt: string;
   member: {
     id: string;
@@ -25,10 +25,13 @@ interface OrdersCardsProps {
   orders: Order[];
   onViewDetails: (order: Order) => void;
   onUpdateStatus: (order: Order, status: string) => void;
+  onCheckout?: (order: Order) => void;
 }
 
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
+    case 'PENDING_PAYMENT':
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
     case 'PENDING':
       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     case 'PAID':
@@ -37,6 +40,12 @@ const getStatusBadgeClass = (status: string) => {
       return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
     case 'CANCELLED':
       return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    case 'INSTALLMENT_ACTIVE':
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+    case 'PARTIALLY_PAID':
+      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
+    case 'PAID_COMPLETE':
+      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
     default:
       return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   }
@@ -44,6 +53,8 @@ const getStatusBadgeClass = (status: string) => {
 
 const getStatusText = (status: string) => {
   switch (status) {
+    case 'PENDING_PAYMENT':
+      return '待結帳';
     case 'PENDING':
       return '待付款';
     case 'PAID':
@@ -52,6 +63,12 @@ const getStatusText = (status: string) => {
       return '已完成';
     case 'CANCELLED':
       return '已取消';
+    case 'INSTALLMENT_ACTIVE':
+      return '分期中';
+    case 'PARTIALLY_PAID':
+      return '部分付款';
+    case 'PAID_COMPLETE':
+      return '分期完成';
     default:
       return status;
   }
@@ -75,7 +92,7 @@ const formatDate = (dateString: string) => {
   });
 };
 
-export default function OrdersCards({ orders, onViewDetails, onUpdateStatus }: OrdersCardsProps) {
+export default function OrdersCards({ orders, onViewDetails, onUpdateStatus, onCheckout }: OrdersCardsProps) {
   return (
     <div className="xl:hidden">
       {/* 平板版 - 橫向布局 */}
@@ -177,6 +194,39 @@ export default function OrdersCards({ orders, onViewDetails, onUpdateStatus }: O
                           重新開啟訂單
                         </DropdownMenuItem>
                       )}
+                      {(order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID') && (
+                        <DropdownMenuItem onClick={() => onViewDetails(order)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          查看分期詳情
+                        </DropdownMenuItem>
+                      )}
+                      {(order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID') && (
+                        <DropdownMenuItem onClick={() => onUpdateStatus(order, 'COMPLETED')}>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          標記為已完成
+                        </DropdownMenuItem>
+                      )}
+                      {(order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID') && (
+                        <DropdownMenuItem 
+                          onClick={() => onUpdateStatus(order, 'CANCELLED')}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          取消訂單
+                        </DropdownMenuItem>
+                      )}
+                      {order.status === 'PAID_COMPLETE' && (
+                        <DropdownMenuItem onClick={() => onViewDetails(order)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          查看分期詳情
+                        </DropdownMenuItem>
+                      )}
+                      {(order.status === 'PENDING_PAYMENT' || order.status === 'PENDING') && onCheckout && (
+                        <DropdownMenuItem onClick={() => onCheckout(order)}>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          結帳
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -276,6 +326,39 @@ export default function OrdersCards({ orders, onViewDetails, onUpdateStatus }: O
                       >
                         <Clock className="h-4 w-4 mr-2" />
                         重新開啟訂單
+                      </DropdownMenuItem>
+                    )}
+                    {(order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID') && (
+                      <DropdownMenuItem onClick={() => onViewDetails(order)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        查看分期詳情
+                      </DropdownMenuItem>
+                    )}
+                    {(order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID') && (
+                      <DropdownMenuItem onClick={() => onUpdateStatus(order, 'COMPLETED')}>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        標記為已完成
+                      </DropdownMenuItem>
+                    )}
+                    {(order.status === 'INSTALLMENT_ACTIVE' || order.status === 'PARTIALLY_PAID') && (
+                      <DropdownMenuItem 
+                        onClick={() => onUpdateStatus(order, 'CANCELLED')}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        取消訂單
+                      </DropdownMenuItem>
+                    )}
+                    {order.status === 'PAID_COMPLETE' && (
+                      <DropdownMenuItem onClick={() => onViewDetails(order)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        查看分期詳情
+                      </DropdownMenuItem>
+                    )}
+                    {(order.status === 'PENDING_PAYMENT' || order.status === 'PENDING') && onCheckout && (
+                      <DropdownMenuItem onClick={() => onCheckout(order)}>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        結帳
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { InstallmentsService } from './installments.service';
 import { CreateInstallmentPlanDto } from './dto/create-installment-plan.dto';
 import { UpdateInstallmentDto } from './dto/update-installment.dto';
@@ -85,5 +85,45 @@ export class InstallmentsController {
   @Roles('BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN')
   async markOverdueInstallments() {
     return this.installmentsService.markOverdueInstallments();
+  }
+
+  /**
+   * 調整分期付款金額（Boss/Manager 專用）
+   */
+  @Put('order/:orderId/installment/:installmentNo/adjust')
+  @Roles('BOSS', 'BRANCH_MANAGER')
+  async adjustInstallmentAmount(
+    @Param('orderId') orderId: string,
+    @Param('installmentNo') installmentNo: string,
+    @Body() body: { newAmount: number },
+    @Request() req: any
+  ) {
+    const userRole = req.user.role;
+    return this.installmentsService.adjustInstallmentAmount(
+      orderId,
+      parseInt(installmentNo),
+      body.newAmount,
+      userRole
+    );
+  }
+
+  /**
+   * 完成訂單結帳（選擇付款方式）
+   */
+  @Post('order/:orderId/complete-payment')
+  @Roles('BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN')
+  async completeOrderPayment(
+    @Param('orderId') orderId: string,
+    @Body() paymentData: {
+      paymentType: 'ONE_TIME' | 'INSTALLMENT';
+      installmentTerms?: number;
+      startDate?: string;
+      customPlan?: { [key: number]: number };
+    }
+  ) {
+    return this.installmentsService.completeOrderPayment(orderId, {
+      ...paymentData,
+      startDate: paymentData.startDate ? new Date(paymentData.startDate) : undefined
+    });
   }
 }
