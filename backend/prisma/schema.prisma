@@ -65,6 +65,7 @@ model Branch {
   artists       Artist[]
   users         User[]
   completedServices CompletedService[]
+  contacts      Contact[]
 }
 
 model Artist {
@@ -75,6 +76,7 @@ model Artist {
   styles      Json?
   speciality  String?
   portfolioUrl String?
+  photoUrl    String?
   branchId    String?
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -307,4 +309,20 @@ model CustomerReminder {
   
   // Relations
   creator   User     @relation("CustomerReminderCreator", fields: [createdBy], references: [id])
+}
+
+// 聯絡表單模型
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  branchId  String
+  notes     String?
+  status    String   @default("PENDING") // PENDING, CONTACTED, CONVERTED, CLOSED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  branch    Branch   @relation(fields: [branchId], references: [id])
 }

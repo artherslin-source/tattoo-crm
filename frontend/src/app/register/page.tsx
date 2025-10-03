@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { postJson, saveTokens, getJsonWithAuth, ApiError } from "@/lib/api";
+import { postJSON, saveTokens, getJsonWithAuth, ApiError } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      const resp = await postJson<
+      const resp = await postJSON<
         { email: string; password: string; name: string },
         { accessToken: string; refreshToken?: string }
       >("/auth/register", { email, password, name });
@@ -45,17 +45,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm mb-6 flex justify-end">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          回上一頁
-        </button>
-      </div>
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-semibold mb-6">註冊</h1>
         {error && (
@@ -106,6 +95,19 @@ export default function RegisterPage() {
             {loading ? "註冊中..." : "註冊"}
           </button>
         </form>
+        
+        {/* 返回首頁按鈕 - 位於註冊按鈕下方中央 */}
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={() => router.push('/booking')}
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            返回首頁
+          </button>
+        </div>
       </div>
     </div>
   );

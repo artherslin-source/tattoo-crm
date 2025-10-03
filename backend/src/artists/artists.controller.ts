@@ -7,7 +7,7 @@ export class ArtistsController {
 
   @Get()
   findAll() {
-    return { message: 'Artists API OK' };
+    return this.artists.getAllArtists('PUBLIC', undefined);
   }
 
   @Get('branch/:branchId')

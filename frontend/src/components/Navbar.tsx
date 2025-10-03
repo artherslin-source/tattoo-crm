@@ -47,14 +47,25 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/booking')}
               className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
-              刺青 CRM
+              彫川紋身
             </button>
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* 預約按鈕 - 所有人都可以看到 */}
+            <button
+              onClick={() => router.push('/appointments/public')}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              立即預約
+            </button>
+
             {isLoggedIn ? (
               <>
                 {/* 管理後台按鈕 - BOSS 和 BRANCH_MANAGER 才顯示 */}

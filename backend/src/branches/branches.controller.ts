@@ -5,11 +5,16 @@ import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 
 @Controller('branches')
-@UseGuards(AuthGuard('jwt'))
 export class BranchesController {
   constructor(private readonly branches: BranchesService) {}
 
+  @Get('public')
+  async listPublic() {
+    return this.branches.list();
+  }
+
   @Get()
+  @UseGuards(AuthGuard('jwt'))
   async list() {
     return this.branches.list();
   }

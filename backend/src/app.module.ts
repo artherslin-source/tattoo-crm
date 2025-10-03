@@ -15,6 +15,7 @@ import { AdminModule } from './admin/admin.module';
 import { AdminMembersModule } from './admin/admin-members.module';
 import { BranchModule } from './branch/branch.module';
 import { ArtistModule } from './artist/artist.module';
+import { ContactsModule } from './contacts/contacts.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ArtistModule } from './artist/artist.module';
     AdminMembersModule,
     AdminModule,
     BranchModule,
+    ContactsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

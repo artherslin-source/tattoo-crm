@@ -1,52 +1,22 @@
-export function getApiBase(): string {
-  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE) {
-    return process.env.NEXT_PUBLIC_API_BASE as string;
-  }
-  return 'http://localhost:4000';
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+
+export function getApiBase() {
+  return API_BASE;
 }
 
-export type ApiError = { message: string; status: number };
-
-export async function postJson<TBody extends Record<string, unknown>, TResp = unknown>(
-  path: string,
-  body: TBody,
-): Promise<TResp> {
-  const res = await fetch(`${getApiBase()}${path}`, {
+export async function postJSON<T>(path: string, body: any) {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const data = (await res.json()) as { message?: string; error?: string };
-      message = data.message || data.error || message;
-    } catch {
-      // ignore parse errors
-    }
-    throw { message, status: res.status } as ApiError;
-  }
-  return (await res.json()) as TResp;
+  const text = await res.text();
+  let data: any = null;
+  try { data = JSON.parse(text); } catch {}
+  return { ok: res.ok, status: res.status, data: data ?? text };
 }
 
-export function saveTokens(tokens: { accessToken?: string; refreshToken?: string; role?: string; branchId?: string }) {
-  if (typeof window === 'undefined') return;
-  if (tokens.accessToken) localStorage.setItem('accessToken', tokens.accessToken);
-  if (tokens.refreshToken) localStorage.setItem('refreshToken', tokens.refreshToken);
-  if (tokens.role) localStorage.setItem('userRole', tokens.role);
-  if (tokens.branchId) localStorage.setItem('userBranchId', tokens.branchId);
-}
-
-export function clearTokens() {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('userRole');
-  localStorage.removeItem('userBranchId');
-}
-
+// 認證相關函數
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('accessToken');
@@ -62,153 +32,139 @@ export function getUserBranchId(): string | null {
   return localStorage.getItem('userBranchId');
 }
 
-
-export async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const token = getAccessToken();
-  return fetch(`${getApiBase()}${url}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+export function clearTokens(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userBranchId');
 }
 
-export async function postJsonWithAuth<TBody extends Record<string, unknown>, TResp = unknown>(
-  path: string,
-  body: TBody,
-): Promise<TResp> {
-  const res = await fetchWithAuth(path, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-  
-  if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const data = (await res.json()) as { message?: string; error?: string };
-      message = data.message || data.error || message;
-    } catch {
-      // ignore parse errors
-    }
-    throw { message, status: res.status } as ApiError;
-  }
-  return (await res.json()) as TResp;
+export function saveTokens(accessToken: string, refreshToken: string, userRole: string, userBranchId: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
+  localStorage.setItem('userRole', userRole);
+  localStorage.setItem('userBranchId', userBranchId);
 }
 
-export async function postFormDataWithAuth<TResp = unknown>(
-  path: string,
-  formData: FormData,
-): Promise<TResp> {
+// 帶認證的 API 調用
+export async function getJsonWithAuth<T>(path: string): Promise<T> {
   const token = getAccessToken();
   if (!token) {
-    throw { message: 'No access token', status: 401 } as ApiError;
+    throw new Error('No access token available');
   }
 
-  const res = await fetch(`${getApiBase()}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new ApiError(res.status, errorData.message || 'Request failed');
+  }
+
+  return res.json();
+}
+
+export async function postJsonWithAuth<T>(path: string, body: any): Promise<T> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error('No access token available');
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
-    body: formData,
-  });
-  
-  if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const data = (await res.json()) as { message?: string; error?: string };
-      message = data.message || data.error || message;
-    } catch {
-      // ignore parse errors
-    }
-    throw { message, status: res.status } as ApiError;
-  }
-  return (await res.json()) as TResp;
-}
-
-export async function patchJsonWithAuth<TBody extends Record<string, unknown>, TResp = unknown>(
-  path: string,
-  body: TBody,
-): Promise<TResp> {
-  const res = await fetchWithAuth(path, {
-    method: 'PATCH',
     body: JSON.stringify(body),
   });
-  
+
   if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const data = (await res.json()) as { message?: string; error?: string };
-      message = data.message || data.error || message;
-    } catch {
-      // ignore parse errors
-    }
-    throw { message, status: res.status } as ApiError;
+    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new ApiError(res.status, errorData.message || 'Request failed');
   }
-  return (await res.json()) as TResp;
+
+  return res.json();
 }
 
-export async function getJsonWithAuth<TResp = unknown>(
-  path: string,
-): Promise<TResp> {
-  const res = await fetchWithAuth(path, {
-    method: 'GET',
-  });
-  
-  if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const data = (await res.json()) as { message?: string; error?: string };
-      message = data.message || data.error || message;
-    } catch {
-      // ignore parse errors
-    }
-    throw { message, status: res.status } as ApiError;
+export async function putJsonWithAuth<T>(path: string, body: any): Promise<T> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error('No access token available');
   }
-  return (await res.json()) as TResp;
-}
 
-export async function putJsonWithAuth<TBody extends Record<string, unknown>, TResp = unknown>(
-  path: string,
-  body: TBody,
-): Promise<TResp> {
-  const res = await fetchWithAuth(path, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
   });
-  
+
   if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const data = (await res.json()) as { message?: string; error?: string };
-      message = data.message || data.error || message;
-    } catch {
-      // ignore parse errors
-    }
-    throw { message, status: res.status } as ApiError;
+    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new ApiError(res.status, errorData.message || 'Request failed');
   }
-  return (await res.json()) as TResp;
+
+  return res.json();
 }
 
-export async function deleteJsonWithAuth<TResp = unknown>(
-  path: string,
-): Promise<TResp> {
-  const res = await fetchWithAuth(path, {
-    method: 'DELETE',
+export async function patchJsonWithAuth<T>(path: string, body: any): Promise<T> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error('No access token available');
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
   });
-  
+
   if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const data = (await res.json()) as { message?: string; error?: string };
-      message = data.message || data.error || message;
-    } catch {
-      // ignore parse errors
-    }
-    throw { message, status: res.status } as ApiError;
+    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new ApiError(res.status, errorData.message || 'Request failed');
   }
-  return (await res.json()) as TResp;
+
+  return res.json();
 }
 
+export async function deleteJsonWithAuth<T>(path: string): Promise<T> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error('No access token available');
+  }
 
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+    throw new ApiError(res.status, errorData.message || 'Request failed');
+  }
+
+  return res.json();
+}
+
+// API 錯誤類
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}

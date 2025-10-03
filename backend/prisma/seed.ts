@@ -82,7 +82,7 @@ async function main() {
   const branches: any[] = [];
   const branchData = [
     { name: '三重店', address: '新北市三重區重新路一段123號', phone: '02-2975-1234' },
-    { name: '東港店', address: '屏東縣東港鎮中正路456號', phone: '08-832-5678' }
+    { name: '東港店', address: '屏東縣東港鎮沿海路356號, 928', phone: '08 831 1615' }
   ];
   
   for (let i = 0; i < 2; i++) {
@@ -179,9 +179,9 @@ async function main() {
   // 5. 建立 3 個刺青師（東港店1位，三重店2位）
   const artists: any[] = [];
   const artistData = [
-    { name: "阿龍師傅", bio: "專精日式刺青，擁有15年經驗，擅長龍鳳、櫻花等傳統圖案", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1", branchIndex: 0 }, // 東港店
-    { name: "小美設計師", bio: "專精幾何圖騰，現代風格專家，擅長線條藝術", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2", branchIndex: 1 }, // 三重店
-    { name: "黑灰大師", bio: "專精黑灰寫實，細節完美主義者，擅長肖像刺青", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3", branchIndex: 1 }, // 三重店
+    { name: "陳震宇", bio: "專精日式刺青，擁有15年經驗，擅長龍鳳、櫻花等傳統圖案。風格沉穩內斂，注重細節與傳統美學的完美結合。身穿黑色高領毛衣，展現專業與內斂的氣質。雙臂滿布精緻的日式刺青，是傳統刺青藝術的傳承者。", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1", photoUrl: "/images/artists/chen-zhenyu.jpeg", branchIndex: 1 }, // 東港店 - 阿龍師傅照片
+    { name: "黃晨洋", bio: "專精幾何圖騰，現代風格專家，擅長線條藝術。融合當代藝術與刺青技藝，創造獨特的視覺語言。年輕有活力，對藝術有獨特見解。喜歡在藝廊中尋找靈感，將現代藝術元素融入刺青設計。", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2", photoUrl: "/images/artists/huang-chenyang.jpeg", branchIndex: 0 }, // 三重店 - 年輕男性在藝廊中
+    { name: "林承葉", bio: "專精黑灰寫實，細節完美主義者，擅長肖像刺青。以精湛的技藝呈現光影層次，每件作品都是藝術品。戴眼鏡展現專業形象，穿著時尚皮夾克。左前臂有彩色刺青作品，展現多元化的刺青風格。", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3", photoUrl: "/images/artists/lin-chengye.jpeg", branchIndex: 0 }, // 三重店 - 戴眼鏡穿皮夾克
   ];
   
   for (let i = 0; i < 3; i++) {
@@ -204,6 +204,7 @@ async function main() {
         bio: artistData[i].bio,
         speciality: artistData[i].speciality,
         portfolioUrl: artistData[i].portfolioUrl,
+        photoUrl: artistData[i].photoUrl,
         styles: [
           faker.helpers.arrayElement(['Traditional', 'Realistic', 'Japanese', 'Blackwork', 'Watercolor']),
           faker.helpers.arrayElement(['Geometric', 'Minimalist', 'Portrait', 'Nature', 'Abstract']),
@@ -215,7 +216,7 @@ async function main() {
     });
     artists.push({ ...artist, user: artistUser });
   }
-  console.log('✅ 建立 3 個刺青師（東港店1位：阿龍師傅，三重店2位：小美設計師、黑灰大師）');
+  console.log('✅ 建立 3 個刺青師（東港店1位：陳震宇，三重店2位：黃晨洋、林承葉）');
 
 
   // 6. 建立 10 個服務
@@ -414,8 +415,8 @@ async function main() {
   console.log(`   - 訂單: ${orders.length} 個 (待結帳和已結帳)`);
   console.log('💰 財務資料已更新到會員帳號中');
   console.log('🏪 分店配置：');
-  console.log('   - 東港店：阿龍師傅 (1位刺青師)');
-  console.log('   - 三重店：小美設計師、黑灰大師 (2位刺青師)');
+  console.log('   - 東港店：陳震宇 (1位刺青師)');
+  console.log('   - 三重店：黃晨洋、林承葉 (2位刺青師)');
 }
 
 main()
