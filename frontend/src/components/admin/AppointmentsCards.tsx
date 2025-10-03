@@ -92,8 +92,16 @@ export default function AppointmentsCards({
     switch (status) {
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'PENDING_PAYMENT':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'PAID':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'PAID_COMPLETE':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'INSTALLMENT_ACTIVE':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'PARTIALLY_PAID':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       case 'COMPLETED':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'CANCELLED':
@@ -107,8 +115,16 @@ export default function AppointmentsCards({
     switch (status) {
       case 'PENDING':
         return '未付款';
+      case 'PENDING_PAYMENT':
+        return '待結帳';
       case 'PAID':
         return '已付款';
+      case 'PAID_COMPLETE':
+        return '已結清';
+      case 'INSTALLMENT_ACTIVE':
+        return '分期付款中';
+      case 'PARTIALLY_PAID':
+        return '部分付款';
       case 'COMPLETED':
         return '已完成';
       case 'CANCELLED':
