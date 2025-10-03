@@ -277,6 +277,11 @@ export default function AdminAppointmentsPage() {
         }
       }
       
+      // 當選擇開始時間時，自動設定結束時間與開始時間相同
+      if (field === 'startAt' && value) {
+        newFormData.endAt = value; // 結束時間與開始時間相同
+      }
+      
       return {
         ...prev,
         formData: newFormData,
