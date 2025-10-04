@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { postJsonWithAuth, getJsonWithAuth, ApiError, getAccessToken } from "@/lib/api";
 
 interface Service {
@@ -69,6 +69,7 @@ export default function AppointmentForm({
   description = "為客戶創建新的預約"
 }: AppointmentFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = useAccessToken();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -81,17 +82,17 @@ export default function AppointmentForm({
 
   const canFetch = useMemo(() => !!token, [token]);
 
-  // Form data
+  // Form data - 優先使用 searchParams，然後是 initialData
   const [formData, setFormData] = useState<AppointmentFormData>({
-    name: initialData.name || '',
-    email: initialData.email || '',
-    phone: initialData.phone || '',
+    name: searchParams.get('name') || initialData.name || '',
+    email: searchParams.get('email') || initialData.email || '',
+    phone: searchParams.get('phone') || initialData.phone || '',
     serviceId: initialData.serviceId || '',
     artistId: initialData.artistId || '',
-    branchId: initialData.branchId || '',
+    branchId: searchParams.get('branchId') || initialData.branchId || '',
     startAt: initialData.startAt || '',
     endAt: initialData.endAt || '',
-    notes: initialData.notes || '',
+    notes: searchParams.get('notes') || initialData.notes || '',
   });
 
   // 載入數據

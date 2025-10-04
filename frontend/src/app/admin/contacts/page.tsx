@@ -102,17 +102,9 @@ export default function AdminContactsPage() {
   };
 
   const convertToAppointment = (contact: Contact) => {
-    // 將聯絡資料編碼為 URL 參數
-    const params = new URLSearchParams({
-      name: contact.name,
-      email: contact.email,
-      phone: contact.phone || '',
-      notes: contact.notes || '',
-      branchId: contact.branch.id,
-      contactId: contact.id,
-    });
-    
-    router.push(`/admin/appointments/new?${params.toString()}`);
+    router.push(
+      `/admin/appointments/new?contactId=${contact.id}&name=${encodeURIComponent(contact.name)}&email=${encodeURIComponent(contact.email)}&phone=${encodeURIComponent(contact.phone || '')}&notes=${encodeURIComponent(contact.notes || '')}&branchId=${contact.branch.id}`
+    );
   };
 
   const getStatusInfo = (status: string) => {
