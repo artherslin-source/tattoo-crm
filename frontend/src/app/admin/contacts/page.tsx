@@ -102,9 +102,15 @@ export default function AdminContactsPage() {
   };
 
   const convertToAppointment = (contact: Contact) => {
-    router.push(
-      `/admin/appointments/new?contactId=${contact.id}&name=${encodeURIComponent(contact.name)}&email=${encodeURIComponent(contact.email)}&phone=${encodeURIComponent(contact.phone || '')}&notes=${encodeURIComponent(contact.notes || '')}&branchId=${contact.branch.id}`
-    );
+    const params = new URLSearchParams({
+      contactId: contact.id ?? "",
+      name: contact.name ?? "",
+      email: contact.email ?? "",
+      phone: contact.phone ?? "",
+      notes: contact.notes ?? "",
+      branchId: contact.branch?.id ?? "",
+    });
+    router.push(`/admin/appointments/new?${params.toString()}`);
   };
 
   const getStatusInfo = (status: string) => {

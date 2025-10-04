@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(input: { userId: string; artistId?: string; serviceId?: string; startAt: Date; endAt: Date; notes?: string; branchId: string }) {
+  async create(input: { userId: string; artistId?: string; serviceId?: string; startAt: Date; endAt: Date; notes?: string; branchId: string; contactId?: string }) {
     // 檢查時間衝突：同一個 serviceId，時間區間重疊的預約狀態為 PENDING 或 CONFIRMED
     if (input.serviceId) {
       const conflict = await this.prisma.appointment.findFirst({
@@ -33,9 +33,16 @@ export class AppointmentsService {
       },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        artist: true,
+        artist: { 
+          select: { 
+            id: true, 
+            name: true, 
+            email: true 
+          } 
+        },
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
+        contact: { select: { id: true, name: true, email: true, phone: true } },
       },
     });
   }

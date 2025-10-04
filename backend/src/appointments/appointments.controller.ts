@@ -6,6 +6,7 @@ import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 
 const CreateAppointmentSchema = z.object({
+  contactId: z.string().optional(),
   name: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
@@ -101,7 +102,7 @@ export class AppointmentsController {
       // 如果用戶沒有分店 ID，嘗試從 artist 獲取
       if (!branchId && input.artistId) {
         const artist = await this.appointments['prisma'].artist.findUnique({
-          where: { id: input.artistId },
+          where: { userId: input.artistId },
           select: { branchId: true }
         });
         branchId = artist?.branchId;
@@ -111,11 +112,60 @@ export class AppointmentsController {
         throw new Error('無法確定分店，請聯繫管理員');
       }
       
-      // 處理客戶資訊
+      // 處理客戶資訊和 contact
       let userId: string;
+      let contactId: string | undefined = input.contactId;
       
-      // 如果有客戶資訊，創建或查找客戶
-      if (input.name && input.email) {
+      // 如果有 contactId，直接使用
+      if (contactId) {
+        // 驗證 contact 存在
+        const contact = await this.appointments['prisma'].contact.findUnique({
+          where: { id: contactId }
+        });
+        if (!contact) {
+          throw new Error('指定的聯絡記錄不存在');
+        }
+        
+        // 從 contact 創建或查找用戶
+        if (contact.email) {
+          const existingUser = await this.appointments['prisma'].user.findFirst({
+            where: { email: contact.email }
+          });
+          
+          if (existingUser) {
+            userId = existingUser.id;
+          } else {
+            // 創建新客戶
+            const tempUser = await this.appointments['prisma'].user.create({
+              data: {
+                email: contact.email,
+                name: contact.name,
+                phone: contact.phone,
+                role: 'MEMBER',
+                branchId: branchId,
+                hashedPassword: 'temp-password', // 臨時密碼，用戶需要後續設定
+              }
+            });
+            userId = tempUser.id;
+          }
+        } else {
+          userId = req.user.userId;
+        }
+      } else if (input.name && input.email) {
+        // 沒有 contactId 但有客戶資訊，自動創建 contact
+        const newContact = await this.appointments['prisma'].contact.create({
+          data: {
+            name: input.name,
+            email: input.email,
+            phone: input.phone || '',
+            notes: input.notes || '',
+            branchId: branchId,
+            status: 'PENDING',
+          }
+        });
+        contactId = newContact.id;
+        
+        // 創建或查找用戶
         const existingUser = await this.appointments['prisma'].user.findFirst({
           where: { email: input.email }
         });
@@ -149,6 +199,7 @@ export class AppointmentsController {
         endAt: new Date(input.endAt),
         notes: input.notes,
         branchId,
+        contactId: contactId,
       });
     } catch (error) {
       console.error('Create appointment error:', error);

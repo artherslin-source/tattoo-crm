@@ -1,25 +1,11 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
+// src/app/admin/appointments/new/page.tsx
 import AppointmentForm from "@/components/appointments/AppointmentForm";
 
-export default function AdminNewAppointmentPage() {
-  const searchParams = useSearchParams();
-
-  // 從 URL 參數獲取初始數據（用於聯絡轉換預約）
-  const initialData = {
-    name: searchParams.get('name') || '',
-    email: searchParams.get('email') || '',
-    phone: searchParams.get('phone') || '',
-    branchId: searchParams.get('branchId') || '',
-    notes: searchParams.get('notes') || '',
-  };
-
+export default function NewAppointmentPage({ searchParams }: { searchParams: Record<string, string> }) {
   return (
-    <AppointmentForm
-      initialData={initialData}
-      title="創建新預約"
-      description="為客戶創建新的預約"
-    />
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-xl font-semibold mb-4">建立新預約</h1>
+      <AppointmentForm fromContact={searchParams} data-testid="appointment-form" />
+    </div>
   );
 }

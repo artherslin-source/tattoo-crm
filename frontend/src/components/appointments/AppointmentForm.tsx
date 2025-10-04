@@ -42,14 +42,17 @@ interface AppointmentFormData {
   startAt: string;
   endAt: string;
   notes: string;
+  contactId: string;
 }
 
 interface AppointmentFormProps {
   initialData?: Partial<AppointmentFormData>;
+  fromContact?: Record<string, string>;
   onSubmitSuccess?: () => void;
   onCancel?: () => void;
   title?: string;
   description?: string;
+  'data-testid'?: string;
 }
 
 function useAccessToken() {
@@ -63,10 +66,12 @@ function useAccessToken() {
 
 export default function AppointmentForm({
   initialData = {},
+  fromContact,
   onSubmitSuccess,
   onCancel,
   title = "創建新預約",
-  description = "為客戶創建新的預約"
+  description = "為客戶創建新的預約",
+  'data-testid': dataTestId
 }: AppointmentFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,17 +87,17 @@ export default function AppointmentForm({
 
   const canFetch = useMemo(() => !!token, [token]);
 
-  // Form data - 優先使用 searchParams，然後是 initialData
   const [formData, setFormData] = useState<AppointmentFormData>({
-    name: searchParams.get('name') || initialData.name || '',
-    email: searchParams.get('email') || initialData.email || '',
-    phone: searchParams.get('phone') || initialData.phone || '',
-    serviceId: initialData.serviceId || '',
-    artistId: initialData.artistId || '',
-    branchId: searchParams.get('branchId') || initialData.branchId || '',
-    startAt: initialData.startAt || '',
-    endAt: initialData.endAt || '',
-    notes: searchParams.get('notes') || initialData.notes || '',
+    name: fromContact?.name ?? searchParams.get("name") ?? "",
+    email: fromContact?.email ?? searchParams.get("email") ?? "",
+    phone: fromContact?.phone ?? searchParams.get("phone") ?? "",
+    notes: fromContact?.notes ?? searchParams.get("notes") ?? "",
+    branchId: fromContact?.branchId ?? searchParams.get("branchId") ?? "",
+    contactId: fromContact?.contactId ?? searchParams.get("contactId") ?? "",
+    serviceId: "",
+    artistId: "",
+    startAt: "",
+    endAt: "",
   });
 
   // 載入數據
@@ -288,7 +293,7 @@ export default function AppointmentForm({
 
         {/* 表單 */}
         <div className="bg-white rounded-lg shadow p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" data-testid={dataTestId}>
             {/* 客戶資訊 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>

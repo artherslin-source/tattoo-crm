@@ -11,6 +11,7 @@ import { ArrowLeft, Calendar, Plus } from "lucide-react";
 import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
+import AppointmentForm from "@/components/appointments/AppointmentForm";
 
 interface Appointment {
   id: string;
@@ -74,26 +75,8 @@ export default function AdminAppointmentsPage() {
   // 新增預約模態框狀態
   const [createAppointmentModal, setCreateAppointmentModal] = useState<{
     isOpen: boolean;
-    formData: {
-      startAt: string;
-      endAt: string;
-      userId: string;
-      serviceId: string;
-      artistId: string;
-      branchId: string;
-      notes: string;
-    };
   }>({
     isOpen: false,
-    formData: {
-      startAt: '',
-      endAt: '',
-      userId: '',
-      serviceId: '',
-      artistId: '',
-      branchId: '',
-      notes: '',
-    },
   });
 
   // 選項資料狀態
@@ -237,115 +220,16 @@ export default function AdminAppointmentsPage() {
   const handleOpenCreateAppointmentModal = () => {
     setCreateAppointmentModal({
       isOpen: true,
-      formData: {
-        startAt: '',
-        endAt: '',
-        userId: '',
-        serviceId: '',
-        artistId: '',
-        branchId: '',
-        notes: '',
-      },
     });
-    fetchOptionsData();
   };
 
   const handleCloseCreateAppointmentModal = () => {
     setCreateAppointmentModal({
       isOpen: false,
-      formData: {
-        startAt: '',
-        endAt: '',
-        userId: '',
-        serviceId: '',
-        artistId: '',
-        branchId: '',
-        notes: '',
-      },
     });
   };
 
-  const handleCreateAppointmentFormChange = (field: string, value: string) => {
-    setCreateAppointmentModal(prev => {
-      const newFormData = { ...prev.formData, [field]: value };
-      
-      // 當選擇刺青師時，自動設定對應的分店
-      if (field === 'artistId' && value) {
-        const selectedArtist = artists.find(artist => (artist.user?.id || artist.id) === value);
-        if (selectedArtist && selectedArtist.branchId) {
-          newFormData.branchId = selectedArtist.branchId;
-        }
-      }
-      
-      // 當選擇開始時間時，自動設定結束時間與開始時間相同
-      if (field === 'startAt' && value) {
-        newFormData.endAt = value; // 結束時間與開始時間相同
-      }
-      
-      return {
-        ...prev,
-        formData: newFormData,
-      };
-    });
-  };
 
-  const handleCreateAppointment = async () => {
-    try {
-      const { startAt, endAt, userId, serviceId, artistId, branchId, notes } = createAppointmentModal.formData;
-      
-      if (!startAt || !endAt || !userId || !serviceId || !artistId || !branchId) {
-        setError('請填寫所有必填欄位');
-        return;
-      }
-
-      // 將日期時間轉換為完整的 ISO 格式
-      const startAtISO = new Date(startAt).toISOString();
-      const endAtISO = new Date(endAt).toISOString();
-
-      const newAppointment = await postJsonWithAuth('/admin/appointments', {
-        startAt: startAtISO,
-        endAt: endAtISO,
-        userId,
-        serviceId,
-        artistId,
-        branchId,
-        notes: notes || undefined,
-      }) as Appointment;
-
-      setAppointments([newAppointment, ...appointments]);
-      setError(null);
-      setSuccessMessage('預約新增成功！');
-      setTimeout(() => setSuccessMessage(null), 3000);
-      handleCloseCreateAppointmentModal();
-    } catch (err) {
-      const apiErr = err as ApiError;
-      
-      // 處理 409 Conflict 錯誤（時間衝突）
-      if (apiErr.statusCode === 409 && apiErr.response?.conflicts) {
-        const conflicts = apiErr.response.conflicts;
-        const conflictMessages = conflicts.map((conflict: any) => {
-          const startTime = new Date(conflict.startTime).toLocaleString('zh-TW', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          });
-          const endTime = new Date(conflict.endTime).toLocaleString('zh-TW', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          });
-          return `客戶：${conflict.member}，時間：${startTime} - ${endTime}`;
-        }).join('\n');
-        
-        setError(`⚠️ 該時段已被預約：\n${conflictMessages}\n\n請調整時間後再提交。`);
-      } else {
-        setError(apiErr.message || "新增預約失敗");
-      }
-    }
-  };
 
   // 更新預約狀態
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
@@ -623,161 +507,20 @@ export default function AdminAppointmentsPage() {
 
       {/* Create Appointment Modal */}
       <Dialog open={createAppointmentModal.isOpen} onOpenChange={handleCloseCreateAppointmentModal}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>新增預約</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="startAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  開始時間 *
-                </label>
-                <input
-                  type="datetime-local"
-                  id="startAt"
-                  value={createAppointmentModal.formData.startAt}
-                  onChange={(e) => handleCreateAppointmentFormChange('startAt', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label htmlFor="endAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  結束時間 *
-                </label>
-                <input
-                  type="datetime-local"
-                  id="endAt"
-                  value={createAppointmentModal.formData.endAt}
-                  onChange={(e) => handleCreateAppointmentFormChange('endAt', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  客戶 *
-                </label>
-                <select
-                  id="userId"
-                  value={createAppointmentModal.formData.userId}
-                  onChange={(e) => handleCreateAppointmentFormChange('userId', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">請選擇客戶</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.user?.id || user.id}>
-                      {user.user?.name || user.name} ({user.user?.email || user.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="serviceId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  服務項目 *
-                </label>
-                <select
-                  id="serviceId"
-                  value={createAppointmentModal.formData.serviceId}
-                  onChange={(e) => handleCreateAppointmentFormChange('serviceId', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">請選擇服務項目</option>
-                  {services.map((service) => (
-                    <option key={service.id} value={service.id}>
-                      {service.name} - {formatCurrency(service.price)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="artistId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  刺青師 *
-                </label>
-                <select
-                  id="artistId"
-                  value={createAppointmentModal.formData.artistId}
-                  onChange={(e) => handleCreateAppointmentFormChange('artistId', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">請選擇刺青師</option>
-                  {artists.map((artist) => (
-                    <option key={artist.id} value={artist.user?.id || artist.id}>
-                      {artist.user?.name || artist.displayName || '未知刺青師'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="branchId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  分店 *
-                </label>
-                <select
-                  id="branchId"
-                  value={createAppointmentModal.formData.branchId}
-                  onChange={(e) => handleCreateAppointmentFormChange('branchId', e.target.value)}
-                  disabled={!!createAppointmentModal.formData.artistId}
-                  className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                    createAppointmentModal.formData.artistId 
-                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-                      : ''
-                  }`}
-                >
-                  <option value="">
-                    {createAppointmentModal.formData.artistId 
-                      ? '將根據選擇的刺青師自動設定' 
-                      : '請選擇分店'
-                    }
-                  </option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
-                {createAppointmentModal.formData.artistId && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    分店將根據選擇的刺青師自動設定
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                備註
-              </label>
-              <textarea
-                id="notes"
-                value={createAppointmentModal.formData.notes}
-                onChange={(e) => handleCreateAppointmentFormChange('notes', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                placeholder="請輸入備註（選填）"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              variant="outline"
-              onClick={handleCloseCreateAppointmentModal}
-              className="flex-1"
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleCreateAppointment}
-              disabled={!createAppointmentModal.formData.startAt || !createAppointmentModal.formData.endAt || !createAppointmentModal.formData.userId || !createAppointmentModal.formData.serviceId || !createAppointmentModal.formData.artistId || !createAppointmentModal.formData.branchId}
-              className="flex-1"
-            >
-              新增預約
-            </Button>
-          </div>
+          <AppointmentForm
+            onCancel={handleCloseCreateAppointmentModal}
+            onSubmitSuccess={() => {
+              handleCloseCreateAppointmentModal();
+              fetchAppointments();
+            }}
+            title="新增預約"
+            description="為客戶創建新的預約"
+            data-testid="modal-appointment-form"
+          />
         </DialogContent>
       </Dialog>
 

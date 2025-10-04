@@ -122,6 +122,7 @@ model Appointment {
   branchId  String
   artistId  String?
   serviceId String?
+  contactId String?
   startAt   DateTime
   endAt     DateTime
   status    AppointmentStatus @default(PENDING)
@@ -134,6 +135,7 @@ model Appointment {
   branch    Branch            @relation(fields: [branchId], references: [id])
   service   Service?          @relation(fields: [serviceId], references: [id])
   user      User              @relation(fields: [userId], references: [id])
+  contact   Contact?          @relation(fields: [contactId], references: [id])
   order     Order?
   completedService CompletedService?
 }
@@ -313,16 +315,17 @@ model CustomerReminder {
 
 // 聯絡表單模型
 model Contact {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  branchId  String
-  notes     String?
-  status    String   @default("PENDING") // PENDING, CONTACTED, CONVERTED, CLOSED
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String         @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  branchId     String
+  notes        String?
+  status       String         @default("PENDING") // PENDING, CONTACTED, CONVERTED, CLOSED
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
   
   // Relations
-  branch    Branch   @relation(fields: [branchId], references: [id])
+  branch       Branch         @relation(fields: [branchId], references: [id])
+  appointments Appointment[]
 }
