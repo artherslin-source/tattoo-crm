@@ -33,7 +33,7 @@ export class AppointmentsService {
       },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        artist: { select: { id: true, name: true, email: true } },
+        artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
       },
@@ -46,7 +46,7 @@ export class AppointmentsService {
       orderBy: { startAt: 'desc' },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        artist: { select: { id: true, name: true, email: true } },
+        artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
       },
@@ -58,7 +58,7 @@ export class AppointmentsService {
       where: { id },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        artist: { select: { id: true, name: true, email: true } },
+        artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
       },
     });
@@ -81,7 +81,7 @@ export class AppointmentsService {
       data: { status },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        artist: { select: { id: true, name: true, email: true } },
+        artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
       },
     });
@@ -101,7 +101,7 @@ export class AppointmentsService {
       orderBy: { startAt: 'desc' },
       include: {
         user: { select: { id: true, name: true, email: true, role: true } },
-        artist: { select: { id: true, name: true, email: true } },
+        artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
       },
@@ -116,7 +116,7 @@ export class AppointmentsService {
         include: {
           service: { select: { id: true, name: true, price: true } },
           user: { select: { id: true, name: true, email: true } },
-          artist: { select: { id: true, name: true, email: true } },
+          artist: true,
         }
       });
       
@@ -126,7 +126,7 @@ export class AppointmentsService {
 
       // 如果預約狀態變為 COMPLETED 且還沒有關聯的訂單，自動生成訂單
       let orderId: string | null = null;
-      if (status === 'COMPLETED' && !appointment.orderId && appointment.service) {
+      if (status === 'COMPLETED' && !appointment.orderId && appointment.serviceId) {
         try {
           // 確保用戶有 Member 記錄
           const member = await tx.member.findUnique({
@@ -144,14 +144,24 @@ export class AppointmentsService {
             });
           }
 
+          // 獲取服務價格信息
+          const service = await tx.service.findUnique({
+            where: { id: appointment.serviceId },
+            select: { price: true, name: true }
+          });
+
+          if (!service) {
+            throw new Error('Service not found');
+          }
+
           // 直接在事務中創建訂單
           const order = await tx.order.create({
             data: {
               memberId: appointment.userId,
               branchId: appointment.branchId,
               appointmentId: appointment.id,
-              totalAmount: appointment.service.price,
-              finalAmount: appointment.service.price,
+              totalAmount: service.price,
+              finalAmount: service.price,
               status: 'PENDING_PAYMENT',
               paymentType: 'ONE_TIME',
               isInstallment: false,
@@ -163,8 +173,8 @@ export class AppointmentsService {
           console.log('🎯 預約完成，自動生成訂單:', {
             appointmentId: appointment.id,
             orderId: order.id,
-            totalAmount: appointment.service.price,
-            serviceName: appointment.service.name
+            totalAmount: service.price,
+            serviceName: service.name
           });
         } catch (error) {
           console.error('❌ 自動生成訂單失敗:', error);
@@ -183,7 +193,7 @@ export class AppointmentsService {
         data: updateData,
         include: {
           user: { select: { id: true, name: true, email: true } },
-          artist: { select: { id: true, name: true, email: true } },
+          artist: true,
           service: { select: { id: true, name: true, price: true, durationMin: true } },
         },
       });

@@ -121,7 +121,7 @@ export default function BookingPage() {
         notes: formData.notes || undefined
       };
 
-      const res = await postJSON('/api/public/contacts', payload);
+      const res = await postJSON('/public/contacts', payload);
 
       if (!res.ok) {
         // 409 衝突、400 驗證錯誤、或其他

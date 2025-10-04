@@ -6,7 +6,7 @@ import { UpdateContactDto } from './dto/update-contact.dto';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 
-@Controller('contacts')
+@Controller('admin/contacts')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class ContactsController {
   constructor(private readonly contactsService: ContactsService) {}
@@ -44,6 +44,12 @@ export class ContactsController {
   @Roles('BOSS', 'BRANCH_MANAGER')
   update(@Param('id') id: string, @Body() updateContactDto: UpdateContactDto) {
     return this.contactsService.update(id, updateContactDto);
+  }
+
+  @Post(':id/convert')
+  @Roles('BOSS', 'BRANCH_MANAGER')
+  convertToAppointment(@Param('id') id: string) {
+    return this.contactsService.convertToAppointment(id);
   }
 
   @Delete(':id')

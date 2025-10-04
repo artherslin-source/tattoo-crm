@@ -138,4 +138,22 @@ export class ContactsService {
       closed,
     };
   }
+
+  async convertToAppointment(contactId: string) {
+    // 將聯絡狀態更新為已轉換
+    return this.prisma.contact.update({
+      where: { id: contactId },
+      data: { status: 'CONVERTED' },
+      include: {
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            phone: true,
+          },
+        },
+      },
+    });
+  }
 }

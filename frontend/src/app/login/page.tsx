@@ -21,15 +21,29 @@ export default function LoginPage() {
         { email, password }
       );
       
+      if (!resp.ok) {
+        throw new Error(resp.data?.message || 'Login failed');
+      }
+      
       // 儲存 tokens
-      saveTokens(resp);
+      saveTokens(
+        resp.data.accessToken, 
+        resp.data.refreshToken || '', 
+        '', // role 將在下面獲取
+        ''  // branchId 將在下面獲取
+      );
       
       // 獲取用戶資訊並儲存 role 和 branchId
       try {
         const userData = await getJsonWithAuth<{ role: string; branchId: string }>('/users/me');
-        saveTokens({ role: userData.role, branchId: userData.branchId });
+        // 更新 role 和 branchId
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userRole', userData.role || '');
+          localStorage.setItem('userBranchId', userData.branchId || '');
+        }
       } catch (userErr) {
         console.error('Failed to fetch user data:', userErr);
+        // 即使獲取用戶資訊失敗，也允許登入繼續
       }
       
       // 登入後統一跳轉到 Profile 頁面

@@ -4,13 +4,16 @@ import { z } from 'zod';
 import { AppointmentsService } from './appointments.service';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
-import { BranchGuard } from '../common/guards/branch.guard';
 
 const CreateAppointmentSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
   artistId: z.string().optional(),
   serviceId: z.string().optional(),
-  startAt: z.string().datetime(),
-  endAt: z.string().datetime(),
+  branchId: z.string().optional(),
+  startAt: z.string(),
+  endAt: z.string(),
   notes: z.string().optional(),
 });
 
@@ -86,36 +89,71 @@ export class AppointmentsController {
     });
   }
 
-  @UseGuards(AuthGuard('jwt'), BranchGuard)
+  @UseGuards(AuthGuard('jwt'))
   @Post()
   async create(@Req() req: any, @Body() body: unknown) {
-    const input = CreateAppointmentSchema.parse(body);
-    
-    // 獲取用戶的分店 ID
-    let branchId = req.user.branchId;
-    
-    // 如果用戶沒有分店 ID，嘗試從 artist 獲取
-    if (!branchId && input.artistId) {
-      const artist = await this.appointments['prisma'].artist.findUnique({
-        where: { userId: input.artistId },
-        select: { branchId: true }
+    try {
+      const input = CreateAppointmentSchema.parse(body);
+      
+      // 獲取用戶的分店 ID
+      let branchId = req.user.branchId || input.branchId;
+      
+      // 如果用戶沒有分店 ID，嘗試從 artist 獲取
+      if (!branchId && input.artistId) {
+        const artist = await this.appointments['prisma'].artist.findUnique({
+          where: { id: input.artistId },
+          select: { branchId: true }
+        });
+        branchId = artist?.branchId;
+      }
+      
+      if (!branchId) {
+        throw new Error('無法確定分店，請聯繫管理員');
+      }
+      
+      // 處理客戶資訊
+      let userId: string;
+      
+      // 如果有客戶資訊，創建或查找客戶
+      if (input.name && input.email) {
+        const existingUser = await this.appointments['prisma'].user.findFirst({
+          where: { email: input.email }
+        });
+        
+        if (existingUser) {
+          userId = existingUser.id;
+        } else {
+          // 創建新客戶
+          const tempUser = await this.appointments['prisma'].user.create({
+            data: {
+              email: input.email,
+              name: input.name,
+              phone: input.phone,
+              role: 'MEMBER',
+              branchId: branchId,
+              hashedPassword: 'temp-password', // 臨時密碼，用戶需要後續設定
+            }
+          });
+          userId = tempUser.id;
+        }
+      } else {
+        // 沒有客戶資訊，使用管理員的 userId（用於內部預約）
+        userId = req.user.userId;
+      }
+      
+      return this.appointments.create({
+        userId,
+        artistId: input.artistId,
+        serviceId: input.serviceId,
+        startAt: new Date(input.startAt),
+        endAt: new Date(input.endAt),
+        notes: input.notes,
+        branchId,
       });
-      branchId = artist?.branchId;
+    } catch (error) {
+      console.error('Create appointment error:', error);
+      throw error;
     }
-    
-    if (!branchId) {
-      throw new Error('無法確定分店，請聯繫管理員');
-    }
-    
-    return this.appointments.create({
-      userId: req.user.userId,
-      artistId: input.artistId,
-      serviceId: input.serviceId,
-      startAt: new Date(input.startAt),
-      endAt: new Date(input.endAt),
-      notes: input.notes,
-      branchId,
-    });
   }
 
   @UseGuards(AuthGuard('jwt'))
