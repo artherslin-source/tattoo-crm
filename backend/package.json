@@ -24,6 +24,9 @@
     "seed": "ts-node prisma/seed.ts",
     "reset-password": "ts-node scripts/reset-password.ts"
   },
+  "resolutions": {
+  "@nestjs/microservices": "^10.0.0"
+  },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "4.0.2",
