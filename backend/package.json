@@ -5,9 +5,9 @@
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "npx prisma generate && nest build",
-    "start": "node dist/main.js",
+    "start": "nest start",
     "start:dev": "cross-env PORT=4000 nest start --watch",
-    "start:prod": "cross-env PORT=4000 node dist/main.js"
+    "start:prod": "npm run build && cross-env PORT=4000 node dist/main.js"
   },
   "dependencies": {
     "@nestjs/common": "10.4.20",
