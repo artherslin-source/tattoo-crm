@@ -2,7 +2,6 @@
   "name": "backend",
   "version": "0.0.1",
   "private": true,
-  "license": "UNLICENSED",
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "npx prisma generate && nest build",
@@ -18,6 +17,7 @@
     "@nestjs/passport": "10.0.3",
     "@nestjs/platform-express": "10.4.20",
     "@prisma/client": "6.16.2",
+    "@faker-js/faker": "^8.3.1",
     "axios": "^1.7.2",
     "bcrypt": "6.0.0",
     "class-transformer": "0.5.1",
