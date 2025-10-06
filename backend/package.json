@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "npx prisma generate && nest build",
+    "build": "npx prisma generate && npx nest build",
     "start": "nest start",
     "start:dev": "cross-env PORT=4000 nest start --watch",
     "start:prod": "npm run build && cross-env PORT=4000 node dist/main.js"
@@ -17,7 +17,6 @@
     "@nestjs/passport": "10.0.3",
     "@nestjs/platform-express": "10.4.20",
     "@prisma/client": "6.16.2",
-    "@faker-js/faker": "^8.3.1",
     "axios": "^1.7.2",
     "bcrypt": "6.0.0",
     "class-transformer": "0.5.1",
@@ -32,7 +31,7 @@
     "zod": "4.1.9"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.0.0",
+    "@nestjs/cli": "^10.3.2",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
     "@types/bcrypt": "5.0.2",
