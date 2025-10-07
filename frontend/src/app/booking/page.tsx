@@ -26,6 +26,8 @@ interface Artist {
   styles: string[];
   speciality: string;
   portfolioUrl?: string;
+  /** ✅ 修正這行，讓 photoUrl 可選 */
+  photoUrl?: string;
   branchId: string;
   user: {
     id: string;
