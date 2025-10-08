@@ -17,20 +17,31 @@ export class ApiError extends Error {
   }
 }
 
-/** ---- Environment & base URL ---- */
-const API_BASE_URL =
+/** ---- Environment & base URL ----
+ * ✅ 修正點 1：安全讀 env，缺失時於瀏覽器端 fallback 到現行網域，不在 build/SSR 直接崩潰
+ */
+const __RAW_ENV_BASE =
   (typeof process !== 'undefined' &&
-    process.env &&
-    process.env.NEXT_PUBLIC_API_URL) ||
-  '';
+    typeof process.env !== 'undefined' &&
+    (process.env as Record<string, string | undefined>).NEXT_PUBLIC_API_URL) || '';
+
+function __resolveApiBase(): string {
+  const fromEnv = (__RAW_ENV_BASE || '').trim();
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+  // Browser fallback：若 env 缺失，使用目前前端網域，避免 build/SSR 當場爆掉
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return window.location.origin.replace(/\/+$/, '');
+  }
+  // SSR 且沒有 env：保持空字串，等到 getApiBase() 呼叫時再丟出清楚錯誤
+  return '';
+}
 
 export function getApiBase(): string {
-  if (!API_BASE_URL) {
-    throw new Error(
-      'Missing NEXT_PUBLIC_API_URL. Please set it in your frontend environment variables.'
-    );
+  const base = __resolveApiBase();
+  if (!base) {
+    throw new Error('NEXT_PUBLIC_API_URL is not set and no browser origin is available. Please set it in your frontend Variables.');
   }
-  return API_BASE_URL.replace(/\/+$/, '');
+  return base;
 }
 
 /** ---- Token utils (no-op on server) ---- */
@@ -103,7 +114,8 @@ export function setUserBranchId(branchId: string | null): void {
 export function getUserRole(): string | null {
   if (!isBrowser()) return null;
   try {
-    return window.localStorage.getItem(ROLE_KEY);
+    const raw = window.localStorage.getItem(ROLE_KEY);
+    return raw ?? null;
   } catch {
     return null;
   }
@@ -142,7 +154,14 @@ function toQueryString(
   return s ? `?${s}` : '';
 }
 
+/**
+ * ✅ 修正點 2：若傳入的是絕對網址（http/https），直接放行，不強制拼 base
+ */
 function buildUrl(path: string, query?: JsonRequestInit['query']): string {
+  if (/^https?:\/\//i.test(path)) {
+    const clean = path.replace(/\/+$/, '');
+    return `${clean}${toQueryString(query)}`;
+  }
   const base = getApiBase();
   const p = path.startsWith('/') ? path : `/${path}`;
   return `${base}${p}${toQueryString(query)}`;
@@ -210,7 +229,7 @@ export function getJSON<TResponse>(
   return requestJSON<TResponse>(path, 'GET', undefined, init);
 }
 
-// Overload signatures to be友善於「一或二個泛型」的呼叫習慣
+// Overload signatures：相容一或二個泛型的舊呼叫方式
 export function postJSON<TResponse>(
   path: string,
   body?: unknown,
@@ -277,4 +296,5 @@ export const putJson = putJSON;
 export const patchJson = patchJSON;
 export const deleteJson = deleteJSON;
 
-export { API_BASE_URL as __API_BASE_URL_INTERNAL__ };
+// 若有需要內部檢視 base，可保留這個名稱（避免其他檔案 import 失敗）
+export { __RAW_ENV_BASE as __API_BASE_URL_INTERNAL__ };
