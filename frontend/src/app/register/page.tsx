@@ -18,17 +18,34 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const resp = await postJSON<{ accessToken: string; refreshToken?: string }>(
-  "/auth/register",
-  { email, password, name }
+        "/auth/register", 
+        { email, password, name }
       );
       
+      if (!resp.ok) {
+        throw new Error((resp.data as { message?: string })?.message || 'Registration failed');
+      }
+      
+      const authData = resp.data as { accessToken: string; refreshToken?: string };
+      
       // 儲存 tokens
-      saveTokens(resp);
+      saveTokens(
+        authData.accessToken,
+        authData.refreshToken || '',
+        '', // role 將在下面獲取
+        ''  // branchId 將在下面獲取
+      );
       
       // 獲取用戶資訊並儲存 role
       try {
-        const userData = await getJsonWithAuth<{ role: string }>('/users/me');
-        saveTokens({ role: userData.role });
+        const userData = await getJsonWithAuth<{ role: string; branchId?: string }>('/users/me');
+        // 更新 role 和 branchId
+        saveTokens(
+          authData.accessToken,
+          authData.refreshToken || '',
+          userData.role,
+          userData.branchId || ''
+        );
       } catch (userErr) {
         console.error('Failed to fetch user data:', userErr);
       }

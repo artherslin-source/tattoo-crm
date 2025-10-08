@@ -93,7 +93,7 @@ export default function AppointmentForm({
     phone: fromContact?.phone ?? searchParams.get("phone") ?? "",
     notes: fromContact?.notes ?? searchParams.get("notes") ?? "",
     branchId: fromContact?.branchId ?? searchParams.get("branchId") ?? "",
-    contactId: fromContact?.contactId ?? searchParams.get("contactId") ?? "",
+    contactId: "", // 前端不再處理 contactId，由後端統一生成
     serviceId: "",
     artistId: "",
     startAt: "",

@@ -17,15 +17,23 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const resp = await postJSON<{ accessToken: string; refreshToken?: string }>(
-  "/auth/login",
-  { email, password }
-      );    
+        "/auth/login",
+        { email, password }
+      );
+      
+      if (!resp.ok) {
+        throw new Error((resp.data as { message?: string })?.message || 'Login failed');
+      }
+      
+      const authData = resp.data as { accessToken: string; refreshToken?: string };
       
       // 儲存 tokens
-      saveTokens({
-        accessToken: resp.accessToken,
-        refreshToken: resp.refreshToken
-      });
+      saveTokens(
+        authData.accessToken, 
+        authData.refreshToken || '', 
+        '', // role 將在下面獲取
+        ''  // branchId 將在下面獲取
+      );
       
       // 獲取用戶資訊並儲存 role 和 branchId
       try {

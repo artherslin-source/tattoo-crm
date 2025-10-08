@@ -80,10 +80,10 @@ export default function AdminAppointmentsPage() {
   });
 
   // 選項資料狀態
-  const [users, setUsers] = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
-  const [artists, setArtists] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [users, setUsers] = useState<Array<Record<string, unknown>>>([]);
+  const [services, setServices] = useState<Array<Record<string, unknown>>>([]);
+  const [artists, setArtists] = useState<Array<Record<string, unknown>>>([]);
+  const [branches, setBranches] = useState<Array<Record<string, unknown>>>([]);
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -113,10 +113,10 @@ export default function AdminAppointmentsPage() {
   const fetchOptionsData = useCallback(async () => {
     try {
       const [usersData, servicesData, artistsData, branchesData] = await Promise.all([
-        getJsonWithAuth('/admin/members') as Promise<any[]>,
-        getJsonWithAuth('/admin/services') as Promise<any[]>,
-        getJsonWithAuth('/admin/artists') as Promise<any[]>,
-        getJsonWithAuth('/branches') as Promise<any[]>,
+        getJsonWithAuth('/admin/members') as Promise<Array<Record<string, unknown>>>,
+        getJsonWithAuth('/admin/services') as Promise<Array<Record<string, unknown>>>,
+        getJsonWithAuth('/admin/artists') as Promise<Array<Record<string, unknown>>>,
+        getJsonWithAuth('/branches') as Promise<Array<Record<string, unknown>>>,
       ]);
       
       setUsers(usersData);
