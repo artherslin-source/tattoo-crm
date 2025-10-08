@@ -221,7 +221,7 @@ export default function PublicAppointmentPage() {
               再次預約
             </button>
             <button
-              onClick={() => router.push('/booking')}
+              onClick={() => router.push('/home')}
               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
             >
               返回首頁

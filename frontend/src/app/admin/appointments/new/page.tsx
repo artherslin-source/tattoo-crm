@@ -3,10 +3,6 @@
 import AppointmentForm from "@/components/appointments/AppointmentForm";
 import { useSearchParams } from "next/navigation";
 
-interface PageProps {
-  searchParams: Promise<Record<string, string>>;
-}
-
 export default function NewAppointmentPage() {
   const searchParams = useSearchParams();
   const fromContactParam = searchParams.get("fromContact");

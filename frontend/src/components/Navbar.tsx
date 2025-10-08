@@ -47,7 +47,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <button
-              onClick={() => router.push('/booking')}
+              onClick={() => router.push('/home')}
               className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               彫川紋身

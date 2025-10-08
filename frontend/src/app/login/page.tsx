@@ -104,7 +104,7 @@ export default function LoginPage() {
         {/* 返回首頁按鈕 - 位於登入按鈕下方中央 */}
         <div className="mt-6 flex justify-center">
           <button
-            onClick={() => router.push('/booking')}
+            onClick={() => router.push('/home')}
             className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
