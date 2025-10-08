@@ -272,7 +272,7 @@ export default function BookingPage() {
                   </div>
                   <CardTitle className="text-xl">{artist.displayName}</CardTitle>
                   <CardDescription>
-                    {artist.user?.name ?? artist.speciality}
+                    {artist.user?.name ?? artist.speciality ?? "刺青師"}
                   </CardDescription>
                 </CardHeader>
               </Card>
