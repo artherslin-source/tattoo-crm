@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
- * Centralized API helper for both server and client.
- * Provides JSON helpers, token storage, and backwards-compatible exports.
+ * Centralized API helper for both server and client (Next.js 15, App Router).
+ * - SSR safe: no top-level window/localStorage access.
+ * - Env handling: uses NEXT_PUBLIC_API_URL at build/runtime; falls back to window.origin only on client.
+ * - Backward-compatible exports for existing imports across the app.
  */
 
 export class ApiError extends Error {
@@ -17,38 +19,46 @@ export class ApiError extends Error {
   }
 }
 
-/** ---- Environment & base URL ----
- * ✅ 修正點 1：安全讀 env，缺失時於瀏覽器端 fallback 到現行網域，不在 build/SSR 直接崩潰
- */
+/* =========================================================
+ * 1) Base URL (SSR 安全)
+ * ======================================================= */
+
+/** 原始環境變數字串（僅讀，不在頂層做 fallback） */
 const __RAW_ENV_BASE =
   (typeof process !== 'undefined' &&
     typeof process.env !== 'undefined' &&
-    (process.env as Record<string, string | undefined>).NEXT_PUBLIC_API_URL) || '';
+    (process.env as Record<string, string | undefined>).NEXT_PUBLIC_API_URL) ||
+  '';
 
+/** 僅在呼叫時解析 Base；SSR 無 env 時不會動用 window，避免「window is not defined」 */
 function __resolveApiBase(): string {
-  const fromEnv = (__RAW_ENV_BASE || '').trim();
-  if (fromEnv) return fromEnv.replace(/\/+$/, '');
-  // Browser fallback：若 env 缺失，使用目前前端網域，避免 build/SSR 當場爆掉
-  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+  const envBase = (__RAW_ENV_BASE || '').trim().replace(/\/+$/, '');
+  if (envBase) return envBase;
+
+  // 只有在瀏覽器端才允許使用目前網域做為 fallback
+  if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin.replace(/\/+$/, '');
   }
-  // SSR 且沒有 env：保持空字串，等到 getApiBase() 呼叫時再丟出清楚錯誤
+
+  // 純 SSR 且沒有 env：回空字串；交由 getApiBase() 統一丟錯，避免在 import 時崩潰
   return '';
 }
 
+/** 提供外部統一取得 API Base；缺失時丟出清楚錯誤（便於 Railway 設定排查） */
 export function getApiBase(): string {
   const base = __resolveApiBase();
   if (!base) {
-    throw new Error('NEXT_PUBLIC_API_URL is not set and no browser origin is available. Please set it in your frontend Variables.');
+    throw new Error(
+      'NEXT_PUBLIC_API_URL is not set and no browser origin is available. ' +
+        'Please set it in your Frontend Variables (e.g. https://<your-backend>.up.railway.app).'
+    );
   }
   return base;
 }
 
-/** ---- Token utils (no-op on server) ---- */
-export type TokensLike =
-  | { accessToken?: string | null; refreshToken?: string | null }
-  | { token?: string | null }
-  | Record<string, any>;
+/* =========================================================
+ * 2) Token & 使用者資訊（僅瀏覽器存取）
+ * ======================================================= */
 
 const ACCESS_KEY = 'accessToken';
 const REFRESH_KEY = 'refreshToken';
@@ -58,6 +68,11 @@ const ROLE_KEY = 'role';
 function isBrowser() {
   return typeof window !== 'undefined';
 }
+
+export type TokensLike =
+  | { accessToken?: string | null; refreshToken?: string | null }
+  | { token?: string | null }
+  | Record<string, any>;
 
 export function saveTokens(input: TokensLike): void {
   if (!isBrowser()) return;
@@ -131,7 +146,9 @@ export function setUserRole(role: string | null): void {
   }
 }
 
-/** ---- Request helpers ---- */
+/* =========================================================
+ * 3) 請求工具
+ * ======================================================= */
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -141,9 +158,8 @@ export type JsonRequestInit = Omit<RequestInit, 'body' | 'method' | 'headers'> &
   query?: Record<string, string | number | boolean | null | undefined>;
 };
 
-function toQueryString(
-  query?: JsonRequestInit['query']
-): string {
+/** 物件 -> 查詢字串 */
+function toQueryString(query?: JsonRequestInit['query']): string {
   if (!query) return '';
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) {
@@ -155,7 +171,8 @@ function toQueryString(
 }
 
 /**
- * ✅ 修正點 2：若傳入的是絕對網址（http/https），直接放行，不強制拼 base
+ * 若 path 為絕對網址（http/https），直接使用，不與 Base 拼接。
+ * 否則用 getApiBase() + path。
  */
 function buildUrl(path: string, query?: JsonRequestInit['query']): string {
   if (/^https?:\/\//i.test(path)) {
@@ -167,16 +184,18 @@ function buildUrl(path: string, query?: JsonRequestInit['query']): string {
   return `${base}${p}${toQueryString(query)}`;
 }
 
+/** 安全解析 JSON（即使錯誤時也嘗試讀 body 供調試） */
 async function parseJsonSafely(res: Response): Promise<unknown> {
   const text = await res.text();
   if (!text) return null;
   try {
     return JSON.parse(text);
   } catch {
-    return text; // allow non-JSON error bodies
+    return text;
   }
 }
 
+/** 核心請求：所有 JSON 方法共用 */
 async function requestJSON<TResponse, TBody = unknown>(
   path: string,
   method: HttpMethod,
@@ -186,11 +205,13 @@ async function requestJSON<TResponse, TBody = unknown>(
   const url = buildUrl(path, init.query);
 
   const headers = new Headers(init.headers);
+  // Token 來源：優先明傳其後嘗試 localStorage（僅瀏覽器）
   const token = init.token ?? getAccessToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   let fetchInit: RequestInit = { ...init, method, headers };
 
+  // 組裝 body
   if (body !== undefined && body !== null && method !== 'GET') {
     const isForm =
       typeof FormData !== 'undefined' && body instanceof FormData;
@@ -221,7 +242,10 @@ async function requestJSON<TResponse, TBody = unknown>(
   return data as TResponse;
 }
 
-/** JSON helpers */
+/* =========================================================
+ * 4) 封裝的 CRUD 方法（含舊寫法相容）
+ * ======================================================= */
+
 export function getJSON<TResponse>(
   path: string,
   init?: JsonRequestInit
@@ -229,7 +253,7 @@ export function getJSON<TResponse>(
   return requestJSON<TResponse>(path, 'GET', undefined, init);
 }
 
-// Overload signatures：相容一或二個泛型的舊呼叫方式
+// 支援舊呼叫：postJSON<Res>(url, body) 與 postJSON<Res, Body>(url, body)
 export function postJSON<TResponse>(
   path: string,
   body?: unknown,
@@ -271,8 +295,8 @@ export function deleteJSON<TResponse = unknown>(
   return requestJSON<TResponse>(path, 'DELETE', undefined, init);
 }
 
-/** FormData upload with auth */
-export async function postFormDataWithAuth<TResponse>(
+/** 上傳 FormData（自動帶 Auth） */
+export function postFormDataWithAuth<TResponse>(
   path: string,
   formData: FormData,
   init?: Omit<JsonRequestInit, 'body'>
@@ -280,21 +304,21 @@ export async function postFormDataWithAuth<TResponse>(
   return requestJSON<TResponse, FormData>(path, 'POST', formData, init);
 }
 
-/** ---- Backwards-compatible aliases (to fix “not exported” errors) ---- */
+/* =========================================================
+ * 5) Backward-compatible 別名（避免 import 失敗）
+ * ======================================================= */
 
-// simple aliases
 export const getJsonWithAuth = getJSON;
 export const postJsonWithAuth = postJSON;
 export const putJsonWithAuth = putJSON;
 export const patchJsonWithAuth = patchJSON;
 export const deleteJsonWithAuth = deleteJSON;
 
-// also export lowercase convenience (in case some files use these)
 export const getJson = getJSON;
 export const postJson = postJSON;
 export const putJson = putJSON;
 export const patchJson = patchJSON;
 export const deleteJson = deleteJSON;
 
-// 若有需要內部檢視 base，可保留這個名稱（避免其他檔案 import 失敗）
+// 供除錯觀察用（不要在業務程式依賴）
 export { __RAW_ENV_BASE as __API_BASE_URL_INTERNAL__ };
