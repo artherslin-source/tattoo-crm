@@ -64,10 +64,11 @@ export default function BookingPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         const [servicesRes, artistsRes, branchesRes] = await Promise.all([
-          fetch('http://localhost:4000/services'),
-          fetch('http://localhost:4000/artists'),
-          fetch('http://localhost:4000/branches/public')
+          fetch(`${apiBase}/services`),
+          fetch(`${apiBase}/artists`),
+          fetch(`${apiBase}/branches/public`)
         ]);
 
         const [servicesData, artistsData, branchesData] = await Promise.all([

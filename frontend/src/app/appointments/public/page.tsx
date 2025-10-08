@@ -51,9 +51,10 @@ export default function PublicAppointmentPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         const [servicesRes, artistsRes] = await Promise.all([
-          fetch('http://localhost:4000/services'),
-          fetch('http://localhost:4000/artists')
+          fetch(`${apiBase}/services`),
+          fetch(`${apiBase}/artists`)
         ]);
 
         const [servicesData, artistsData] = await Promise.all([
