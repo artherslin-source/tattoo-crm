@@ -38,7 +38,8 @@ async function bootstrap() {
   
   const port = process.env.PORT || 4000;
   await app.listen(port, '0.0.0.0'); // 監聽所有網路介面
-  console.log(`🚀 Backend running on port ${port}`);
+  console.log(`🚀 Server is running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Backend accessible at: http://0.0.0.0:${port}`);
 }
 bootstrap();
