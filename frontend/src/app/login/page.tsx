@@ -16,11 +16,10 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const resp = await postJSON<{ email: string; password: string }, { accessToken: string; refreshToken?: string }>(
-        "/auth/login",
-        { email, password }
-      );
-      
+      const resp = await postJSON<{ accessToken: string; refreshToken?: string }>(
+  "/auth/login",
+  { email, password }
+      );    
       if (!resp.ok) {
         throw new Error(resp.data?.message || 'Login failed');
       }
