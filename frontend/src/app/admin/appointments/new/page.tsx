@@ -1,13 +1,19 @@
-import AppointmentForm from "@/components/appointments/AppointmentForm";
+"use client";
 
-export default async function NewAppointmentPage({ searchParams }: any) {
-  // ✅ 等待 async component 被解析（避免 JSX 直接渲染 Promise）
-  const Form = await AppointmentForm({ fromContact: searchParams });
+import AppointmentForm from "@/components/appointments/AppointmentForm";
+import { useSearchParams } from "next/navigation";
+
+export default function NewAppointmentPage() {
+  const searchParams = useSearchParams();
+  const fromContactParam = searchParams.get("fromContact");
+  
+  // 將 fromContact 字符串轉換為對象
+  const fromContact = fromContactParam ? JSON.parse(fromContactParam) : undefined;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-xl font-semibold mb-4">建立新預約</h1>
-      {Form}
+      <AppointmentForm fromContact={fromContact} />
     </div>
   );
 }

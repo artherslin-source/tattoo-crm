@@ -20,17 +20,12 @@ export default function LoginPage() {
   "/auth/login",
   { email, password }
       );    
-      if (!resp.ok) {
-        throw new Error(resp.data?.message || 'Login failed');
-      }
       
       // 儲存 tokens
-      saveTokens(
-        resp.data.accessToken, 
-        resp.data.refreshToken || '', 
-        '', // role 將在下面獲取
-        ''  // branchId 將在下面獲取
-      );
+      saveTokens({
+        accessToken: resp.accessToken,
+        refreshToken: resp.refreshToken
+      });
       
       // 獲取用戶資訊並儲存 role 和 branchId
       try {

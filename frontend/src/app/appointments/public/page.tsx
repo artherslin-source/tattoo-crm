@@ -26,11 +26,6 @@ interface Artist {
   };
 }
 
-interface AppointmentResponse {
-  ok?: boolean;
-  data?: { message?: string } | string;
-}
-
 // ✅ Railway/Next.js 安全取得 API URL
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') ||
@@ -162,19 +157,9 @@ export default function PublicAppointmentPage() {
         notes: formData.notes || undefined,
       };
 
-      const res = (await postJSON<AppointmentResponse>(
-        '/appointments/public',
-        payload
-      )) as AppointmentResponse;
+      const res = await postJSON('/appointments/public', payload);
 
-      if (!res?.ok) {
-        const errorMessage =
-          typeof res?.data === 'string'
-            ? res.data
-            : res?.data?.message || '預約失敗';
-        setError(errorMessage);
-        return;
-      }
+      // 如果 postJSON 成功執行到這裡，說明請求成功
 
       setSuccess(true);
       setFormData({

@@ -137,15 +137,7 @@ export default function BookingPage() {
 
       const res = await postJSON("/public/contacts", payload);
 
-      if (!res.ok) {
-        const errorMessage =
-          typeof res.data === "string"
-            ? res.data
-            : res.data?.message || "提交失敗";
-        setMessage({ type: "error", text: errorMessage });
-        return;
-      }
-
+      // 如果 postJSON 成功執行到這裡，說明請求成功
       setMessage({
         type: "success",
         text: "✅ 已成功提交，我們將盡快與您聯繫！",
