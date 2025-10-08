@@ -17,10 +17,10 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      const resp = await postJSON<
-        { email: string; password: string; name: string },
-        { accessToken: string; refreshToken?: string }
-      >("/auth/register", { email, password, name });
+      const resp = await postJSON<{ accessToken: string; refreshToken?: string }>(
+  "/auth/register",
+  { email, password, name }
+      );
       
       // 儲存 tokens
       saveTokens(resp);
