@@ -1,11 +1,12 @@
 {
   "name": "backend",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "bash build.sh",
     "build:npm": "npx prisma generate && npx nest build",
+    "build:tsc": "npx prisma generate && npx tsc",
     "start": "nest start",
     "start:dev": "cross-env PORT=4000 nest start --watch",
     "start:prod": "npm run build && npx prisma db push --accept-data-loss && node dist/main.js",

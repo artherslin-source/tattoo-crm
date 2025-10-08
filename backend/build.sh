@@ -20,7 +20,18 @@ fi
 
 # 構建 NestJS 應用
 echo "🔨 構建 NestJS 應用..."
-npx nest build
+echo "嘗試使用 NestJS CLI 構建..."
+if npx nest build; then
+    echo "✅ NestJS CLI 構建成功"
+else
+    echo "❌ NestJS CLI 構建失敗，嘗試使用 TypeScript 編譯器..."
+    if npx tsc -p tsconfig.build.json; then
+        echo "✅ TypeScript 編譯器構建成功"
+    else
+        echo "❌ TypeScript 編譯器構建也失敗"
+        exit 1
+    fi
+fi
 
 # 驗證構建結果
 echo "✅ 驗證構建結果..."
@@ -31,8 +42,12 @@ else
     echo "❌ 構建失敗！dist/main.js 不存在"
     echo "📁 當前目錄內容："
     ls -la
+    echo "📁 dist 文件夾內容："
+    ls -la dist/
     echo "📁 node_modules/.bin 內容："
     ls -la node_modules/.bin/ | grep nest
+    echo "🔍 檢查 NestJS 構建詳細信息..."
+    npx nest build --verbose
     exit 1
 fi
 
