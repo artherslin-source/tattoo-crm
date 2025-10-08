@@ -35,8 +35,20 @@ git push origin main
 3. 點擊 **Variables** 標籤
 4. 添加以下環境變數：
 
+**如果你沒有 PostgreSQL 資料庫：**
 ```bash
 DATABASE_URL=file:./prisma/dev.db
+JWT_SECRET=請改成你自己的超長隨機字串
+PORT=4000
+NODE_ENV=production
+```
+
+**如果你已經有 PostgreSQL 資料庫（推薦）：**
+```bash
+# DATABASE_URL 應該已經由 Railway 自動設定
+# 格式：postgresql://...@postgres.railway.internal:5432/railway
+# 如果沒有，請參考 YOUR_DEPLOYMENT_GUIDE.md
+
 JWT_SECRET=請改成你自己的超長隨機字串
 PORT=4000
 NODE_ENV=production
