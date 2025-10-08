@@ -1,189 +1,188 @@
-// src/lib/api.ts (drop-in replacement)
-// Robust, typed JSON helper around fetch for the app router.
-// No "any" types; works both on server and client components.
+// src/lib/api.ts
+// A strict, typed helper around fetch for Next.js App Router (no `any`).
 
-export const API_BASE_URL =
-  (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
+/** Trim trailing slashes to avoid `//` in URLs */
+const trimSlash = (s: string): string => s.replace(/\/+$/, "");
 
-/** Narrow HTTP methods we support */
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+/** Base URL from env (optional). If empty and you call a relative path, we'll throw. */
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
+/** HTTP methods we support */
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+/** A typed error carrying HTTP status and parsed body (when available) */
 export class ApiError extends Error {
-  /** HTTP status code returned by the server */
   status: number;
-  /** Parsed body (if any) returned by the server for the error */
   body?: unknown;
 
-  constructor(status: number, message: string, body?: unknown) {
+  constructor(message: string, status: number, body?: unknown) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.body = body;
   }
 }
 
-/** Init options for our JSON helpers */
-export interface JsonRequestInit
-  extends Omit<RequestInit, 'body' | 'headers' | 'method'> {
-  /** Extra headers to include */
-  headers?: HeadersInit;
-  /** Optional query params (will be serialized to the URL) */
-  query?: Record<string, string | number | boolean | null | undefined>;
-  /**
-   * Access token to use for Authorization header.
-   * If omitted, we'll try reading "accessToken" from localStorage on the client.
-   */
+/** Key-value object for query strings */
+export type Query = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
+
+/** Options for apiFetch */
+export interface ApiOptions<B = unknown> extends RequestInit {
+  method?: HttpMethod;
+  /** Query string parameters */
+  query?: Query;
+  /** Body (will be JSON.stringified if not FormData/Blob/ArrayBuffer) */
+  body?: B;
+  /** Whether to attach Authorization header from localStorage token */
+  useAuth?: boolean;
+  /** Explicit token to use for Authorization (overrides useAuth) */
   token?: string | null;
 }
 
-/** Serialize a query object to a query string */
-function toQueryString(
-  query?: JsonRequestInit['query']
-): string {
-  if (!query) return '';
-  const params = new URLSearchParams();
+/** Encode query object into `key=value&...` safely */
+const encodeQuery = (query?: Query): string => {
+  if (!query) return "";
+  const pairs: string[] = [];
   for (const [k, v] of Object.entries(query)) {
     if (v === undefined || v === null) continue;
-    params.append(k, String(v));
+    pairs.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
   }
-  const s = params.toString();
-  return s ? `?${s}` : '';
-}
+  return pairs.length ? `?${pairs.join("&")}` : "";
+};
 
-/** Try to read the access token from localStorage (client only) */
-function getStoredToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage.getItem('accessToken');
-  } catch {
-    return null;
-  }
-}
+/** Build absolute URL from base + path + query */
+const buildUrl = (path: string, query?: Query): string => {
+  const qs = encodeQuery(query);
 
-/** Build the absolute URL for a request */
-function buildUrl(path: string, query?: JsonRequestInit['query']): string {
+  // Absolute URL passed in
+  if (/^https?:\/\//i.test(path)) return `${trimSlash(path)}${qs}`;
+
+  // Relative path — need a base
   if (!API_BASE_URL) {
     throw new Error(
-      'Missing NEXT_PUBLIC_API_URL. Please set it in your .env file.'
+      "NEXT_PUBLIC_API_URL is empty. Set it in Railway Variables or use an absolute URL when calling apiFetch."
     );
   }
-  const base = API_BASE_URL.replace(/\/+$/, '');
-  const p = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${p}${toQueryString(query)}`;
-}
+  return `${trimSlash(API_BASE_URL)}${path.startsWith("/") ? "" : "/"}${path}${qs}`;
+};
 
-/** Safely parse a JSON response */
-async function parseJsonSafely(res: Response): Promise<unknown> {
+/** Try parsing JSON safely (for both ok and error responses) */
+const parseJsonSafely = async (res: Response): Promise<unknown> => {
   const text = await res.text();
   if (!text) return null;
   try {
-    return JSON.parse(text) as unknown;
+    return JSON.parse(text);
   } catch {
-    // Not JSON (or invalid) — return the raw string so callers can inspect it.
-    return text;
+    return text; // not JSON
   }
-}
+};
 
-/** Core request that all helpers use */
-async function requestJSON<TResponse, TBody = unknown>(
+/** Read token from localStorage on the client (SSR-safe) */
+const getClientToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    // 依你的專案實際 key 如 'accessToken'、'token' 等擇一或都試
+    return (
+      window.localStorage.getItem("accessToken") ??
+      window.localStorage.getItem("token")
+    );
+  } catch {
+    return null;
+  }
+};
+
+/** Core fetch helper (generic, strictly typed) */
+export async function apiFetch<TResponse, TBody = unknown>(
   path: string,
-  method: HttpMethod,
-  body?: TBody,
-  init: JsonRequestInit = {}
+  options: ApiOptions<TBody> = {}
 ): Promise<TResponse> {
-  const url = buildUrl(path, init.query);
+  const {
+    method = "GET",
+    query,
+    body,
+    headers,
+    useAuth = false,
+    token,
+    ...rest
+  } = options;
 
-  const headers = new Headers(init.headers);
-  const token = init.token ?? getStoredToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const url = buildUrl(path, query);
 
-  let fetchInit: RequestInit = { ...init, method, headers };
+  // Build headers safely
+  const finalHeaders = new Headers(headers ?? {});
 
-  if (body !== undefined && body !== null && method !== 'GET') {
-    // If body is already FormData/Blob/ArrayBufferView etc. leave it as-is
-    // otherwise JSON-encode.
-    const isFormLike =
-      typeof FormData !== 'undefined' && body instanceof FormData;
-    const isBlobLike =
-      (typeof Blob !== 'undefined' && body instanceof Blob) ||
-      (typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer);
+  // Attach Authorization if requested
+  const bearer = token ?? (useAuth ? getClientToken() : null);
+  if (bearer && !finalHeaders.has("Authorization")) {
+    finalHeaders.set("Authorization", `Bearer ${bearer}`);
+  }
 
-    if (!isFormLike && !isBlobLike && typeof body !== 'string') {
-      headers.set('Content-Type', 'application/json');
+  // Attach JSON content-type if body is plain object
+  let fetchInit: RequestInit = { ...rest, method, headers: finalHeaders };
+
+  if (body !== undefined && body !== null && method !== "GET") {
+    const isFormData =
+      typeof FormData !== "undefined" && body instanceof FormData;
+    const isBlob = typeof Blob !== "undefined" && body instanceof Blob;
+    const isArrayBuffer = body instanceof ArrayBuffer;
+
+    if (!isFormData && !isBlob && !isArrayBuffer) {
+      if (!finalHeaders.has("Content-Type")) {
+        finalHeaders.set("Content-Type", "application/json");
+      }
       fetchInit = { ...fetchInit, body: JSON.stringify(body) };
     } else {
+      // Let browser set multipart or appropriate headers
       fetchInit = { ...fetchInit, body: body as BodyInit };
     }
   }
 
   const res = await fetch(url, fetchInit);
-
-  // Try to parse body (even on error) so callers get details
   const data = await parseJsonSafely(res);
 
   if (!res.ok) {
     const message =
-      (typeof data === 'object' &&
+      (typeof data === "object" &&
         data !== null &&
-        // common NestJS/Express error shapes
-        (('message' in data && String((data as { message: unknown }).message)) ||
-          ('error' in data && String((data as { error: unknown }).error)))) ||
-      `Request failed with ${res.status}`;
-    throw new ApiError(res.status, message, data);
+        // 常見的錯誤格式 { message: string } 或 { error: string }
+        (("message" in data && String((data as { message: unknown }).message)) ||
+          ("error" in data && String((data as { error: unknown }).error)))) ||
+      `Request failed with status ${res.status}`;
+    throw new ApiError(message, res.status, data);
   }
 
   return data as TResponse;
 }
 
-/** GET JSON */
-export function getJSON<TResponse>(
-  path: string,
-  init?: JsonRequestInit
-): Promise<TResponse> {
-  return requestJSON<TResponse>(path, 'GET', undefined, init);
-}
+/* ------------------------------
+ * Convenience wrappers
+ * ------------------------------ */
 
-/** POST JSON */
-export function postJSON<TResponse, TBody = unknown>(
-  path: string,
-  body?: TBody,
-  init?: JsonRequestInit
-): Promise<TResponse> {
-  return requestJSON<TResponse, TBody>(path, 'POST', body, init);
-}
+export const api = {
+  get: <T>(path: string, opt?: Omit<ApiOptions<never>, "method" | "body">) =>
+    apiFetch<T>(path, { ...opt, method: "GET" }),
 
-/** PUT JSON */
-export function putJSON<TResponse, TBody = unknown>(
-  path: string,
-  body?: TBody,
-  init?: JsonRequestInit
-): Promise<TResponse> {
-  return requestJSON<TResponse, TBody>(path, 'PUT', body, init);
-}
+  post: <T, B = unknown>(
+    path: string,
+    body?: B,
+    opt?: Omit<ApiOptions<B>, "method">
+  ) => apiFetch<T, B>(path, { ...opt, method: "POST", body }),
 
-/** PATCH JSON */
-export function patchJSON<TResponse, TBody = unknown>(
-  path: string,
-  body?: TBody,
-  init?: JsonRequestInit
-): Promise<TResponse> {
-  return requestJSON<TResponse, TBody>(path, 'PATCH', body, init);
-}
+  put: <T, B = unknown>(
+    path: string,
+    body?: B,
+    opt?: Omit<ApiOptions<B>, "method">
+  ) => apiFetch<T, B>(path, { ...opt, method: "PUT", body }),
 
-/** DELETE JSON */
-export function deleteJSON<TResponse>(
-  path: string,
-  init?: JsonRequestInit
-): Promise<TResponse> {
-  return requestJSON<TResponse>(path, 'DELETE', undefined, init);
-}
+  patch: <T, B = unknown>(
+    path: string,
+    body?: B,
+    opt?: Omit<ApiOptions<B>, "method">
+  ) => apiFetch<T, B>(path, { ...opt, method: "PATCH", body }),
 
-/** Upload helper for FormData (files) */
-export function uploadForm<TResponse>(
-  path: string,
-  form: FormData,
-  init?: JsonRequestInit
-): Promise<TResponse> {
-  // Do not set content-type; the browser will set the proper multipart boundary.
-  return requestJSON<TResponse, FormData>(path, 'POST', form, init);
-}
+  delete: <T>(path: string, opt?: Omit<ApiOptions<never>, "method" | "body">) =>
+    apiFetch<T>(path, { ...opt, method: "DELETE" }),
+};
