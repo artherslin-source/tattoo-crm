@@ -9,9 +9,10 @@
     "build:tsc": "npx prisma generate && npx tsc -p tsconfig.build.json",
     "start": "nest start",
     "start:dev": "cross-env PORT=4000 nest start --watch",
-    "start:prod": "npm run build:tsc && npx prisma db push --accept-data-loss && node dist/main.js",
+    "start:prod": "npm run build:tsc && npx prisma db push --accept-data-loss && npx ts-node prisma/seed.ts && node dist/main.js",
     "start:force-build": "npm run build && npm run start:prod",
-    "postinstall": "npx prisma generate && npm run build:tsc"
+    "postinstall": "npx prisma generate && npm run build:tsc",
+    "seed": "npx ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "10.4.20",
@@ -35,7 +36,8 @@
     "rxjs": "^7.8.1",
     "zod": "4.1.9",
     "@nestjs/cli": "^10.3.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.3.2",
