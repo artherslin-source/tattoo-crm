@@ -1,45 +1,151 @@
-// src/lib/api.ts
-// ✅ 全面修正版：兼容舊版函式名稱 + 型別安全 + Railway/Next.js 可部署
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
-
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+/**
+ * Centralized API helper for both server and client.
+ * Provides JSON helpers, token storage, and backwards-compatible exports.
+ */
 
 export class ApiError extends Error {
   status: number;
-  body?: unknown;
+  data: unknown;
 
-  constructor(status: number, message: string, body?: unknown) {
+  constructor(status: number, message: string, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
-    this.body = body;
+    this.data = data;
   }
 }
 
-export interface JsonRequestInit extends Omit<RequestInit, 'body' | 'headers' | 'method'> {
-  headers?: HeadersInit;
-  query?: Record<string, string | number | boolean | null | undefined>;
-  token?: string | null;
+/** ---- Environment & base URL ---- */
+const API_BASE_URL =
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.NEXT_PUBLIC_API_URL) ||
+  '';
+
+export function getApiBase(): string {
+  if (!API_BASE_URL) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_API_URL. Please set it in your frontend environment variables.'
+    );
+  }
+  return API_BASE_URL.replace(/\/+$/, '');
 }
 
-/* ------------------------- 公用工具 ------------------------- */
+/** ---- Token utils (no-op on server) ---- */
+export type TokensLike =
+  | { accessToken?: string | null; refreshToken?: string | null }
+  | { token?: string | null }
+  | Record<string, any>;
 
-function toQueryString(query?: JsonRequestInit['query']): string {
+const ACCESS_KEY = 'accessToken';
+const REFRESH_KEY = 'refreshToken';
+const BRANCH_ID_KEY = 'branchId';
+const ROLE_KEY = 'role';
+
+function isBrowser() {
+  return typeof window !== 'undefined';
+}
+
+export function saveTokens(input: TokensLike): void {
+  if (!isBrowser()) return;
+  try {
+    const at =
+      (input as any).accessToken ?? (input as any).token ?? (input as any)?.data?.accessToken;
+    const rt =
+      (input as any).refreshToken ?? (input as any)?.data?.refreshToken;
+    if (at) window.localStorage.setItem(ACCESS_KEY, String(at));
+    if (rt) window.localStorage.setItem(REFRESH_KEY, String(rt));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearTokens(): void {
+  if (!isBrowser()) return;
+  try {
+    window.localStorage.removeItem(ACCESS_KEY);
+    window.localStorage.removeItem(REFRESH_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getAccessToken(): string | null {
+  if (!isBrowser()) return null;
+  try {
+    return window.localStorage.getItem(ACCESS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function getUserBranchId(): string | null {
+  if (!isBrowser()) return null;
+  try {
+    return window.localStorage.getItem(BRANCH_ID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setUserBranchId(branchId: string | null): void {
+  if (!isBrowser()) return;
+  try {
+    if (branchId) window.localStorage.setItem(BRANCH_ID_KEY, branchId);
+    else window.localStorage.removeItem(BRANCH_ID_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getUserRole(): string | null {
+  if (!isBrowser()) return null;
+  try {
+    return window.localStorage.getItem(ROLE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setUserRole(role: string | null): void {
+  if (!isBrowser()) return;
+  try {
+    if (role) window.localStorage.setItem(ROLE_KEY, role);
+    else window.localStorage.removeItem(ROLE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** ---- Request helpers ---- */
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+export type JsonRequestInit = Omit<RequestInit, 'body' | 'method' | 'headers'> & {
+  headers?: HeadersInit;
+  token?: string | null;
+  query?: Record<string, string | number | boolean | null | undefined>;
+};
+
+function toQueryString(
+  query?: JsonRequestInit['query']
+): string {
   if (!query) return '';
-  const params = new URLSearchParams();
+  const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) {
     if (v === undefined || v === null) continue;
-    params.append(k, String(v));
+    sp.set(k, String(v));
   }
-  return params.toString() ? `?${params.toString()}` : '';
+  const s = sp.toString();
+  return s ? `?${s}` : '';
 }
 
 function buildUrl(path: string, query?: JsonRequestInit['query']): string {
-  const base = API_BASE_URL || '';
-  const cleanBase = base.replace(/\/+$/, '');
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${cleanBase}${cleanPath}${toQueryString(query)}`;
+  const base = getApiBase();
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}${toQueryString(query)}`;
 }
 
 async function parseJsonSafely(res: Response): Promise<unknown> {
@@ -48,37 +154,9 @@ async function parseJsonSafely(res: Response): Promise<unknown> {
   try {
     return JSON.parse(text);
   } catch {
-    return text;
+    return text; // allow non-JSON error bodies
   }
 }
-
-/* --------------------- Token 相關函式 --------------------- */
-
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const token = window.localStorage.getItem('accessToken');
-    if (token) return token;
-    const match = document.cookie.match(/(?:^|;\s*)accessToken=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function getUserRole(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem('user');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { role?: string };
-    return parsed?.role ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/* --------------------- 主核心 fetch --------------------- */
 
 async function requestJSON<TResponse, TBody = unknown>(
   path: string,
@@ -97,11 +175,10 @@ async function requestJSON<TResponse, TBody = unknown>(
   if (body !== undefined && body !== null && method !== 'GET') {
     const isForm =
       typeof FormData !== 'undefined' && body instanceof FormData;
-    const isBlob =
-      typeof Blob !== 'undefined' && body instanceof Blob;
-    const isBuffer = body instanceof ArrayBuffer;
-
-    if (!isForm && !isBlob && !isBuffer && typeof body !== 'string') {
+    const isBlobLike =
+      (typeof Blob !== 'undefined' && body instanceof Blob) ||
+      (typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer);
+    if (!isForm && !isBlobLike && typeof body !== 'string') {
       headers.set('Content-Type', 'application/json');
       fetchInit = { ...fetchInit, body: JSON.stringify(body) };
     } else {
@@ -118,43 +195,86 @@ async function requestJSON<TResponse, TBody = unknown>(
         data !== null &&
         (('message' in data && String((data as any).message)) ||
           ('error' in data && String((data as any).error)))) ||
-      `Request failed with status ${res.status}`;
+      `Request failed with ${res.status}`;
     throw new ApiError(res.status, message, data);
   }
 
   return data as TResponse;
 }
 
-/* ------------------ 基本 HTTP 方法封裝 ------------------ */
-
-export function getJSON<TResponse>(path: string, init?: JsonRequestInit) {
+/** JSON helpers */
+export function getJSON<TResponse>(
+  path: string,
+  init?: JsonRequestInit
+): Promise<TResponse> {
   return requestJSON<TResponse>(path, 'GET', undefined, init);
 }
-export function postJSON<TResponse, TBody = unknown>(path: string, body?: TBody, init?: JsonRequestInit) {
+
+// Overload signatures to be友善於「一或二個泛型」的呼叫習慣
+export function postJSON<TResponse>(
+  path: string,
+  body?: unknown,
+  init?: JsonRequestInit
+): Promise<TResponse>;
+export function postJSON<TResponse, TBody = unknown>(
+  path: string,
+  body?: TBody,
+  init?: JsonRequestInit
+): Promise<TResponse>;
+export function postJSON<TResponse, TBody = unknown>(
+  path: string,
+  body?: TBody,
+  init?: JsonRequestInit
+): Promise<TResponse> {
   return requestJSON<TResponse, TBody>(path, 'POST', body, init);
 }
-export function putJSON<TResponse, TBody = unknown>(path: string, body?: TBody, init?: JsonRequestInit) {
+
+export function putJSON<TResponse, TBody = unknown>(
+  path: string,
+  body?: TBody,
+  init?: JsonRequestInit
+): Promise<TResponse> {
   return requestJSON<TResponse, TBody>(path, 'PUT', body, init);
 }
-export function patchJSON<TResponse, TBody = unknown>(path: string, body?: TBody, init?: JsonRequestInit) {
+
+export function patchJSON<TResponse, TBody = unknown>(
+  path: string,
+  body?: TBody,
+  init?: JsonRequestInit
+): Promise<TResponse> {
   return requestJSON<TResponse, TBody>(path, 'PATCH', body, init);
 }
-export function deleteJSON<TResponse>(path: string, init?: JsonRequestInit) {
+
+export function deleteJSON<TResponse = unknown>(
+  path: string,
+  init?: JsonRequestInit
+): Promise<TResponse> {
   return requestJSON<TResponse>(path, 'DELETE', undefined, init);
 }
 
-/* ------------------ 舊版相容匯出名稱 ------------------ */
-// ✅ 舊版本 import 的名稱都可直接對應到新版函式
+/** FormData upload with auth */
+export async function postFormDataWithAuth<TResponse>(
+  path: string,
+  formData: FormData,
+  init?: Omit<JsonRequestInit, 'body'>
+): Promise<TResponse> {
+  return requestJSON<TResponse, FormData>(path, 'POST', formData, init);
+}
+
+/** ---- Backwards-compatible aliases (to fix “not exported” errors) ---- */
+
+// simple aliases
 export const getJsonWithAuth = getJSON;
 export const postJsonWithAuth = postJSON;
 export const putJsonWithAuth = putJSON;
 export const patchJsonWithAuth = patchJSON;
 export const deleteJsonWithAuth = deleteJSON;
 
+// also export lowercase convenience (in case some files use these)
 export const getJson = getJSON;
 export const postJson = postJSON;
 export const putJson = putJSON;
 export const patchJson = patchJSON;
 export const deleteJson = deleteJSON;
 
-export type { JsonRequestInit, HttpMethod };
+export { API_BASE_URL as __API_BASE_URL_INTERNAL__ };
