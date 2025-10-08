@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "scripts": {
     "prebuild": "rimraf dist",
@@ -10,7 +10,7 @@
     "start": "nest start",
     "start:dev": "cross-env PORT=4000 nest start --watch",
     "start:prod": "npm run build && npx prisma db push --accept-data-loss && node dist/main.js",
-    "start:force-build": "npm run build && npx prisma db push --accept-data-loss && node dist/main.js",
+    "start:force-build": "npm run build && npm run start:prod",
     "postinstall": "npx prisma generate && npm run build"
   },
   "dependencies": {
