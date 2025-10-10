@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="armGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#7c2d12" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="24" fill="url(#armGradient)" />
+  <path d="M130 70c20-18 60-18 80 0 30 24 40 72 40 112 0 30-12 60-30 80-20 20-64 20-88 0-18-18-30-44-30-70 0-24 8-40 18-56" fill="none" stroke="#fff7ed" stroke-width="14" stroke-linecap="round" stroke-opacity="0.5" />
+  <circle cx="290" cy="90" r="26" fill="#fed7aa" fill-opacity="0.4" />
+</svg>
