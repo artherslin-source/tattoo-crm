@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="torsoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f87171" />
+      <stop offset="100%" stop-color="#7f1d1d" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="24" fill="url(#torsoGradient)" />
+  <path d="M200 60c-30 0-60 20-70 50-14 38 6 80 44 96l26 10 26-10c38-16 58-58 44-96-10-30-40-50-70-50z" fill="none" stroke="#fee2e2" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.6" />
+  <circle cx="200" cy="210" r="46" fill="#fecaca" fill-opacity="0.25" />
+</svg>
