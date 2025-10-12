@@ -428,13 +428,6 @@ export default function HomePage() {
                       每位設計師都有獨特風格與擅長領域，預約前歡迎先瀏覽作品集並與我們聯絡安排諮詢。
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="hidden border-white/30 text-gray-600 hover:bg-white/10 hover:text-white lg:inline-flex"
-                    onClick={() => router.push("/appointments/public")}
-                  >
-                    瀏覽公開檔期
-                  </Button>
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -489,14 +482,6 @@ export default function HomePage() {
                       留下聯絡方式與想法，我們的客服專員將於 24 小時內回覆並安排適合的設計師。
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    className="hidden items-center gap-2 text-yellow-300 hover:bg-white hover:text-gray-600 lg:inline-flex"
-                    onClick={() => router.push("/appointments/public")}
-                  >
-                    查看可預約時段
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
                 </div>
 
                 <Card className="border-white/10 bg-white/5 text-white">
