@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 
 import { Hero } from "@/components/home/Hero";
 import { Accordion } from "@/components/home/Accordion";
@@ -170,7 +169,6 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, "");
 
 export default function HomePage() {
-  const router = useRouter();
   const [loggedIn, setLoggedIn] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -186,6 +184,10 @@ export default function HomePage() {
     branchId: "",
     notes: "",
   });
+
+  const scrollToBookingForm = () => {
+    document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     const token = getAccessToken();
@@ -362,7 +364,7 @@ export default function HomePage() {
                   <Button
                     variant="ghost"
                     className="hidden items-center gap-2 text-yellow-300 hover:bg-white hover:text-gray-600 lg:inline-flex"
-                    onClick={() => router.push("/booking")}
+                    onClick={scrollToBookingForm}
                   >
                     快速預約
                     <ArrowRight className="h-4 w-4" />
@@ -458,7 +460,7 @@ export default function HomePage() {
                         <Button
                           variant="outline"
                           className="w-full border-white/30 text-gray-600 hover:bg-white/10 hover:text-white"
-                          onClick={() => router.push(`/booking?artistId=${artist.id}`)}
+                          onClick={scrollToBookingForm}
                         >
                           預約此設計師
                         </Button>
@@ -613,7 +615,7 @@ export default function HomePage() {
         </div>
       </footer>
 
-      <StickyCTA href="/booking" label="立即預約" />
+      <StickyCTA onClick={scrollToBookingForm} label="立即預約" />
     </div>
   );
 }
