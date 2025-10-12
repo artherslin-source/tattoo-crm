@@ -430,7 +430,7 @@ export default function HomePage() {
                   </div>
                   <Button
                     variant="outline"
-                    className="hidden border-white/30 text-white hover:bg-white/10 lg:inline-flex"
+                    className="hidden border-white/30 text-gray-600 hover:bg-white/10 lg:inline-flex"
                     onClick={() => router.push("/appointments/public")}
                   >
                     瀏覽公開檔期
@@ -464,7 +464,7 @@ export default function HomePage() {
                         </div>
                         <Button
                           variant="outline"
-                          className="w-full border-white/30 text-white hover:bg-white/10"
+                          className="w-full border-white/30 text-gray-600 hover:bg-white/10"
                           onClick={() => router.push(`/booking?artistId=${artist.id}`)}
                         >
                           預約此設計師
@@ -611,7 +611,7 @@ export default function HomePage() {
             <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
               立即預約
             </Button>
-            <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
+            <Button variant="outline" size="lg" className="border-white/30 text-gray-600 hover:bg-white/10" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
               留下聯絡資訊
             </Button>
           </div>

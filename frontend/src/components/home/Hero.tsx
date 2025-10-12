@@ -37,7 +37,7 @@ export function Hero({ loggedIn }: HeroProps) {
               立即預約
             </Button>
             {!loggedIn && (
-              <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10" onClick={() => window.location.href = '/login'}>
+              <Button variant="outline" size="lg" className="border-white/30 text-gray-600 hover:bg-white/10" onClick={() => window.location.href = '/login'}>
                 會員登入
               </Button>
             )}
