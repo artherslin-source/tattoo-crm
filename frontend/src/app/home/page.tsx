@@ -390,9 +390,11 @@ export default function HomePage() {
                 ))}
 
                 <div className="mt-6 flex items-center justify-center lg:hidden">
-                  <Button asChild size="lg" className="w-full max-w-sm bg-yellow-400 text-black hover:bg-yellow-300">
-                    <Link href="/booking">查看更多方案</Link>
-                  </Button>
+                  <Link href="/booking">
+                    <Button size="lg" className="w-full max-w-sm bg-yellow-400 text-black hover:bg-yellow-300">
+                      查看更多方案
+                    </Button>
+                  </Link>
                 </div>
               </section>
 
@@ -585,12 +587,16 @@ export default function HomePage() {
             線上填寫需求、選擇設計師與分店，我們會在最短時間協助安排專屬檔期。
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button asChild size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300">
-              <Link href="/booking">立即預約</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10">
-              <Link href="#booking-form">留下聯絡資訊</Link>
-            </Button>
+            <Link href="/booking">
+              <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300">
+                立即預約
+              </Button>
+            </Link>
+            <Link href="#booking-form">
+              <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10">
+                留下聯絡資訊
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
