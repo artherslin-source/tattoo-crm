@@ -361,7 +361,7 @@ export default function HomePage() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="hidden items-center gap-2 text-yellow-300 hover:text-yellow-200 lg:inline-flex"
+                    className="hidden items-center gap-2 text-yellow-300 hover:bg-white hover:text-gray-600 lg:inline-flex"
                     onClick={() => router.push("/booking")}
                   >
                     快速預約
@@ -491,7 +491,7 @@ export default function HomePage() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="hidden items-center gap-2 text-yellow-300 hover:text-yellow-200 lg:inline-flex"
+                    className="hidden items-center gap-2 text-yellow-300 hover:bg-white hover:text-gray-600 lg:inline-flex"
                     onClick={() => router.push("/appointments/public")}
                   >
                     查看可預約時段
