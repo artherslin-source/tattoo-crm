@@ -126,7 +126,8 @@ export class AdminAppointmentsService {
     serviceId: string; 
     artistId: string; 
     branchId: string; 
-    notes?: string; 
+    notes?: string;
+    contactId?: string;
   }) {
     try {
       console.log('🔍 開始驗證外鍵:', {
@@ -213,6 +214,7 @@ export class AdminAppointmentsService {
           artist: { select: { id: true, name: true } },
           service: { select: { id: true, name: true, price: true, durationMin: true } },
           branch: { select: { id: true, name: true } },
+          contact: { select: { id: true, name: true, email: true, phone: true } },
         },
       });
     } catch (error) {
