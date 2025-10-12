@@ -511,6 +511,7 @@ export default function HomePage() {
                             value={formData.name}
                             onChange={(event) => handleInputChange("name", event.target.value)}
                             placeholder="請輸入您的姓名"
+                            className="bg-white/10 text-white placeholder:text-gray-400"
                             required
                           />
                         </div>
@@ -522,6 +523,7 @@ export default function HomePage() {
                             value={formData.email}
                             onChange={(event) => handleInputChange("email", event.target.value)}
                             placeholder="請輸入您的 Email"
+                            className="bg-white/10 text-white placeholder:text-gray-400"
                             required
                           />
                         </div>
@@ -533,6 +535,7 @@ export default function HomePage() {
                             value={formData.phone}
                             onChange={(event) => handleInputChange("phone", event.target.value)}
                             placeholder="請輸入您的聯絡電話"
+                            className="bg-white/10 text-white placeholder:text-gray-400"
                           />
                         </div>
                         <div>
@@ -565,6 +568,7 @@ export default function HomePage() {
                           value={formData.notes}
                           onChange={(event) => handleInputChange("notes", event.target.value)}
                           placeholder="請描述您的刺青想法、尺寸或預期預算..."
+                          className="bg-white/10 text-white placeholder:text-gray-400"
                           rows={4}
                         />
                       </div>
