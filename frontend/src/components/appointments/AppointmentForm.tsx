@@ -133,7 +133,7 @@ export default function AppointmentForm({
 
     // 刺青師與分店連動
     if (field === 'artistId') {
-      const artist = artists.find(a => a.id === value);
+      const artist = artists.find(a => a.user.id === value);
       if (artist && artist.branchId) {
         setFormData(prev => ({
           ...prev,
@@ -352,7 +352,7 @@ export default function AppointmentForm({
                 >
                   <option value="">請選擇刺青師</option>
                   {artists.map((artist) => (
-                    <option key={artist.id} value={artist.id}>
+                    <option key={artist.id} value={artist.user.id}>
                       {artist.displayName || artist.user.name} ({artist.branch?.name || '無分店'})
                     </option>
                   ))}
