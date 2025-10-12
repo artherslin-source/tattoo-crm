@@ -511,7 +511,7 @@ export default function HomePage() {
                             value={formData.name}
                             onChange={(event) => handleInputChange("name", event.target.value)}
                             placeholder="請輸入您的姓名"
-                            className="bg-white/10 text-white placeholder:text-gray-400"
+                            className="bg-white/10 text-white placeholder:text-gray-400 focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
                         </div>
@@ -523,7 +523,7 @@ export default function HomePage() {
                             value={formData.email}
                             onChange={(event) => handleInputChange("email", event.target.value)}
                             placeholder="請輸入您的 Email"
-                            className="bg-white/10 text-white placeholder:text-gray-400"
+                            className="bg-white/10 text-white placeholder:text-gray-400 focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
                         </div>
@@ -535,24 +535,24 @@ export default function HomePage() {
                             value={formData.phone}
                             onChange={(event) => handleInputChange("phone", event.target.value)}
                             placeholder="請輸入您的聯絡電話"
-                            className="bg-white/10 text-white placeholder:text-gray-400"
+                            className="bg-white/10 text-white placeholder:text-gray-400 focus:ring-1 focus:ring-yellow-400/50"
                           />
                         </div>
                         <div>
                           <Label htmlFor="branch">指定分店 *</Label>
                           <Select value={formData.branchId} onValueChange={(value) => handleInputChange("branchId", value)}>
-                            <SelectTrigger>
+                            <SelectTrigger className="bg-white/10 text-white placeholder:text-gray-400">
                               <SelectValue placeholder="請選擇分店" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white border border-gray-200">
                               {branches.length ? (
                                 branches.map((branch) => (
-                                  <SelectItem key={branch.id} value={branch.id}>
+                                  <SelectItem key={branch.id} value={branch.id} className="text-gray-900 hover:bg-gray-100">
                                     {branch.name}
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="placeholder" disabled>
+                                <SelectItem value="placeholder" disabled className="text-gray-500">
                                   目前尚無分店資料
                                 </SelectItem>
                               )}
