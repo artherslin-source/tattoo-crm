@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { Hero } from "@/components/home/Hero";
 import { Accordion } from "@/components/home/Accordion";
 import { HorizontalScroller } from "@/components/home/HorizontalScroller";
-import { QuickNav } from "@/components/home/QuickNav";
 import { ServiceCard } from "@/components/home/ServiceCard";
 import { StickyCTA } from "@/components/home/StickyCTA";
 import { Badge } from "@/components/ui/badge";
@@ -326,14 +325,32 @@ export default function HomePage() {
     <div className="relative min-h-screen bg-[#0D0D0D] text-neutral-100 pb-24 sm:pb-16">
       <Hero loggedIn={loggedIn} />
 
-      <main className="relative z-10 -mt-12 space-y-16 pb-12 sm:-mt-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-12 lg:gap-10">
-            <aside className="hidden lg:col-span-3 lg:block">
-              <QuickNav categories={quickNavItems} />
-            </aside>
+      {/* 桌機版固定浮動側邊欄 */}
+      <aside className="hidden lg:fixed lg:left-6 lg:top-32 lg:z-30 lg:block lg:w-48 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-black/40 lg:p-4 lg:backdrop-blur-lg lg:shadow-lg">
+        <nav aria-label="快速導覽" className="space-y-3">
+          <p className="text-sm uppercase tracking-[0.2em] text-neutral-500">快速導覽</p>
+          <ul className="space-y-1 text-sm">
+            {quickNavItems.map((category) => (
+              <li key={category.id}>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.querySelector(`#${category.id}`)?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="flex w-full items-center justify-between rounded-md px-3 py-2 text-neutral-400 transition-colors duration-200 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/80"
+                >
+                  <span>{category.title}</span>
+                  <span aria-hidden>↘</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
 
-            <section className="lg:col-span-9 space-y-16">
+      <main className="relative z-10 -mt-12 space-y-16 pb-12 sm:-mt-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:ml-[15rem] lg:px-8">
+          <section className="space-y-16">
               <section id="services" className="space-y-6 scroll-mt-24">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
@@ -359,31 +376,39 @@ export default function HomePage() {
                 )}
 
                 {categories.map((category, index) => (
-                  <div key={category.id} id={category.id} className="space-y-4 scroll-mt-28">
-                    <div className="sm:hidden">
-                      <Accordion id={`${category.id}-mobile`} title={category.title} defaultOpen={false}>
-                        <HorizontalScroller ariaLabel={`${category.title} 服務列表`}>
-                          {category.items.map((item) => (
-                            <ServiceCard key={item.id} item={item} variant="compact" />
-                          ))}
-                        </HorizontalScroller>
-                      </Accordion>
-                    </div>
+                  <div key={category.id} className="space-y-4">
+                    <div id={category.id} className="scroll-mt-24">
+                      {/* 手機版：Accordion + 橫向滑動 */}
+                      <div className="sm:hidden">
+                        <Accordion id={`${category.id}-mobile`} title={category.title} defaultOpen={false}>
+                          <HorizontalScroller ariaLabel={`${category.title} 服務列表`}>
+                            {category.items.map((item) => (
+                              <ServiceCard key={item.id} item={item} variant="compact" />
+                            ))}
+                          </HorizontalScroller>
+                        </Accordion>
+                      </div>
 
-                    <div className="hidden sm:block lg:hidden">
-                      <Accordion id={`${category.id}-tablet`} title={category.title} defaultOpen={index === 0}>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {/* 平板版：Accordion + 兩欄網格 */}
+                      <div className="hidden sm:block lg:hidden">
+                        <Accordion id={`${category.id}-tablet`} title={category.title} defaultOpen={index === 0}>
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            {category.items.map((item) => (
+                              <ServiceCard key={item.id} item={item} />
+                            ))}
+                          </div>
+                        </Accordion>
+                      </div>
+
+                      {/* 桌機版：分類標題 + 網格布局 */}
+                      <div className="hidden lg:block">
+                        <h3 className="mb-6 text-2xl font-semibold text-white">{category.title}</h3>
+                        <div className="grid grid-cols-3 gap-6 xl:grid-cols-4">
                           {category.items.map((item) => (
                             <ServiceCard key={item.id} item={item} />
                           ))}
                         </div>
-                      </Accordion>
-                    </div>
-
-                    <div className="hidden gap-6 lg:grid lg:grid-cols-3">
-                      {category.items.map((item) => (
-                        <ServiceCard key={item.id} item={item} />
-                      ))}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -574,8 +599,7 @@ export default function HomePage() {
               </section>
             </section>
           </div>
-        </div>
-      </main>
+        </main>
 
       <section className="hidden border-t border-white/10 bg-[#080808] py-12 sm:block">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-6 text-center">
