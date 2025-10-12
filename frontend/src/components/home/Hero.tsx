@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 interface HeroProps {
@@ -34,17 +33,13 @@ export function Hero({ loggedIn }: HeroProps) {
             透過 Tattoo CRM 預約、管理與追蹤每一次刺青旅程，讓靈感與工藝在同一個地方匯聚。
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-            <Link href="/booking">
-              <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300">
-                立即預約
-              </Button>
-            </Link>
+            <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
+              立即預約
+            </Button>
             {!loggedIn && (
-              <Link href="/login">
-                <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10">
-                  會員登入
-                </Button>
-              </Link>
+              <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10" onClick={() => window.location.href = '/login'}>
+                會員登入
+              </Button>
             )}
           </div>
         </div>

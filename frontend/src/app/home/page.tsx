@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Hero } from "@/components/home/Hero";
@@ -390,11 +389,9 @@ export default function HomePage() {
                 ))}
 
                 <div className="mt-6 flex items-center justify-center lg:hidden">
-                  <Link href="/booking">
-                    <Button size="lg" className="w-full max-w-sm bg-yellow-400 text-black hover:bg-yellow-300">
-                      查看更多方案
-                    </Button>
-                  </Link>
+                  <Button size="lg" className="w-full max-w-sm bg-yellow-400 text-black hover:bg-yellow-300" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
+                    查看更多方案
+                  </Button>
                 </div>
               </section>
 
@@ -587,16 +584,12 @@ export default function HomePage() {
             線上填寫需求、選擇設計師與分店，我們會在最短時間協助安排專屬檔期。
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/booking">
-              <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300">
-                立即預約
-              </Button>
-            </Link>
-            <Link href="#booking-form">
-              <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10">
-                留下聯絡資訊
-              </Button>
-            </Link>
+            <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
+              立即預約
+            </Button>
+            <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
+              留下聯絡資訊
+            </Button>
           </div>
         </div>
       </section>
