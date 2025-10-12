@@ -9,7 +9,7 @@
     "build:tsc": "npx prisma generate && npx tsc -p tsconfig.build.json",
     "start": "nest start",
     "start:dev": "cross-env PORT=4000 nest start --watch",
-    "start:prod": "npm run build:tsc && npx prisma db push --accept-data-loss && npx ts-node prisma/seed.ts && node dist/main.js",
+    "start:prod": "node scripts/start-prod.js",
     "start:force-build": "npm run build && npm run start:prod",
     "postinstall": "npx prisma generate && npm run build:tsc",
     "seed": "npx ts-node prisma/seed.ts"
@@ -25,6 +25,7 @@
     "@faker-js/faker": "^8.3.1",
     "axios": "^1.7.2",
     "bcrypt": "6.0.0",
+    "dotenv": "^16.4.5",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2",
     "multer": "1.4.5-lts.1",

@@ -219,35 +219,44 @@ async function main() {
   console.log('✅ 建立 3 個刺青師（東港店1位：陳震宇，三重店2位：黃晨洋、林承葉）');
 
 
-  // 6. 建立 10 個服務
+  // 6. 建立服務項目
   const services: any[] = [];
   const serviceData = [
-    { name: '小圖案刺青', price: 3000, duration: 60, category: 'Basic' },
-    { name: '大圖案刺青', price: 15000, duration: 300, category: 'Advanced' },
-    { name: '刺青修復', price: 8000, duration: 180, category: 'Repair' },
-    { name: '彩色刺青', price: 12000, duration: 240, category: 'Color' },
-    { name: '黑白刺青', price: 10000, duration: 200, category: 'Blackwork' },
-    { name: '文字刺青', price: 2500, duration: 45, category: 'Text' },
-    { name: '日式傳統刺青', price: 20000, duration: 360, category: 'Traditional' },
-    { name: '幾何圖騰', price: 8000, duration: 150, category: 'Geometric' },
-    { name: '肖像刺青', price: 25000, duration: 480, category: 'Portrait' },
-    { name: '水彩風格', price: 18000, duration: 300, category: 'Watercolor' },
+    { name: '上下手臂全肢', price: 60000, duration: 600, category: 'Arm' },
+    { name: '上手臂', price: 30000, duration: 360, category: 'Arm' },
+    { name: '大小腿包全肢', price: 65000, duration: 660, category: 'Leg' },
+    { name: '大背到大腿圖', price: 70000, duration: 720, category: 'Back' },
+    { name: '大背後圖', price: 55000, duration: 540, category: 'Back' },
+    { name: '大腿全包', price: 50000, duration: 480, category: 'Leg' },
+    { name: '大腿表面', price: 32000, duration: 360, category: 'Leg' },
+    { name: '小腿全包', price: 38000, duration: 420, category: 'Leg' },
+    { name: '小腿表面', price: 25000, duration: 300, category: 'Leg' },
+    { name: '半臂圖', price: 35000, duration: 360, category: 'Arm' },
+    { name: '前手臂', price: 28000, duration: 300, category: 'Arm' },
+    { name: '背後左或右圖', price: 30000, duration: 360, category: 'Back' },
+    { name: '排肚圖', price: 32000, duration: 360, category: 'Torso' },
+    { name: '單胸口', price: 22000, duration: 240, category: 'Torso' },
+    { name: '單胸到包全手', price: 45000, duration: 480, category: 'Torso' },
+    { name: '單胸腹肚圖', price: 42000, duration: 450, category: 'Torso' },
+    { name: '腹肚圖', price: 30000, duration: 330, category: 'Torso' },
+    { name: '雙前胸口圖', price: 40000, duration: 420, category: 'Torso' },
+    { name: '雙胸到腹肚圖', price: 52000, duration: 540, category: 'Torso' },
   ];
-  
-  for (let i = 0; i < 10; i++) {
+
+  for (const data of serviceData) {
     const service = await prisma.service.create({
       data: {
-        name: serviceData[i].name,
-        description: `${serviceData[i].name}服務，專業技術，品質保證`,
-        price: serviceData[i].price,
-        durationMin: serviceData[i].duration,
-        category: serviceData[i].category,
+        name: data.name,
+        description: `${data.name}服務，專業技術，品質保證`,
+        price: data.price,
+        durationMin: data.duration,
+        category: data.category,
         createdAt: faker.date.past(),
       },
     });
     services.push(service);
   }
-  console.log('✅ 建立 10 個服務');
+  console.log(`✅ 建立 ${serviceData.length} 個服務`);
 
   // 7. 建立預約（按照刺青師平均分配）
   const appointments: any[] = [];

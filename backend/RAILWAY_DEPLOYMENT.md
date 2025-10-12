@@ -18,31 +18,22 @@
 
 ```bash
 # 必須設定的環境變數
-DATABASE_URL=file:./prisma/dev.db
+DATABASE_URL=<Railway PostgreSQL 連線字串>
 JWT_SECRET=your-very-secret-jwt-key-here
 PORT=4000
 NODE_ENV=production
 ```
 
-### 2. 如果使用 PostgreSQL（推薦用於生產環境）
+> ❗️ **重要提醒**：`DATABASE_URL` 必須是 PostgreSQL 連線字串（以 `postgresql://` 或 `postgres://` 開頭）。
+> Railway 的 SQLite 磁碟在部署間不會持久化，而且 Prisma 在生產模式會拒絕使用 SQLite 連線字串，
+> 因此務必使用 Railway 提供的 PostgreSQL 服務。
 
-如果你想使用 PostgreSQL 而非 SQLite：
+### 2. 建立 PostgreSQL 服務
 
-1. 在 Railway 中添加 PostgreSQL 服務
-2. 將 `DATABASE_URL` 設定為 Railway 提供的 PostgreSQL 連接字串
-3. 更新 `prisma/schema.prisma`：
-
-```prisma
-datasource db {
-  provider = "postgresql"  // 改成 postgresql
-  url      = env("DATABASE_URL")
-}
-```
-
-4. 重新生成 migration：
-```bash
-npx prisma migrate dev --name switch_to_postgresql
-```
+1. 在 Railway 中新增一個 PostgreSQL 服務
+2. 複製服務提供的 `DATABASE_URL`（通常以 `postgresql://` 開頭）
+3. 在 Backend 服務的 Variables 設定中貼上這組連線字串
+4. 重新部署即可完成資料庫同步與種子資料匯入
 
 ### 3. 提交並推送更改
 
