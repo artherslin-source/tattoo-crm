@@ -6,7 +6,7 @@ import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth, ApiError
 import BranchSelector from "@/components/BranchSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Palette, Settings } from "lucide-react";
+import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Palette, Settings, MessageSquare } from "lucide-react";
 
 interface DashboardStats {
   totalUsers: number;
@@ -116,6 +116,13 @@ export default function AdminDashboardPage() {
       icon: Users,
       href: "/admin/members",
       color: "bg-blue-500"
+    },
+    {
+      title: "管理聯絡通知",
+      description: "查看和處理客戶聯絡訊息",
+      icon: MessageSquare,
+      href: "/admin/contacts",
+      color: "bg-indigo-500"
     },
     {
       title: "管理預約",

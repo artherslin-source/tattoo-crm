@@ -38,14 +38,14 @@ const navigationItems = [
     icon: Users,
   },
   {
-    name: "管理預約",
-    href: "/admin/appointments",
-    icon: Calendar,
-  },
-  {
     name: "管理聯絡通知",
     href: "/admin/contacts",
     icon: MessageSquare,
+  },
+  {
+    name: "管理預約",
+    href: "/admin/appointments",
+    icon: Calendar,
   },
   {
     name: "管理訂單",
