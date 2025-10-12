@@ -48,8 +48,8 @@ export default function LoginPage() {
         // 即使獲取用戶資訊失敗，也允許登入繼續
       }
       
-      // 登入後統一跳轉到 Profile 頁面
-      router.push("/profile");
+      // 登入後統一跳轉到首頁
+      router.push("/home");
     } catch (err) {
       console.error('Login error:', err);
       const apiErr = err as ApiError;
