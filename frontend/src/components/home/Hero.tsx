@@ -33,11 +33,22 @@ export function Hero({ loggedIn }: HeroProps) {
             透過 Tattoo CRM 預約、管理與追蹤每一次刺青旅程，讓靈感與工藝在同一個地方匯聚。
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-            <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
+            <Button
+              size="default"
+              className="w-full bg-yellow-400 text-black hover:bg-yellow-300 sm:w-auto sm:px-6 sm:py-3 sm:text-base"
+              onClick={() =>
+                document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })
+              }
+            >
               立即預約
             </Button>
             {!loggedIn && (
-              <Button variant="outline" size="lg" className="border-white/30 text-gray-600 hover:bg-white/10 hover:text-white" onClick={() => window.location.href = '/login'}>
+              <Button
+                variant="outline"
+                size="default"
+                className="w-full border-white/30 text-gray-200 hover:bg-white/10 hover:text-white sm:w-auto sm:px-6 sm:py-3 sm:text-base"
+                onClick={() => (window.location.href = '/login')}
+              >
                 會員登入
               </Button>
             )}
