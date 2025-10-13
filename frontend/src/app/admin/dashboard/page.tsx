@@ -147,7 +147,7 @@ export default function AdminDashboardPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {getUserRole() === 'BOSS' ? '總管理後台' : '分店管理後台'}
+              {getUserRole() === 'BOSS' ? '管理後台' : '分店管理後台'}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
               歡迎回到管理後台，這裡是您的控制中心

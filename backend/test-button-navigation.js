@@ -25,7 +25,7 @@ async function login(account) {
 }
 
 async function testButtonNavigation() {
-  console.log('🧪 測試總管理後台與分店管理按鈕功能\n');
+  console.log('🧪 測試管理後台與分店管理按鈕功能\n');
 
   for (const [accountName, account] of Object.entries(testAccounts)) {
     console.log(`\n📋 測試帳號: ${accountName} (${account.email})`);
@@ -44,7 +44,7 @@ async function testButtonNavigation() {
     // 根據角色測試按鈕功能
     if (account.role === 'BOSS') {
       console.log('🎯 BOSS 角色測試:');
-      console.log('  - 應該顯示「總管理後台」按鈕');
+      console.log('  - 應該顯示「管理後台」按鈕');
       console.log('  - 點擊後應該導向 /admin/dashboard');
       console.log('  - 可以查看所有分店資料');
     } else if (account.role === 'BRANCH_MANAGER') {
@@ -62,7 +62,7 @@ async function testButtonNavigation() {
             'Cookie': `accessToken=${loginResult.accessToken}`
           }
         });
-        console.log('✅ 總管理後台頁面可訪問');
+        console.log('✅ 管理後台頁面可訪問');
       } else if (account.role === 'BRANCH_MANAGER') {
         const branchResponse = await axios.get(`${FRONTEND_URL}/branch/dashboard`, {
           headers: {
@@ -80,7 +80,7 @@ async function testButtonNavigation() {
 
   console.log('\n🎉 按鈕導航功能測試完成！');
   console.log('\n📝 測試總結:');
-  console.log('1. ✅ BOSS 角色顯示「總管理後台」按鈕，導向 /admin/dashboard');
+  console.log('1. ✅ BOSS 角色顯示「管理後台」按鈕，導向 /admin/dashboard');
   console.log('2. ✅ BRANCH_MANAGER 角色顯示「分店管理」按鈕，導向 /branch/dashboard');
   console.log('3. ✅ 兩個頁面都已創建並可正常訪問');
   console.log('4. ✅ 按鈕根據用戶角色動態顯示');
