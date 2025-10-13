@@ -170,11 +170,11 @@
             message += `Token: ${accessToken.substring(0, 50)}...\n\n`;
             
             if (userRole === 'BOSS') {
-                message += `✅ 應該顯示「總管理後台」按鈕\n`;
+                message += `✅ 應該顯示「管理後台」按鈕\n`;
                 message += `✅ 點擊後應該導向 /admin/dashboard\n`;
                 message += `✅ 可以查看所有分店資料\n\n`;
                 message += `🔗 測試連結:\n`;
-                message += `- 總管理後台: http://localhost:4001/admin/dashboard\n`;
+                message += `- 管理後台: http://localhost:4001/admin/dashboard\n`;
                 message += `- 分店管理後台: http://localhost:4001/branch/dashboard\n`;
             } else if (userRole === 'BRANCH_MANAGER') {
                 message += `✅ 應該顯示「分店管理」按鈕\n`;

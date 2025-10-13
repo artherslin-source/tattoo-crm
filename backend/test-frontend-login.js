@@ -84,7 +84,7 @@ async function testFrontendLogin() {
     console.log('2. 使用以下帳號登入:');
     console.log('   Email: admin@test.com');
     console.log('   Password: 12345678');
-    console.log('3. 登入後點擊「總管理後台」按鈕');
+    console.log('3. 登入後點擊「管理後台」按鈕');
     console.log('4. 測試各個子頁面:');
     console.log('   - 管理刺青師: http://localhost:4001/admin/artists');
     console.log('   - 管理訂單: http://localhost:4001/admin/orders');

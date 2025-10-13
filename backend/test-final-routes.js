@@ -32,7 +32,7 @@ async function testFinalRoutes() {
     
     const pages = [
       { name: '登入頁面', url: `${FRONTEND_URL}/login` },
-      { name: '總管理後台', url: `${FRONTEND_URL}/admin/dashboard` },
+      { name: '管理後台', url: `${FRONTEND_URL}/admin/dashboard` },
       { name: '分店管理後台', url: `${FRONTEND_URL}/branch/dashboard` },
       { name: '分店會員管理', url: `${FRONTEND_URL}/branch/members` },
       { name: '分店刺青師管理', url: `${FRONTEND_URL}/branch/artists` },
@@ -97,7 +97,7 @@ async function testFinalRoutes() {
 
     console.log('\n🔗 可用的 URL:');
     console.log('- 前端登入: http://localhost:4001/login');
-    console.log('- 總管理後台: http://localhost:4001/admin/dashboard');
+    console.log('- 管理後台: http://localhost:4001/admin/dashboard');
     console.log('- 分店管理後台: http://localhost:4001/branch/dashboard');
     console.log('- 分店子頁面: http://localhost:4001/branch/{members|artists|appointments|orders|services}');
 

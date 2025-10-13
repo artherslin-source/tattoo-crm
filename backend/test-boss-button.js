@@ -4,7 +4,7 @@ const BASE_URL = 'http://localhost:4000';
 const FRONTEND_URL = 'http://localhost:4001';
 
 async function testBossButton() {
-  console.log('🧪 測試 BOSS 帳號的總管理後台按鈕功能\n');
+  console.log('🧪 測試 BOSS 帳號的管理後台按鈕功能\n');
 
   try {
     // 1. 測試登入
@@ -18,14 +18,14 @@ async function testBossButton() {
     console.log(`Token: ${loginResponse.data.accessToken.substring(0, 50)}...`);
     console.log(`角色: BOSS`);
 
-    // 2. 測試總管理後台頁面可訪問性
-    console.log('\n📋 步驟 2: 測試總管理後台頁面');
+    // 2. 測試管理後台頁面可訪問性
+    console.log('\n📋 步驟 2: 測試管理後台頁面');
     try {
       const adminPageResponse = await axios.get(`${FRONTEND_URL}/admin/dashboard`);
-      console.log('✅ 總管理後台頁面可訪問');
+      console.log('✅ 管理後台頁面可訪問');
       console.log(`狀態碼: ${adminPageResponse.status}`);
     } catch (error) {
-      console.log('❌ 總管理後台頁面訪問失敗:', error.response?.status || error.message);
+      console.log('❌ 管理後台頁面訪問失敗:', error.response?.status || error.message);
     }
 
     // 3. 測試分店管理後台頁面（BOSS 不應該訪問）
@@ -57,9 +57,9 @@ async function testBossButton() {
     console.log('\n🎉 BOSS 按鈕功能測試完成！');
     console.log('\n📝 測試總結:');
     console.log('1. ✅ BOSS 可以正常登入');
-    console.log('2. ✅ 總管理後台頁面可以訪問');
+    console.log('2. ✅ 管理後台頁面可以訪問');
     console.log('3. ✅ BOSS 可以訪問後端 API');
-    console.log('4. ✅ 按鈕應該顯示「總管理後台」並導向 /admin/dashboard');
+    console.log('4. ✅ 按鈕應該顯示「管理後台」並導向 /admin/dashboard');
 
   } catch (error) {
     console.error('❌ 測試失敗:', error.response?.data || error.message);
