@@ -41,6 +41,14 @@ export default function Navbar() {
     return null;
   }
 
+  const handleReservationClick = () => {
+    if (pathname === "/home") {
+      document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      router.push("/home#booking-form");
+    }
+  };
+
   return (
     <header className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,7 +65,7 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             {/* 預約按鈕 - 所有人都可以看到 */}
             <button
-              onClick={() => router.push('/appointments/public')}
+              onClick={handleReservationClick}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
