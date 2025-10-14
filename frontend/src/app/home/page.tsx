@@ -218,7 +218,7 @@ export default function HomePage() {
 
         setServices(servicesData);
         setArtists(artistsData);
-        const uniqueBranches = sortBranchesByName(getUniqueBranches<Branch>(branchesData));
+        const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData)) as Branch[];
         setBranches(uniqueBranches);
       } catch (error) {
         console.error("載入資料失敗:", error);
