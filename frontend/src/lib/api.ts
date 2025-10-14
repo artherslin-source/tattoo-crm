@@ -94,7 +94,7 @@ export async function postJSON<T>(path: string, body: Record<string, unknown> | 
     console.error('postJSON fetch error:', error);
     // 如果是網路錯誤，提供更友好的錯誤訊息
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new ApiError('無法連接到伺服器，請檢查網路連線或稍後再試', 0);
+      throw new ApiError(0, '無法連接到伺服器，請檢查網路連線或稍後再試');
     }
     throw error;
   }

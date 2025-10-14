@@ -53,6 +53,6 @@ console.log(`📊 使用 PostgreSQL 資料庫`);
 
 run('npx prisma generate', '生成 Prisma Client');
 run('npx tsc -p tsconfig.build.json', '編譯 TypeScript 專案');
-run('npx prisma migrate deploy', '執行資料庫遷移');
+run('npx prisma db push --accept-data-loss', '同步資料庫 Schema');
 run('npx ts-node prisma/seed.ts', '匯入預設種子資料');
 run('node dist/main.js', '啟動 NestJS 伺服器');
