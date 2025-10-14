@@ -8,6 +8,7 @@
     "build:npm": "npx prisma generate && npx nest build",
     "build:tsc": "npx prisma generate && npx tsc -p tsconfig.build.json",
     "start": "nest start",
+    "prestart:dev": "npx prisma generate",
     "start:dev": "cross-env PORT=4000 nest start --watch",
     "start:prod": "node scripts/start-prod.js",
     "start:force-build": "npm run build && npm run start:prod",
