@@ -46,8 +46,14 @@ export async function testApiConnection(url: string): Promise<boolean> {
 export async function findWorkingApiUrl(): Promise<string | null> {
   const possibleUrls = debugApiUrls();
   
+  // 如果沒有可用的 URL 列表，返回 null
+  if (!possibleUrls || possibleUrls.length === 0) {
+    console.log('❌ 沒有可用的 API URL 列表。');
+    return null;
+  }
+  
   for (const url of possibleUrls) {
-    if (await testApiConnection(url)) {
+    if (url && await testApiConnection(url)) {
       console.log(`✅ 找到可用的 API URL: ${url}`);
       return url;
     }
