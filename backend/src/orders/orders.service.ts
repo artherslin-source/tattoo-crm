@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { OrderStatus, Prisma } from '@prisma/client';
 
 interface GetOrdersQuery {
   branchId?: string;
@@ -372,7 +372,7 @@ export class OrdersService {
       
       console.log('🔍 Summary where condition:', JSON.stringify(where, null, 2));
 
-      const paidStatuses: Prisma.OrderStatus[] = [
+      const paidStatuses: OrderStatus[] = [
         'PAID',
         'PAID_COMPLETE',
         'INSTALLMENT_ACTIVE',

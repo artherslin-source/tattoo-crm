@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { OrderStatus, Prisma } from '@prisma/client';
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -96,7 +96,7 @@ export class AdminController {
       });
 
       // 獲取總營收（所有已完成的訂單）
-      const paidStatuses: Prisma.OrderStatus[] = [
+      const paidStatuses: OrderStatus[] = [
         'PAID',
         'PAID_COMPLETE',
         'INSTALLMENT_ACTIVE',
