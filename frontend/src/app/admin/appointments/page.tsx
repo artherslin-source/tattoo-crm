@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
+import type { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -84,7 +85,7 @@ export default function AdminAppointmentsPage() {
   const [users, setUsers] = useState<Array<Record<string, unknown>>>([]);
   const [services, setServices] = useState<Array<Record<string, unknown>>>([]);
   const [artists, setArtists] = useState<Array<Record<string, unknown>>>([]);
-  const [branches, setBranches] = useState<Array<Record<string, unknown>>>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -123,7 +124,7 @@ export default function AdminAppointmentsPage() {
       setUsers(usersData);
       setServices(servicesData);
       setArtists(artistsData);
-      const uniqueBranches = sortBranchesByName(getUniqueBranches<any>(branchesData));
+      const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData)) as Branch[];
       setBranches(uniqueBranches);
     } catch (err) {
       console.error('載入選項資料失敗:', err);
