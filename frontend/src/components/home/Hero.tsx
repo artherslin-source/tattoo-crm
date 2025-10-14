@@ -10,8 +10,8 @@ export function Hero({ loggedIn }: HeroProps) {
     <section className="relative isolate overflow-hidden bg-[#080808]">
       <div className="absolute inset-0">
         <Image
-          src="/images/hero/tattoo-artist.svg"
-          alt="刺青師正在為客戶服務"
+          src="/images/banner/tattoo-monk.jpg"
+          alt="專業紋身師正在進行精細的紋身工作，展現東方禪意與現代工藝的完美結合"
           fill
           priority
           className="object-cover"
