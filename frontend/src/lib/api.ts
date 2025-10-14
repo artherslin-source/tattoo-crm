@@ -7,7 +7,7 @@ export class ApiError extends Error {
 }
 
 // 智能檢測 API URL
-function getApiBase(): string {
+function detectApiBase(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
@@ -27,7 +27,7 @@ function getApiBase(): string {
   return "http://localhost:4000";
 }
 
-const API_BASE = getApiBase();
+const API_BASE = detectApiBase();
 
 function readFromLocalStorage(key: string) {
   try {
