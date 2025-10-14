@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth } from "@/lib/api";
 import BranchSelector from "@/components/BranchSelector";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Palette, Settings, MessageSquare } from "lucide-react";
+import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Settings, MessageSquare } from "lucide-react";
 
 interface DashboardStats {
   totalUsers: number;
@@ -30,59 +29,100 @@ export default function AdminDashboardPage() {
     monthlyRevenue: 0,
   });
 
+  const fetchDashboardData = useCallback(async (): Promise<DashboardStats> => {
+    try {
+      const dashboardData = await getJsonWithAuth<{
+        users?: { total: number };
+        services?: { total: number };
+        appointments?: { total: number; today: number };
+        revenue?: { total: number; monthly: number };
+      }>('/admin/stats');
+
+      return {
+        totalUsers: dashboardData.users?.total || 0,
+        totalServices: dashboardData.services?.total || 0,
+        totalAppointments: dashboardData.appointments?.total || 0,
+        todayAppointments: dashboardData.appointments?.today || 0,
+        totalRevenue: dashboardData.revenue?.total || 0,
+        monthlyRevenue: dashboardData.revenue?.monthly || 0,
+      };
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+      return {
+        totalUsers: 0,
+        totalServices: 0,
+        totalAppointments: 0,
+        todayAppointments: 0,
+        totalRevenue: 0,
+        monthlyRevenue: 0,
+      };
+    }
+  }, []);
+
   useEffect(() => {
     const userRole = getUserRole();
     const token = getAccessToken();
-    
+
     if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
       router.replace('/profile');
       return;
     }
 
-    async function fetchDashboardData() {
-      try {
-        // 調用統計 API 獲取數據
-        const dashboardData = await getJsonWithAuth<{
-          users?: { total: number };
-          services?: { total: number };
-          appointments?: { total: number; today: number };
-          revenue?: { total: number; monthly: number };
-        }>('/admin/stats');
+    let isActive = true;
+    let hasInitialLoad = false;
 
-        setStats({
-          totalUsers: dashboardData.users?.total || 0,
-          totalServices: dashboardData.services?.total || 0,
-          totalAppointments: dashboardData.appointments?.total || 0,
-          todayAppointments: dashboardData.appointments?.today || 0,
-          totalRevenue: dashboardData.revenue?.total || 0,
-          monthlyRevenue: dashboardData.revenue?.monthly || 0,
-        });
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err);
-        // 如果 API 失敗，保持預設值
-        setStats({
-          totalUsers: 0,
-          totalServices: 0,
-          totalAppointments: 0,
-          todayAppointments: 0,
-          totalRevenue: 0,
-          monthlyRevenue: 0,
-        });
-      } finally {
-        setLoading(false);
+    const loadDashboard = async () => {
+      if (!isActive) {
+        return;
       }
-    }
 
-    fetchDashboardData();
-  }, [router]);
+      const latestStats = await fetchDashboardData();
+
+      if (!isActive) {
+        return;
+      }
+
+      setStats(latestStats);
+
+      if (!hasInitialLoad) {
+        setLoading(false);
+        hasInitialLoad = true;
+      }
+    };
+
+    setLoading(true);
+    loadDashboard();
+
+    const intervalId = setInterval(loadDashboard, 10000);
+
+    return () => {
+      isActive = false;
+      clearInterval(intervalId);
+    };
+  }, [router, fetchDashboardData]);
 
   // 當選擇的分店改變時，重新載入數據
   useEffect(() => {
-    if (selectedBranchId) {
-      // 重新載入數據的邏輯
-      console.log('Branch changed to:', selectedBranchId);
+    if (!selectedBranchId) {
+      return;
     }
-  }, [selectedBranchId]);
+
+    let isActive = true;
+
+    const refreshStats = async () => {
+      const latestStats = await fetchDashboardData();
+      if (!isActive) {
+        return;
+      }
+      setStats(latestStats);
+    };
+
+    refreshStats();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedBranchId, fetchDashboardData]);
 
   if (loading) {
     return (
