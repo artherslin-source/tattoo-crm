@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -95,13 +96,21 @@ export class AdminController {
       });
 
       // 獲取總營收（所有已完成的訂單）
+      const paidStatuses: Prisma.OrderStatus[] = [
+        'PAID',
+        'PAID_COMPLETE',
+        'INSTALLMENT_ACTIVE',
+        'PARTIALLY_PAID',
+        'COMPLETED'
+      ];
+
       const totalRevenue = await this.prisma.order.aggregate({
         where: {
           ...whereCondition,
-          status: 'COMPLETED'
+          status: { in: paidStatuses }
         },
         _sum: {
-          totalAmount: true
+          finalAmount: true
         }
       });
 
@@ -113,13 +122,13 @@ export class AdminController {
       const monthlyRevenue = await this.prisma.order.aggregate({
         where: {
           ...whereCondition,
-          status: 'COMPLETED',
+          status: { in: paidStatuses },
           createdAt: {
             gte: startOfMonth
           }
         },
         _sum: {
-          totalAmount: true
+          finalAmount: true
         }
       });
 
@@ -139,8 +148,8 @@ export class AdminController {
           today: todayAppointments
         },
         revenue: {
-          total: totalRevenue._sum.totalAmount || 0,
-          monthly: monthlyRevenue._sum.totalAmount || 0
+          total: totalRevenue._sum.finalAmount || 0,
+          monthly: monthlyRevenue._sum.finalAmount || 0
         }
       };
     } catch (error) {

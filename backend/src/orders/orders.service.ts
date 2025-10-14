@@ -372,6 +372,14 @@ export class OrdersService {
       
       console.log('🔍 Summary where condition:', JSON.stringify(where, null, 2));
 
+      const paidStatuses: Prisma.OrderStatus[] = [
+        'PAID',
+        'PAID_COMPLETE',
+        'INSTALLMENT_ACTIVE',
+        'PARTIALLY_PAID',
+        'COMPLETED'
+      ];
+
       const [totalCount, pendingCount, completedCount, cancelledCount, totalRevenue] =
         await this.prisma.$transaction([
           this.prisma.order.count({ where }),
@@ -379,25 +387,25 @@ export class OrdersService {
           this.prisma.order.count({ where: { ...where, status: 'COMPLETED' } }),
           this.prisma.order.count({ where: { ...where, status: 'CANCELLED' } }),
           this.prisma.order.aggregate({
-            where: { ...where, status: 'COMPLETED' },
-            _sum: { totalAmount: true },
+            where: { ...where, status: { in: paidStatuses } },
+            _sum: { finalAmount: true },
           }),
         ]);
 
-      console.log('🔍 Summary results:', { 
-        totalCount, 
-        pendingCount, 
-        completedCount, 
-        cancelledCount, 
-        totalRevenue: totalRevenue._sum.totalAmount 
-      });
+        console.log('🔍 Summary results:', {
+          totalCount,
+          pendingCount,
+          completedCount,
+          cancelledCount,
+          totalRevenue: totalRevenue._sum.finalAmount
+        });
 
       return {
         totalCount,
         pendingCount,
         completedCount,
         cancelledCount,
-        totalRevenue: Number(totalRevenue._sum.totalAmount || 0), // Decimal 轉 number
+        totalRevenue: Number(totalRevenue._sum.finalAmount || 0), // Decimal 轉 number
       };
     } catch (error) {
       console.error('❌ Error in getOrdersSummary:', error);
