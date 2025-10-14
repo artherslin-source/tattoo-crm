@@ -61,6 +61,9 @@ export default function InstallmentManager({
     amount: 0,
     notes: ''
   });
+  
+  // ✅ 新增：錯誤訊息狀態
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('zh-TW', {
@@ -106,40 +109,69 @@ export default function InstallmentManager({
   const handleRecordPayment = async () => {
     if (!selectedInstallment) return;
     
+    // 清除之前的錯誤訊息
+    setErrorMessage(null);
+    
     try {
       await onPaymentRecorded(selectedInstallment.id, paymentData);
       setIsPaymentDialogOpen(false);
       setPaymentData({ paymentMethod: '', notes: '', paidAt: new Date().toISOString().split('T')[0] });
     } catch (error) {
       console.error('記錄付款失敗:', error);
+      setErrorMessage('記錄付款失敗，請稍後再試。');
+      // 5秒後自動清除錯誤訊息
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
     }
   };
 
   const handleUpdateInstallment = async () => {
     if (!selectedInstallment) return;
     
+    // 清除之前的錯誤訊息
+    setErrorMessage(null);
+    
     try {
       await onInstallmentUpdated(selectedInstallment.id, editData);
       setIsEditDialogOpen(false);
     } catch (error) {
       console.error('更新分期失敗:', error);
+      setErrorMessage('更新分期資料失敗，請稍後再試。');
+      // 5秒後自動清除錯誤訊息
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
     }
   };
 
   const handleAdjustAmount = async () => {
     if (!selectedInstallment || !onInstallmentAmountAdjusted) return;
     
+    // 清除之前的錯誤訊息
+    setErrorMessage(null);
+    
     // 檢查金額是否為0
     if (editingAmount === 0) {
-      alert('分期付款金額不能為0，請輸入有效的金額。');
+      setErrorMessage('分期付款金額不能為0，請輸入有效的金額。');
+      // 3秒後自動清除錯誤訊息
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
       return;
     }
     
     try {
       await onInstallmentAmountAdjusted(order.id, selectedInstallment.installmentNo, editingAmount);
       setIsAmountEditDialogOpen(false);
+      setErrorMessage(null);
     } catch (error) {
       console.error('調整分期金額失敗:', error);
+      setErrorMessage('調整分期金額失敗，請稍後再試。');
+      // 3秒後自動清除錯誤訊息
+      setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
     }
   };
 
@@ -209,10 +241,19 @@ export default function InstallmentManager({
       {/* 分期付款列表 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            分期付款明細
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              分期付款明細
+            </CardTitle>
+            {/* ✅ 錯誤訊息顯示區域 */}
+            {errorMessage && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-red-100 border border-red-400 text-red-700 rounded-lg animate-pulse">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">{errorMessage}</span>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
