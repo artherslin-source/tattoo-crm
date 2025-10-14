@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { postJSON, getAccessToken, getApiBase } from "@/lib/api";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
 
 interface Service {
@@ -223,7 +224,8 @@ export default function HomePage() {
 
         setServices(servicesData);
         setArtists(artistsData);
-        setBranches(branchesData);
+        const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData));
+        setBranches(uniqueBranches);
       } catch (error) {
         console.error("載入資料失敗:", error);
         setMessage({ type: "error", text: "載入資料失敗，已展示範例內容" });
