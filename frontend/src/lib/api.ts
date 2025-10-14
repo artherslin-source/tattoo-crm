@@ -27,6 +27,20 @@ function detectApiBase(): string {
   return "http://localhost:4000";
 }
 
+// 檢查後端服務狀態
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000)
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Backend health check failed:', error);
+    return false;
+  }
+}
+
 const API_BASE = detectApiBase();
 
 function readFromLocalStorage(key: string) {
@@ -66,15 +80,24 @@ export function getApiBase() {
 }
 
 export async function postJSON<T>(path: string, body: Record<string, unknown> | unknown) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  let data: unknown = null;
-  try { data = JSON.parse(text); } catch {}
-  return { ok: res.ok, status: res.status, data: data ?? text };
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    let data: unknown = null;
+    try { data = JSON.parse(text); } catch {}
+    return { ok: res.ok, status: res.status, data: data ?? text };
+  } catch (error) {
+    console.error('postJSON fetch error:', error);
+    // 如果是網路錯誤，提供更友好的錯誤訊息
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ApiError('無法連接到伺服器，請檢查網路連線或稍後再試', 0);
+    }
+    throw error;
+  }
 }
 
 // 認證相關函數

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { postJSON, saveTokens, getJsonWithAuth, ApiError } from "@/lib/api";
+import { postJSON, saveTokens, getJsonWithAuth, ApiError, checkBackendHealth } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,7 +15,16 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    
     try {
+      // 首先檢查後端服務狀態
+      const isBackendHealthy = await checkBackendHealth();
+      if (!isBackendHealthy) {
+        setError("後端服務暫時無法使用，請稍後再試或聯繫管理員");
+        setLoading(false);
+        return;
+      }
+      
       const resp = await postJSON<{ accessToken: string; refreshToken?: string }>(
         "/auth/login",
         { email, password }
