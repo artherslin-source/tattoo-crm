@@ -50,6 +50,7 @@ interface Branch {
   phone?: string;
   email?: string;
   businessHours?: string;
+  [key: string]: unknown;
 }
 
 type ServiceItem = {

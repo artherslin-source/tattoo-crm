@@ -26,6 +26,7 @@ interface Order {
 interface Branch {
   id: string;
   name: string;
+  [key: string]: unknown;
 }
 
 export default function BranchOrdersPage() {

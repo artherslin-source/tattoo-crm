@@ -32,6 +32,7 @@ interface Branch {
   id: string;
   name: string;
   address: string;
+  [key: string]: unknown;
 }
 
 export default function BranchArtistsPage() {

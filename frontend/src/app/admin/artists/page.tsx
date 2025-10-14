@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
+import { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCheck, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
@@ -29,10 +30,6 @@ interface Artist {
   };
 }
 
-interface Branch {
-  id: string;
-  name: string;
-}
 
 export default function AdminArtistsPage() {
   const router = useRouter();

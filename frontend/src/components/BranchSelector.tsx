@@ -14,6 +14,7 @@ interface Branch {
     orders: number;
     appointments: number;
   };
+  [key: string]: unknown;
 }
 
 interface BranchSelectorProps {

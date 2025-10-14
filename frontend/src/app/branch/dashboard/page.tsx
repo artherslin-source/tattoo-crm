@@ -18,6 +18,7 @@ interface DashboardStats {
 interface Branch {
   id: string;
   name: string;
+  [key: string]: unknown;
 }
 
 export default function BranchDashboardPage() {

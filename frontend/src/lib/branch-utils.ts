@@ -1,8 +1,4 @@
-export interface BranchLike {
-  id?: string | number;
-  name?: string;
-  [key: string]: unknown;
-}
+import { BranchLike } from '@/types/branch';
 
 /**
  * Removes duplicated branch entries by prioritizing unique IDs and falling back to names.
