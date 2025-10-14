@@ -241,20 +241,20 @@ export default function InstallmentManager({
       {/* 分期付款列表 */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              分期付款明細
-            </CardTitle>
-            {/* ✅ 錯誤訊息顯示區域 */}
-            {errorMessage && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-red-100 border border-red-400 text-red-700 rounded-lg animate-pulse">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">{errorMessage}</span>
-              </div>
-            )}
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            分期付款明細
+          </CardTitle>
+          {/* ✅ 錯誤訊息顯示區域 - 放在 CardHeader 外面 */}
         </CardHeader>
+        {errorMessage && (
+          <div className="px-6 pb-2">
+            <div className="flex items-center gap-2 px-4 py-2 bg-red-100 border border-red-400 text-red-700 rounded-lg animate-pulse">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">{errorMessage}</span>
+            </div>
+          </div>
+        )}
         <CardContent>
           <div className="space-y-3">
             {order.installments.map((installment) => (

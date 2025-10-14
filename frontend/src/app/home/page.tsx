@@ -243,8 +243,8 @@ export default function HomePage() {
 
         setServices(servicesData);
         setArtists(artistsData);
-        const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData)) as Branch[];
-        setBranches(uniqueBranches);
+        const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData));
+        setBranches(uniqueBranches as Branch[]);
       } catch (error) {
         console.error("載入資料失敗:", error);
         setMessage({ type: "error", text: "載入資料失敗，已展示範例內容" });

@@ -314,15 +314,14 @@ export default function AdminOrdersPage() {
         newAmount
       });
       
+      // 重新獲取訂單列表和統計
+      await fetchOrders();
+      await fetchSummary();
+      
       // 重新獲取訂單詳情
       if (selectedOrder) {
         const updatedOrder = await getJsonWithAuth<Order>(`/admin/orders/${selectedOrder.id}`);
         setSelectedOrder(updatedOrder);
-        
-        // 更新訂單列表中的對應訂單
-        setOrders(orders.map(order => 
-          order.id === selectedOrder.id ? updatedOrder : order
-        ));
       }
       
       setSuccessMessage('分期金額調整成功');
@@ -335,6 +334,8 @@ export default function AdminOrdersPage() {
       const apiErr = err as ApiError;
       setError(apiErr.message || "調整分期金額失敗");
       setSuccessMessage(null);
+      // 拋出錯誤讓 InstallmentManager 可以捕獲
+      throw err;
     }
   };
 

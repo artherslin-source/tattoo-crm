@@ -95,7 +95,7 @@ export class AdminController {
         }
       });
 
-      // 獲取總營收（所有已完成的訂單）
+      // 獲取總營收：一次付清訂單的 finalAmount + 分期訂單中已付款的分期金額
       const paidStatuses: OrderStatus[] = [
         'PAID',
         'PAID_COMPLETE',
@@ -104,33 +104,58 @@ export class AdminController {
         'COMPLETED'
       ];
 
-      const totalRevenue = await this.prisma.order.aggregate({
+      // 1. 計算一次付清且已付款的訂單
+      const oneTimeRevenue = await this.prisma.order.aggregate({
         where: {
           ...whereCondition,
+          paymentType: 'ONE_TIME',
           status: { in: paidStatuses }
         },
-        _sum: {
-          finalAmount: true
-        }
+        _sum: { finalAmount: true }
       });
+
+      // 2. 計算分期訂單中已付款的分期金額
+      const installmentRevenue = await this.prisma.installment.aggregate({
+        where: {
+          status: 'PAID',
+          order: whereCondition
+        },
+        _sum: { amount: true }
+      });
+
+      const totalRevenueAmount = 
+        Number(oneTimeRevenue._sum.finalAmount || 0) + 
+        Number(installmentRevenue._sum.amount || 0);
 
       // 獲取本月營收
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const monthlyRevenue = await this.prisma.order.aggregate({
+      // 1. 計算本月一次付清且已付款的訂單
+      const monthlyOneTimeRevenue = await this.prisma.order.aggregate({
         where: {
           ...whereCondition,
+          paymentType: 'ONE_TIME',
           status: { in: paidStatuses },
-          createdAt: {
-            gte: startOfMonth
-          }
+          createdAt: { gte: startOfMonth }
         },
-        _sum: {
-          finalAmount: true
-        }
+        _sum: { finalAmount: true }
       });
+
+      // 2. 計算本月分期訂單中已付款的分期金額
+      const monthlyInstallmentRevenue = await this.prisma.installment.aggregate({
+        where: {
+          status: 'PAID',
+          paidAt: { gte: startOfMonth },
+          order: whereCondition
+        },
+        _sum: { amount: true }
+      });
+
+      const monthlyRevenueAmount = 
+        Number(monthlyOneTimeRevenue._sum.finalAmount || 0) + 
+        Number(monthlyInstallmentRevenue._sum.amount || 0);
 
       return {
         users: { 
@@ -148,8 +173,8 @@ export class AdminController {
           today: todayAppointments
         },
         revenue: {
-          total: totalRevenue._sum.finalAmount || 0,
-          monthly: monthlyRevenue._sum.finalAmount || 0
+          total: totalRevenueAmount,
+          monthly: monthlyRevenueAmount
         }
       };
     } catch (error) {
