@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { postJsonWithAuth, getJsonWithAuth, ApiError, getAccessToken } from "@/lib/api";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 
 interface Service {
   id: string;
@@ -115,7 +116,8 @@ export default function AppointmentForm({
 
         setServices(servicesData);
         setArtists(artistsData);
-        setBranches(branchesData);
+        const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData));
+        setBranches(uniqueBranches);
       } catch (err) {
         console.error('Failed to fetch data:', err);
         setError("載入數據失敗");

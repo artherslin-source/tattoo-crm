@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -118,11 +119,12 @@ export default function AdminAppointmentsPage() {
         getJsonWithAuth('/admin/artists') as Promise<Array<Record<string, unknown>>>,
         getJsonWithAuth('/branches') as Promise<Array<Record<string, unknown>>>,
       ]);
-      
+
       setUsers(usersData);
       setServices(servicesData);
       setArtists(artistsData);
-      setBranches(branchesData);
+      const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData));
+      setBranches(uniqueBranches);
     } catch (err) {
       console.error('載入選項資料失敗:', err);
     }

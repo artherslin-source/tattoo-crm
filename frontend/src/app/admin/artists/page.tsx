@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCheck, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
@@ -82,7 +83,8 @@ export default function AdminArtistsPage() {
   const fetchBranches = async () => {
     try {
       const data = await getJsonWithAuth<Branch[]>('/admin/artists/branches');
-      setBranches(data);
+      const uniqueBranches = sortBranchesByName(getUniqueBranches(data));
+      setBranches(uniqueBranches);
     } catch (err) {
       const apiErr = err as ApiError;
       console.error('載入分店資料失敗:', apiErr.message);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getJsonWithAuth, getUserRole, getUserBranchId } from "@/lib/api";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 
 interface Branch {
   id: string;
@@ -29,7 +30,8 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
     async function fetchBranches() {
       try {
         const data = await getJsonWithAuth<Branch[]>('/branches');
-        setBranches(data);
+        const uniqueBranches = sortBranchesByName(getUniqueBranches(data));
+        setBranches(uniqueBranches);
         
         // 如果沒有選中的分店，且用戶有分店 ID，自動選擇
         if (!selectedBranchId) {
