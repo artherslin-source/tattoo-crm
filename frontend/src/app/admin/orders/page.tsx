@@ -746,7 +746,7 @@ export default function AdminOrdersPage() {
 
       {/* 訂單詳情模態框 */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>訂單詳情</DialogTitle>
             <DialogDescription>
@@ -865,7 +865,7 @@ export default function AdminOrdersPage() {
 
       {/* 創建訂單模態框 */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>創建新訂單</DialogTitle>
             <DialogDescription>

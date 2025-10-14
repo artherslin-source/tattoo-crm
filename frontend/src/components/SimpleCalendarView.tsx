@@ -472,7 +472,7 @@ export default function SimpleCalendarView({
 
       {/* 預約詳情對話框 */}
       <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-full sm:max-w-xl md:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />

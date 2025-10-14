@@ -513,7 +513,7 @@ export default function ArtistAppointments() {
 
       {/* 完成服務確認框 */}
       <Dialog open={confirmDialog.isOpen} onOpenChange={handleCancelComplete}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-full sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />

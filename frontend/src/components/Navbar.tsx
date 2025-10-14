@@ -55,7 +55,7 @@ export default function Navbar() {
   return (
     <header className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex flex-col gap-3 py-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-0">
           <div className="flex items-center">
             <button
               onClick={() => router.push('/home')}
@@ -65,7 +65,7 @@ export default function Navbar() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-4">
             {/* 預約按鈕 - 所有人都可以看到 */}
             <button
               onClick={handleReservationClick}
