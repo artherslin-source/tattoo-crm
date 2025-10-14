@@ -6,7 +6,28 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// 智能檢測 API URL
+function getApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('railway.app')) {
+      // Railway 部署：嘗試後端服務 URL
+      return `https://${hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`;
+    } else {
+      // 其他生產環境
+      return window.location.origin.replace(/:\d+$/, ':4000');
+    }
+  }
+  
+  // 開發環境
+  return "http://localhost:4000";
+}
+
+const API_BASE = getApiBase();
 
 function readFromLocalStorage(key: string) {
   try {

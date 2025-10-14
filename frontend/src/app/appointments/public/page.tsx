@@ -51,7 +51,13 @@ export default function PublicAppointmentPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        // 使用統一的 API URL 檢測邏輯
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 
+          (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+            ? (window.location.hostname.includes('railway.app') 
+                ? `https://${window.location.hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`
+                : window.location.origin.replace(/:\d+$/, ':4000'))
+            : 'http://localhost:4000');
         const [servicesRes, artistsRes] = await Promise.all([
           fetch(`${apiBase}/services`),
           fetch(`${apiBase}/artists`)

@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { postJSON, getAccessToken, getApiBase } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import type { Branch as BranchType } from "@/types/branch";
+import { debugApiUrls, findWorkingApiUrl } from "@/lib/api-debug";
 import { CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
 
 interface Service {
@@ -199,7 +200,31 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        // 調試 API URLs
+        debugApiUrls();
+        
+        // 自動檢測 API URL
+        let apiBase = process.env.NEXT_PUBLIC_API_URL;
+        if (!apiBase) {
+          // 嘗試找到可用的 API URL
+          const workingUrl = await findWorkingApiUrl();
+          if (workingUrl) {
+            apiBase = workingUrl;
+          } else {
+            // 回退到預設邏輯
+            if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+              const hostname = window.location.hostname;
+              if (hostname.includes('railway.app')) {
+                apiBase = `https://${hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`;
+              } else {
+                apiBase = window.location.origin.replace(/:\d+$/, ':4000');
+              }
+            } else {
+              apiBase = "http://localhost:4000";
+            }
+          }
+        }
+        console.log("使用 API Base URL:", apiBase);
         const [servicesRes, artistsRes, branchesRes] = await Promise.all([
           fetch(`${apiBase}/services`),
           fetch(`${apiBase}/artists`),
