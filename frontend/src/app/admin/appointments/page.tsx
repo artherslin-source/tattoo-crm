@@ -123,7 +123,7 @@ export default function AdminAppointmentsPage() {
       setUsers(usersData);
       setServices(servicesData);
       setArtists(artistsData);
-      const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData));
+      const uniqueBranches = sortBranchesByName(getUniqueBranches<any>(branchesData));
       setBranches(uniqueBranches);
     } catch (err) {
       console.error('載入選項資料失敗:', err);

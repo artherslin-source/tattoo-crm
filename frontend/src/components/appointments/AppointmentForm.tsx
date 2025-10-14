@@ -117,7 +117,7 @@ export default function AppointmentForm({
 
         setServices(servicesData);
         setArtists(artistsData);
-        const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData));
+        const uniqueBranches = sortBranchesByName(getUniqueBranches<Branch>(branchesData));
         setBranches(uniqueBranches);
       } catch (err) {
         console.error('Failed to fetch data:', err);
