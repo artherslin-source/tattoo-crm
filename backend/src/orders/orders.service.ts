@@ -380,10 +380,19 @@ export class OrdersService {
         'COMPLETED'
       ];
 
+      // ✅ 待處理狀態：所有未完成的訂單（不包括已完成和已取消）
+      const pendingStatuses: OrderStatus[] = [
+        'PENDING_PAYMENT',  // 待結帳
+        'PENDING',          // 待付款
+        'INSTALLMENT_ACTIVE', // 分期中
+        'PARTIALLY_PAID',   // 部分付款
+        'PAID'              // 已付款（但還未完成服務）
+      ];
+
       const [totalCount, pendingCount, completedCount, cancelledCount, totalRevenue] =
         await this.prisma.$transaction([
           this.prisma.order.count({ where }),
-          this.prisma.order.count({ where: { ...where, status: 'PENDING' } }),
+          this.prisma.order.count({ where: { ...where, status: { in: pendingStatuses } } }), // ✅ 改為計算所有待處理的訂單
           this.prisma.order.count({ where: { ...where, status: 'COMPLETED' } }),
           this.prisma.order.count({ where: { ...where, status: 'CANCELLED' } }),
           this.prisma.order.aggregate({

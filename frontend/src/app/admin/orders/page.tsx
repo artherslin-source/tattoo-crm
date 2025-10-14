@@ -232,6 +232,9 @@ export default function AdminOrdersPage() {
         o.id === order.id ? { ...o, status: newStatus as Order['status'] } : o
       ));
       
+      // ✅ 重新抓取統計資料以更新數字
+      await fetchSummary();
+      
       // 顯示成功訊息
       const statusText = getStatusText(newStatus);
       setSuccessMessage(`訂單狀態已更新為：${statusText}`);
