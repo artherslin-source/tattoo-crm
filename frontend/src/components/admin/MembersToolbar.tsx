@@ -277,7 +277,7 @@ export default function MembersToolbar({
 
         {/* 篩選抽屜 */}
         <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="max-w-full sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 篩選條件

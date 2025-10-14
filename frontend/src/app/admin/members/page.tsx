@@ -906,7 +906,7 @@ export default function AdminMembersPage() {
 
           {/* Create Member Modal */}
           <Dialog open={createMemberModal.isOpen} onOpenChange={handleCloseCreateMemberModal}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="max-w-full sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>新增會員</DialogTitle>
                 <DialogDescription>

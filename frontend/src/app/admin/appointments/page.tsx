@@ -510,7 +510,7 @@ export default function AdminAppointmentsPage() {
 
       {/* Create Appointment Modal */}
       <Dialog open={createAppointmentModal.isOpen} onOpenChange={handleCloseCreateAppointmentModal}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>新增預約</DialogTitle>
           </DialogHeader>
@@ -529,7 +529,7 @@ export default function AdminAppointmentsPage() {
 
       {/* Appointment Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-full sm:max-w-md">
           <DialogHeader>
             <DialogTitle>預約詳情</DialogTitle>
           </DialogHeader>
