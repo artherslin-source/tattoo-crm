@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getJsonWithAuth, getUserRole, getUserBranchId } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Branch {
   id: string;
@@ -95,27 +96,26 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
   const userRole = getUserRole();
 
   return (
-    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2 relative z-50">
-      <label htmlFor="branch-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
         分店：
       </label>
-      <select
-        id="branch-select"
-        value={selectedBranchId || ''}
-        onChange={(e) => onBranchChange(e.target.value)}
-        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:py-1.5"
-        style={{ position: 'relative' }}
-      >
-        <option value="">選擇分店</option>
-        {userRole === 'BOSS' && (
-          <option value="all">全部分店</option>
-        )}
-        {branches.map((branch) => (
-          <option key={branch.id} value={branch.id}>
-            {branch.name} ({branch._count.users} 用戶, {branch._count.appointments} 預約)
-          </option>
-        ))}
-      </select>
+      <Select value={selectedBranchId || ''} onValueChange={onBranchChange}>
+        <SelectTrigger className="w-full sm:w-[280px] bg-white dark:bg-gray-800">
+          <SelectValue placeholder="選擇分店" />
+        </SelectTrigger>
+        <SelectContent className="bg-white dark:bg-gray-800">
+          <SelectItem value="">選擇分店</SelectItem>
+          {userRole === 'BOSS' && (
+            <SelectItem value="all">全部分店</SelectItem>
+          )}
+          {branches.map((branch) => (
+            <SelectItem key={branch.id} value={branch.id}>
+              {branch.name} ({branch._count.users} 用戶, {branch._count.appointments} 預約)
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
