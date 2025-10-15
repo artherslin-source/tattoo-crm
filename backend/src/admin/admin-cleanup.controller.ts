@@ -137,7 +137,7 @@ export class AdminCleanupController {
       };
     }
 
-    console.log('🗑️ 強制清理：刪除所有無數據的分店...');
+    console.log('🗑️ 強制清理：使用原始 SQL 刪除所有無數據的分店...');
 
     // 獲取所有分店
     const branches = await this.prisma.branch.findMany({
@@ -165,17 +165,19 @@ export class AdminCleanupController {
 
     console.log(`   找到 ${toDelete.length} 個無數據的分店`);
 
-    // 刪除
+    // 使用原始 SQL 強制刪除
     const deleted: string[] = [];
+    const failed: Array<{ id: string; error: string }> = [];
+    
     for (const branch of toDelete) {
       try {
-        await this.prisma.branch.delete({
-          where: { id: branch.id },
-        });
+        // 使用原始 SQL，繞過 Prisma 的檢查
+        await this.prisma.$executeRaw`DELETE FROM "Branch" WHERE id = ${branch.id}`;
         deleted.push(branch.id);
         console.log(`   ✅ 已刪除: ${branch.name} (${branch.id})`);
       } catch (error: any) {
         console.error(`   ❌ 刪除失敗: ${branch.name} (${branch.id})`, error.message);
+        failed.push({ id: branch.id, error: error.message });
       }
     }
 
@@ -195,9 +197,11 @@ export class AdminCleanupController {
     });
 
     return {
-      success: true,
+      success: deleted.length > 0,
       deleted: deleted.length,
       deletedIds: deleted,
+      failed: failed.length,
+      failedDetails: failed,
       remaining: finalBranches.length,
       branches: finalBranches.map((b) => ({
         id: b.id,
