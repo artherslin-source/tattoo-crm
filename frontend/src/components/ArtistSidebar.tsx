@@ -78,14 +78,14 @@ export default function ArtistSidebar() {
         <div className="fixed inset-0 z-50 lg:hidden">
           {/* 背景遮罩：黑色、透明度90% */}
           <div 
-            className="fixed inset-0 bg-black bg-opacity-90 transition-opacity duration-300 ease-in-out"
+            className="fixed inset-0 bg-black bg-opacity-90 transition-opacity duration-[900ms] ease-in-out"
             onClick={() => setSidebarOpen(false)}
           />
 
           {/* 側邊選單：從左側滑入、寬度佔螢幕的2/3、全屏高、純白色、右側陰影 */}
           <div 
             className={cn(
-              "fixed inset-y-0 left-0 w-2/3 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out",
+              "fixed inset-y-0 left-0 w-2/3 bg-white shadow-2xl transform transition-transform duration-[900ms] ease-in-out",
               sidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}
           >
