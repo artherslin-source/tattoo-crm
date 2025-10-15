@@ -1,11 +1,11 @@
 import { Controller, Post, Get, UseGuards, Query } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('admin/cleanup')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('BOSS')
 export class AdminCleanupController {
   constructor(private prisma: PrismaService) {}
