@@ -256,15 +256,14 @@ export default function AdminOrdersPage() {
     try {
       await postJsonWithAuth(`/installments/${installmentId}/payment`, paymentData);
       
+      // ✅ 重新獲取訂單列表和統計數據
+      await fetchOrders();
+      await fetchSummary();
+      
       // 重新獲取訂單詳情
       if (selectedOrder) {
         const updatedOrder = await getJsonWithAuth<Order>(`/admin/orders/${selectedOrder.id}`);
         setSelectedOrder(updatedOrder);
-        
-        // 更新訂單列表中的對應訂單
-        setOrders(orders.map(order => 
-          order.id === selectedOrder.id ? updatedOrder : order
-        ));
       }
       
       setSuccessMessage('付款記錄成功');

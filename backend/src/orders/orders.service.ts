@@ -389,32 +389,54 @@ export class OrdersService {
         'PAID'              // 已付款（但還未完成服務）
       ];
 
-      const [totalCount, pendingCount, completedCount, cancelledCount, totalRevenue] =
+      const [totalCount, pendingCount, completedCount, cancelledCount] =
         await this.prisma.$transaction([
           this.prisma.order.count({ where }),
-          this.prisma.order.count({ where: { ...where, status: { in: pendingStatuses } } }), // ✅ 改為計算所有待處理的訂單
+          this.prisma.order.count({ where: { ...where, status: { in: pendingStatuses } } }),
           this.prisma.order.count({ where: { ...where, status: 'COMPLETED' } }),
           this.prisma.order.count({ where: { ...where, status: 'CANCELLED' } }),
-          this.prisma.order.aggregate({
-            where: { ...where, status: { in: paidStatuses } },
-            _sum: { finalAmount: true },
-          }),
         ]);
 
-        console.log('🔍 Summary results:', {
-          totalCount,
-          pendingCount,
-          completedCount,
-          cancelledCount,
-          totalRevenue: totalRevenue._sum.finalAmount
-        });
+      // ✅ 修正：計算總營收 = 一次付清訂單的 finalAmount + 分期訂單中已付款的分期金額
+      // 1. 計算一次付清且已付款的訂單
+      const oneTimeRevenue = await this.prisma.order.aggregate({
+        where: {
+          ...where,
+          paymentType: 'ONE_TIME',
+          status: { in: paidStatuses }
+        },
+        _sum: { finalAmount: true }
+      });
+
+      // 2. 計算分期訂單中已付款的分期金額
+      const installmentRevenue = await this.prisma.installment.aggregate({
+        where: {
+          status: 'PAID',
+          order: where
+        },
+        _sum: { amount: true }
+      });
+
+      const totalRevenueAmount = 
+        Number(oneTimeRevenue._sum.finalAmount || 0) + 
+        Number(installmentRevenue._sum.amount || 0);
+
+      console.log('🔍 Summary results:', {
+        totalCount,
+        pendingCount,
+        completedCount,
+        cancelledCount,
+        oneTimeRevenue: oneTimeRevenue._sum.finalAmount,
+        installmentRevenue: installmentRevenue._sum.amount,
+        totalRevenue: totalRevenueAmount
+      });
 
       return {
         totalCount,
         pendingCount,
         completedCount,
         cancelledCount,
-        totalRevenue: Number(totalRevenue._sum.finalAmount || 0), // Decimal 轉 number
+        totalRevenue: totalRevenueAmount,
       };
     } catch (error) {
       console.error('❌ Error in getOrdersSummary:', error);
