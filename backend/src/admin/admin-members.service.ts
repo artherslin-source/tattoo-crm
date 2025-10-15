@@ -382,25 +382,48 @@ export class AdminMembersService {
   }
 
   async topupUser(memberId: string, amount: number, operatorId: string) {
-    // 如果沒有 operatorId，使用預設的管理員 ID
-    const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
-    
-    return this.prisma.$transaction(async (tx) => {
-      const member = await tx.member.update({
-        where: { id: memberId },
-        data: { balance: { increment: amount } },
-      });
+    try {
+      console.log('💰 topupUser called with:', { memberId, amount, operatorId });
+      
+      // 如果沒有 operatorId，使用預設的管理員 ID
+      const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
+      
+      return await this.prisma.$transaction(async (tx) => {
+        // 先檢查會員是否存在
+        const existingMember = await tx.member.findUnique({
+          where: { id: memberId },
+        });
 
-      await tx.topupHistory.create({
-        data: {
-          memberId,
-          operatorId: finalOperatorId,
-          amount,
-        },
-      });
+        if (!existingMember) {
+          throw new NotFoundException(`會員不存在: ${memberId}`);
+        }
 
-      return member;
-    });
+        console.log('💰 Found member:', existingMember);
+
+        const member = await tx.member.update({
+          where: { id: memberId },
+          data: { balance: { increment: amount } },
+        });
+
+        console.log('💰 Updated member balance:', member);
+
+        await tx.topupHistory.create({
+          data: {
+            memberId,
+            operatorId: finalOperatorId,
+            amount,
+            type: 'TOPUP',
+          },
+        });
+
+        console.log('💰 Created topup history');
+
+        return member;
+      });
+    } catch (error) {
+      console.error('💰 topupUser error:', error);
+      throw error;
+    }
   }
 
   async getTopupHistory(id: string) {
@@ -423,47 +446,60 @@ export class AdminMembersService {
   }
 
   async spend(memberId: string, amount: number, operatorId: string) {
-    if (amount <= 0) {
-      throw new BadRequestException('消費金額必須大於 0');
+    try {
+      console.log('💸 spend called with:', { memberId, amount, operatorId });
+      
+      if (amount <= 0) {
+        throw new BadRequestException('消費金額必須大於 0');
+      }
+
+      // 如果沒有 operatorId，使用預設的管理員 ID
+      const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
+
+      return await this.prisma.$transaction(async (tx) => {
+        // 檢查會員餘額是否足夠
+        const member = await tx.member.findUnique({
+          where: { id: memberId },
+        });
+
+        if (!member) {
+          throw new NotFoundException(`會員不存在: ${memberId}`);
+        }
+
+        console.log('💸 Found member:', member);
+
+        if (member.balance < amount) {
+          throw new BadRequestException(`餘額不足，無法完成消費。當前餘額: ${member.balance}, 消費金額: ${amount}`);
+        }
+
+        // 扣減餘額
+        const updatedMember = await tx.member.update({
+          where: { id: memberId },
+          data: { 
+            balance: { decrement: amount },
+            totalSpent: { increment: amount }  // 同時增加累計消費
+          },
+        });
+
+        console.log('💸 Updated member after spend:', updatedMember);
+
+        // 記錄消費歷史
+        await tx.topupHistory.create({
+          data: {
+            memberId,
+            operatorId: finalOperatorId,
+            amount,
+            type: 'SPEND',
+          },
+        });
+
+        console.log('💸 Created spend history');
+
+        return updatedMember;
+      });
+    } catch (error) {
+      console.error('💸 spend error:', error);
+      throw error;
     }
-
-    // 如果沒有 operatorId，使用預設的管理員 ID
-    const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
-
-    return this.prisma.$transaction(async (tx) => {
-      // 檢查會員餘額是否足夠
-      const member = await tx.member.findUnique({
-        where: { id: memberId },
-      });
-
-      if (!member) {
-        throw new NotFoundException('會員不存在');
-      }
-
-      if (member.balance < amount) {
-        throw new BadRequestException('餘額不足，無法完成消費');
-      }
-
-      // 扣減餘額
-      const updatedMember = await tx.member.update({
-        where: { id: memberId },
-        data: { 
-          balance: { decrement: amount },
-          totalSpent: { increment: amount }  // 同時增加累計消費
-        },
-      });
-
-      // 記錄消費歷史
-      await tx.topupHistory.create({
-        data: {
-          memberId,
-          operatorId: finalOperatorId,
-          amount,
-          type: 'SPEND',
-        },
-      });
-
-      return updatedMember;
-    });
   }
 }
