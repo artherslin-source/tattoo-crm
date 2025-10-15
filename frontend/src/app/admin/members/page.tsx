@@ -130,15 +130,6 @@ export default function AdminMembersPage() {
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupHistory, setTopupHistory] = useState<TopupHistory[]>([]);
 
-  // Debug: 監控 topUpModal 和 spendModal 狀態變化
-  useEffect(() => {
-    console.log('🔵 topUpModal state changed:', topUpModal);
-  }, [topUpModal]);
-
-  useEffect(() => {
-    console.log('🔴 spendModal state changed:', spendModal);
-  }, [spendModal]);
-
   useEffect(() => {
     const userRole = getUserRole();
     const token = getAccessToken();
@@ -385,13 +376,11 @@ export default function AdminMembersPage() {
 
   // 財務相關處理函數
   const handleOpenTopUpModal = (member: Member) => {
-    console.log('🔵 handleOpenTopUpModal called with member:', member);
     setTopUpModal({
       isOpen: true,
       member,
       amount: '',
     });
-    console.log('🔵 topUpModal state should be updated');
   };
 
   const handleCloseTopUpModal = () => {
@@ -485,13 +474,11 @@ export default function AdminMembersPage() {
 
   // 消費相關處理函數
   const handleOpenSpendModal = (member: Member) => {
-    console.log('🔴 handleOpenSpendModal called with member:', member);
     setSpendModal({
       isOpen: true,
       member,
       amount: '',
     });
-    console.log('🔴 spendModal state should be updated');
   };
 
   const handleCloseSpendModal = () => {
