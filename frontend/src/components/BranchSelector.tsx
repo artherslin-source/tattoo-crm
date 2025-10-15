@@ -78,7 +78,7 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
   }
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
       <label htmlFor="branch-select" className="text-sm font-medium text-gray-700">
         分店：
       </label>
@@ -86,7 +86,7 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
         id="branch-select"
         value={selectedBranchId || ''}
         onChange={(e) => onBranchChange(e.target.value)}
-        className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:py-1.5"
       >
         <option value="">選擇分店</option>
         {branches.map((branch) => (
