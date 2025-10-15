@@ -8,20 +8,22 @@ export class AdminMembersService {
     console.log('🏗️ AdminMembersService constructor called');
   }
 
-  async findAll(filters?: { 
-    search?: string; 
-    role?: string; 
+  async findAll(filters?: {
+    search?: string;
+    role?: string;
     status?: string;
     branchId?: string;
     membershipLevel?: string;
     sortField?: string;
     sortOrder?: 'asc' | 'desc';
+    page?: number;
+    pageSize?: number;
   }) {
     try {
       // 建立篩選條件
       const where: any = {};
       const userWhere: any = {};
-      
+
       // 搜尋條件
       if (filters?.search) {
         where.OR = [
@@ -103,9 +105,18 @@ export class AdminMembersService {
 
       console.log('🔍 Final orderBy:', JSON.stringify(orderBy, null, 2));
 
-      const members = await this.prisma.member.findMany({
+      const rawPage = filters?.page ?? 1;
+      const rawPageSize = filters?.pageSize ?? 10;
+      const pageSize = Math.min(Math.max(Number(rawPageSize) || 10, 1), 100);
+
+      const totalMembers = await this.prisma.member.count({ where });
+      const totalPages = Math.max(1, Math.ceil(totalMembers / pageSize));
+      const page = Math.min(Math.max(Number(rawPage) || 1, 1), totalPages);
+      const skip = (page - 1) * pageSize;
+
+      const membersPromise = this.prisma.member.findMany({
         where,
-        include: { 
+        include: {
           user: {
             include: {
               branch: {
@@ -118,9 +129,67 @@ export class AdminMembersService {
           }
         },
         orderBy,
+        skip,
+        take: pageSize,
       });
-      console.log('DEBUG members:', JSON.stringify(members, null, 2));
-      return members;
+
+      const userFiltersWithoutRole = { ...(where.user ?? {}) };
+      delete userFiltersWithoutRole.role;
+
+      let adminCountPromise: Promise<number> | null = null;
+      let regularMemberCountPromise: Promise<number> | null = null;
+
+      if (!filters?.role || filters.role === 'all') {
+        adminCountPromise = this.prisma.member.count({
+          where: {
+            ...where,
+            user: {
+              ...userFiltersWithoutRole,
+              role: 'ADMIN',
+            },
+          },
+        });
+
+        regularMemberCountPromise = this.prisma.member.count({
+          where: {
+            ...where,
+            user: {
+              ...userFiltersWithoutRole,
+              role: 'MEMBER',
+            },
+          },
+        });
+      }
+
+      const members = await membersPromise;
+
+      let adminCount = 0;
+      let regularMemberCount = 0;
+
+      if (filters?.role === 'ADMIN') {
+        adminCount = totalMembers;
+      } else if (filters?.role === 'MEMBER') {
+        regularMemberCount = totalMembers;
+      } else {
+        [adminCount, regularMemberCount] = await Promise.all([
+          adminCountPromise ?? Promise.resolve(0),
+          regularMemberCountPromise ?? Promise.resolve(0),
+        ]);
+      }
+
+      console.log('DEBUG members (paginated):', JSON.stringify({ page, pageSize, totalMembers, items: members.length }, null, 2));
+
+      return {
+        data: members,
+        total: totalMembers,
+        page,
+        pageSize,
+        stats: {
+          totalMembers,
+          adminCount,
+          memberCount: regularMemberCount,
+        }
+      };
     } catch (error) {
       console.error('ERROR in findAll members:', error);
       throw error;

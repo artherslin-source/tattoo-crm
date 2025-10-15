@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
@@ -44,6 +44,18 @@ interface TopupHistory {
   };
 }
 
+interface MembersResponse {
+  data: Member[];
+  total: number;
+  page: number;
+  pageSize: number;
+  stats?: {
+    totalMembers: number;
+    adminCount: number;
+    memberCount: number;
+  };
+}
+
 export default function AdminMembersPage() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
@@ -62,6 +74,11 @@ export default function AdminMembersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    adminCount: 0,
+    memberCount: 0,
+  });
 
   // 分店資料狀態
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -129,20 +146,22 @@ export default function AdminMembersPage() {
 
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupHistory, setTopupHistory] = useState<TopupHistory[]>([]);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const manualFetchRef = useRef(false);
 
   useEffect(() => {
     const userRole = getUserRole();
     const token = getAccessToken();
-    
+
     if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
       router.replace('/profile');
       return;
     }
 
-    fetchMembers();
+    setIsAuthorized(true);
   }, [router]);
 
-  const fetchMembers = useCallback(async () => {
+  const fetchMembers = useCallback(async (page: number, pageSize: number) => {
     try {
       setLoading(true);
       // 使用 admin/members API，包含排序和篩選參數
@@ -153,12 +172,20 @@ export default function AdminMembersPage() {
       if (branchId && branchId !== 'all') params.append('branchId', branchId);
       if (role && role !== 'all') params.append('role', role);
       if (membershipLevel && membershipLevel !== 'all') params.append('membershipLevel', membershipLevel);
-      
+      params.append('page', page.toString());
+      params.append('pageSize', pageSize.toString());
+
       const url = `/admin/members${params.toString() ? `?${params.toString()}` : ''}`;
-      const data = await getJsonWithAuth<Member[]>(url);
-      setMembers(data);
-      setTotalItems(data.length);
-      setCurrentPage(1); // 重置到第一頁
+      const data = await getJsonWithAuth<MembersResponse>(url);
+      setMembers(data.data);
+      setTotalItems(data.total);
+      setCurrentPage(data.page);
+      setItemsPerPage(data.pageSize);
+      setStats({
+        totalMembers: data.stats?.totalMembers ?? data.total,
+        adminCount: data.stats?.adminCount ?? 0,
+        memberCount: data.stats?.memberCount ?? 0,
+      });
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "載入會員資料失敗");
@@ -166,6 +193,17 @@ export default function AdminMembersPage() {
       setLoading(false);
     }
   }, [sortField, sortOrder, search, branchId, role, membershipLevel]);
+
+  useEffect(() => {
+    if (!isAuthorized) {
+      return;
+    }
+    if (manualFetchRef.current) {
+      manualFetchRef.current = false;
+      return;
+    }
+    fetchMembers(currentPage, itemsPerPage);
+  }, [fetchMembers, isAuthorized, currentPage, itemsPerPage]);
 
   // 獲取分店資料
   const fetchBranches = useCallback(async () => {
@@ -193,30 +231,22 @@ export default function AdminMembersPage() {
     fetchBranches();
   }, [fetchBranches]);
 
-  // 當排序參數改變時重新載入資料
-  useEffect(() => {
-    if (sortField && sortOrder) {
-      fetchMembers();
-    }
-  }, [sortField, sortOrder, fetchMembers]);
-
   // 排序處理函數
   const handleSortFieldChange = (field: string) => {
     setSortField(field);
+    setCurrentPage(1);
   };
 
   const handleSortOrderToggle = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    setCurrentPage(1);
   };
 
   // 分頁計算函數
-  const getPaginatedMembers = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return members.slice(startIndex, endIndex);
-  };
-
   const getTotalPages = () => {
+    if (totalItems === 0) {
+      return 1;
+    }
     return Math.ceil(totalItems / itemsPerPage);
   };
 
@@ -225,31 +255,31 @@ export default function AdminMembersPage() {
   };
 
   const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(parseInt(value));
+    const parsed = parseInt(value, 10);
+    setItemsPerPage(Number.isNaN(parsed) ? 10 : parsed);
     setCurrentPage(1); // 重置到第一頁
   };
 
   // 篩選處理函數
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setCurrentPage(1);
   };
 
   const handleBranchChange = (value: string) => {
     setBranchId(value);
+    setCurrentPage(1);
   };
 
   const handleRoleChange = (value: string) => {
     setRole(value);
+    setCurrentPage(1);
   };
 
   const handleMembershipLevelChange = (value: string) => {
     setMembershipLevel(value);
+    setCurrentPage(1);
   };
-
-  // 當 members 改變時，重新計算總項目數
-  useEffect(() => {
-    setTotalItems(members.length);
-  }, [members]);
 
   const handleDeleteMember = async (memberId: string) => {
     if (!confirm('確定要刪除這個會員嗎？此操作無法復原。')) {
@@ -258,7 +288,8 @@ export default function AdminMembersPage() {
 
     try {
       await deleteJsonWithAuth(`/admin/members/${memberId}`);
-      setMembers(members.filter(member => member.id !== memberId));
+      manualFetchRef.current = true;
+      await fetchMembers(currentPage, itemsPerPage);
       setError(null);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -314,16 +345,21 @@ export default function AdminMembersPage() {
         return;
       }
 
-      const newMember = await postJsonWithAuth('/admin/members', {
+      await postJsonWithAuth('/admin/members', {
         name,
         email,
         password,
         phone,
         branchId,
         role,
-      }) as Member;
+      });
 
-      setMembers([newMember, ...members]);
+      if (currentPage === 1) {
+        manualFetchRef.current = true;
+        await fetchMembers(1, itemsPerPage);
+      } else {
+        setCurrentPage(1);
+      }
       setError(null);
       handleCloseCreateMemberModal();
     } catch (err) {
@@ -407,10 +443,11 @@ export default function AdminMembersPage() {
       await patchJsonWithAuth(`/admin/members/${topUpModal.member.id}/topup`, {
         amount: amount,
       });
-      
+
       setError(null);
       handleCloseTopUpModal();
-      fetchMembers(); // 重新載入會員資料
+      manualFetchRef.current = true;
+      await fetchMembers(currentPage, itemsPerPage); // 重新載入會員資料
       alert('儲值成功！');
     } catch (err) {
       const apiErr = err as ApiError;
@@ -450,10 +487,11 @@ export default function AdminMembersPage() {
       await patchJsonWithAuth(`/users/${adjustBalanceModal.member.user.id}/balance`, {
         amount: amount,
       });
-      
+
       setError(null);
       handleCloseAdjustBalanceModal();
-      fetchMembers(); // 重新載入會員資料
+      manualFetchRef.current = true;
+      await fetchMembers(currentPage, itemsPerPage); // 重新載入會員資料
       alert('餘額調整成功！');
     } catch (err) {
       const apiErr = err as ApiError;
@@ -510,10 +548,11 @@ export default function AdminMembersPage() {
       await postJsonWithAuth(`/admin/members/${spendModal.member.id}/spend`, {
         amount: amount,
       });
-      
+
       setError(null);
       handleCloseSpendModal();
-      fetchMembers(); // 重新載入會員資料
+      manualFetchRef.current = true;
+      await fetchMembers(currentPage, itemsPerPage); // 重新載入會員資料
       alert('消費成功！');
     } catch (err) {
       const apiErr = err as ApiError;
@@ -587,7 +626,7 @@ export default function AdminMembersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{members.length}</div>
+            <div className="text-2xl font-bold">{stats.totalMembers}</div>
           </CardContent>
         </Card>
 
@@ -597,9 +636,7 @@ export default function AdminMembersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {members.filter(member => member.user?.role === 'ADMIN').length}
-            </div>
+            <div className="text-2xl font-bold">{stats.adminCount}</div>
           </CardContent>
         </Card>
 
@@ -609,9 +646,7 @@ export default function AdminMembersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {members.filter(member => member.user?.role === 'MEMBER').length}
-            </div>
+            <div className="text-2xl font-bold">{stats.memberCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -653,7 +688,7 @@ export default function AdminMembersPage() {
         <CardContent>
           {/* 桌機/平板表格 */}
           <MembersTable
-            members={getPaginatedMembers()}
+            members={members}
             onTopUp={handleOpenTopUpModal}
             onSpend={handleOpenSpendModal}
             onAdjustBalance={handleOpenAdjustBalanceModal}
@@ -665,7 +700,7 @@ export default function AdminMembersPage() {
 
           {/* 手機卡片 */}
           <MembersCards
-            members={getPaginatedMembers()}
+            members={members}
             onTopUp={handleOpenTopUpModal}
             onSpend={handleOpenSpendModal}
             onAdjustBalance={handleOpenAdjustBalanceModal}

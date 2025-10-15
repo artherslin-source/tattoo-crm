@@ -61,6 +61,8 @@ export class AdminMembersController {
         membershipLevel: query.membershipLevel,
         sortField: query.sortField,
         sortOrder: query.sortOrder,
+        page: query.page ? Number(query.page) : undefined,
+        pageSize: query.pageSize ? Number(query.pageSize) : undefined,
       });
     } catch (error) {
       console.error('❌ Error in AdminMembersController.findAll:', error);
