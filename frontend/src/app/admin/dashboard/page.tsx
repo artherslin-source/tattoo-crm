@@ -185,19 +185,15 @@ export default function AdminDashboardPage() {
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
       {/* Header */}
       <div className="mb-6 pb-6 lg:sticky lg:top-0 lg:z-10">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {role === 'BOSS' ? '管理後台' : '分店管理後台'}
-              </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                歡迎回到管理後台，這裡是您的控制中心
-              </p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {role === 'BOSS' ? '管理後台' : '分店管理後台'}
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            歡迎回到管理後台，這裡是您的控制中心
+          </p>
           {role === 'BOSS' && (
-            <div className="flex items-center">
+            <div className="mt-4">
               <BranchSelector
                 selectedBranchId={selectedBranchId}
                 onBranchChange={setSelectedBranchId}
