@@ -240,21 +240,16 @@ export default function InstallmentManager({
 
       {/* 分期付款列表 */}
       <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             分期付款明細
           </CardTitle>
-          {errorMessage && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-red-100 border border-red-400 text-red-700 rounded-lg animate-pulse">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">{errorMessage}</span>
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {order.installments.map((installment) => (
+            {/* ✅ 問題1修正：固定按期別排序 */}
+            {[...order.installments].sort((a, b) => a.installmentNo - b.installmentNo).map((installment) => (
               <div
                 key={installment.id}
                 className="flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
@@ -482,7 +477,42 @@ export default function InstallmentManager({
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="new-amount">新金額</Label>
+              {/* ✅ 問題3修正：錯誤訊息顯示在標題右側 */}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="new-amount">新金額</Label>
+                {errorMessage && (
+                  <div className="flex items-center gap-1 text-red-600 animate-pulse">
+                    <AlertCircle className="h-3 w-3" />
+                    <span className="text-xs font-medium">{errorMessage}</span>
+                  </div>
+                )}
+              </div>
+              {/* ✅ 問題2修正：可輸入範圍顯示在輸入欄位下方 */}
+              {selectedInstallment && (() => {
+                const paidSum = order.installments.filter(i => i.status === 'PAID').reduce((sum, i) => sum + i.amount, 0);
+                const lockedUnpaidSum = order.installments
+                  .filter(i => i.installmentNo !== selectedInstallment.installmentNo && 
+                              i.status !== 'PAID' && 
+                              i.isCustom === true)
+                  .reduce((sum, i) => sum + i.amount, 0);
+                const maxAllowed = order.finalAmount - paidSum - lockedUnpaidSum;
+                const adjustableCount = order.installments.filter(
+                  i => i.installmentNo !== selectedInstallment.installmentNo &&
+                       i.status !== 'PAID' &&
+                       i.isCustom !== true
+                ).length;
+
+                return (
+                  <div className="text-xs text-gray-500 mb-2">
+                    可輸入範圍：1 ~ {formatCurrency(maxAllowed)}
+                    {adjustableCount === 0 && (
+                      <span className="text-orange-600 font-medium ml-2">
+                        ⚠️ 必須剛好為 {formatCurrency(maxAllowed)}（無其他可調整分期）
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               <Input
                 id="new-amount"
                 type="number"
@@ -499,17 +529,6 @@ export default function InstallmentManager({
                 }}
                 min="0"
               />
-              {selectedInstallment && (
-                <div className="text-xs text-gray-500">
-                  可輸入範圍：0 ~ {formatCurrency(
-                    (order.finalAmount - order.installments.filter(i => i.status === 'PAID').reduce((sum, i) => sum + i.amount, 0)) -
-                    order.installments
-                      .filter(i => i.installmentNo !== selectedInstallment.installmentNo && 
-                                  (i.status === 'PAID' || i.isCustom === true))
-                      .reduce((sum, i) => sum + i.amount, 0)
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
