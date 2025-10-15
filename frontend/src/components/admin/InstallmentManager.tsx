@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar, CheckCircle, Clock, DollarSign, AlertCircle } from 'lucide-react';
 
 interface Installment {
@@ -255,25 +255,22 @@ export default function InstallmentManager({
         <CardContent>
           <div className="space-y-3">
             {order.installments.map((installment) => (
-              <div key={installment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
+              <div
+                key={installment.id}
+                className="flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="flex flex-col gap-3 text-sm text-gray-600 md:flex-row md:items-center md:gap-4">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                     <Badge variant="outline">第{installment.installmentNo}期</Badge>
                     {getStatusBadge(installment.status)}
                   </div>
-                  <div className="text-sm text-gray-600">
-                    到期日：{formatDate(installment.dueDate)}
-                  </div>
-                  {installment.paidAt && (
-                    <div className="text-sm text-gray-600">
-                      付款日：{formatDate(installment.paidAt)}
-                    </div>
-                  )}
+                  <div>到期日：{formatDate(installment.dueDate)}</div>
+                  {installment.paidAt && <div>付款日：{formatDate(installment.paidAt)}</div>}
                 </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-medium text-lg">
+
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+                  <div className="text-left md:text-right">
+                    <div className="text-lg font-medium">
                       {formatCurrency(installment.amount)}
                     </div>
                     {installment.paymentMethod && (
@@ -282,8 +279,8 @@ export default function InstallmentManager({
                       </div>
                     )}
                   </div>
-                  
-                  <div className="flex gap-2">
+
+                  <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:justify-end">
                     {installment.status === 'UNPAID' || installment.status === 'OVERDUE' ? (
                       <>
                         <Button
@@ -291,7 +288,7 @@ export default function InstallmentManager({
                           onClick={() => openPaymentDialog(installment)}
                           className="bg-green-600 hover:bg-green-700"
                         >
-                          <CheckCircle className="h-4 w-4 mr-1" />
+                          <CheckCircle className="mr-1 h-4 w-4" />
                           記錄付款
                         </Button>
                         {(userRole === 'BOSS' || userRole === 'BRANCH_MANAGER') && (
@@ -299,26 +296,18 @@ export default function InstallmentManager({
                             size="sm"
                             variant="outline"
                             onClick={() => openAmountEditDialog(installment)}
-                            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                            className="border-blue-600 text-blue-600 hover:bg-blue-50"
                           >
-                            <DollarSign className="h-4 w-4 mr-1" />
+                            <DollarSign className="mr-1 h-4 w-4" />
                             調整金額
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditDialog(installment)}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => openEditDialog(installment)}>
                           編輯
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEditDialog(installment)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => openEditDialog(installment)}>
                         查看詳情
                       </Button>
                     )}
