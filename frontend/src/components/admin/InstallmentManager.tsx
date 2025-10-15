@@ -464,7 +464,11 @@ export default function InstallmentManager({
                     )}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>其他固定金額：</span>
+                    <span>
+                      固定金額
+                      <span className="text-xs text-gray-500 ml-1">（已付款 + 已鎖定分期）</span>
+                      ：
+                    </span>
                     <span className="font-medium">{formatCurrency(
                       order.installments
                         .filter(i => i.installmentNo !== selectedInstallment.installmentNo && 
