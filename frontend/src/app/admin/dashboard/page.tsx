@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth } from "@/lib/api";
+import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth } from "@/lib/api";
 import BranchSelector from "@/components/BranchSelector";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Settings, MessageSquare } from "lucide-react";
@@ -31,12 +31,19 @@ export default function AdminDashboardPage() {
 
   const fetchDashboardData = useCallback(async (): Promise<DashboardStats> => {
     try {
+      // 構建查詢參數
+      const params = new URLSearchParams();
+      if (selectedBranchId && selectedBranchId !== 'all') {
+        params.append('branchId', selectedBranchId);
+      }
+      const url = `/admin/stats${params.toString() ? `?${params.toString()}` : ''}`;
+      
       const dashboardData = await getJsonWithAuth<{
         users?: { total: number };
         services?: { total: number };
         appointments?: { total: number; today: number };
         revenue?: { total: number; monthly: number };
-      }>('/admin/stats');
+      }>(url);
 
       return {
         totalUsers: dashboardData.users?.total || 0,
@@ -57,7 +64,7 @@ export default function AdminDashboardPage() {
         monthlyRevenue: 0,
       };
     }
-  }, []);
+  }, [selectedBranchId]);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -66,6 +73,18 @@ export default function AdminDashboardPage() {
     if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
       router.replace('/profile');
       return;
+    }
+
+    // 設置預設分店
+    if (!selectedBranchId) {
+      if (userRole === 'BOSS') {
+        setSelectedBranchId('all');
+      } else if (userRole === 'BRANCH_MANAGER') {
+        const userBranchId = getUserBranchId();
+        if (userBranchId) {
+          setSelectedBranchId(userBranchId);
+        }
+      }
     }
 
     let isActive = true;
@@ -99,7 +118,7 @@ export default function AdminDashboardPage() {
       isActive = false;
       clearInterval(intervalId);
     };
-  }, [router, fetchDashboardData]);
+  }, [router, fetchDashboardData, selectedBranchId]);
 
   // 當選擇的分店改變時，重新載入數據
   useEffect(() => {

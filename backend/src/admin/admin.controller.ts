@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -24,16 +24,22 @@ export class AdminController {
   }
 
   @Get('stats')
-  async getStats(@Req() req: any) {
+  async getStats(@Req() req: any, @Query('branchId') queryBranchId?: string) {
     try {
       const userRole = req.user.role;
       const userBranchId = req.user.branchId;
 
       // 構建 where 條件
       const whereCondition: any = {};
-      if (userRole !== 'BOSS') {
+      
+      // 優先使用查詢參數中的 branchId（僅 BOSS 可以使用）
+      if (userRole === 'BOSS' && queryBranchId && queryBranchId !== 'all') {
+        whereCondition.branchId = queryBranchId;
+      } else if (userRole !== 'BOSS') {
+        // BRANCH_MANAGER 使用自己的 branchId
         whereCondition.branchId = userBranchId;
       }
+      // 如果是 BOSS 且 queryBranchId 為 'all' 或未提供，則不過濾分店
 
       // 獲取用戶統計
       const [totalUsers, activeUsers] = await Promise.all([
