@@ -6,6 +6,7 @@ import { AdminArtistsController } from './admin-artists.controller';
 import { AdminArtistsService } from './admin-artists.service';
 import { AdminOrdersController } from './admin-orders.controller';
 import { AdminAppointmentsController } from './admin-appointments.controller';
+import { AdminCleanupController } from './admin-cleanup.controller';
 import { DiagnosticsController } from './diagnostics.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { OrdersModule } from '../orders/orders.module';
@@ -20,6 +21,7 @@ import { BranchesModule } from '../branches/branches.module';
     AdminArtistsController, 
     AdminOrdersController,
     AdminAppointmentsController,
+    AdminCleanupController,
     DiagnosticsController
   ],
   providers: [AdminAppointmentsService, AdminArtistsService],

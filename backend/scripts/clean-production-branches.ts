@@ -29,14 +29,14 @@ if (!databaseUrl) {
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: databaseUrl,
+      url: databaseUrl!,
     },
   },
 });
 
 async function main() {
   console.log('🔍 連接到數據庫...');
-  console.log('📍 URL:', databaseUrl.replace(/:[^:@]*@/, ':***@'));
+  console.log('📍 URL:', databaseUrl!.replace(/:[^:@]*@/, ':***@'));
   console.log('');
 
   try {
