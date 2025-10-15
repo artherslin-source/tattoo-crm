@@ -524,31 +524,31 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
+      <div className="mb-6 pb-6 lg:sticky lg:top-0 lg:z-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
               <ShoppingCart className="mr-3 h-8 w-8" />
               管理訂單
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
               管理系統中的所有客戶訂單
             </p>
           </div>
-          <div className="flex items-center space-x-3">
-            <Button 
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-2"
+              className="flex w-full items-center justify-center space-x-2 sm:w-auto"
             >
               <Plus className="h-4 w-4" />
               <span>創建訂單</span>
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => router.back()}
-              className="flex items-center space-x-2"
+              className="flex w-full items-center justify-center space-x-2 sm:w-auto"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>回上一頁</span>
