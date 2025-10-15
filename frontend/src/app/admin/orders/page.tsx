@@ -855,6 +855,19 @@ export default function AdminOrdersPage() {
                 <Button variant="outline" onClick={handleCloseDetailModal}>
                   關閉
                 </Button>
+                {/* 待結帳狀態：顯示「開始結帳」按鈕 */}
+                {selectedOrder.status === 'PENDING_PAYMENT' && (
+                  <Button 
+                    onClick={() => {
+                      handleCloseDetailModal();
+                      handleOpenCheckout(selectedOrder);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    開始結帳
+                  </Button>
+                )}
+                {/* 待付款狀態：顯示「標記為已付款」按鈕 */}
                 {selectedOrder.status === 'PENDING' && (
                   <Button 
                     onClick={() => {
@@ -877,7 +890,8 @@ export default function AdminOrdersPage() {
                     標記為已完成
                   </Button>
                 )}
-                {(selectedOrder.status === 'PENDING' || selectedOrder.status === 'PAID') && (
+                {/* 取消訂單按鈕：待結帳、待付款、已付款狀態都可以取消 */}
+                {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PENDING' || selectedOrder.status === 'PAID') && (
                   <Button 
                     onClick={() => {
                       handleUpdateStatus(selectedOrder, 'CANCELLED');
