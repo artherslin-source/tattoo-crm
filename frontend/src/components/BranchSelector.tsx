@@ -95,15 +95,16 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
   const userRole = getUserRole();
 
   return (
-    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
-      <label htmlFor="branch-select" className="text-sm font-medium text-gray-700">
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2 relative z-50">
+      <label htmlFor="branch-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
         分店：
       </label>
       <select
         id="branch-select"
         value={selectedBranchId || ''}
         onChange={(e) => onBranchChange(e.target.value)}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:py-1.5"
+        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:py-1.5"
+        style={{ position: 'relative' }}
       >
         <option value="">選擇分店</option>
         {userRole === 'BOSS' && (
