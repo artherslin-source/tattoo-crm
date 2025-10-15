@@ -165,13 +165,19 @@ export class AdminCleanupController {
 
     console.log(`   找到 ${toDelete.length} 個無數據的分店`);
 
-    // 使用原始 SQL 強制刪除
+    // 使用原始 SQL 強制刪除（包括級聯刪除 Contact）
     const deleted: string[] = [];
     const failed: Array<{ id: string; error: string }> = [];
     
     for (const branch of toDelete) {
       try {
-        // 使用原始 SQL，繞過 Prisma 的檢查
+        // 先刪除關聯的 Contact 記錄
+        const contactCount = await this.prisma.$executeRaw`DELETE FROM "Contact" WHERE "branchId" = ${branch.id}`;
+        if (contactCount > 0) {
+          console.log(`   🗑️ 刪除了 ${contactCount} 個關聯的 Contact 記錄`);
+        }
+        
+        // 然後刪除分店
         await this.prisma.$executeRaw`DELETE FROM "Branch" WHERE id = ${branch.id}`;
         deleted.push(branch.id);
         console.log(`   ✅ 已刪除: ${branch.name} (${branch.id})`);
