@@ -184,7 +184,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="mb-6 pb-6 lg:sticky lg:top-0 lg:z-10">
+      <div className="mb-6 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             {role === 'BOSS' ? '管理後台' : '分店管理後台'}
@@ -193,7 +193,7 @@ export default function AdminDashboardPage() {
             歡迎回到管理後台，這裡是您的控制中心
           </p>
           {role === 'BOSS' && (
-            <div className="mt-4">
+            <div className="mt-4 relative">
               <BranchSelector
                 selectedBranchId={selectedBranchId}
                 onBranchChange={setSelectedBranchId}
