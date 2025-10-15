@@ -135,6 +135,7 @@ export default function AdminDashboardPage() {
     );
   }
 
+  const role = getUserRole();
   const quickActions = [
     {
       title: "管理服務項目",
@@ -181,20 +182,20 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-start">
+      <div className="mb-6 pb-6 lg:sticky lg:top-0 lg:z-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {getUserRole() === 'BOSS' ? '管理後台' : '分店管理後台'}
+              {role === 'BOSS' ? '管理後台' : '分店管理後台'}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
               歡迎回到管理後台，這裡是您的控制中心
             </p>
           </div>
-          {getUserRole() === 'BOSS' && (
-            <div className="mt-2">
+          {role === 'BOSS' && (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <BranchSelector
                 selectedBranchId={selectedBranchId}
                 onBranchChange={setSelectedBranchId}
@@ -204,63 +205,63 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">今日預約數</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.todayAppointments}</div>
-              <p className="text-xs text-muted-foreground">
-                今日新增的預約
-              </p>
-            </CardContent>
-          </Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">今日預約數</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.todayAppointments}</div>
+            <p className="text-xs text-muted-foreground">
+              今日新增的預約
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">總會員數</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">
-                已註冊的會員總數
-              </p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">總會員數</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              已註冊的會員總數
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">總預約數</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalAppointments}</div>
-              <p className="text-xs text-muted-foreground">
-                系統中的所有預約
-              </p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">總預約數</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalAppointments}</div>
+            <p className="text-xs text-muted-foreground">
+              系統中的所有預約
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">總營收</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">NT$ {(stats.totalRevenue || 0).toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                所有已完成訂單的總營收
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">總營收</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">NT$ {(stats.totalRevenue || 0).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              所有已完成訂單的總營收
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Quick Actions */}
-        <div className="mb-8">
+      {/* Quick Actions */}
+      <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
             快捷功能
           </h2>
