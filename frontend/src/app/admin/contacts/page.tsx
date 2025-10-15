@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { MessageSquare, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Contact {
   id: string;
@@ -160,39 +163,82 @@ export default function AdminContactsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* 頁面標題 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">聯絡管理</h1>
-          <p className="text-gray-600 mt-2">管理客戶聯絡資料和轉換流程</p>
-        </div>
-
-        {/* 統計卡片 */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <div className="text-sm text-gray-600">總聯絡數</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <div className="text-sm text-gray-600">待處理</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-blue-600">{stats.contacted}</div>
-              <div className="text-sm text-gray-600">已聯繫</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-green-600">{stats.converted}</div>
-              <div className="text-sm text-gray-600">已轉換</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-gray-600">{stats.closed}</div>
-              <div className="text-sm text-gray-600">已關閉</div>
-            </div>
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
+              <MessageSquare className="mr-3 h-8 w-8" />
+              管理聯絡通知
+            </h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              管理客戶聯絡資料和轉換流程
+            </p>
           </div>
-        )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="flex w-full items-center justify-center space-x-2 sm:w-auto"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>回上一頁</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">總聯絡數</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">待處理</CardTitle>
+              <div className="h-4 w-4 rounded-full bg-yellow-500"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pending}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">已聯繫</CardTitle>
+              <div className="h-4 w-4 rounded-full bg-blue-500"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.contacted}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">已轉換</CardTitle>
+              <div className="h-4 w-4 rounded-full bg-green-500"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.converted}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">已關閉</CardTitle>
+              <div className="h-4 w-4 rounded-full bg-gray-500"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.closed}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
         {/* 聯絡列表 */}
         <div className="bg-white rounded-lg shadow">

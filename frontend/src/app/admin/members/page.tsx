@@ -540,8 +540,8 @@ export default function AdminMembersPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
-      {/* Page Header - now sticky within the main scrolling container */}
-      <div className="mb-6 pb-6 lg:sticky lg:top-0 lg:z-10">
+      {/* Header */}
+      <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
