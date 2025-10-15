@@ -240,101 +240,100 @@ export default function AdminContactsPage() {
         </div>
       )}
 
-        {/* 聯絡列表 */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">聯絡列表</h2>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    客戶資訊
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    分店
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    狀態
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    建立時間
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {contacts.map((contact) => {
-                  const statusInfo = getStatusInfo(contact.status);
-                  return (
-                    <tr key={contact.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{contact.name}</div>
-                          <div className="text-sm text-gray-500">{contact.email}</div>
-                          {contact.phone && (
-                            <div className="text-sm text-gray-500">{contact.phone}</div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{contact.branch.name}</div>
-                        <div className="text-sm text-gray-500">{contact.branch.address}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={contact.status}
-                          onChange={(e) => updateContactStatus(contact.id, e.target.value)}
-                          disabled={updating === contact.id}
-                          className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${statusInfo.color} ${
-                            updating === contact.id ? 'opacity-50' : 'cursor-pointer'
-                          }`}
-                        >
-                          {STATUS_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(contact.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => convertToAppointment(contact)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            轉換為預約
-                          </button>
-                          {contact.notes && (
-                            <button
-                              onClick={() => alert(`備註：${contact.notes}`)}
-                              className="text-gray-600 hover:text-gray-900"
-                            >
-                              查看備註
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {contacts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-500">目前沒有聯絡資料</div>
-            </div>
-          )}
+      {/* 聯絡列表 */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">聯絡列表</h2>
         </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  客戶資訊
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  分店
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  狀態
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  建立時間
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  操作
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {contacts.map((contact) => {
+                const statusInfo = getStatusInfo(contact.status);
+                return (
+                  <tr key={contact.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{contact.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{contact.email}</div>
+                        {contact.phone && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{contact.phone}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-white">{contact.branch.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{contact.branch.address}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select
+                        value={contact.status}
+                        onChange={(e) => updateContactStatus(contact.id, e.target.value)}
+                        disabled={updating === contact.id}
+                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${statusInfo.color} ${
+                          updating === contact.id ? 'opacity-50' : 'cursor-pointer'
+                        }`}
+                      >
+                        {STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {formatDate(contact.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => convertToAppointment(contact)}
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          轉換為預約
+                        </button>
+                        {contact.notes && (
+                          <button
+                            onClick={() => alert(`備註：${contact.notes}`)}
+                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                          >
+                            查看備註
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {contacts.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-500 dark:text-gray-400">目前沒有聯絡資料</div>
+          </div>
+        )}
       </div>
     </div>
   );
