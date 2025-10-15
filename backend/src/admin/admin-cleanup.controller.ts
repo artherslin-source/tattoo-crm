@@ -129,6 +129,87 @@ export class AdminCleanupController {
     };
   }
 
+  @Post('branches/force-clean')
+  async forceCleanBranches(@Query('confirm') confirm: string) {
+    if (confirm !== 'true') {
+      return {
+        error: '請使用 ?confirm=true 參數確認執行強制清理',
+      };
+    }
+
+    console.log('🗑️ 強制清理：刪除所有無數據的分店...');
+
+    // 獲取所有分店
+    const branches = await this.prisma.branch.findMany({
+      include: {
+        _count: {
+          select: {
+            appointments: true,
+            orders: true,
+            users: true,
+            artists: true,
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // 找出所有無數據的分店
+    const toDelete = branches.filter(
+      (b) =>
+        b._count.appointments === 0 &&
+        b._count.orders === 0 &&
+        b._count.users === 0 &&
+        b._count.artists === 0
+    );
+
+    console.log(`   找到 ${toDelete.length} 個無數據的分店`);
+
+    // 刪除
+    const deleted: string[] = [];
+    for (const branch of toDelete) {
+      try {
+        await this.prisma.branch.delete({
+          where: { id: branch.id },
+        });
+        deleted.push(branch.id);
+        console.log(`   ✅ 已刪除: ${branch.name} (${branch.id})`);
+      } catch (error: any) {
+        console.error(`   ❌ 刪除失敗: ${branch.name} (${branch.id})`, error.message);
+      }
+    }
+
+    // 驗證結果
+    const finalBranches = await this.prisma.branch.findMany({
+      include: {
+        _count: {
+          select: {
+            appointments: true,
+            orders: true,
+            users: true,
+            artists: true,
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return {
+      success: true,
+      deleted: deleted.length,
+      deletedIds: deleted,
+      remaining: finalBranches.length,
+      branches: finalBranches.map((b) => ({
+        id: b.id,
+        name: b.name,
+        appointments: b._count.appointments,
+        orders: b._count.orders,
+        users: b._count.users,
+        artists: b._count.artists,
+      })),
+    };
+  }
+
   @Post('branches/clean')
   async cleanBranches(@Query('confirm') confirm: string) {
     if (confirm !== 'true') {
