@@ -149,22 +149,38 @@ export default function AdminLayout({
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-gray-800">
-            <div className="absolute top-0 right-0 -mr-12 pt-2">
+          {/* 背景遮罩：黑色、透明度90% */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-90 transition-opacity duration-300 ease-in-out" 
+            onClick={() => setSidebarOpen(false)}
+          />
+          
+          {/* 側邊選單：從左側滑入、寬度佔螢幕的2/3、全屏高、純白色、右側陰影 */}
+          <div 
+            className={`fixed inset-y-0 left-0 w-2/3 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            {/* 關閉按鈕：在選單內部的右上角 */}
+            <div className="absolute top-4 right-4">
               <button
                 type="button"
-                className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                className="flex items-center justify-center h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onClick={() => setSidebarOpen(false)}
               >
-                <X className="h-6 w-6 text-white" />
+                <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-              <div className="flex-shrink-0 flex items-center px-4">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">刺青 CRM</h1>
+
+            {/* 選單內容 */}
+            <div className="flex flex-col h-full pt-5 pb-4 overflow-y-auto">
+              {/* Logo/標題 */}
+              <div className="flex-shrink-0 flex items-center px-6 mb-8">
+                <h1 className="text-2xl font-bold text-gray-900">刺青 CRM</h1>
               </div>
-              <nav className="mt-5 px-2 space-y-1">
+
+              {/* 導航選單 */}
+              <nav className="flex-1 px-4 space-y-2">
                 {navigationItems.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = pathname === item.href;
@@ -172,18 +188,33 @@ export default function AdminLayout({
                     <a
                       key={item.name}
                       href={item.href}
+                      onClick={() => setSidebarOpen(false)}
                       className={`${
                         isActive
-                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      } group flex items-center px-2 py-2 text-base font-medium rounded-md`}
+                          ? 'bg-blue-100 text-blue-900 border-l-4 border-blue-600'
+                          : 'text-gray-700 hover:bg-gray-100 border-l-4 border-transparent'
+                      } group flex items-center px-4 py-3 text-base font-medium rounded-r-md transition-all duration-150`}
                     >
-                      <IconComponent className="mr-4 h-6 w-6" />
-                      {item.name}
+                      <IconComponent className="mr-4 h-6 w-6 flex-shrink-0" />
+                      <span>{item.name}</span>
                     </a>
                   );
                 })}
               </nav>
+
+              {/* 登出按鈕 */}
+              <div className="px-4 pb-4 border-t border-gray-200 pt-4">
+                <button
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 rounded-md transition-all duration-150"
+                >
+                  <LogOut className="mr-4 h-6 w-6 flex-shrink-0" />
+                  <span>登出</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
