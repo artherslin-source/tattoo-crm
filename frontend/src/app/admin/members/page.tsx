@@ -171,7 +171,17 @@ export default function AdminMembersPage() {
   const fetchBranches = useCallback(async () => {
     try {
       const branchesData = await getJsonWithAuth('/branches') as Array<Record<string, unknown>>;
-      const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData)) as Branch[];
+      
+      // 按名稱去重：只保留每個名稱的第一個分店（通常是最新的）
+      const uniqueByName = branchesData.reduce((acc, branch) => {
+        const name = branch.name as string;
+        if (!acc.some(b => (b.name as string) === name)) {
+          acc.push(branch);
+        }
+        return acc;
+      }, [] as Array<Record<string, unknown>>);
+      
+      const uniqueBranches = sortBranchesByName(getUniqueBranches(uniqueByName)) as Branch[];
       setBranches(uniqueBranches);
     } catch (err) {
       console.error('載入分店資料失敗:', err);
