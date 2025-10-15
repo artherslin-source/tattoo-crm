@@ -151,7 +151,8 @@ export default function AdminAppointmentsPage() {
     }
 
     fetchAppointments();
-  }, [router, fetchAppointments]);
+    fetchOptionsData(); // ✅ 問題1：調用 fetchOptionsData 以載入分店選項
+  }, [router, fetchAppointments, fetchOptionsData]);
 
   // 當篩選條件改變時重新載入資料
   useEffect(() => {

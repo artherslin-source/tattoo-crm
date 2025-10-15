@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Palette, Settings, Building2 } from "lucide-react";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 
 interface DashboardStats {
   totalUsers: number;
@@ -24,6 +26,9 @@ interface Branch {
 export default function BranchDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
   const [branchInfo, setBranchInfo] = useState<Branch | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -33,27 +38,73 @@ export default function BranchDashboardPage() {
     monthlyRevenue: 0,
   });
 
+  // 載入分店列表（僅 BOSS 角色）
   useEffect(() => {
-    const userRole = getUserRole();
+    const role = getUserRole();
     const token = getAccessToken();
     
-    if (!token || userRole !== 'BRANCH_MANAGER') {
+    if (!token || (role !== 'BOSS' && role !== 'BRANCH_MANAGER')) {
       router.replace('/profile');
       return;
     }
 
+    setUserRole(role);
+
+    // 如果是 BOSS，載入所有分店列表
+    if (role === 'BOSS') {
+      const fetchBranches = async () => {
+        try {
+          const branchesData = await getJsonWithAuth('/branches') as Array<Record<string, unknown>>;
+          
+          // 按名稱去重：只保留每個名稱的第一個分店
+          const uniqueByName = branchesData.reduce((acc, branch) => {
+            const name = branch.name as string;
+            if (!acc.some(b => (b.name as string) === name)) {
+              acc.push(branch);
+            }
+            return acc;
+          }, [] as Array<Record<string, unknown>>);
+          
+          const uniqueBranches = sortBranchesByName(getUniqueBranches(uniqueByName)) as Branch[];
+          setBranches(uniqueBranches);
+        } catch (err) {
+          console.error('載入分店列表失敗:', err);
+        }
+      };
+      fetchBranches();
+    } else {
+      // 如果是 BRANCH_MANAGER，設置為當前分店
+      const userBranchId = getUserBranchId();
+      if (userBranchId) {
+        setSelectedBranchId(userBranchId);
+      }
+    }
+  }, [router]);
+
+  // 載入統計數據
+  useEffect(() => {
     async function fetchDashboardData() {
       try {
-        const userBranchId = getUserBranchId();
+        setLoading(true);
         
-        // 獲取分店資訊
-        if (userBranchId) {
+        // 確定要查詢的分店 ID
+        let targetBranchId: string | null = null;
+        if (userRole === 'BOSS') {
+          targetBranchId = selectedBranchId === 'all' ? null : selectedBranchId;
+        } else {
+          targetBranchId = getUserBranchId();
+        }
+        
+        // 獲取分店資訊（如果選擇了特定分店）
+        if (targetBranchId) {
           try {
-            const branchData = await getJsonWithAuth<Branch>(`/branches/${userBranchId}`);
+            const branchData = await getJsonWithAuth<Branch>(`/branches/${targetBranchId}`);
             setBranchInfo(branchData);
           } catch (err) {
             console.error('Failed to fetch branch info:', err);
           }
+        } else {
+          setBranchInfo(null); // 全部分店時清空單一分店資訊
         }
 
         // 這裡可以調用多個 API 來獲取統計數據
@@ -84,8 +135,10 @@ export default function BranchDashboardPage() {
       }
     }
 
-    fetchDashboardData();
-  }, [router]);
+    if (userRole) {
+      fetchDashboardData();
+    }
+  }, [userRole, selectedBranchId]);
 
   if (loading) {
     return (
@@ -141,7 +194,7 @@ export default function BranchDashboardPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-start">
-          <div>
+          <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
               <Building2 className="h-8 w-8 text-blue-600" />
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -160,6 +213,28 @@ export default function BranchDashboardPage() {
               歡迎回到分店管理後台，這裡是您的控制中心
             </p>
           </div>
+          
+          {/* ✅ 問題3：BOSS 角色顯示分店選擇器 */}
+          {userRole === 'BOSS' && branches.length > 0 && (
+            <div className="ml-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                選擇分店
+              </label>
+              <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                <SelectTrigger className="w-48 bg-white dark:bg-gray-800">
+                  <SelectValue placeholder="選擇分店" />
+                </SelectTrigger>
+                <SelectContent className="bg-white/95 dark:bg-gray-800/95">
+                  <SelectItem value="all">全部分店</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
 
