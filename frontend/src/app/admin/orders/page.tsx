@@ -60,7 +60,7 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // ✅ 問題4：預設為升序
   
   // 分頁相關狀態
   const [currentPage, setCurrentPage] = useState(1);

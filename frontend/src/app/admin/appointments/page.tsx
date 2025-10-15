@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, Plus } from "lucide-react";
+import { ArrowLeft, Calendar, Plus, ShoppingCart } from "lucide-react";
 import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
@@ -385,7 +385,7 @@ export default function AdminAppointmentsPage() {
       )}
 
       {/* Stats Card */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總預約數</CardTitle>
@@ -417,6 +417,18 @@ export default function AdminAppointmentsPage() {
             </div>
           </CardContent>
         </Card>
+        {/* ✅ 問題2：添加「進行中」統計 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">進行中</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-red-500"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {appointments.filter(a => a.status === 'IN_PROGRESS').length}
+            </div>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">已完成</CardTitle>
@@ -438,6 +450,7 @@ export default function AdminAppointmentsPage() {
         search={search}
         branchId={branchId}
         status={status}
+        branches={branches} {/* ✅ 問題3：傳遞分店列表 */}
         onSortFieldChange={handleSortFieldChange}
         onSortOrderToggle={handleSortOrderToggle}
         onItemsPerPageChange={handleItemsPerPageChange}
@@ -623,14 +636,30 @@ export default function AdminAppointmentsPage() {
               )}
 
               {/* 操作按鈕 */}
-              <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <Button
-                  variant="outline"
-                  onClick={handleCloseDetailModal}
-                  className="flex-1"
-                >
-                  關閉
-                </Button>
+              <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                {/* ✅ 問題1：添加跳轉到訂單的按鈕 */}
+                {selectedAppointment.orderId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      handleCloseDetailModal();
+                      router.push(`/admin/orders?orderId=${selectedAppointment.orderId}`);
+                    }}
+                    className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    查看關聯訂單
+                  </Button>
+                )}
+                
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseDetailModal}
+                    className="flex-1"
+                  >
+                    關閉
+                  </Button>
                 {selectedAppointment.status === 'PENDING' && (
                           <>
                             <Button
@@ -687,7 +716,8 @@ export default function AdminAppointmentsPage() {
                         </Button>
                   </>
                 )}
-          </div>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>

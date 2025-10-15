@@ -6,6 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 interface AppointmentsToolbarProps {
   sortField: string;
   sortOrder: 'asc' | 'desc';
@@ -13,6 +18,7 @@ interface AppointmentsToolbarProps {
   search: string;
   branchId: string;
   status: string;
+  branches?: Branch[]; // ✅ 問題3：添加分店列表
   onSortFieldChange: (value: string) => void;
   onSortOrderToggle: () => void;
   onItemsPerPageChange: (value: string) => void;
@@ -28,6 +34,7 @@ export default function AppointmentsToolbar({
   search,
   branchId,
   status,
+  branches = [], // ✅ 問題3：接收分店列表
   onSortFieldChange,
   onSortOrderToggle,
   onItemsPerPageChange,
@@ -60,8 +67,11 @@ export default function AppointmentsToolbar({
               </SelectTrigger>
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部分店</SelectItem>
-                <SelectItem value="cmg7dp8t10001sbdjirjya7tp">三重店</SelectItem>
-                <SelectItem value="cmg7dp8t20002sbdj7go17bx0">東港店</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
