@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
+import type { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -60,6 +62,9 @@ export default function AdminMembersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+
+  // 分店資料狀態
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [resetPasswordModal, setResetPasswordModal] = useState<{
     isOpen: boolean;
     member: Member | null;
@@ -161,6 +166,22 @@ export default function AdminMembersPage() {
       setLoading(false);
     }
   }, [sortField, sortOrder, search, branchId, role, membershipLevel]);
+
+  // 獲取分店資料
+  const fetchBranches = useCallback(async () => {
+    try {
+      const branchesData = await getJsonWithAuth('/branches') as Array<Record<string, unknown>>;
+      const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData)) as Branch[];
+      setBranches(uniqueBranches);
+    } catch (err) {
+      console.error('載入分店資料失敗:', err);
+    }
+  }, []);
+
+  // 初次載入時獲取分店資料
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
 
   // 當排序參數改變時重新載入資料
   useEffect(() => {
@@ -594,6 +615,7 @@ export default function AdminMembersPage() {
         branchId={branchId}
         role={role}
         membershipLevel={membershipLevel}
+        branches={branches}
         onSortFieldChange={handleSortFieldChange}
         onSortOrderToggle={handleSortOrderToggle}
         onItemsPerPageChange={handleItemsPerPageChange}

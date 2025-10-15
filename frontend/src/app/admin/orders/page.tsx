@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError } from "@/lib/api";
+import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
+import type { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,6 +77,9 @@ export default function AdminOrdersPage() {
   // ✅ 統計相關狀態
   const [summary, setSummary] = useState<OrdersSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+
+  // 分店資料狀態
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   // 訂單詳情模態框狀態
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -168,6 +173,22 @@ export default function AdminOrdersPage() {
       fetchOrders();
     }
   }, [sortField, sortOrder, currentPage, itemsPerPage, fetchOrders]);
+
+  // 獲取分店資料
+  const fetchBranches = useCallback(async () => {
+    try {
+      const branchesData = await getJsonWithAuth('/branches') as Array<Record<string, unknown>>;
+      const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData)) as Branch[];
+      setBranches(uniqueBranches);
+    } catch (err) {
+      console.error('載入分店資料失敗:', err);
+    }
+  }, []);
+
+  // 初次載入時獲取分店資料
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
 
   // 當篩選條件改變時重新載入資料和統計
   useEffect(() => {
@@ -629,6 +650,7 @@ export default function AdminOrdersPage() {
         search={search}
         branchId={branchId}
         status={status}
+        branches={branches}
         onSortFieldChange={handleSortFieldChange}
         onSortOrderToggle={handleSortOrderToggle}
         onItemsPerPageChange={handleItemsPerPageChange}

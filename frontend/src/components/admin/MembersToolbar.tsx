@@ -6,6 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 interface MembersToolbarProps {
   sortField: string;
   sortOrder: 'asc' | 'desc';
@@ -14,6 +19,7 @@ interface MembersToolbarProps {
   branchId: string;
   role: string;
   membershipLevel: string;
+  branches?: Branch[];
   onSortFieldChange: (field: string) => void;
   onSortOrderToggle: () => void;
   onItemsPerPageChange: (value: string) => void;
@@ -31,6 +37,7 @@ export default function MembersToolbar({
   branchId,
   role,
   membershipLevel,
+  branches = [],
   onSortFieldChange,
   onSortOrderToggle,
   onItemsPerPageChange,
@@ -64,8 +71,11 @@ export default function MembersToolbar({
               </SelectTrigger>
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部分店</SelectItem>
-                <SelectItem value="cmg7dp8t10001sbdjirjya7tp">三重店</SelectItem>
-                <SelectItem value="cmg7dp8t20002sbdj7go17bx0">東港店</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -167,8 +177,11 @@ export default function MembersToolbar({
               </SelectTrigger>
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部分店</SelectItem>
-                <SelectItem value="cmg7dp8t10001sbdjirjya7tp">三重店</SelectItem>
-                <SelectItem value="cmg7dp8t20002sbdj7go17bx0">東港店</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
