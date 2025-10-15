@@ -99,35 +99,68 @@ async function main() {
   console.log('✅ 建立管理員帳號:', admin.email);
 
   // 2. 建立或讀取分店：三重店、東港店
+  const branchSeeds = [
+    { name: '三重店', address: '新北市三重區重新路一段123號', phone: '02-2975-1234' },
+    { name: '東港店', address: '屏東縣東港鎮沿海路356號, 928', phone: '08 831 1615' }
+  ];
   let branches: any[] = [];
-  let shouldCreateBranches = !PROTECT_REAL_DATA;
-  
+
   if (PROTECT_REAL_DATA) {
-    // 保護模式：讀取現有分店
-    branches = await prisma.branch.findMany({
+    // 保護模式：讀取現有分店並自動補齊預設分店
+    const existingBranches = await prisma.branch.findMany({
       orderBy: { name: 'asc' }
     });
-    console.log(`✅ 保護模式：讀取現有 ${branches.length} 個分店`, branches.map(b => b.name));
-    
-    if (branches.length === 0) {
-      console.log('⚠️ 警告：沒有找到現有分店，將創建預設分店');
-      shouldCreateBranches = true; // 暫時允許創建分店
+    console.log(
+      `✅ 保護模式：讀取現有 ${existingBranches.length} 個分店`,
+      existingBranches.map((b) => b.name),
+    );
+
+    const branchesByName = new Map(existingBranches.map((branch) => [branch.name, branch]));
+
+    for (const seed of branchSeeds) {
+      let branch = branchesByName.get(seed.name);
+      if (!branch) {
+        console.log(`⚠️ 缺少預設分店：${seed.name}，將自動建立`);
+        branch = await prisma.branch.create({
+          data: {
+            name: seed.name,
+            address: seed.address,
+            phone: seed.phone,
+            businessHours: {
+              monday: '09:00-18:00',
+              tuesday: '09:00-18:00',
+              wednesday: '09:00-18:00',
+              thursday: '09:00-18:00',
+              friday: '09:00-18:00',
+              saturday: '10:00-16:00',
+              sunday: 'closed',
+            },
+            createdAt: faker.date.past(),
+          },
+        });
+      }
+
+      branches.push(branch);
     }
-  }
-  
-  if (shouldCreateBranches) {
+
+    const extraBranches = existingBranches.filter(
+      (branch) => !branchSeeds.some((seed) => seed.name === branch.name),
+    );
+    if (extraBranches.length > 0) {
+      console.log(
+        `ℹ️ 保留額外 ${extraBranches.length} 個現有分店`,
+        extraBranches.map((branch) => branch.name),
+      );
+      branches.push(...extraBranches);
+    }
+  } else {
     // 完整重建模式：創建新分店
-    const branchData = [
-      { name: '三重店', address: '新北市三重區重新路一段123號', phone: '02-2975-1234' },
-      { name: '東港店', address: '屏東縣東港鎮沿海路356號, 928', phone: '08 831 1615' }
-    ];
-    
-    for (let i = 0; i < 2; i++) {
+    for (const seed of branchSeeds) {
       const branch = await prisma.branch.create({
         data: {
-          name: branchData[i].name,
-          address: branchData[i].address,
-          phone: branchData[i].phone,
+          name: seed.name,
+          address: seed.address,
+          phone: seed.phone,
           businessHours: {
             monday: '09:00-18:00',
             tuesday: '09:00-18:00',
