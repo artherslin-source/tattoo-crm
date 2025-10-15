@@ -110,25 +110,36 @@ export class AdminMembersController {
     @Body() body: { amount: number },
     @Req() req
   ) {
-    console.log('DEBUG req.user:', req.user); // Debug 用，確認是否有登入的 user 資訊
+    try {
+      console.log('💰 Controller: topupUser called with:', { memberId: id, amount: body.amount, user: req.user });
 
-    const amount = Number(body.amount);
-    if (amount <= 0) {
-      throw new BadRequestException('儲值金額必須大於 0');
+      const amount = Number(body.amount);
+      if (amount <= 0) {
+        throw new BadRequestException('儲值金額必須大於 0');
+      }
+
+      if (!req.user || !req.user.id) {
+        console.error('❌ Controller: req.user is missing or invalid:', req.user);
+        throw new BadRequestException('操作人員未登入或缺少 ID');
+      }
+
+      // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行儲值操作
+      const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
+      if (!allowedRoles.includes(req.user.role)) {
+        console.error('❌ Controller: Insufficient permissions. User role:', req.user.role);
+        throw new BadRequestException('權限不足：只有管理員才能執行儲值操作');
+      }
+
+      const operatorId = req.user.id;
+      console.log('💰 Controller: Calling service.topupUser with:', { id, amount, operatorId });
+      
+      const result = await this.service.topupUser(id, amount, operatorId);
+      console.log('💰 Controller: topupUser completed successfully');
+      return result;
+    } catch (error) {
+      console.error('❌ Controller: topupUser error:', error);
+      throw error;
     }
-
-    if (!req.user || !req.user.id) {
-      throw new BadRequestException('操作人員未登入或缺少 ID');
-    }
-
-    // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行儲值操作
-    const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
-    if (!allowedRoles.includes(req.user.role)) {
-      throw new BadRequestException('權限不足：只有管理員才能執行儲值操作');
-    }
-
-    const operatorId = req.user.id;
-    return this.service.topupUser(id, amount, operatorId);
   }
 
   @Post(':id/spend')
@@ -138,25 +149,36 @@ export class AdminMembersController {
     @Body() body: { amount: number },
     @Req() req
   ) {
-    console.log('DEBUG req.user for spend:', req.user);
+    try {
+      console.log('💸 Controller: spend called with:', { memberId: id, amount: body.amount, user: req.user });
 
-    const amount = Number(body.amount);
-    if (amount <= 0) {
-      throw new BadRequestException('消費金額必須大於 0');
+      const amount = Number(body.amount);
+      if (amount <= 0) {
+        throw new BadRequestException('消費金額必須大於 0');
+      }
+
+      if (!req.user || !req.user.id) {
+        console.error('❌ Controller: req.user is missing or invalid:', req.user);
+        throw new BadRequestException('操作人員未登入或缺少 ID');
+      }
+
+      // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行消費操作
+      const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
+      if (!allowedRoles.includes(req.user.role)) {
+        console.error('❌ Controller: Insufficient permissions. User role:', req.user.role);
+        throw new BadRequestException('權限不足：只有管理員才能執行消費操作');
+      }
+
+      const operatorId = req.user.id;
+      console.log('💸 Controller: Calling service.spend with:', { id, amount, operatorId });
+      
+      const result = await this.service.spend(id, amount, operatorId);
+      console.log('💸 Controller: spend completed successfully');
+      return result;
+    } catch (error) {
+      console.error('❌ Controller: spend error:', error);
+      throw error;
     }
-
-    if (!req.user || !req.user.id) {
-      throw new BadRequestException('操作人員未登入或缺少 ID');
-    }
-
-    // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行消費操作
-    const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
-    if (!allowedRoles.includes(req.user.role)) {
-      throw new BadRequestException('權限不足：只有管理員才能執行消費操作');
-    }
-
-    const operatorId = req.user.id;
-    return this.service.spend(id, amount, operatorId);
   }
 
   @Get(':id')
