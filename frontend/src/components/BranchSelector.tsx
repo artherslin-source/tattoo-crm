@@ -31,14 +31,29 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
     async function fetchBranches() {
       try {
         const data = await getJsonWithAuth<Branch[]>('/branches');
-        const uniqueBranches = sortBranchesByName(getUniqueBranches<Branch>(data));
+        
+        // 按名稱去重：只保留每個名稱的第一個分店
+        const uniqueByName = data.reduce((acc, branch) => {
+          if (!acc.some(b => b.name === branch.name)) {
+            acc.push(branch);
+          }
+          return acc;
+        }, [] as Branch[]);
+        
+        const uniqueBranches = sortBranchesByName(getUniqueBranches<Branch>(uniqueByName));
         setBranches(uniqueBranches);
         
         // 如果沒有選中的分店，且用戶有分店 ID，自動選擇
         if (!selectedBranchId) {
-          const userBranchId = getUserBranchId();
-          if (userBranchId) {
-            onBranchChange(userBranchId);
+          const userRole = getUserRole();
+          if (userRole === 'BOSS') {
+            // BOSS 預設選擇「全部分店」
+            onBranchChange('all');
+          } else {
+            const userBranchId = getUserBranchId();
+            if (userBranchId) {
+              onBranchChange(userBranchId);
+            }
           }
         }
       } catch (err) {
@@ -77,6 +92,8 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
     );
   }
 
+  const userRole = getUserRole();
+
   return (
     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
       <label htmlFor="branch-select" className="text-sm font-medium text-gray-700">
@@ -89,6 +106,9 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:py-1.5"
       >
         <option value="">選擇分店</option>
+        {userRole === 'BOSS' && (
+          <option value="all">全部分店</option>
+        )}
         {branches.map((branch) => (
           <option key={branch.id} value={branch.id}>
             {branch.name} ({branch._count.users} 用戶, {branch._count.appointments} 預約)
