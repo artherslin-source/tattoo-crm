@@ -6,6 +6,16 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 開始執行 Prisma seeding...');
+  
+  // 檢查是否保護真實數據
+  const PROTECT_REAL_DATA = process.env.PROTECT_REAL_DATA === 'true';
+  
+  if (PROTECT_REAL_DATA) {
+    console.log('🛡️ 保護模式：將保留現有的分店和刺青師數據');
+  } else {
+    console.log('⚠️ 完整重建模式：將重建所有數據（包括分店和刺青師）');
+  }
+  console.log('');
 
   // 清理現有資料（按外鍵約束順序）
   try {
@@ -26,10 +36,15 @@ async function main() {
     console.log('⚠️ Appointment 表不存在，跳過清理');
   }
   
-  try {
-    await prisma.artist.deleteMany();
-  } catch (e) {
-    console.log('⚠️ Artist 表不存在，跳過清理');
+  // 刺青師數據 - 根據保護模式決定是否清理
+  if (!PROTECT_REAL_DATA) {
+    try {
+      await prisma.artist.deleteMany();
+    } catch (e) {
+      console.log('⚠️ Artist 表不存在，跳過清理');
+    }
+  } else {
+    console.log('🛡️ 保護模式：保留刺青師數據');
   }
   
   try {
@@ -50,10 +65,15 @@ async function main() {
     console.log('⚠️ Service 表不存在，跳過清理');
   }
   
-  try {
-    await prisma.branch.deleteMany();
-  } catch (e) {
-    console.log('⚠️ Branch 表不存在，跳過清理');
+  // 分店數據 - 根據保護模式決定是否清理
+  if (!PROTECT_REAL_DATA) {
+    try {
+      await prisma.branch.deleteMany();
+    } catch (e) {
+      console.log('⚠️ Branch 表不存在，跳過清理');
+    }
+  } else {
+    console.log('🛡️ 保護模式：保留分店數據');
   }
   
   try {
@@ -78,34 +98,52 @@ async function main() {
   });
   console.log('✅ 建立管理員帳號:', admin.email);
 
-  // 2. 建立 2 個分店：三重店、東港店
-  const branches: any[] = [];
-  const branchData = [
-    { name: '三重店', address: '新北市三重區重新路一段123號', phone: '02-2975-1234' },
-    { name: '東港店', address: '屏東縣東港鎮沿海路356號, 928', phone: '08 831 1615' }
-  ];
+  // 2. 建立或讀取分店：三重店、東港店
+  let branches: any[] = [];
+  let shouldCreateBranches = !PROTECT_REAL_DATA;
   
-  for (let i = 0; i < 2; i++) {
-    const branch = await prisma.branch.create({
-      data: {
-        name: branchData[i].name,
-        address: branchData[i].address,
-        phone: branchData[i].phone,
-        businessHours: {
-          monday: '09:00-18:00',
-          tuesday: '09:00-18:00',
-          wednesday: '09:00-18:00',
-          thursday: '09:00-18:00',
-          friday: '09:00-18:00',
-          saturday: '10:00-16:00',
-          sunday: 'closed',
-        },
-        createdAt: faker.date.past(),
-      },
+  if (PROTECT_REAL_DATA) {
+    // 保護模式：讀取現有分店
+    branches = await prisma.branch.findMany({
+      orderBy: { name: 'asc' }
     });
-    branches.push(branch);
+    console.log(`✅ 保護模式：讀取現有 ${branches.length} 個分店`, branches.map(b => b.name));
+    
+    if (branches.length === 0) {
+      console.log('⚠️ 警告：沒有找到現有分店，將創建預設分店');
+      shouldCreateBranches = true; // 暫時允許創建分店
+    }
   }
-  console.log('✅ 建立 2 個分店：三重店、東港店');
+  
+  if (shouldCreateBranches) {
+    // 完整重建模式：創建新分店
+    const branchData = [
+      { name: '三重店', address: '新北市三重區重新路一段123號', phone: '02-2975-1234' },
+      { name: '東港店', address: '屏東縣東港鎮沿海路356號, 928', phone: '08 831 1615' }
+    ];
+    
+    for (let i = 0; i < 2; i++) {
+      const branch = await prisma.branch.create({
+        data: {
+          name: branchData[i].name,
+          address: branchData[i].address,
+          phone: branchData[i].phone,
+          businessHours: {
+            monday: '09:00-18:00',
+            tuesday: '09:00-18:00',
+            wednesday: '09:00-18:00',
+            thursday: '09:00-18:00',
+            friday: '09:00-18:00',
+            saturday: '10:00-16:00',
+            sunday: 'closed',
+          },
+          createdAt: faker.date.past(),
+        },
+      });
+      branches.push(branch);
+    }
+    console.log('✅ 完整重建模式：建立 2 個分店（三重店、東港店）');
+  }
 
   // 3. 建立 2 個分店經理（三重店、東港店各一位）
   const managers: any[] = [];
@@ -176,47 +214,66 @@ async function main() {
   }
   console.log('✅ 建立 12 個會員帳號（平均分配到兩個分店，包含財務資料）');
 
-  // 5. 建立 3 個刺青師（東港店1位，三重店2位）
-  const artists: any[] = [];
-  const artistData = [
-    { name: "陳震宇", bio: "專精日式刺青，擁有15年經驗，擅長龍鳳、櫻花等傳統圖案。風格沉穩內斂，注重細節與傳統美學的完美結合。身穿黑色高領毛衣，展現專業與內斂的氣質。雙臂滿布精緻的日式刺青，是傳統刺青藝術的傳承者。", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1", photoUrl: "/images/artists/chen-zhenyu.jpeg", branchIndex: 1 }, // 東港店 - 阿龍師傅照片
-    { name: "黃晨洋", bio: "專精幾何圖騰，現代風格專家，擅長線條藝術。融合當代藝術與刺青技藝，創造獨特的視覺語言。年輕有活力，對藝術有獨特見解。喜歡在藝廊中尋找靈感，將現代藝術元素融入刺青設計。", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2", photoUrl: "/images/artists/huang-chenyang.jpeg", branchIndex: 0 }, // 三重店 - 年輕男性在藝廊中
-    { name: "林承葉", bio: "專精黑灰寫實，細節完美主義者，擅長肖像刺青。以精湛的技藝呈現光影層次，每件作品都是藝術品。戴眼鏡展現專業形象，穿著時尚皮夾克。左前臂有彩色刺青作品，展現多元化的刺青風格。", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3", photoUrl: "/images/artists/lin-chengye.jpeg", branchIndex: 0 }, // 三重店 - 戴眼鏡穿皮夾克
-  ];
+  // 5. 建立或讀取刺青師
+  let artists: any[] = [];
   
-  for (let i = 0; i < 3; i++) {
-    const artistUser = await prisma.user.create({
-      data: {
-        email: `artist${i + 1}@test.com`,
-        hashedPassword,
-        name: artistData[i].name,
-        role: 'ARTIST',
-        phone: faker.phone.number(),
-        branchId: branches[artistData[i].branchIndex].id,
-        createdAt: faker.date.past(),
+  if (PROTECT_REAL_DATA) {
+    // 保護模式：讀取現有刺青師
+    const existingArtists = await prisma.artist.findMany({
+      include: {
+        user: true
       },
+      orderBy: { displayName: 'asc' }
     });
+    artists = existingArtists.map((a: any) => ({ ...a, user: a.user }));
+    console.log(`✅ 保護模式：讀取現有 ${artists.length} 個刺青師`, artists.map(a => a.displayName));
+    
+    if (artists.length === 0) {
+      console.log('⚠️ 警告：沒有找到現有刺青師，將創建測試刺青師');
+      // 不自動創建，只是警告
+    }
+  } else {
+    // 完整重建模式：創建新刺青師
+    const artistData = [
+      { name: "陳震宇", bio: "專精日式刺青，擁有15年經驗，擅長龍鳳、櫻花等傳統圖案。風格沉穩內斂，注重細節與傳統美學的完美結合。身穿黑色高領毛衣，展現專業與內斂的氣質。雙臂滿布精緻的日式刺青，是傳統刺青藝術的傳承者。", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1", photoUrl: "/images/artists/chen-zhenyu.jpeg", branchIndex: 1 }, // 東港店
+      { name: "黃晨洋", bio: "專精幾何圖騰，現代風格專家，擅長線條藝術。融合當代藝術與刺青技藝，創造獨特的視覺語言。年輕有活力，對藝術有獨特見解。喜歡在藝廊中尋找靈感，將現代藝術元素融入刺青設計。", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2", photoUrl: "/images/artists/huang-chenyang.jpeg", branchIndex: 0 }, // 三重店
+      { name: "林承葉", bio: "專精黑灰寫實，細節完美主義者，擅長肖像刺青。以精湛的技藝呈現光影層次，每件作品都是藝術品。戴眼鏡展現專業形象，穿著時尚皮夾克。左前臂有彩色刺青作品，展現多元化的刺青風格。", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3", photoUrl: "/images/artists/lin-chengye.jpeg", branchIndex: 0 }, // 三重店
+    ];
+    
+    for (let i = 0; i < 3; i++) {
+      const artistUser = await prisma.user.create({
+        data: {
+          email: `artist${i + 1}@test.com`,
+          hashedPassword,
+          name: artistData[i].name,
+          role: 'ARTIST',
+          phone: faker.phone.number(),
+          branchId: branches[artistData[i].branchIndex].id,
+          createdAt: faker.date.past(),
+        },
+      });
 
-    const artist = await prisma.artist.create({
-      data: {
-        userId: artistUser.id,
-        displayName: artistData[i].name,
-        bio: artistData[i].bio,
-        speciality: artistData[i].speciality,
-        portfolioUrl: artistData[i].portfolioUrl,
-        photoUrl: artistData[i].photoUrl,
-        styles: [
-          faker.helpers.arrayElement(['Traditional', 'Realistic', 'Japanese', 'Blackwork', 'Watercolor']),
-          faker.helpers.arrayElement(['Geometric', 'Minimalist', 'Portrait', 'Nature', 'Abstract']),
-        ],
-        branchId: branches[artistData[i].branchIndex].id,
-        active: true,
-        createdAt: faker.date.past(),
-      },
-    });
-    artists.push({ ...artist, user: artistUser });
+      const artist = await prisma.artist.create({
+        data: {
+          userId: artistUser.id,
+          displayName: artistData[i].name,
+          bio: artistData[i].bio,
+          speciality: artistData[i].speciality,
+          portfolioUrl: artistData[i].portfolioUrl,
+          photoUrl: artistData[i].photoUrl,
+          styles: [
+            faker.helpers.arrayElement(['Traditional', 'Realistic', 'Japanese', 'Blackwork', 'Watercolor']),
+            faker.helpers.arrayElement(['Geometric', 'Minimalist', 'Portrait', 'Nature', 'Abstract']),
+          ],
+          branchId: branches[artistData[i].branchIndex].id,
+          active: true,
+          createdAt: faker.date.past(),
+        },
+      });
+      artists.push({ ...artist, user: artistUser });
+    }
+    console.log('✅ 完整重建模式：建立 3 個刺青師（東港店1位：陳震宇，三重店2位：黃晨洋、林承葉）');
   }
-  console.log('✅ 建立 3 個刺青師（東港店1位：陳震宇，三重店2位：黃晨洋、林承葉）');
 
 
   // 6. 建立服務項目
