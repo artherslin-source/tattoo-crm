@@ -287,8 +287,11 @@ export default function OrdersToolbar({
                   </SelectTrigger>
                   <SelectContent className="bg-white/85">
                     <SelectItem value="all">全部分店</SelectItem>
-                    <SelectItem value="cmg7dp8t10001sbdjirjya7tp">三重店</SelectItem>
-                    <SelectItem value="cmg7dp8t20002sbdj7go17bx0">東港店</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
