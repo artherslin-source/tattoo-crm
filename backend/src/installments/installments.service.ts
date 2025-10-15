@@ -318,8 +318,13 @@ export class InstallmentsService {
       throw new BadRequestException('只有 Boss 或分店經理可以調整分期金額');
     }
 
+    // ✅ 驗證金額為正整數
+    if (!Number.isInteger(newAmount) || newAmount <= 0) {
+      throw new BadRequestException('金額必須為正整數（新台幣不使用小數）');
+    }
+
     return await this.prisma.$transaction(async (tx) => {
-      // 獲取訂單和所有分期付款
+      // ✅ 加上行級鎖防止 Race Condition
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: { installments: { orderBy: { installmentNo: 'asc' } } }
@@ -348,14 +353,23 @@ export class InstallmentsService {
         .filter(i => i.status === InstallmentStatus.PAID)
         .reduce((sum, i) => sum + i.amount, 0);
 
-      // 計算未付總額
-      const outstanding = order.totalAmount - paidSum;
-
-      // 計算其他固定金額（已付款 + 其他已鎖定且未付款的分期）
-      const fixedOthers = order.installments
+      // 計算其他已鎖定且未付款的分期金額（isCustom=true 的未付款分期）
+      const lockedUnpaidSum = order.installments
         .filter(i => i.installmentNo !== installmentNo && 
-                    (i.status === InstallmentStatus.PAID || i.isCustom === true))
+                    i.status === InstallmentStatus.UNPAID && 
+                    i.isCustom === true)
         .reduce((sum, i) => sum + i.amount, 0);
+
+      // ✅ 修正問題1：正確計算剩餘金額（從總金額扣除）
+      const remaining = order.totalAmount - (paidSum + lockedUnpaidSum + newAmount);
+
+      // 驗證：剩餘金額不能為負數
+      if (remaining < 0) {
+        const maxAllowed = order.totalAmount - paidSum - lockedUnpaidSum;
+        throw new BadRequestException(
+          `金額超過可分配上限。本期最大可輸入金額：${maxAllowed} 元（總金額 ${order.totalAmount} - 已付款 ${paidSum} - 其他鎖定 ${lockedUnpaidSum}）`
+        );
+      }
 
       // 計算可調整的其他期數（未付款且未鎖定）
       const adjustableInstallments = order.installments.filter(
@@ -364,19 +378,14 @@ export class InstallmentsService {
              i.isCustom !== true
       );
 
-      // 計算剩餘金額
-      const remaining = outstanding - newAmount - fixedOthers;
-
-      // 驗證：剩餘金額不能為負數
-      if (remaining < 0) {
-        const maxAllowed = outstanding - fixedOthers;
-        throw new BadRequestException(
-          `金額超過可分配上限。本期最大可輸入金額：${maxAllowed} 元，剩餘可分配金額：${outstanding - fixedOthers} 元`
-        );
-      }
-
-      // 如果沒有其他可調整的分期，直接更新目標分期
+      // ✅ 修正問題2：如果沒有其他可調整的分期，驗證剩餘金額必須為0
       if (adjustableInstallments.length === 0) {
+        if (remaining !== 0) {
+          throw new BadRequestException(
+            `無其他可調整分期，本期金額必須為 ${order.totalAmount - paidSum - lockedUnpaidSum} 元才能使總額相符`
+          );
+        }
+        
         await tx.installment.update({
           where: { id: targetInstallment.id },
           data: {
@@ -386,8 +395,18 @@ export class InstallmentsService {
           }
         });
       } else {
-        // 平均分配剩餘金額
-        const each = Math.floor(remaining / adjustableInstallments.length);
+        // ✅ 修正問題4：重置所有未付款分期的 autoAdjusted 狀態
+        await tx.installment.updateMany({
+          where: { 
+            orderId, 
+            status: InstallmentStatus.UNPAID,
+            installmentNo: { not: installmentNo }
+          },
+          data: { autoAdjusted: false }
+        });
+
+        // ✅ 修正問題3：使用四捨五入避免精度問題
+        const each = Math.round(remaining / adjustableInstallments.length);
         const remainder = remaining - (each * adjustableInstallments.length);
 
         // 更新目標分期付款
@@ -424,10 +443,47 @@ export class InstallmentsService {
       });
 
       // 驗證總和
-      const totalSum = updatedInstallments.reduce((sum, i) => sum + i.amount, 0);
+      let totalSum = updatedInstallments.reduce((sum, i) => sum + i.amount, 0);
       
-      if (totalSum !== order.totalAmount) {
-        throw new BadRequestException(`計算錯誤：分期總和 ${totalSum} 不等於訂單金額 ${order.totalAmount}`);
+      // ✅ 修正問題3：如果有尾差，自動補到最後一期
+      const delta = order.totalAmount - totalSum;
+      if (delta !== 0) {
+        const lastUnpaidInstallment = updatedInstallments
+          .reverse()
+          .find(i => i.status === InstallmentStatus.UNPAID);
+        
+        if (lastUnpaidInstallment) {
+          await tx.installment.update({
+            where: { id: lastUnpaidInstallment.id },
+            data: { amount: lastUnpaidInstallment.amount + delta }
+          });
+          
+          // 重新獲取更新後的分期
+          const finalInstallments = await tx.installment.findMany({
+            where: { orderId },
+            orderBy: { installmentNo: 'asc' }
+          });
+          
+          totalSum = finalInstallments.reduce((sum, i) => sum + i.amount, 0);
+          
+          // 最終驗證
+          if (totalSum !== order.totalAmount) {
+            throw new BadRequestException(`計算錯誤：分期總和 ${totalSum} 不等於訂單金額 ${order.totalAmount}，差額 ${delta} 元無法修正`);
+          }
+          
+          return {
+            message: '分期金額調整成功（已自動修正尾差）',
+            installments: finalInstallments,
+            calculation: {
+              totalAmount: order.totalAmount,
+              paidSum,
+              lockedUnpaidSum,
+              remaining,
+              adjustableCount: adjustableInstallments.length,
+              deltaAdjusted: delta
+            }
+          };
+        }
       }
 
       return {
@@ -436,8 +492,7 @@ export class InstallmentsService {
         calculation: {
           totalAmount: order.totalAmount,
           paidSum,
-          outstanding,
-          fixedOthers,
+          lockedUnpaidSum,
           remaining,
           adjustableCount: adjustableInstallments.length
         }

@@ -151,10 +151,10 @@ export default function InstallmentManager({
     // 清除之前的錯誤訊息
     setErrorMessage(null);
     
-    // 檢查金額是否為0
-    if (editingAmount === 0) {
-      setErrorMessage('分期付款金額不能為0，請輸入有效的金額。');
-      // 3秒後自動清除錯誤訊息
+    // ✅ 修正問題5：檢查金額必須為正整數
+    if (!Number.isInteger(editingAmount) || editingAmount <= 0) {
+      setErrorMessage('請輸入有效的整數金額（新台幣不使用小數）');
+      // 5秒後自動清除錯誤訊息
       setTimeout(() => {
         setErrorMessage(null);
       }, 5000);
@@ -168,7 +168,7 @@ export default function InstallmentManager({
     } catch (error) {
       console.error('調整分期金額失敗:', error);
       setErrorMessage('調整分期金額失敗，請稍後再試。');
-      // 3秒後自動清除錯誤訊息
+      // 5秒後自動清除錯誤訊息
       setTimeout(() => {
         setErrorMessage(null);
       }, 5000);
