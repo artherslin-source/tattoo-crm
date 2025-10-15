@@ -100,12 +100,11 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
       <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
         分店：
       </label>
-      <Select value={selectedBranchId || ''} onValueChange={onBranchChange}>
+      <Select value={selectedBranchId || 'all'} onValueChange={onBranchChange}>
         <SelectTrigger className="w-full sm:w-[280px] bg-white dark:bg-gray-800">
           <SelectValue placeholder="選擇分店" />
         </SelectTrigger>
         <SelectContent className="bg-white dark:bg-gray-800">
-          <SelectItem value="">選擇分店</SelectItem>
           {userRole === 'BOSS' && (
             <SelectItem value="all">全部分店</SelectItem>
           )}
