@@ -60,7 +60,7 @@ export default function AdminAppointmentsPage() {
   
   // 排序和分頁狀態
   const [sortField, setSortField] = useState<string>('startAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // ✅ 預設為升序
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
@@ -244,6 +244,9 @@ export default function AdminAppointmentsPage() {
       setSuccessMessage(`預約狀態已更新為：${getStatusText(newStatus)}`);
       setTimeout(() => setSuccessMessage(null), 3000);
       
+      // ✅ 關閉詳情視窗
+      handleCloseDetailModal();
+      
       // 重新載入資料
       fetchAppointments();
     } catch (err) {
@@ -278,7 +281,7 @@ export default function AdminAppointmentsPage() {
       case 'CONFIRMED':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'IN_PROGRESS':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       case 'COMPLETED':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'CANCELED':
