@@ -450,7 +450,7 @@ export default function AdminAppointmentsPage() {
         search={search}
         branchId={branchId}
         status={status}
-        branches={branches} {/* ✅ 問題3：傳遞分店列表 */}
+        branches={branches}
         onSortFieldChange={handleSortFieldChange}
         onSortOrderToggle={handleSortOrderToggle}
         onItemsPerPageChange={handleItemsPerPageChange}
