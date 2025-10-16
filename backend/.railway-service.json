@@ -1,0 +1,21 @@
+{
+  "name": "tattoo-crm-backend",
+  "type": "web",
+  "root": "backend",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install && npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm run start:prod",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 300
+  },
+  "variables": {
+    "NODE_ENV": "production",
+    "PORT": "4000"
+  }
+}
+

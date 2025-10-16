@@ -1,0 +1,18 @@
+# Railway 多服務配置
+
+# 後端服務
+[backend]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run build"
+startCommand = "npm run start:prod"
+root = "backend"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+
+# 前端服務
+[frontend]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run build"
+startCommand = "npm run start"
+root = "frontend"
+
