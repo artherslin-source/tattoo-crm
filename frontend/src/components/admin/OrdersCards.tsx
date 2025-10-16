@@ -50,8 +50,6 @@ const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case 'PENDING_PAYMENT':
       return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    case 'PENDING':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     case 'PAID':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
     case 'COMPLETED':
@@ -73,8 +71,6 @@ const getStatusText = (status: string) => {
   switch (status) {
     case 'PENDING_PAYMENT':
       return '待結帳';
-    case 'PENDING':
-      return '待付款';
     case 'PAID':
       return '已付款';
     case 'COMPLETED':
@@ -214,7 +210,7 @@ export default function OrdersCards({
                       )}
                       {order.status === 'CANCELLED' && (
                         <DropdownMenuItem 
-                          onClick={() => onUpdateStatus(order, 'PENDING')}
+                          onClick={() => onUpdateStatus(order, 'PENDING_PAYMENT')}
                           className="text-yellow-600 focus:text-yellow-600"
                         >
                           <Clock className="h-4 w-4 mr-2" />
@@ -248,7 +244,7 @@ export default function OrdersCards({
                           查看分期詳情
                         </DropdownMenuItem>
                       )}
-                      {(order.status === 'PENDING_PAYMENT' || order.status === 'PENDING') && onCheckout && (
+                      {order.status === 'PENDING_PAYMENT' && onCheckout && (
                         <DropdownMenuItem onClick={() => onCheckout(order)}>
                           <CheckCircle className="h-4 w-4 mr-2" />
                           結帳
@@ -316,7 +312,7 @@ export default function OrdersCards({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-white/85">
-                    {order.status === 'PENDING' && (
+                    {order.status === 'PENDING_PAYMENT' && (
                       <DropdownMenuItem onClick={() => onUpdateStatus(order, 'PAID')}>
                         <CheckCircle className="h-4 w-4 mr-2" />
                         標記為已付款
@@ -328,7 +324,7 @@ export default function OrdersCards({
                         標記為已完成
                       </DropdownMenuItem>
                     )}
-                    {(order.status === 'PENDING' || order.status === 'PAID') && (
+                    {(order.status === 'PENDING_PAYMENT' || order.status === 'PAID') && (
                       <DropdownMenuItem 
                         onClick={() => onUpdateStatus(order, 'CANCELLED')}
                         className="text-red-600 focus:text-red-600"
@@ -348,7 +344,7 @@ export default function OrdersCards({
                     )}
                     {order.status === 'CANCELLED' && (
                       <DropdownMenuItem 
-                        onClick={() => onUpdateStatus(order, 'PENDING')}
+                        onClick={() => onUpdateStatus(order, 'PENDING_PAYMENT')}
                         className="text-yellow-600 focus:text-yellow-600"
                       >
                         <Clock className="h-4 w-4 mr-2" />
@@ -382,7 +378,7 @@ export default function OrdersCards({
                         查看分期詳情
                       </DropdownMenuItem>
                     )}
-                    {(order.status === 'PENDING_PAYMENT' || order.status === 'PENDING') && onCheckout && (
+                    {order.status === 'PENDING_PAYMENT' && onCheckout && (
                       <DropdownMenuItem onClick={() => onCheckout(order)}>
                         <CheckCircle className="h-4 w-4 mr-2" />
                         結帳
