@@ -278,7 +278,7 @@ export class AdminAppointmentsService {
             totalAmount: appointment.service.price,
             finalAmount: appointment.service.price,
             paymentType: 'ONE_TIME',
-            status: 'PENDING',
+            status: 'PENDING_PAYMENT',
             notes: `自動生成訂單 - 預約ID: ${id}`
           }
         });

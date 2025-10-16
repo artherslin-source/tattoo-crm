@@ -88,7 +88,7 @@ export class InstallmentsService {
           data: {
             isInstallment: true,
             paymentType: PaymentType.INSTALLMENT,
-            status: OrderStatus.PENDING
+            status: OrderStatus.PENDING_PAYMENT
           }
         });
       } else {
@@ -98,7 +98,7 @@ export class InstallmentsService {
           data: {
             isInstallment: false,
             paymentType: PaymentType.ONE_TIME,
-            status: OrderStatus.PENDING
+            status: OrderStatus.PENDING_PAYMENT
           }
         });
       }

@@ -182,7 +182,7 @@ export default function OrdersCards({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-white/85">
-                      {order.status === 'PENDING' && (
+                      {order.status === 'PENDING_PAYMENT' && (
                         <DropdownMenuItem onClick={() => onUpdateStatus(order, 'PAID')}>
                           <CheckCircle className="h-4 w-4 mr-2" />
                           標記為已付款
