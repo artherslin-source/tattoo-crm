@@ -108,7 +108,20 @@ export default function AdminOrdersPage() {
       setTimeout(() => {
         document.body.style.pointerEvents = '';
         document.body.style.overflow = '';
+        // 額外清理：移除所有可能影響 pointer-events 的樣式
+        const elements = document.querySelectorAll('[style*="pointer-events"]');
+        elements.forEach(el => {
+          if (el instanceof HTMLElement) {
+            el.style.pointerEvents = '';
+          }
+        });
       }, 100);
+    } else {
+      // 開啟時也確保清理
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }, 50);
     }
   };
   const [createOrderData, setCreateOrderData] = useState({
@@ -244,6 +257,13 @@ export default function AdminOrdersPage() {
     const cleanup = () => {
       document.body.style.pointerEvents = '';
       document.body.style.overflow = '';
+      // 額外清理：移除所有可能影響 pointer-events 的樣式
+      const elements = document.querySelectorAll('[style*="pointer-events"]');
+      elements.forEach(el => {
+        if (el instanceof HTMLElement) {
+          el.style.pointerEvents = '';
+        }
+      });
     };
     
     cleanup();
@@ -255,10 +275,17 @@ export default function AdminOrdersPage() {
       }
     };
     
+    // 監聽點擊事件，確保 pointer-events 正常
+    const handleClick = () => {
+      cleanup();
+    };
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('click', handleClick);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('click', handleClick);
       cleanup();
     };
   }, []);
@@ -979,7 +1006,10 @@ export default function AdminOrdersPage() {
                   value={createOrderData.memberId}
                   onValueChange={(value) => setCreateOrderData({ ...createOrderData, memberId: value })}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger 
+                    className="w-full"
+                    style={{ pointerEvents: 'auto' }}
+                  >
                     <SelectValue placeholder="請選擇會員" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800 max-h-[300px]">
@@ -1010,7 +1040,10 @@ export default function AdminOrdersPage() {
                   value={createOrderData.branchId}
                   onValueChange={(value) => setCreateOrderData({ ...createOrderData, branchId: value })}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger 
+                    className="w-full"
+                    style={{ pointerEvents: 'auto' }}
+                  >
                     <SelectValue placeholder="請選擇分店" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800">
@@ -1080,7 +1113,7 @@ export default function AdminOrdersPage() {
                   <ul className="list-disc list-inside space-y-1 text-xs">
                     <li>訂單將自動設定為「待結帳」狀態</li>
                     <li>可在訂單詳情中進行結帳操作，選擇一次付清或分期付款</li>
-                    <li>結帳後訂單狀態將更新為「待付款」或「分期中」</li>
+                    <li>結帳後訂單狀態將更新為「已付款」或「分期中」</li>
                   </ul>
                 </div>
               </div>
