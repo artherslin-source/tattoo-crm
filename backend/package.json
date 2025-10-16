@@ -13,7 +13,12 @@
     "start:prod": "node scripts/start-prod.js",
     "start:force-build": "npm run build && npm run start:prod",
     "postinstall": "npx prisma generate && npm run build:tsc",
-    "seed": "npx ts-node prisma/seed.ts"
+    "seed": "npx ts-node prisma/seed.ts",
+    "rebuild": "npx ts-node scripts/smart-rebuild.ts",
+    "rebuild:dev": "npx ts-node scripts/smart-rebuild.ts -r \"開發環境重建\"",
+    "rebuild:protect": "npx ts-node scripts/smart-rebuild.ts -p -r \"保護性重建\"",
+    "restore": "npx ts-node scripts/restore-backup.ts",
+    "backup:list": "npx ts-node scripts/restore-backup.ts --list"
   },
   "dependencies": {
     "@nestjs/common": "10.4.20",
