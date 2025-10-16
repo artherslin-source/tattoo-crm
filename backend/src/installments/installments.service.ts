@@ -180,7 +180,7 @@ export class InstallmentsService {
       const totalPaidAmount = paidInstallments.reduce((sum, i) => sum + i.amount, 0);
 
       // 更新訂單狀態
-      let orderStatus: any = OrderStatus.PENDING;
+      let orderStatus: any = OrderStatus.PENDING_PAYMENT;
       if (paidInstallments.length === allInstallments.length) {
         orderStatus = OrderStatus.PAID;
       } else if (paidInstallments.length > 0) {

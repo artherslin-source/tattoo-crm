@@ -21,7 +21,7 @@ interface Order {
   id: string;
   totalAmount: number;
   finalAmount: number;
-  status: 'PENDING_PAYMENT' | 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
+  status: 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
   createdAt: string;
   paymentType: 'ONE_TIME' | 'INSTALLMENT';
   isInstallment: boolean;
@@ -517,8 +517,6 @@ export default function AdminOrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'PARTIALLY_PAID':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'PAID':
@@ -536,8 +534,6 @@ export default function AdminOrdersPage() {
     switch (status) {
       case 'PENDING_PAYMENT':
         return '待結帳';
-      case 'PENDING':
-        return '待付款';
       case 'INSTALLMENT_ACTIVE':
         return '分期中';
       case 'PARTIALLY_PAID':
@@ -559,8 +555,6 @@ export default function AdminOrdersPage() {
     switch (status) {
       case 'PENDING_PAYMENT':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'INSTALLMENT_ACTIVE':
         return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
       case 'PARTIALLY_PAID':
@@ -598,8 +592,6 @@ export default function AdminOrdersPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'PENDING':
-        return <Clock className="h-4 w-4" />;
       case 'PAID':
         return <CheckCircle className="h-4 w-4" />;
       case 'COMPLETED':
@@ -936,18 +928,6 @@ export default function AdminOrdersPage() {
                     開始結帳
                   </Button>
                 )}
-                {/* 待付款狀態：顯示「標記為已付款」按鈕 */}
-                {selectedOrder.status === 'PENDING' && (
-                  <Button 
-                    onClick={() => {
-                      handleUpdateStatus(selectedOrder, 'PAID');
-                      handleCloseDetailModal();
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    標記為已付款
-                  </Button>
-                )}
                 {selectedOrder.status === 'PAID' && (
                   <Button 
                     onClick={() => {
@@ -959,8 +939,8 @@ export default function AdminOrdersPage() {
                     標記為已完成
                   </Button>
                 )}
-                {/* 取消訂單按鈕：待結帳、待付款、已付款狀態都可以取消 */}
-                {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PENDING' || selectedOrder.status === 'PAID') && (
+                {/* 取消訂單按鈕：待結帳、已付款狀態都可以取消 */}
+                {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PAID') && (
                   <Button 
                     onClick={() => {
                       handleUpdateStatus(selectedOrder, 'CANCELLED');

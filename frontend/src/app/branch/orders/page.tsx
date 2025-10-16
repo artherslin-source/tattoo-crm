@@ -10,7 +10,7 @@ import { ShoppingCart, ArrowLeft, CheckCircle, XCircle, Clock, Building2 } from 
 interface Order {
   id: string;
   totalAmount: number;
-  status: 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED';
+  status: 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED' | 'COMPLETED';
   createdAt: string;
   member: {
     id: string;
@@ -78,7 +78,7 @@ export default function BranchOrdersPage() {
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'CANCELLED':
         return <XCircle className="h-5 w-5 text-red-500" />;
-      case 'PENDING':
+      case 'PENDING_PAYMENT':
         return <Clock className="h-5 w-5 text-yellow-500" />;
       default:
         return <Clock className="h-5 w-5 text-gray-500" />;
@@ -89,8 +89,6 @@ export default function BranchOrdersPage() {
     switch (status) {
       case 'PENDING_PAYMENT':
         return '待結帳';
-      case 'PENDING':
-        return '待付款';
       case 'INSTALLMENT_ACTIVE':
         return '分期中';
       case 'PARTIALLY_PAID':

@@ -154,7 +154,7 @@ export class OrdersService {
         throw new Error('訂單不存在');
       }
 
-      if (order.status !== 'PENDING_PAYMENT' && order.status !== 'PENDING') {
+      if (order.status !== 'PENDING_PAYMENT') {
         throw new Error('訂單狀態不正確，無法結帳');
       }
 
@@ -383,7 +383,6 @@ export class OrdersService {
       // ✅ 待處理狀態：所有未完成的訂單（不包括已完成和已取消）
       const pendingStatuses: OrderStatus[] = [
         'PENDING_PAYMENT',  // 待結帳
-        'PENDING',          // 待付款
         'INSTALLMENT_ACTIVE', // 分期中
         'PARTIALLY_PAID',   // 部分付款
         'PAID'              // 已付款（但還未完成服務）

@@ -12,7 +12,7 @@ interface Order {
   finalAmount: number;
   paymentType: 'ONE_TIME' | 'INSTALLMENT';
   isInstallment: boolean;
-  status: 'PENDING_PAYMENT' | 'PENDING' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
+  status: 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED' | 'COMPLETED' | 'INSTALLMENT_ACTIVE' | 'PARTIALLY_PAID' | 'PAID_COMPLETE';
   createdAt: string;
   member: {
     id: string;

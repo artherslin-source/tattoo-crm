@@ -213,7 +213,6 @@ enum PaymentType {
 
 enum OrderStatus {
   PENDING_PAYMENT  // 待結帳
-  PENDING
   PARTIALLY_PAID  // 部分付款（分期付款中）
   INSTALLMENT_ACTIVE  // 分期付款中
   PAID

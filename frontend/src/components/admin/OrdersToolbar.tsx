@@ -82,7 +82,6 @@ export default function OrdersToolbar({
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部狀態</SelectItem>
                 <SelectItem value="PENDING_PAYMENT">待結帳</SelectItem>
-                <SelectItem value="PENDING">待付款</SelectItem>
                 <SelectItem value="PAID">已付款</SelectItem>
                 <SelectItem value="COMPLETED">已完成</SelectItem>
                 <SelectItem value="CANCELLED">已取消</SelectItem>
@@ -176,7 +175,6 @@ export default function OrdersToolbar({
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部狀態</SelectItem>
                 <SelectItem value="PENDING_PAYMENT">待結帳</SelectItem>
-                <SelectItem value="PENDING">待付款</SelectItem>
                 <SelectItem value="PAID">已付款</SelectItem>
                 <SelectItem value="COMPLETED">已完成</SelectItem>
                 <SelectItem value="CANCELLED">已取消</SelectItem>
@@ -305,7 +303,6 @@ export default function OrdersToolbar({
                   </SelectTrigger>
                   <SelectContent className="bg-white/85">
                     <SelectItem value="all">全部狀態</SelectItem>
-                    <SelectItem value="PENDING">待付款</SelectItem>
                     <SelectItem value="PAID">已付款</SelectItem>
                     <SelectItem value="COMPLETED">已完成</SelectItem>
                     <SelectItem value="CANCELLED">已取消</SelectItem>
