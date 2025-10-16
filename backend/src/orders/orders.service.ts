@@ -17,6 +17,7 @@ interface CreateOrderInput {
   appointmentId?: string | null;
   totalAmount: number;
   useStoredValue?: boolean;
+  notes?: string;
 }
 
 interface CheckoutInput {
@@ -107,6 +108,7 @@ export class OrdersService {
           status: 'PENDING_PAYMENT', // 新建訂單預設為待結帳狀態
           paymentType: 'ONE_TIME', // 預設為一次付清，結帳時再決定
           isInstallment: false,
+          notes: input.notes || null,
         },
         include: {
           member: { select: { id: true, name: true, email: true } },

@@ -133,6 +133,10 @@ export default function AdminOrdersPage() {
     notes: ''
   });
 
+  // 控制下拉選單顯示狀態
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
+
   // 會員列表和刺青師列表（用於創建訂單時選擇）
   const [members, setMembers] = useState<Array<{ id: string; name: string; email: string }>>([]);
 
@@ -516,7 +520,7 @@ export default function AdminOrdersPage() {
         notes: createOrderData.notes
       };
 
-      await postJsonWithAuth('/orders', orderData);
+      await postJsonWithAuth('/admin/orders', orderData);
 
       // 重新獲取訂單列表
       await fetchOrders();
@@ -532,6 +536,8 @@ export default function AdminOrdersPage() {
         totalAmount: '',
         notes: ''
       });
+      setShowMemberDropdown(false);
+      setShowBranchDropdown(false);
 
       setSuccessMessage('訂單創建成功');
       setError(null);
@@ -1017,12 +1023,14 @@ export default function AdminOrdersPage() {
                         memberSearch: searchValue,
                         memberId: searchValue ? createOrderData.memberId : ''
                       });
+                      setShowMemberDropdown(searchValue.length > 0);
                     }}
+                    onFocus={() => setShowMemberDropdown(createOrderData.memberSearch.length > 0)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     placeholder="請輸入會員姓名或郵箱搜索"
                     required
                   />
-                  {createOrderData.memberSearch && (
+                  {showMemberDropdown && createOrderData.memberSearch && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
                       {members
                         .filter(member => 
@@ -1040,6 +1048,7 @@ export default function AdminOrdersPage() {
                                 memberId: member.id,
                                 memberSearch: `${member.name} (${member.email})`
                               });
+                              setShowMemberDropdown(false);
                             }}
                           >
                             <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
@@ -1072,12 +1081,14 @@ export default function AdminOrdersPage() {
                         branchSearch: searchValue,
                         branchId: searchValue ? createOrderData.branchId : ''
                       });
+                      setShowBranchDropdown(searchValue.length > 0);
                     }}
+                    onFocus={() => setShowBranchDropdown(createOrderData.branchSearch.length > 0)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     placeholder="請輸入分店名稱搜索"
                     required
                   />
-                  {createOrderData.branchSearch && (
+                  {showBranchDropdown && createOrderData.branchSearch && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
                       {branches
                         .filter(branch => 
@@ -1094,6 +1105,7 @@ export default function AdminOrdersPage() {
                                 branchId: branch.id,
                                 branchSearch: branch.name
                               });
+                              setShowBranchDropdown(false);
                             }}
                           >
                             <div className="font-medium text-gray-900 dark:text-white">{branch.name}</div>
@@ -1183,6 +1195,8 @@ export default function AdminOrdersPage() {
                     totalAmount: '',
                     notes: ''
                   });
+                  setShowMemberDropdown(false);
+                  setShowBranchDropdown(false);
                 }}
               >
                 取消
