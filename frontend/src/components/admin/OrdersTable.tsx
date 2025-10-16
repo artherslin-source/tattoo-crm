@@ -189,7 +189,7 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
                         )}
                         {order.status === 'CANCELLED' && (
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(order, 'PENDING')}
+                            onClick={() => onUpdateStatus(order, 'PENDING_PAYMENT')}
                             className="text-yellow-600 focus:text-yellow-600"
                           >
                             <Clock className="h-4 w-4 mr-2" />
