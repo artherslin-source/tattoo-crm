@@ -126,7 +126,9 @@ export default function AdminOrdersPage() {
   };
   const [createOrderData, setCreateOrderData] = useState({
     memberId: '',
+    memberSearch: '',
     branchId: '',
+    branchSearch: '',
     totalAmount: '',
     notes: ''
   });
@@ -524,7 +526,9 @@ export default function AdminOrdersPage() {
       setIsCreateModalOpen(false);
       setCreateOrderData({
         memberId: '',
+        memberSearch: '',
         branchId: '',
+        branchSearch: '',
         totalAmount: '',
         notes: ''
       });
@@ -1002,33 +1006,54 @@ export default function AdminOrdersPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   選擇會員 *
                 </label>
-                <Select
-                  value={createOrderData.memberId}
-                  onValueChange={(value) => setCreateOrderData({ ...createOrderData, memberId: value })}
-                >
-                  <SelectTrigger 
-                    className="w-full"
-                    style={{ pointerEvents: 'auto' }}
-                  >
-                    <SelectValue placeholder="請選擇會員" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 max-h-[300px]">
-                    {members.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        暫無會員資料
-                      </div>
-                    ) : (
-                      members.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">{member.name}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{member.email}</span>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={createOrderData.memberSearch || ''}
+                    onChange={(e) => {
+                      const searchValue = e.target.value;
+                      setCreateOrderData({ 
+                        ...createOrderData, 
+                        memberSearch: searchValue,
+                        memberId: searchValue ? createOrderData.memberId : ''
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="請輸入會員姓名或郵箱搜索"
+                    required
+                  />
+                  {createOrderData.memberSearch && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {members
+                        .filter(member => 
+                          member.name.toLowerCase().includes(createOrderData.memberSearch.toLowerCase()) ||
+                          member.email.toLowerCase().includes(createOrderData.memberSearch.toLowerCase())
+                        )
+                        .slice(0, 5)
+                        .map((member) => (
+                          <div
+                            key={member.id}
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                            onClick={() => {
+                              setCreateOrderData({ 
+                                ...createOrderData, 
+                                memberId: member.id,
+                                memberSearch: `${member.name} (${member.email})`
+                              });
+                            }}
+                          >
+                            <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{member.email}</div>
                           </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                {createOrderData.memberId && (
+                  <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                    ✓ 已選擇會員
+                  </p>
+                )}
               </div>
 
               {/* 選擇分店 */}
@@ -1036,30 +1061,55 @@ export default function AdminOrdersPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   選擇分店 *
                 </label>
-                <Select
-                  value={createOrderData.branchId}
-                  onValueChange={(value) => setCreateOrderData({ ...createOrderData, branchId: value })}
-                >
-                  <SelectTrigger 
-                    className="w-full"
-                    style={{ pointerEvents: 'auto' }}
-                  >
-                    <SelectValue placeholder="請選擇分店" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800">
-                    {branches.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        暫無分店資料
-                      </div>
-                    ) : (
-                      branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={createOrderData.branchSearch || ''}
+                    onChange={(e) => {
+                      const searchValue = e.target.value;
+                      setCreateOrderData({ 
+                        ...createOrderData, 
+                        branchSearch: searchValue,
+                        branchId: searchValue ? createOrderData.branchId : ''
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="請輸入分店名稱搜索"
+                    required
+                  />
+                  {createOrderData.branchSearch && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {branches
+                        .filter(branch => 
+                          branch.name.toLowerCase().includes(createOrderData.branchSearch.toLowerCase())
+                        )
+                        .slice(0, 5)
+                        .map((branch) => (
+                          <div
+                            key={branch.id}
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                            onClick={() => {
+                              setCreateOrderData({ 
+                                ...createOrderData, 
+                                branchId: branch.id,
+                                branchSearch: branch.name
+                              });
+                            }}
+                          >
+                            <div className="font-medium text-gray-900 dark:text-white">{branch.name}</div>
+                            {branch.address && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{branch.address}</div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                {createOrderData.branchId && (
+                  <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                    ✓ 已選擇分店
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1127,7 +1177,9 @@ export default function AdminOrdersPage() {
                   setIsCreateModalOpen(false);
                   setCreateOrderData({
                     memberId: '',
+                    memberSearch: '',
                     branchId: '',
+                    branchSearch: '',
                     totalAmount: '',
                     notes: ''
                   });
