@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,66 @@ export default function CheckoutModal({
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [customPlan, setCustomPlan] = useState<{ [key: number]: number }>({});
   const [loading, setLoading] = useState(false);
+
+  // 處理模態框開啟/關閉時的 pointer-events 清理
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+      // 清理 pointer-events
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+        const elements = document.querySelectorAll('[style*="pointer-events"]');
+        elements.forEach(el => {
+          if (el instanceof HTMLElement) {
+            el.style.pointerEvents = '';
+          }
+        });
+      }, 100);
+    } else {
+      // 開啟時也確保清理
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }, 50);
+    }
+  };
+
+  // 全局 pointer-events 清理
+  useEffect(() => {
+    const cleanup = () => {
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+      const elements = document.querySelectorAll('[style*="pointer-events"]');
+      elements.forEach(el => {
+        if (el instanceof HTMLElement) {
+          el.style.pointerEvents = '';
+        }
+      });
+    };
+    
+    cleanup();
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        cleanup();
+      }
+    };
+    
+    // 監聽點擊事件，確保 pointer-events 正常
+    const handleClick = () => {
+      cleanup();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('click', handleClick);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('click', handleClick);
+      cleanup();
+    };
+  }, []);
 
   if (!order) return null;
 
@@ -169,7 +229,7 @@ export default function CheckoutModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-full md:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -244,7 +304,7 @@ export default function CheckoutModal({
                   <div>
                     <Label htmlFor="installment-terms">分期期數</Label>
                     <Select value={installmentTerms.toString()} onValueChange={(value) => setInstallmentTerms(parseInt(value))}>
-                      <SelectTrigger>
+                      <SelectTrigger style={{ pointerEvents: 'auto' }}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-white/85">
