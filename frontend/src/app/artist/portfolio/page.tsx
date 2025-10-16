@@ -225,7 +225,7 @@ export default function ArtistPortfolio() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 pb-10 max-w-6xl mx-auto w-full">
       {/* 頁面標題和操作 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -243,41 +243,47 @@ export default function ArtistPortfolio() {
       </div>
 
       {/* 搜尋和篩選 */}
-      <div className="flex flex-col gap-4">
-        <div className="relative flex-1">
-          <Input
-            placeholder="搜尋作品標題或描述..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        {/* 標籤篩選 - 響應式佈局 */}
-        <div className="w-full">
-          <div className="grid grid-rows-2 grid-flow-col gap-2 sm:gap-3 md:gap-4 max-w-full overflow-x-auto">
-            {AVAILABLE_TAGS.map(tag => (
-              <Badge
-                key={tag}
-                variant="outline"
-                className={`cursor-pointer transition-all duration-200 text-center text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 whitespace-nowrap ${
-                  selectedTags.includes(tag) 
-                    ? 'bg-orange-500 border-white text-white hover:bg-orange-600' 
-                    : 'hover:bg-gray-100'
-                }`}
-                onClick={() => {
-                  setSelectedTags(prev => 
-                    prev.includes(tag) 
-                      ? prev.filter(t => t !== tag)
-                      : [...prev, tag]
-                  );
-                }}
-              >
-                {tag}
-              </Badge>
-            ))}
+      <Card className="border border-gray-200 shadow-sm">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            <div className="relative flex-1">
+              <Input
+                placeholder="搜尋作品標題或描述..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-11"
+              />
+            </div>
+
+            {/* 標籤篩選 - 響應式佈局 */}
+            <div className="w-full">
+              <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4">
+                {AVAILABLE_TAGS.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className={`cursor-pointer transition-all duration-200 text-center text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2
+whitespace-nowrap ${
+                      selectedTags.includes(tag)
+                        ? 'bg-orange-500 border-white text-white hover:bg-orange-600'
+                        : 'hover:bg-gray-100'
+                    }`}
+                    onClick={() => {
+                      setSelectedTags(prev =>
+                        prev.includes(tag)
+                          ? prev.filter(t => t !== tag)
+                          : [...prev, tag]
+                      );
+                    }}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* 上傳表單 */}
       {showUploadForm && (
@@ -317,7 +323,7 @@ export default function ArtistPortfolio() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   標籤
                 </label>
-                <div className="grid grid-rows-2 grid-flow-col gap-2 sm:gap-3 md:gap-4 max-w-full overflow-x-auto">
+                <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4">
                   {AVAILABLE_TAGS.map(tag => (
                     <Badge
                       key={tag}
@@ -370,11 +376,11 @@ export default function ArtistPortfolio() {
                 </div>
               </div>
 
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   type="submit"
                   disabled={uploading}
-                  className="flex-1"
+                  className="w-full sm:flex-1"
                 >
                   {uploading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -388,6 +394,7 @@ export default function ArtistPortfolio() {
                   variant="outline"
                   onClick={handleCancel}
                   disabled={uploading}
+                  className="w-full sm:w-auto"
                 >
                   <X className="mr-2 h-4 w-4" />
                   取消
