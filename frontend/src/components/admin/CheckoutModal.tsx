@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, CreditCard, DollarSign, AlertCircle } from 'lucide-react';
@@ -47,6 +46,7 @@ export default function CheckoutModal({
 }: CheckoutModalProps) {
   const [paymentType, setPaymentType] = useState<'ONE_TIME' | 'INSTALLMENT'>('ONE_TIME');
   const [installmentTerms, setInstallmentTerms] = useState(3);
+  const [installmentTermsError, setInstallmentTermsError] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [customPlan, setCustomPlan] = useState<{ [key: number]: number }>({});
   const [loading, setLoading] = useState(false);
@@ -179,8 +179,15 @@ export default function CheckoutModal({
   const handleCheckout = async () => {
     if (!order) return;
 
-    // 檢查分期付款中是否有金額為0的情況
+    // 檢查分期付款設定
     if (paymentType === 'INSTALLMENT') {
+      // 檢查分期期數是否有效
+      if (installmentTerms < 2 || installmentTerms > 24) {
+        setInstallmentTermsError('分期期數必須在2-24期之間');
+        return;
+      }
+      
+      // 檢查分期付款中是否有金額為0的情況
       const hasZeroAmount = installmentAmounts.some(installment => installment.amount === 0);
       if (hasZeroAmount) {
         alert('分期付款金額不能為0，請檢查並修正金額設定。');
@@ -303,17 +310,64 @@ export default function CheckoutModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="installment-terms">分期期數</Label>
-                    <Select value={installmentTerms.toString()} onValueChange={(value) => setInstallmentTerms(parseInt(value))}>
-                      <SelectTrigger style={{ pointerEvents: 'auto' }}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white/85">
-                        <SelectItem value="2">2期</SelectItem>
-                        <SelectItem value="3">3期</SelectItem>
-                        <SelectItem value="6">6期</SelectItem>
-                        <SelectItem value="12">12期</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Input
+                        id="installment-terms"
+                        type="number"
+                        min="2"
+                        max="24"
+                        value={installmentTerms}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (e.target.value === '') {
+                            setInstallmentTermsError('');
+                            return;
+                          }
+                          if (isNaN(value)) {
+                            setInstallmentTermsError('請輸入有效的數字');
+                            return;
+                          }
+                          if (value < 2) {
+                            setInstallmentTermsError('分期期數最少2期');
+                            return;
+                          }
+                          if (value > 24) {
+                            setInstallmentTermsError('分期期數最多24期');
+                            return;
+                          }
+                          setInstallmentTerms(value);
+                          setInstallmentTermsError('');
+                        }}
+                        className="w-full"
+                        placeholder="請輸入分期期數 (2-24期)"
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                        期
+                      </div>
+                    </div>
+                    {installmentTermsError && (
+                      <p className="mt-1 text-xs text-red-600">{installmentTermsError}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="text-xs text-gray-500">快速選擇：</span>
+                      {[2, 3, 6, 12].map((term) => (
+                        <button
+                          key={term}
+                          type="button"
+                          onClick={() => {
+                            setInstallmentTerms(term);
+                            setInstallmentTermsError('');
+                          }}
+                          className={`px-2 py-1 text-xs rounded border ${
+                            installmentTerms === term
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                          }`}
+                        >
+                          {term}期
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="start-date">開始日期</Label>
