@@ -7,7 +7,7 @@ CREATE TABLE "new_TopupHistory" (
     "operatorId" TEXT NOT NULL,
     "amount" INTEGER NOT NULL,
     "type" TEXT NOT NULL DEFAULT 'TOPUP',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "TopupHistory_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "TopupHistory_operatorId_fkey" FOREIGN KEY ("operatorId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );

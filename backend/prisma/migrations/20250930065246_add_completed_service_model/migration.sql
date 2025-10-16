@@ -9,7 +9,7 @@ CREATE TABLE "CompletedService" (
     "serviceName" TEXT NOT NULL,
     "servicePrice" INTEGER NOT NULL,
     "serviceDuration" INTEGER NOT NULL,
-    "completedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "notes" TEXT,
     CONSTRAINT "CompletedService_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "CompletedService_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
