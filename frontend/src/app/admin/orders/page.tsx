@@ -84,9 +84,33 @@ export default function AdminOrdersPage() {
   // 訂單詳情模態框狀態
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  // 修復 Dialog pointer-events 問題
+  const handleDetailModalOpenChange = (open: boolean) => {
+    setIsDetailModalOpen(open);
+    if (!open) {
+      // 強制清除可能殘留的 pointer-events: none
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }, 100);
+    }
+  };
 
   // 創建訂單模態框狀態
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  // 修復 Dialog pointer-events 問題
+  const handleCreateModalOpenChange = (open: boolean) => {
+    setIsCreateModalOpen(open);
+    if (!open) {
+      // 強制清除可能殘留的 pointer-events: none
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }, 100);
+    }
+  };
   const [createOrderData, setCreateOrderData] = useState({
     memberId: '',
     branchId: '',
@@ -212,6 +236,31 @@ export default function AdminOrdersPage() {
       const apiErr = err as ApiError;
       console.error('載入會員資料失敗:', apiErr.message);
     }
+  }, []);
+
+  // 修復 Dialog pointer-events 問題的全局清理
+  useEffect(() => {
+    // 頁面載入時清除任何殘留的 pointer-events 樣式
+    const cleanup = () => {
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+    };
+    
+    cleanup();
+    
+    // 監聽頁面可見性變化，確保樣式正確
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        cleanup();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      cleanup();
+    };
   }, []);
 
   // 初次載入時獲取分店資料和會員資料
@@ -796,7 +845,7 @@ export default function AdminOrdersPage() {
       </Card>
 
       {/* 訂單詳情模態框 */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+      <Dialog open={isDetailModalOpen} onOpenChange={handleDetailModalOpenChange}>
         <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>訂單詳情</DialogTitle>
@@ -929,7 +978,7 @@ export default function AdminOrdersPage() {
       </Dialog>
 
       {/* 創建訂單模態框 */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+      <Dialog open={isCreateModalOpen} onOpenChange={handleCreateModalOpenChange}>
         <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>創建新訂單</DialogTitle>
