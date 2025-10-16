@@ -57,12 +57,16 @@ run('npx tsc -p tsconfig.build.json', '編譯 TypeScript 專案');
 // 如果需要完全重置資料庫（清空所有數據並重新導入）
 if (process.env.RESET_DATABASE === 'true') {
   console.log('🔄 完全重置資料庫模式：將清空並重建所有數據');
-  run('npx prisma migrate reset --force --skip-seed', '重置資料庫');
+  
+  // 使用 db push 代替 migrate reset 以避免 migration 錯誤
+  console.log('📊 使用 db push 清空並重建資料庫...');
+  run('npx prisma db push --force-reset --accept-data-loss', '強制重置並同步資料庫 Schema');
   
   // 重置後執行 seeding
   console.log('🌱 執行資料庫 seeding...');
   try {
     run('npx ts-node prisma/seed.ts', '匯入預設種子資料');
+    console.log('✅ 資料庫種子數據導入成功');
   } catch (error) {
     console.warn('⚠️ Seeding 失敗，但服務將繼續啟動');
     console.warn('   錯誤訊息:', error.message);
