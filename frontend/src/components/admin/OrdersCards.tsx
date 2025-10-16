@@ -194,7 +194,7 @@ export default function OrdersCards({
                           標記為已完成
                         </DropdownMenuItem>
                       )}
-                      {(order.status === 'PENDING' || order.status === 'PAID') && (
+                      {(order.status === 'PENDING_PAYMENT' || order.status === 'PAID') && (
                         <DropdownMenuItem 
                           onClick={() => onUpdateStatus(order, 'CANCELLED')}
                           className="text-red-600 focus:text-red-600"
