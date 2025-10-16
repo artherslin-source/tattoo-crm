@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar, CheckCircle, Clock, DollarSign, AlertCircle } from 'lucide-react';
@@ -64,6 +63,67 @@ export default function InstallmentManager({
   
   // ✅ 新增：錯誤訊息狀態
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [paymentMethodError, setPaymentMethodError] = useState('');
+
+  // 處理模態框開啟/關閉時的 pointer-events 清理
+  const handlePaymentDialogOpenChange = (open: boolean) => {
+    setIsPaymentDialogOpen(open);
+    if (!open) {
+      // 清理 pointer-events
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+        const elements = document.querySelectorAll('[style*="pointer-events"]');
+        elements.forEach(el => {
+          if (el instanceof HTMLElement) {
+            el.style.pointerEvents = '';
+          }
+        });
+      }, 100);
+    } else {
+      // 開啟時也確保清理
+      setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }, 50);
+    }
+  };
+
+  // 全局 pointer-events 清理
+  useEffect(() => {
+    const cleanup = () => {
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+      const elements = document.querySelectorAll('[style*="pointer-events"]');
+      elements.forEach(el => {
+        if (el instanceof HTMLElement) {
+          el.style.pointerEvents = '';
+        }
+      });
+    };
+    
+    cleanup();
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        cleanup();
+      }
+    };
+    
+    // 監聽點擊事件，確保 pointer-events 正常
+    const handleClick = () => {
+      cleanup();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('click', handleClick);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('click', handleClick);
+      cleanup();
+    };
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('zh-TW', {
@@ -111,6 +171,13 @@ export default function InstallmentManager({
     
     // 清除之前的錯誤訊息
     setErrorMessage(null);
+    setPaymentMethodError('');
+    
+    // 驗證付款方式
+    if (!paymentData.paymentMethod || paymentData.paymentMethod.trim() === '') {
+      setPaymentMethodError('請選擇付款方式');
+      return;
+    }
     
     try {
       await onPaymentRecorded(selectedInstallment.id, paymentData);
@@ -315,7 +382,7 @@ export default function InstallmentManager({
       </Card>
 
       {/* 記錄付款對話框 */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+      <Dialog open={isPaymentDialogOpen} onOpenChange={handlePaymentDialogOpenChange}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>記錄付款</DialogTitle>
@@ -330,17 +397,43 @@ export default function InstallmentManager({
             
             <div className="space-y-2">
               <Label htmlFor="payment-method">付款方式</Label>
-              <Select value={paymentData.paymentMethod} onValueChange={(value) => setPaymentData({...paymentData, paymentMethod: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="選擇付款方式" />
-                </SelectTrigger>
-                <SelectContent className="bg-white/80">
-                  <SelectItem value="現金">現金</SelectItem>
-                  <SelectItem value="信用卡">信用卡</SelectItem>
-                  <SelectItem value="匯款">匯款</SelectItem>
-                  <SelectItem value="轉帳">轉帳</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <Input
+                  id="payment-method"
+                  type="text"
+                  value={paymentData.paymentMethod}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPaymentData({...paymentData, paymentMethod: value});
+                    setPaymentMethodError('');
+                  }}
+                  className="w-full"
+                  placeholder="請輸入或選擇付款方式"
+                />
+              </div>
+              {paymentMethodError && (
+                <p className="text-xs text-red-600">{paymentMethodError}</p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500">快速選擇：</span>
+                {['現金', '信用卡', '匯款', '轉帳'].map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => {
+                      setPaymentData({...paymentData, paymentMethod: method});
+                      setPaymentMethodError('');
+                    }}
+                    className={`px-2 py-1 text-xs rounded border ${
+                      paymentData.paymentMethod === method
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
