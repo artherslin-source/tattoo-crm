@@ -5,7 +5,8 @@ import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
-import { extname } from "path";
+import { existsSync, mkdirSync } from "fs";
+import { extname, join } from "path";
 
 @Controller("artist")
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -122,7 +123,13 @@ export class ArtistController {
   @Post("portfolio")
   @UseInterceptors(FileInterceptor('image', {
     storage: diskStorage({
-      destination: './uploads/portfolio',
+      destination: (req, file, callback) => {
+        const uploadPath = join(process.cwd(), 'uploads', 'portfolio');
+        if (!existsSync(uploadPath)) {
+          mkdirSync(uploadPath, { recursive: true });
+        }
+        callback(null, uploadPath);
+      },
       filename: (req, file, callback) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = extname(file.originalname);
