@@ -94,6 +94,9 @@ export default function AdminOrdersPage() {
     notes: ''
   });
 
+  // 會員列表和刺青師列表（用於創建訂單時選擇）
+  const [members, setMembers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+
   // 結帳模態框狀態
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [checkoutOrder, setCheckoutOrder] = useState<Order | null>(null);
@@ -195,10 +198,27 @@ export default function AdminOrdersPage() {
     }
   }, []);
 
-  // 初次載入時獲取分店資料
+  // 獲取會員列表（用於創建訂單）
+  const fetchMembers = useCallback(async () => {
+    try {
+      const response = await getJsonWithAuth('/admin/members') as { data: Array<{ user: { id: string; name: string; email: string } }> };
+      const membersList = response.data.map(member => ({
+        id: member.user.id,
+        name: member.user.name || '未設定',
+        email: member.user.email
+      }));
+      setMembers(membersList);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      console.error('載入會員資料失敗:', apiErr.message);
+    }
+  }, []);
+
+  // 初次載入時獲取分店資料和會員資料
   useEffect(() => {
     fetchBranches();
-  }, [fetchBranches]);
+    fetchMembers();
+  }, [fetchBranches, fetchMembers]);
 
   // 當篩選條件改變時重新載入資料和統計
   useEffect(() => {
@@ -914,80 +934,149 @@ export default function AdminOrdersPage() {
           <DialogHeader>
             <DialogTitle>創建新訂單</DialogTitle>
             <DialogDescription>
-              為客戶創建新的訂單，可選擇一次付清或分期付款
+              為客戶創建新的訂單
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 pb-4">
             {/* 基本資訊 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 選擇會員 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  會員ID *
+                  選擇會員 *
                 </label>
-                <input
-                  type="text"
+                <Select
                   value={createOrderData.memberId}
-                  onChange={(e) => setCreateOrderData({ ...createOrderData, memberId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  placeholder="輸入會員ID"
-                  required
-                />
+                  onValueChange={(value) => setCreateOrderData({ ...createOrderData, memberId: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="請選擇會員" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 max-h-[300px]">
+                    {members.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        暫無會員資料
+                      </div>
+                    ) : (
+                      members.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{member.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{member.email}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* 選擇分店 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  分店ID *
+                  選擇分店 *
                 </label>
-                <input
-                  type="text"
+                <Select
                   value={createOrderData.branchId}
-                  onChange={(e) => setCreateOrderData({ ...createOrderData, branchId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  placeholder="輸入分店ID"
-                  required
-                />
+                  onValueChange={(value) => setCreateOrderData({ ...createOrderData, branchId: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="請選擇分店" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800">
+                    {branches.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        暫無分店資料
+                      </div>
+                    ) : (
+                      branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
+            {/* 訂單金額 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                訂單金額 *
+                訂單金額 (TWD) *
               </label>
               <input
                 type="number"
+                min="0"
+                step="1"
                 value={createOrderData.totalAmount}
                 onChange={(e) => setCreateOrderData({ ...createOrderData, totalAmount: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="輸入訂單金額"
+                placeholder="請輸入訂單金額"
                 required
               />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                請輸入訂單總金額，單位為新台幣
+              </p>
             </div>
 
+            {/* 訂單備註 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                備註
+                訂單備註
               </label>
               <textarea
                 value={createOrderData.notes}
                 onChange={(e) => setCreateOrderData({ ...createOrderData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="輸入訂單備註"
-                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
+                placeholder="可選填訂單相關備註資訊"
+                rows={4}
               />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                例如：服務項目、特殊需求等
+              </p>
             </div>
 
+            {/* 說明提示 */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-start space-x-2">
+                <div className="text-blue-600 dark:text-blue-400 mt-0.5">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1 text-sm text-blue-800 dark:text-blue-200">
+                  <p className="font-medium mb-1">訂單建立後的流程</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>訂單將自動設定為「待結帳」狀態</li>
+                    <li>可在訂單詳情中進行結帳操作，選擇一次付清或分期付款</li>
+                    <li>結帳後訂單狀態將更新為「待付款」或「分期中」</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
             {/* 操作按鈕 */}
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button 
                 variant="outline" 
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setCreateOrderData({
+                    memberId: '',
+                    branchId: '',
+                    totalAmount: '',
+                    notes: ''
+                  });
+                }}
               >
                 取消
               </Button>
               <Button 
                 onClick={handleCreateOrder}
                 disabled={!createOrderData.memberId || !createOrderData.branchId || !createOrderData.totalAmount}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 創建訂單
               </Button>
