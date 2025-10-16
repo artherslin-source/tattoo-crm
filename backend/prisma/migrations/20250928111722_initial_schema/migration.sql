@@ -1,4 +1,30 @@
 -- CreateTable
+CREATE TABLE "Branch" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "address" TEXT NOT NULL,
+    "phone" TEXT,
+    "businessHours" JSONB,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "Service" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL,
+    "category" TEXT,
+    "currency" TEXT NOT NULL DEFAULT 'TWD',
+    "durationMin" INTEGER NOT NULL,
+    "imageUrl" TEXT,
+    "price" INTEGER NOT NULL
+);
+
+-- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL,
@@ -29,17 +55,6 @@ CREATE TABLE "Member" (
 );
 
 -- CreateTable
-CREATE TABLE "Branch" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "address" TEXT NOT NULL,
-    "phone" TEXT,
-    "businessHours" JSONB,
-    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP NOT NULL
-);
-
--- CreateTable
 CREATE TABLE "TattooArtist" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
@@ -67,21 +82,6 @@ CREATE TABLE "ArtistAvailability" (
     "isBlocked" BOOLEAN NOT NULL DEFAULT false,
     "repeatRule" TEXT,
     CONSTRAINT "ArtistAvailability_artistId_fkey" FOREIGN KEY ("artistId") REFERENCES "TattooArtist" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "Service" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP NOT NULL,
-    "category" TEXT,
-    "currency" TEXT NOT NULL DEFAULT 'TWD',
-    "durationMin" INTEGER NOT NULL,
-    "imageUrl" TEXT,
-    "price" INTEGER NOT NULL
 );
 
 -- CreateTable
