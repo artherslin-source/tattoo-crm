@@ -118,66 +118,85 @@ export default function OrdersCards({
 }: OrdersCardsProps) {
   return (
     <div className="xl:hidden">
-      {/* 平板版 - 橫向布局 */}
-      <div className="hidden md:block">
-        <div className="space-y-3">
+      {/* 平板版 - 優化橫向布局 */}
+      <div className="hidden md:block xl:hidden">
+        <div className="space-y-4">
           {orders.map((order) => (
-            <div key={order.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                {/* 左側：基本資訊 */}
-                <div className="flex-1 min-w-0">
-                  <div className="mb-2">
-                    <div className="text-lg font-semibold mb-1">訂單 #{order.id.slice(-8)}</div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
-                        {order.branch?.name || '未分配'}
-                      </span>
-                      <Badge className={`rounded-full px-2 py-0.5 text-xs ${getStatusBadgeClass(order.status)}`}>
-                        {getStatusText(order.status)}
-                      </Badge>
-                    </div>
+            <div key={order.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 text-on-dark shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex flex-col gap-4">
+                {/* 頂部：訂單編號和狀態 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-xl font-bold text-blue-600 dark:text-blue-400">#{order.id.slice(-8)}</div>
+                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-sm font-medium">
+                      {order.branch?.name || '未分配'}
+                    </span>
                   </div>
-                  <div className="text-sm text-on-dark-muted truncate">
-                    {order.member.name || '未設定'} • {order.member.email}
-                  </div>
+                  <Badge className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusBadgeClass(order.status)}`}>
+                    {getStatusText(order.status)}
+                  </Badge>
                 </div>
 
-                {/* 中間：金額資訊 */}
-                <div className="flex items-center gap-6 flex-shrink-0">
-                  <div className="text-center">
-                    <div className="text-xs text-on-dark-subtle">訂單金額</div>
-                    <div className="text-lg font-semibold tabular-nums text-blue-600 dark:text-blue-400">
-                      {formatCurrency(order.totalAmount)}
+                {/* 中間：會員資訊和金額 */}
+                <div className="flex items-center justify-between gap-4 py-3 border-y border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
+                  {/* 會員資訊 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-on-dark-subtle mb-1">會員資訊</div>
+                    <div className="text-base font-medium truncate">
+                      {order.member.name || '未設定'}
                     </div>
+                    <div className="text-sm text-on-dark-muted truncate">{order.member.email}</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-xs text-on-dark-subtle">建立時間</div>
-                    <div className="text-sm text-on-dark-muted">
+
+                  {/* 金額資訊 */}
+                  <div className="flex items-center gap-8 flex-shrink-0">
+                    <div className="text-right">
+                      <div className="text-xs text-on-dark-subtle mb-1">訂單金額</div>
+                      <div className="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
+                        {formatCurrency(order.totalAmount)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-on-dark-subtle mb-1">建立時間</div>
+                      <div className="text-sm font-medium text-on-dark-muted">
                       {formatDate(order.createdAt)}
                     </div>
                   </div>
+                  </div>
                 </div>
 
-                {/* 右側：操作按鈕 */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* 主按鈕：查看 */}
-                  <Button
-                    size="sm"
-                    onClick={() => onViewDetails(order)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 min-w-[80px]"
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    查看
-                  </Button>
+                {/* 底部：操作按鈕 */}
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  {/* 主按鈕組 */}
+                  <div className="flex items-center gap-2 flex-1">
+                    <Button
+                      size="default"
+                      onClick={() => onViewDetails(order)}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      查看詳情
+                    </Button>
+                    {order.status === 'PENDING_PAYMENT' && onCheckout && (
+                      <Button
+                        size="default"
+                        onClick={() => onCheckout(order)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        結帳
+                      </Button>
+                    )}
+                  </div>
 
                   {/* 更多選單 */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="px-2">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="outline" size="default" className="px-4">
+                        <MoreHorizontal className="h-5 w-5" />
                       </Button>
                     </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light">
+                    <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light w-48">
                       {order.status === 'PENDING_PAYMENT' && (
                         <DropdownMenuItem onClick={() => onUpdateStatus(order, 'PAID')}>
                           <CheckCircle className="h-4 w-4 mr-2" />
@@ -259,59 +278,70 @@ export default function OrdersCards({
         </div>
       </div>
 
-      {/* 手機版 - 垂直卡片布局 */}
-      <div className="md:hidden space-y-3">
+      {/* 手機版 - 優化垂直卡片布局 */}
+      <div className="md:hidden space-y-4">
         {orders.map((order) => (
-          <div key={order.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm">
+          <div key={order.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-md">
             <div className="space-y-3">
               {/* 訂單標題和狀態 */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-base font-semibold">訂單 #{order.id.slice(-8)}</div>
-                  <div className="text-xs text-on-dark-subtle mt-1">
-                    {order.member.name || '未設定'} • {order.member.email}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">#{order.id.slice(-8)}</div>
+                  <div className="text-xs text-on-dark-subtle mt-1 truncate">
+                    {order.member.name || '未設定'}
                   </div>
+                  <div className="text-xs text-on-dark-muted truncate">{order.member.email}</div>
                 </div>
-                <Badge className={`rounded-full px-2 py-0.5 text-xs ${getStatusBadgeClass(order.status)}`}>
+                <Badge className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap ${getStatusBadgeClass(order.status)}`}>
                   {getStatusText(order.status)}
                 </Badge>
               </div>
 
               {/* 詳細資訊 */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-3 py-3 border-y border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
                 <div>
-                  <div className="text-xs text-on-dark-subtle">分店</div>
-                  <div className="font-medium">{order.branch?.name || '未分配'}</div>
+                  <div className="text-xs text-on-dark-subtle mb-1">分店</div>
+                  <div className="font-medium text-sm">{order.branch?.name || '未分配'}</div>
                 </div>
-                <div>
-                  <div className="text-xs text-on-dark-subtle">訂單金額</div>
-                  <div className="font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
+                <div className="text-right">
+                  <div className="text-xs text-on-dark-subtle mb-1">訂單金額</div>
+                  <div className="font-bold text-lg text-blue-600 dark:text-blue-400 tabular-nums">
                     {formatCurrency(order.totalAmount)}
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <div className="text-xs text-on-dark-subtle">建立時間</div>
-                  <div className="text-sm text-on-dark-muted">{formatDate(order.createdAt)}</div>
+                  <div className="text-xs text-on-dark-subtle mb-1">建立時間</div>
+                  <div className="text-sm font-medium text-on-dark-muted">{formatDate(order.createdAt)}</div>
                 </div>
               </div>
 
               {/* 操作按鈕 */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
+              <div className="flex items-center gap-2">
                 <Button
-                  size="sm"
+                  size="default"
                   onClick={() => onViewDetails(order)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 min-w-[80px]"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 >
-                  <Eye className="h-3 w-3 mr-1" />
+                  <Eye className="h-4 w-4 mr-2" />
                   查看
                 </Button>
+                {order.status === 'PENDING_PAYMENT' && onCheckout && (
+                  <Button
+                    size="default"
+                    onClick={() => onCheckout(order)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    結帳
+                  </Button>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="px-2">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button variant="outline" size="default" className="px-3">
+                      <MoreHorizontal className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light">
+                  <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light w-48">
                     {order.status === 'PENDING_PAYMENT' && (
                       <DropdownMenuItem onClick={() => onUpdateStatus(order, 'PAID')}>
                         <CheckCircle className="h-4 w-4 mr-2" />
