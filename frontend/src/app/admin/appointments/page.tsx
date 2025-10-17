@@ -348,16 +348,16 @@ export default function AdminAppointmentsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-text-primary-dark page-title">
               <Calendar className="mr-3 h-8 w-8" />
               管理預約
             </h1>
-            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
+            <p className="mt-2 text-gray-600 dark:text-text-muted-dark page-subtitle">
               管理系統中的所有預約記錄
             </p>
           </div>

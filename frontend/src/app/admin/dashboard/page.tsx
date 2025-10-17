@@ -201,14 +201,14 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-on-dark">
       {/* Header */}
       <div className="mb-6 pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-on-dark">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-on-dark dashboard-title">
             {role === 'BOSS' ? '管理後台' : '分店管理後台'}
           </h1>
-          <p className="mt-2 text-on-dark-muted">
+          <p className="mt-2 text-gray-600 dark:text-on-dark-muted dashboard-subtitle">
             歡迎回到管理後台，這裡是您的控制中心
           </p>
           {role === 'BOSS' && (
@@ -279,7 +279,7 @@ export default function AdminDashboardPage() {
 
       {/* Quick Actions */}
       <div className="mb-8">
-          <h2 className="text-2xl font-bold text-on-dark mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-on-dark mb-6 page-title">
             快捷功能
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -288,7 +288,7 @@ export default function AdminDashboardPage() {
               return (
                 <Card 
                   key={action.title} 
-                  className="hover:shadow-lg transition-shadow cursor-pointer"
+                  className="hover:shadow-lg transition-shadow cursor-pointer quick-card"
                   onClick={() => router.push(action.href)}
                 >
                   <CardHeader>

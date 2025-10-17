@@ -1,15 +1,28 @@
 :root{
+  /* Light Mode 統一色系 */
   --bg-light:#ffffff; --bg-dark:#1e1e1e;
-  --card-light:#f9fafb; --card-dark:#2a2a2a;
+  --card-light:#ffffff; --card-dark:#2a2a2a;
+  --bg-sub-light:#f9fafb; --bg-sub-dark:#1f2937;
 
-  --text-primary-light:#1a1a1a;
-  --text-secondary-light:#3a3a3a;
+  /* 文字色彩 - Light Mode 高對比 */
+  --text-main: #111827;        /* 主要標題：深黑 */
+  --text-sub: #4B5563;         /* 副標題：中灰 */
+  --text-muted: #6B7280;       /* 說明文字：柔和灰 */
+  
+  --text-primary-light:#111827;
+  --text-secondary-light:#4B5563;
   --text-muted-light:#6b7280;
 
+  /* Dark Mode 保持原樣 */
   --text-primary-dark:#ffffff;
   --text-secondary-dark:#e5e7eb;
   --text-muted-dark:#9ca3af;
 
+  /* 邊框與陰影 */
+  --border-soft: #e5e7eb;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  /* 品牌色 */
   --blue:#2563eb; --orange:#ff7a00;
   --green:#22c55e; --yellow:#eab308; --red:#ef4444;
 }
@@ -46,17 +59,69 @@
 .drawer-panel{position:fixed;top:0;bottom:0;left:0;width:280px;background:var(--card-light);border-right:1px solid rgba(0,0,0,.08);z-index:50;overflow:auto;}
 .dark .drawer-panel{background:var(--card-dark);border-color:rgba(255,255,255,.1);}
 
-/* 卡片與表格統一 */
-.stat-card{background:var(--card-light);color:var(--text-primary-light);border-radius:12px;padding:1rem;box-shadow:0 2px 6px rgba(0,0,0,.05);transition:box-shadow .2s,transform .2s;}
-.stat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px);}
-.dark .stat-card{background:var(--card-dark);color:var(--text-primary-dark);box-shadow:0 1px 3px rgba(255,255,255,.06);}
+/* === Light Mode 統一化樣式 === */
 
+/* 儀表板主體文字與說明 */
+.dashboard-title,
+.page-title {
+  color: var(--text-main);
+  font-weight: 700;
+}
+.dashboard-subtitle,
+.page-subtitle,
+.section-description {
+  color: var(--text-sub);
+  font-weight: 500;
+}
+
+/* 快捷功能卡片 */
+.quick-card {
+  background: var(--bg-light);
+  color: var(--text-main);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--card-shadow);
+  transition: all 0.2s ease;
+  border-radius: 12px;
+  padding: 1rem;
+}
+.quick-card:hover {
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+/* 篩選列樣式（統一白天模式） */
+.filter-bar,
+.search-bar,
+.select-bar {
+  background: var(--bg-light);
+  border: 1px solid var(--border-soft);
+  color: var(--text-sub);
+}
+.filter-bar button,
+.select-bar select {
+  background: #f3f4f6;
+  color: var(--text-main);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 6px 12px;
+  transition: background-color 0.2s ease;
+}
+.filter-bar button:hover {
+  background: #e5e7eb;
+}
+
+/* 卡片與表格統一 */
+.stat-card{background:var(--card-light);color:var(--text-primary-light);border-radius:12px;padding:1rem;border:1px solid var(--border-soft);box-shadow:var(--card-shadow);transition:box-shadow .2s,transform .2s;}
+.stat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px);}
+.dark .stat-card{background:var(--card-dark);color:var(--text-primary-dark);box-shadow:0 1px 3px rgba(255,255,255,.06);border-color:#374151;}
+
+/* 表格標題與文字統一字色 */
 .table-list{width:100%;border-collapse:separate;border-spacing:0 8px;}
-.table-list th{text-align:left;font-size:.85rem;color:var(--text-muted-light);padding:.75rem;}
+.table-list th{text-align:left;font-size:.85rem;color:var(--text-sub);font-weight:600;padding:.75rem;}
 .dark .table-list th{color:var(--text-muted-dark);}
-.table-list td{background:var(--card-light);padding:.9rem;border-radius:10px;vertical-align:middle;color:var(--text-primary-light);}
-.dark .table-list td{background:var(--card-dark);color:var(--text-primary-dark);}
-.table-list tr:hover td{background:rgba(0,0,0,.02);}
+.table-list td{background:var(--card-light);padding:.9rem;border-radius:10px;vertical-align:middle;color:var(--text-main);font-weight:500;border:1px solid var(--border-soft);}
+.dark .table-list td{background:var(--card-dark);color:var(--text-primary-dark);border-color:#374151;}
+.table-list tr:hover td{background:#fafafa;box-shadow:0 2px 6px rgba(0,0,0,.06);}
 .dark .table-list tr:hover td{background:rgba(255,255,255,.06);}
 
 /* 標籤(狀態) */
@@ -79,10 +144,94 @@
 .dark .btn-secondary:hover{background:#3a3a3a;}
 
 /* 文字層級（避免淡到不可讀） */
-.text-strong{color:var(--text-primary-light);}
-.text-muted{color:var(--text-muted-light);}
+.text-strong{color:var(--text-main);}
+.text-muted{color:var(--text-muted);}
 .dark .text-strong{color:var(--text-primary-dark);}
 .dark .text-muted{color:var(--text-muted-dark);}
+
+/* === 訂單列表視覺優化 === */
+.order-list-item {
+  background-color: var(--bg-light);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  box-shadow: var(--card-shadow);
+  padding: 12px 16px;
+  transition: all 0.25s ease;
+}
+.order-list-item:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+  transform: translateY(-1px);
+}
+.dark .order-list-item {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+/* 金額顏色強調 */
+.amount {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+.dark .amount {
+  color: #60a5fa;
+}
+
+/* 狀態標籤顏色優化 */
+.status-tag {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.status-tag[data-status="待確認"],
+.status-tag[data-status="待結帳"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+.status-tag[data-status="進行中"],
+.status-tag[data-status="部分付款"] {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+.status-tag[data-status="已完成"],
+.status-tag[data-status="已付款"] {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-tag[data-status="分期中"],
+.status-tag[data-status="分期付款中"] {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+.status-tag[data-status="已取消"] {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.dark .status-tag[data-status="待確認"],
+.dark .status-tag[data-status="待結帳"] {
+  background: #78350f;
+  color: #fef3c7;
+}
+.dark .status-tag[data-status="進行中"],
+.dark .status-tag[data-status="部分付款"] {
+  background: #1e3a8a;
+  color: #dbeafe;
+}
+.dark .status-tag[data-status="已完成"],
+.dark .status-tag[data-status="已付款"] {
+  background: #14532d;
+  color: #bbf7d0;
+}
+.dark .status-tag[data-status="分期中"],
+.dark .status-tag[data-status="分期付款中"] {
+  background: #581c87;
+  color: #f3e8ff;
+}
+.dark .status-tag[data-status="已取消"] {
+  background: #7f1d1d;
+  color: #fecaca;
+}
 
 /* 主題切換 */
 .theme-toggle{background:none;border:none;font-size:1.35rem;cursor:pointer;transition:transform .25s;}
