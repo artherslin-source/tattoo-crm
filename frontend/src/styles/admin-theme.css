@@ -456,10 +456,10 @@
   transition: all 0.25s ease;
 }
 
-/* 卡片內所有文字統一為白色 */
-.dark .card *,
-.dark .stat-card *,
-.dark .summary-card * {
+/* 卡片內所有文字統一為白色，但保留特定顏色類別 */
+.dark .card *:not([class*="text-green"]):not([class*="text-red"]):not([class*="text-gray"]):not([class*="text-blue"]):not([class*="text-yellow"]),
+.dark .stat-card *:not([class*="text-green"]):not([class*="text-red"]):not([class*="text-gray"]):not([class*="text-blue"]):not([class*="text-yellow"]),
+.dark .summary-card *:not([class*="text-green"]):not([class*="text-red"]):not([class*="text-gray"]):not([class*="text-blue"]):not([class*="text-yellow"]) {
   color: #FFFFFF;
 }
 
