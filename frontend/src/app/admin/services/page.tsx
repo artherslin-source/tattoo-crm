@@ -395,7 +395,7 @@ export default function AdminServicesPage() {
               </thead>
               <tbody>
                 {services.map((service) => (
-                  <tr key={service.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr key={service.id} className="border-b border-gray-100 dark:border-gray-700">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
