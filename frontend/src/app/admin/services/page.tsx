@@ -435,7 +435,6 @@ export default function AdminServicesPage() {
                           size="sm"
                           onClick={() => handleEditService(service)}
                           className="flex items-center space-x-1"
-                          style={{ color: 'var(--text-secondary-light)' }}
                         >
                           <Edit className="h-3 w-3" style={{ color: '#333333 !important' }} />
                           <span style={{ color: '#333333 !important' }}>編輯</span>
@@ -445,7 +444,6 @@ export default function AdminServicesPage() {
                           size="sm"
                           onClick={() => handleDeleteService(service.id)}
                           className="flex items-center space-x-1"
-                          style={{ color: 'var(--text-secondary-light)' }}
                         >
                           <Trash2 className="h-3 w-3" style={{ color: '#dc2626 !important' }} />
                           <span style={{ color: '#dc2626 !important' }}>刪除</span>
