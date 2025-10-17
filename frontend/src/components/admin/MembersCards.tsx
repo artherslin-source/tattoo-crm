@@ -39,15 +39,15 @@ interface MembersCardsProps {
 const getLevelBadgeClass = (level?: string) => {
   switch (level) {
     case 'Bronze':
-      return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+      return 'level-tag-bronze';
     case 'Silver':
-      return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
+      return 'level-tag-silver';
     case 'Gold':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      return 'level-tag-gold';
     case 'Platinum':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      return 'level-tag-platinum';
     default:
-      return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
+      return 'level-tag-default';
   }
 };
 
@@ -84,7 +84,7 @@ export default function MembersCards({
                 <div className="mb-2">
                   <div className="text-lg font-semibold mb-1">{member.user?.name || '未設定'}</div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                    <span className="rounded-full px-2 py-0.5 text-xs branch-tag">
                       {member.user?.branch?.name || '未分配'}
                     </span>
                     <span className={`rounded-full px-2 py-0.5 text-xs ${
@@ -186,7 +186,7 @@ export default function MembersCards({
                 <div className="text-base font-semibold">{member.user?.name || '未設定'}</div>
                 <div className="text-xs text-text-muted-light">{member.user?.email || 'N/A'}</div>
                 <div className="mt-1 flex items-center gap-2 flex-wrap">
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                  <span className="rounded-full px-2 py-0.5 text-xs branch-tag">
                     {member.user?.branch?.name || '未分配'}
                   </span>
                   <span className={`rounded-full px-2 py-0.5 text-xs ${

@@ -649,3 +649,65 @@
   color: #dc2626 !important;
   fill: #dc2626 !important;
 }
+
+/* 分店標籤 */
+.branch-tag {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.dark .branch-tag {
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+/* 會員等級標籤 */
+.level-tag-bronze {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.dark .level-tag-bronze {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.level-tag-silver {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.dark .level-tag-silver {
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+.level-tag-gold {
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+}
+
+.dark .level-tag-gold {
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+}
+
+.level-tag-platinum {
+  background: #f3e8ff !important;
+  color: #6b21a8 !important;
+}
+
+.dark .level-tag-platinum {
+  background: #f3e8ff !important;
+  color: #6b21a8 !important;
+}
+
+.level-tag-default {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.dark .level-tag-default {
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+}
