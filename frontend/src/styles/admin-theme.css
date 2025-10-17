@@ -443,9 +443,16 @@
 .dark .table-container {
   background-color: #1E2025;
   border: 1px solid #2D3036;
-  color: #F1F3F5;
+  color: #FFFFFF;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
   transition: all 0.25s ease;
+}
+
+/* 卡片內所有文字統一為白色 */
+.dark .card *,
+.dark .stat-card *,
+.dark .summary-card * {
+  color: #FFFFFF;
 }
 
 /* 懸停：只微亮一層，不突兀 */
@@ -460,7 +467,7 @@
 .dark .stat-card {
   background: linear-gradient(180deg, #1F2227 0%, #191B20 100%);
   border: 1px solid #31343B;
-  color: #F5F6F7;
+  color: #FFFFFF;
 }
 
 /* 表格標題（thead） */
@@ -493,7 +500,7 @@
 
 /* 列表主體色階補正 */
 .dark .table-list td {
-  color: #F0F2F4;
+  color: #FFFFFF;
   font-weight: 500;
 }
 .dark .table-list tr:nth-child(even) td {
@@ -515,7 +522,7 @@
 
 /* 頁面標題區域（統一白字強對比） */
 .dark h1, .dark h2, .dark h3, .dark h4 {
-  color: #F3F4F6;
+  color: #FFFFFF;
 }
 
 /* 表格空白狀態、說明文字 */
