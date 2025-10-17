@@ -552,6 +552,26 @@
   color: #FFFFFF !important;
 }
 
+/* Dialog 內容區域的標籤文字（如：預約ID、狀態、開始時間等）需要白色 */
+/* 排除按鈕內的文字 */
+.dark [role="dialog"] .space-y-4 .text-text-muted-light,
+.dark [role="dialog"] .space-y-4 .text-text-muted-dark,
+.dark [role="dialog"] .space-y-4 .text-text-secondary-light,
+.dark [role="dialog"] .space-y-4 .text-text-secondary-dark {
+  color: #FFFFFF !important;
+}
+
+/* Dialog 內容區域的實際值文字（如：font-medium 的內容）需要白色 */
+/* 只針對在 space-y-4 內的，排除按鈕 */
+.dark [role="dialog"] .space-y-4 .font-medium {
+  color: #FFFFFF !important;
+}
+
+/* Dialog 內 text-sm 區域的 span（實際值）需要白色 */
+.dark [role="dialog"] .space-y-4 .text-sm span.ml-2 {
+  color: #FFFFFF !important;
+}
+
 /* 表格空白狀態、說明文字 */
 .dark .empty-state,
 .dark .description-text {
