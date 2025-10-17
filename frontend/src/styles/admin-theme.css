@@ -544,6 +544,14 @@
   color: #4B5563;
 }
 
+/* Dialog 內的標題需要白色（因為 Dialog 背景是深黑色） */
+.dark [role="dialog"] h1,
+.dark [role="dialog"] h2,
+.dark [role="dialog"] h3,
+.dark [role="dialog"] h4 {
+  color: #FFFFFF !important;
+}
+
 /* 表格空白狀態、說明文字 */
 .dark .empty-state,
 .dark .description-text {
