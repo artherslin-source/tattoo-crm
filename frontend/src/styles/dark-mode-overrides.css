@@ -1,0 +1,260 @@
+/* ========================================
+   🌙 Tattoo CRM — Dark Mode Specific Overrides
+   ======================================== */
+
+/*
+  This file contains dark mode specific styling that cannot be 
+  handled by simple token swaps. These are component-specific 
+  dark mode adjustments.
+*/
+
+/* ==========================================
+   DARK MODE - BACKGROUND GRADIENTS
+   ========================================== */
+
+.dark .auth-page {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+}
+
+.dark .auth-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================
+   DARK MODE - CARD HOVER STATES
+   ========================================== */
+
+.dark .card:hover,
+.dark .stat-card:hover,
+.dark .table-list tr:hover td {
+  background-color: #6b6b6b;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================
+   DARK MODE - SPECIFIC COMPONENT OVERRIDES
+   ========================================== */
+
+/* Order List Items */
+.dark .order-list-item {
+  background: var(--color-card-bg);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.dark .order-list-item:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Amount Display */
+.dark .amount {
+  color: #60a5fa;
+}
+
+/* ==========================================
+   DARK MODE - DIALOG/MODAL OVERRIDES
+   ========================================== */
+
+/* Dialog titles need white text on dark backgrounds */
+.dark [role="dialog"] h1,
+.dark [role="dialog"] h2,
+.dark [role="dialog"] h3,
+.dark [role="dialog"] h4 {
+  color: #ffffff !important;
+}
+
+/* Dialog content labels need white text */
+.dark [role="dialog"] .space-y-4 .text-text-muted-light,
+.dark [role="dialog"] .space-y-4 .text-text-muted-dark,
+.dark [role="dialog"] .space-y-4 .text-text-secondary-light,
+.dark [role="dialog"] .space-y-4 .text-text-secondary-dark,
+.dark [role="dialog"] .space-y-4 .font-medium,
+.dark [role="dialog"] .space-y-4 .text-sm span.ml-2 {
+  color: #ffffff !important;
+}
+
+/* Notes field in dialogs - keep light background for readability */
+.dark [role="dialog"] p.bg-gray-50 {
+  background: #f9fafb !important;
+  color: #1f2937 !important;
+}
+
+/* Dialog close button - keep dark for visibility */
+.dark [role="dialog"] .dialog-close-btn,
+.dark [role="dialog"] .dialog-close-btn * {
+  color: #1f2937 !important;
+}
+
+/* ==========================================
+   DARK MODE - ACTION BUTTONS
+   ========================================== */
+
+/* Edit buttons - keep dark for contrast */
+.dark .action-btn-edit,
+.dark .action-btn-edit *,
+.dark .action-btn-edit svg {
+  color: #333333 !important;
+  fill: #333333 !important;
+}
+
+/* Delete buttons - keep red for visibility */
+.dark .action-btn-delete,
+.dark .action-btn-delete *,
+.dark .action-btn-delete svg {
+  color: #dc2626 !important;
+  fill: #dc2626 !important;
+}
+
+/* Cancel buttons - keep light background */
+.dark .action-btn-cancel {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.dark .action-btn-cancel:hover {
+  background: #e5e7eb !important;
+  color: #000000 !important;
+}
+
+/* Action menu buttons */
+.dark .action-menu-btn,
+.dark .action-menu-btn *,
+.dark .action-menu-btn svg {
+  color: #333333 !important;
+  fill: #333333 !important;
+}
+
+/* ==========================================
+   DARK MODE - DROPDOWN MENUS
+   ========================================== */
+
+.dark .dropdown-menu-item {
+  color: #000000 !important;
+}
+
+.dark .dropdown-menu-item svg {
+  color: #000000 !important;
+  fill: #000000 !important;
+}
+
+.dark .dropdown-menu-item-delete {
+  color: #dc2626 !important;
+}
+
+.dark .dropdown-menu-item-delete svg {
+  color: #dc2626 !important;
+  fill: #dc2626 !important;
+}
+
+/* ==========================================
+   DARK MODE - TAGS & BADGES
+   ========================================== */
+
+/* Branch Tags */
+.dark .branch-tag {
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+/* Member Level Tags */
+.dark .level-tag-bronze {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.dark .level-tag-silver {
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+.dark .level-tag-gold {
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+}
+
+.dark .level-tag-platinum {
+  background: #f3e8ff !important;
+  color: #6b21a8 !important;
+}
+
+.dark .level-tag-default {
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+/* Status Tags - Enhanced for dark mode */
+.dark .status-tag[data-status="待確認"],
+.dark .status-tag[data-status="待結帳"] {
+  background: #78350f;
+  color: #fef3c7;
+}
+
+.dark .status-tag[data-status="進行中"],
+.dark .status-tag[data-status="部分付款"] {
+  background: #1e3a8a;
+  color: #dbeafe;
+}
+
+.dark .status-tag[data-status="已完成"],
+.dark .status-tag[data-status="已付款"] {
+  background: #14532d;
+  color: #bbf7d0;
+}
+
+.dark .status-tag[data-status="分期中"],
+.dark .status-tag[data-status="分期付款中"] {
+  background: #581c87;
+  color: #f3e8ff;
+}
+
+.dark .status-tag[data-status="已取消"] {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+/* ==========================================
+   DARK MODE - TABLE ENHANCEMENTS
+   ========================================== */
+
+.dark .table-list th {
+  color: #c7cad1;
+  background-color: #17191d;
+  border-bottom: 1px solid #2e3238;
+}
+
+.dark .table-list td {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.dark .table-list tr:nth-child(even) td {
+  background-color: #1a1c21;
+}
+
+/* ==========================================
+   DARK MODE - SIDEBAR ENHANCEMENTS
+   ========================================== */
+
+.dark .sidebar a:hover {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+/* ==========================================
+   DARK MODE - COLOR SCHEME PREFERENCE
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+  }
+}

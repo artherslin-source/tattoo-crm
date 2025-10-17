@@ -1,0 +1,552 @@
+/* ========================================
+   🎨 Tattoo CRM — Component Styles
+   ======================================== */
+
+/*
+  All components use CSS variables from tokens.css
+  No hardcoded colors allowed in this file
+*/
+
+/* ==========================================
+   LAYOUT COMPONENTS
+   ========================================== */
+
+/* Admin Layout */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 248px;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+  transition: background-color var(--transition-slow), border-color var(--transition-slow);
+}
+
+.sidebar h1 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  letter-spacing: 0.2px;
+}
+
+.sidebar nav {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-secondary);
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+.sidebar a:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--color-primary);
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .main-content {
+    padding: 2rem;
+  }
+}
+
+/* Topbar (Mobile) */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-topbar-bg);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+/* Drawer (Mobile/Tablet) */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  backdrop-filter: saturate(120%) blur(2px);
+  z-index: 40;
+}
+
+.drawer-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 280px;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-border);
+  z-index: 50;
+  overflow: auto;
+}
+
+/* ==========================================
+   CARD COMPONENTS
+   ========================================== */
+
+.card {
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  background-color: var(--color-card-bg);
+  padding: 1rem;
+  transition: all var(--transition-base);
+  border: 1px solid var(--color-border);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.stat-card {
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.quick-card {
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem;
+}
+
+.quick-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+/* ==========================================
+   BUTTON COMPONENTS
+   ========================================== */
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-button-text);
+  font-weight: 600;
+  border-radius: var(--border-radius-md);
+  padding: 0.55rem 1rem;
+  transition: all var(--transition-base);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  background-color: var(--color-primary-active);
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background-color: var(--color-button-secondary-bg);
+  color: var(--color-button-secondary-text);
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem 0.9rem;
+  transition: all var(--transition-base);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.btn-reserve {
+  background-color: var(--color-accent);
+  color: var(--color-button-text);
+  border-radius: var(--border-radius-md);
+  font-weight: 600;
+  padding: 0.55rem 1rem;
+  transition: all var(--transition-base);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-reserve:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-reserve:active {
+  background-color: var(--color-accent-active);
+  transform: scale(0.98);
+}
+
+/* ==========================================
+   INPUT COMPONENTS
+   ========================================== */
+
+input,
+textarea,
+select {
+  background-color: var(--color-input-bg);
+  color: var(--color-input-text);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem 0.75rem;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-input-placeholder);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-input-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ==========================================
+   TABLE COMPONENTS
+   ========================================== */
+
+.table-list {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.table-list th {
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  padding: 0.75rem;
+}
+
+.table-list td {
+  background: var(--color-card-bg);
+  padding: 0.9rem;
+  border-radius: var(--border-radius-md);
+  vertical-align: middle;
+  color: var(--color-text);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+
+.table-list tr:hover td {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================
+   STATUS TAGS
+   ========================================== */
+
+.tag {
+  padding: 3px 8px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  display: inline-block;
+}
+
+.tag-pending {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.tag-progress {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.tag-success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.tag-failed {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.status-tag {
+  padding: 4px 12px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* ==========================================
+   TYPOGRAPHY UTILITIES
+   ========================================== */
+
+.dashboard-title,
+.page-title {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.dashboard-subtitle,
+.page-subtitle,
+.section-description {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.text-strong {
+  color: var(--color-text);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+/* ==========================================
+   THEME TOGGLE
+   ========================================== */
+
+.theme-toggle {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  cursor: pointer;
+  transition: transform var(--transition-slow);
+}
+
+.theme-toggle:hover {
+  transform: rotate(12deg);
+}
+
+/* ==========================================
+   SCROLLBAR
+   ========================================== */
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ==========================================
+   RESPONSIVE TABLE
+   ========================================== */
+
+@media (max-width: 1024px) {
+  .responsive-table {
+    display: block;
+  }
+  
+  .responsive-table thead {
+    display: none;
+  }
+  
+  .responsive-table tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    padding: 12px;
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border: none;
+  }
+  
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    min-width: 80px;
+  }
+  
+  .responsive-table td:last-child {
+    justify-content: flex-end;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+  }
+  
+  .responsive-table td:last-child::before {
+    display: none;
+  }
+}
+
+/* ==========================================
+   AUTHENTICATION PAGES
+   ========================================== */
+
+.auth-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+}
+
+.auth-bg-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(147, 51, 234, 0.3) 0%, transparent 50%);
+  z-index: 0;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-xl);
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-xl);
+  transition: transform var(--transition-slow), box-shadow var(--transition-slow);
+}
+
+.auth-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.auth-logo {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.auth-subtitle {
+  text-align: center;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+  font-weight: 500;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-md);
+  color: white;
+  font-size: 1rem;
+  transition: all var(--transition-slow);
+}
+
+.auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.auth-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-slow);
+  margin-bottom: 1rem;
+}
+
+.auth-button:hover {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.auth-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-link {
+  display: block;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  transition: color var(--transition-slow);
+}
+
+.auth-link:hover {
+  color: white;
+  text-decoration: underline;
+}

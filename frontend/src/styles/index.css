@@ -1,0 +1,53 @@
+/* ========================================
+   🎨 Tattoo CRM — Unified Theme System
+   ======================================== */
+
+/*
+  This is the main entry point for all styles.
+  Import order matters for proper cascade.
+*/
+
+/* 1. Design Tokens (CSS Variables) */
+@import "./tokens.css";
+
+/* 2. Base Component Styles */
+@import "./components.css";
+
+/* 3. Brand-Specific Effects */
+@import "./branding.css";
+
+/* 4. Dark Mode Specific Overrides */
+@import "./dark-mode-overrides.css";
+
+/* 5. Tailwind Utilities */
+@layer utilities {
+  /* Semantic text color utilities */
+  .text-on-dark {
+    color: var(--color-text);
+  }
+
+  .text-on-dark-muted {
+    color: var(--color-text-muted);
+  }
+
+  .text-on-dark-subtle {
+    color: var(--color-text-secondary);
+  }
+
+  .text-on-light {
+    color: var(--color-text);
+  }
+
+  .text-on-light-muted {
+    color: var(--color-text-secondary);
+  }
+
+  .text-on-light-subtle {
+    color: var(--color-text-muted);
+  }
+
+  .no-text-opacity {
+    --tw-text-opacity: 1 !important;
+    opacity: 1 !important;
+  }
+}
