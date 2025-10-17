@@ -58,7 +58,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">載入中...</div>
+        <div className="text-text-muted-light">載入中...</div>
       </div>
     );
   }
@@ -97,31 +97,31 @@ export default function ProfilePage() {
           {me.avatar ? (
             <img src={me.avatar} alt="avatar" className="w-20 h-20 rounded-full object-cover border" />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-neutral-800 flex items-center justify-center text-xl font-semibold text-gray-600">
+            <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-neutral-800 flex items-center justify-center text-xl font-semibold text-text-muted-light">
               {me.name?.[0]?.toUpperCase() || "U"}
             </div>
           )}
           <div>
             <div className="text-2xl font-semibold">{me.name}</div>
-            <div className="text-gray-600 dark:text-gray-300">{me.email}</div>
+            <div className="text-text-muted-light dark:text-text-secondary-dark">{me.email}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">註冊日期</div>
+            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">註冊日期</div>
             <div className="font-medium">{registeredAt}</div>
           </div>
           <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">最後登入</div>
+            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">最後登入</div>
             <div className="font-medium">{lastLogin}</div>
           </div>
           <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">角色</div>
+            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">角色</div>
             <div className="font-medium">{role}</div>
           </div>
           <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">狀態</div>
+            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">狀態</div>
             <div className="font-medium">{status}</div>
           </div>
         </div>
@@ -129,7 +129,7 @@ export default function ProfilePage() {
         {/* 財務資訊區塊 */}
         {me.member && (
           <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">財務資訊</h2>
+            <h2 className="text-xl font-semibold mb-4 text-text-primary-light dark:text-text-primary-dark">財務資訊</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-4 bg-blue-50 dark:bg-blue-900/20">
                 <div className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">累計消費金額</div>
@@ -150,13 +150,13 @@ export default function ProfilePage() {
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => router.push("/profile/edit")}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-gray-100 font-medium py-2.5 rounded-lg shadow-sm transition-colors"
+            className="flex-1 bg-gray-100 hover:bg-gray-200 text-text-primary-light dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-text-primary-dark font-medium py-2.5 rounded-lg shadow-sm transition-colors"
           >
             編輯個人資料
           </button>
           <button
             onClick={() => router.push("/profile/change-password")}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-gray-100 font-medium py-2.5 rounded-lg shadow-sm transition-colors"
+            className="flex-1 bg-gray-100 hover:bg-gray-200 text-text-primary-light dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-text-primary-dark font-medium py-2.5 rounded-lg shadow-sm transition-colors"
           >
             修改密碼
           </button>

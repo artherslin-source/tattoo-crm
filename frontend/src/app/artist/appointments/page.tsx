@@ -226,7 +226,7 @@ export default function ArtistAppointments() {
       case 'CANCELED':
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-text-primary-light';
     }
   };
 
@@ -271,7 +271,7 @@ export default function ArtistAppointments() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">載入中...</p>
+          <p className="mt-2 text-text-muted-light">載入中...</p>
         </div>
       </div>
     );
@@ -296,12 +296,12 @@ export default function ArtistAppointments() {
       {/* 頁面標題和篩選 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">我的行程</h1>
-          <p className="text-gray-600 mt-3">管理您的預約和服務安排</p>
+          <h1 className="text-3xl font-bold text-text-primary-light">我的行程</h1>
+          <p className="text-text-muted-light mt-3">管理您的預約和服務安排</p>
         </div>
         
         <div className="mt-6 sm:mt-0">
-          <span className="text-sm text-gray-600">顯示所有行程</span>
+          <span className="text-sm text-text-muted-light">顯示所有行程</span>
         </div>
       </div>
 
@@ -321,7 +321,7 @@ export default function ArtistAppointments() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">每頁顯示：</span>
+                <span className="text-sm text-text-muted-light">每頁顯示：</span>
                 <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
                   <SelectTrigger className="w-20">
                     <SelectValue />
@@ -334,7 +334,7 @@ export default function ArtistAppointments() {
                   </SelectContent>
                 </Select>
               </div>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-text-muted-light">
                 共 {totalItems} 個行程，第 {currentPage} / {getTotalPages()} 頁
               </span>
             </div>
@@ -344,9 +344,9 @@ export default function ArtistAppointments() {
           {appointments.length === 0 ? (
             <Card>
               <CardContent className="text-center py-16">
-                <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-                <h3 className="text-lg font-medium text-gray-900 mb-3">沒有預約</h3>
-                <p className="text-gray-500">目前沒有任何預約安排</p>
+                <Calendar className="h-16 w-16 text-text-muted-light mx-auto mb-6" />
+                <h3 className="text-lg font-medium text-text-primary-light mb-3">沒有預約</h3>
+                <p className="text-text-muted-light">目前沒有任何預約安排</p>
               </CardContent>
             </Card>
           ) : (
@@ -375,27 +375,27 @@ export default function ArtistAppointments() {
                     {/* 顧客資訊 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div>
-                        <h3 className="font-medium text-gray-900 mb-3">顧客資訊</h3>
+                        <h3 className="font-medium text-text-primary-light mb-3">顧客資訊</h3>
                         <div className="space-y-2">
                           <div className="flex items-center space-x-3">
-                            <User className="h-4 w-4 text-gray-500" />
+                            <User className="h-4 w-4 text-text-muted-light" />
                             <span>{appointment.user.name}</span>
                           </div>
                           <div className="flex items-center space-x-3">
-                            <Phone className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-600">{appointment.user.phone}</span>
+                            <Phone className="h-4 w-4 text-text-muted-light" />
+                            <span className="text-sm text-text-muted-light">{appointment.user.phone}</span>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <h3 className="font-medium text-gray-900 mb-3">服務資訊</h3>
+                        <h3 className="font-medium text-text-primary-light mb-3">服務資訊</h3>
                         <div className="space-y-2">
                           <p className="font-medium">{appointment.service.name}</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-text-muted-light">
                             時長：{appointment.service.durationMin} 分鐘
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-text-muted-light">
                             價格：NT$ {appointment.service.price.toLocaleString()}
                           </p>
                         </div>
@@ -404,15 +404,15 @@ export default function ArtistAppointments() {
 
                     {/* 分店資訊 */}
                     <div className="flex items-center space-x-3 mb-6">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">{appointment.branch.name}</span>
+                      <MapPin className="h-4 w-4 text-text-muted-light" />
+                      <span className="text-sm text-text-muted-light">{appointment.branch.name}</span>
                     </div>
 
                     {/* 備註 */}
                     {appointment.notes && (
                       <div className="mb-6">
-                        <h4 className="font-medium text-gray-900 mb-2">備註</h4>
-                        <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-text-primary-light mb-2">備註</h4>
+                        <p className="text-sm text-text-muted-light bg-gray-50 p-4 rounded-lg">
                           {appointment.notes}
                         </p>
                       </div>
@@ -482,7 +482,7 @@ export default function ArtistAppointments() {
                     page === currentPage - 3 ||
                     page === currentPage + 3
                   ) {
-                    return <span key={page} className="text-gray-500">...</span>;
+                    return <span key={page} className="text-text-muted-light">...</span>;
                   }
                   return null;
                 })}
@@ -528,21 +528,21 @@ export default function ArtistAppointments() {
             <div className="py-4">
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">顧客：</span>
+                  <span className="text-sm text-text-muted-light">顧客：</span>
                   <span className="text-sm font-medium">{confirmDialog.appointment.user.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">服務：</span>
+                  <span className="text-sm text-text-muted-light">服務：</span>
                   <span className="text-sm font-medium">{confirmDialog.appointment.service.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">時間：</span>
+                  <span className="text-sm text-text-muted-light">時間：</span>
                   <span className="text-sm font-medium">
                     {formatTime(confirmDialog.appointment.startAt)} - {formatTime(confirmDialog.appointment.endAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">金額：</span>
+                  <span className="text-sm text-text-muted-light">金額：</span>
                   <span className="text-sm font-medium text-green-600">
                     NT$ {confirmDialog.appointment.service.price.toLocaleString()}
                   </span>

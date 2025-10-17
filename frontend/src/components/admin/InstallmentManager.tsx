@@ -150,7 +150,7 @@ export default function InstallmentManager({
       case 'OVERDUE':
         return <Badge className="bg-red-100 text-red-800"><AlertCircle className="h-3 w-3 mr-1" />逾期</Badge>;
       case 'CANCELLED':
-        return <Badge className="bg-gray-100 text-gray-800">已取消</Badge>;
+        return <Badge className="bg-gray-100 text-text-primary-light">已取消</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -287,19 +287,19 @@ export default function InstallmentManager({
               <div className="text-2xl font-bold text-blue-600">
                 {formatCurrency(order.finalAmount)}
               </div>
-              <div className="text-sm text-gray-600">訂單總額</div>
+              <div className="text-sm text-text-muted-light">訂單總額</div>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
                 {formatCurrency(totalPaid)}
               </div>
-              <div className="text-sm text-gray-600">已付款</div>
+              <div className="text-sm text-text-muted-light">已付款</div>
             </div>
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
               <div className="text-2xl font-bold text-yellow-600">
                 {formatCurrency(totalUnpaid)}
               </div>
-              <div className="text-sm text-gray-600">未付款</div>
+              <div className="text-sm text-text-muted-light">未付款</div>
             </div>
           </div>
         </CardContent>
@@ -321,8 +321,8 @@ export default function InstallmentManager({
                 key={installment.id}
                 className="flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
               >
-                <div className="flex flex-col gap-3 text-sm text-gray-600 md:flex-row md:items-center md:gap-4">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                <div className="flex flex-col gap-3 text-sm text-text-muted-light md:flex-row md:items-center md:gap-4">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted-light">
                     <Badge variant="outline">第{installment.installmentNo}期</Badge>
                     {getStatusBadge(installment.status)}
                   </div>
@@ -336,7 +336,7 @@ export default function InstallmentManager({
                       {formatCurrency(installment.amount)}
                     </div>
                     {installment.paymentMethod && (
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-text-muted-light">
                         {getPaymentMethodText(installment.paymentMethod)}
                       </div>
                     )}
@@ -389,7 +389,7 @@ export default function InstallmentManager({
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-600">第{selectedInstallment?.installmentNo}期</div>
+              <div className="text-sm text-text-muted-light">第{selectedInstallment?.installmentNo}期</div>
               <div className="text-2xl font-bold">
                 {selectedInstallment && formatCurrency(selectedInstallment.amount)}
               </div>
@@ -415,7 +415,7 @@ export default function InstallmentManager({
                 <p className="text-xs text-red-600">{paymentMethodError}</p>
               )}
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="text-xs text-gray-500">快速選擇：</span>
+                <span className="text-xs text-text-muted-light">快速選擇：</span>
                 {['現金', '信用卡', '匯款', '轉帳'].map((method) => (
                   <button
                     key={method}
@@ -427,7 +427,7 @@ export default function InstallmentManager({
                     className={`px-2 py-1 text-xs rounded border ${
                       paymentData.paymentMethod === method
                         ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                        : 'bg-gray-100 text-text-secondary-light border-gray-300 hover:bg-gray-200'
                     }`}
                   >
                     {method}
@@ -492,10 +492,10 @@ export default function InstallmentManager({
                 type="number"
                 value={editData.amount}
                 disabled
-                className="bg-gray-100 text-gray-600 cursor-not-allowed"
+                className="bg-gray-100 text-text-muted-light cursor-not-allowed"
                 readOnly
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-text-muted-light">
                 分期金額只能透過「調整金額」功能修改
               </p>
             </div>
@@ -539,7 +539,7 @@ export default function InstallmentManager({
             {/* 計算提示信息 */}
             {selectedInstallment && (
               <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-text-secondary-light">
                   <div className="flex justify-between mb-1">
                     <span>訂單總額：</span>
                     <span className="font-medium">{formatCurrency(order.finalAmount)}</span>
@@ -559,7 +559,7 @@ export default function InstallmentManager({
                   <div className="flex justify-between">
                     <span>
                       固定金額
-                      <span className="text-xs text-gray-500 ml-1">（已付款 + 已鎖定分期）</span>
+                      <span className="text-xs text-text-muted-light ml-1">（已付款 + 已鎖定分期）</span>
                       ：
                     </span>
                     <span className="font-medium">{formatCurrency(
@@ -600,7 +600,7 @@ export default function InstallmentManager({
                 ).length;
 
                 return (
-                  <div className="text-xs text-gray-500 mb-2">
+                  <div className="text-xs text-text-muted-light mb-2">
                     可輸入範圍：1 ~ {formatCurrency(maxAllowed)}
                     {adjustableCount === 0 && (
                       <span className="text-orange-600 font-medium ml-2">

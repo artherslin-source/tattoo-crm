@@ -81,7 +81,7 @@ export default function BranchOrdersPage() {
       case 'PENDING_PAYMENT':
         return <Clock className="h-5 w-5 text-yellow-500" />;
       default:
-        return <Clock className="h-5 w-5 text-gray-500" />;
+        return <Clock className="h-5 w-5 text-text-muted-light" />;
     }
   };
 
@@ -111,19 +111,19 @@ export default function BranchOrdersPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入訂單資料中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入訂單資料中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto px-6 py-6 space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <Building2 className="h-8 w-8 text-blue-600" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
               分店訂單管理
             </h1>
             {branchInfo && (
@@ -147,7 +147,7 @@ export default function BranchOrdersPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <p className="text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
@@ -156,11 +156,11 @@ export default function BranchOrdersPage() {
         {orders.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <ShoppingCart className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <ShoppingCart className="h-12 w-12 text-text-muted-light mb-4" />
+              <h3 className="text-lg font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
                 暫無訂單
               </h3>
-              <p className="text-gray-500 dark:text-gray-400 text-center">
+              <p className="text-text-muted-light dark:text-text-muted-dark text-center">
                 目前沒有訂單記錄
               </p>
             </CardContent>
@@ -188,26 +188,26 @@ export default function BranchOrdersPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                    <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark mb-1">
                       會員資訊
                     </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
                       {order.member.name || '未設定姓名'}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500">
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
                       {order.member.email}
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                    <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark mb-1">
                       分店
                     </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
                       {order.branch.name}
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                    <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark mb-1">
                       金額
                     </h4>
                     <p className="text-lg font-bold text-blue-600 dark:text-blue-400">

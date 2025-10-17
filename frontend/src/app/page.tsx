@@ -12,7 +12,7 @@ export default function WelcomePage() {
           <span className="text-yellow-400"> CRM</span>
         </h1>
         
-        <p className="text-xl md:text-2xl text-gray-300 mb-8">
+        <p className="text-xl md:text-2xl text-text-muted-light mb-8">
           歡迎來到專業刺青工作室管理系統
         </p>
 
@@ -31,7 +31,7 @@ export default function WelcomePage() {
           </button>
         </div>
 
-        <div className="mt-12 text-gray-400">
+        <div className="mt-12 text-text-muted-light">
           <p>© 2025 Tattoo CRM. All rights reserved.</p>
         </div>
       </div>

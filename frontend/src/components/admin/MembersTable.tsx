@@ -41,13 +41,13 @@ const getLevelBadgeClass = (level?: string) => {
     case 'Bronze':
       return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
     case 'Silver':
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     case 'Gold':
       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     case 'Platinum':
       return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
   }
 };
 
@@ -77,7 +77,7 @@ export default function MembersTable({
       <div className="overflow-x-auto">
         <table className="w-full table-fixed border-separate border-spacing-0 responsive-table">
           <thead className="bg-white border-b border-gray-200">
-            <tr className="text-xs text-gray-500">
+            <tr className="text-xs text-text-muted-light">
               <th className="px-4 py-3 text-left w-[22%] font-medium">姓名 / Email</th>
               <th className="px-4 py-3 text-left w-[10%] md:table-cell hidden font-medium">分店</th>
               <th className="px-4 py-3 text-left w-[10%] lg:table-cell hidden font-medium">角色</th>
@@ -94,7 +94,7 @@ export default function MembersTable({
               <tr key={member.id} className="odd:bg-gray-50">
                 <td className="px-4 py-3" data-label="姓名 / Email">
                   <div className="font-medium">{member.user?.name || '未設定'}</div>
-                  <div className="text-gray-500 text-xs truncate">{member.user?.email || 'N/A'}</div>
+                  <div className="text-text-muted-light text-xs truncate">{member.user?.email || 'N/A'}</div>
                 </td>
 
                 <td className="px-4 py-3 md:table-cell hidden" data-label="分店">
@@ -131,7 +131,7 @@ export default function MembersTable({
                   </span>
                 </td>
 
-                <td className="px-2 py-3 xl:table-cell hidden text-gray-500 text-sm" data-label="註冊時間">
+                <td className="px-2 py-3 xl:table-cell hidden text-text-muted-light text-sm" data-label="註冊時間">
                   {member.user?.createdAt ? formatDate(member.user.createdAt) : 'N/A'}
                 </td>
 

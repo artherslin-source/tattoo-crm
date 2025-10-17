@@ -257,16 +257,16 @@ export default function CheckoutModal({
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-600">客戶</Label>
+                  <Label className="text-sm font-medium text-text-muted-light">客戶</Label>
                   <p className="text-lg font-semibold">{order.member.name}</p>
-                  <p className="text-sm text-gray-600">{order.member.email}</p>
+                  <p className="text-sm text-text-muted-light">{order.member.email}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-600">分店</Label>
+                  <Label className="text-sm font-medium text-text-muted-light">分店</Label>
                   <p className="text-lg font-semibold">{order.branch.name}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <Label className="text-sm font-medium text-gray-600">訂單金額</Label>
+                  <Label className="text-sm font-medium text-text-muted-light">訂單金額</Label>
                   <p className="text-3xl font-bold text-green-600">
                     {formatCurrency(order.finalAmount)}
                   </p>
@@ -341,7 +341,7 @@ export default function CheckoutModal({
                         className="w-full"
                         placeholder="請輸入分期期數 (2-24期)"
                       />
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-text-muted-light">
                         期
                       </div>
                     </div>
@@ -349,7 +349,7 @@ export default function CheckoutModal({
                       <p className="mt-1 text-xs text-red-600">{installmentTermsError}</p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="text-xs text-gray-500">快速選擇：</span>
+                      <span className="text-xs text-text-muted-light">快速選擇：</span>
                       {[2, 3, 6, 12].map((term) => (
                         <button
                           key={term}
@@ -361,7 +361,7 @@ export default function CheckoutModal({
                           className={`px-2 py-1 text-xs rounded border ${
                             installmentTerms === term
                               ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                              : 'bg-gray-100 text-text-secondary-light border-gray-300 hover:bg-gray-200'
                           }`}
                         >
                           {term}期
@@ -388,7 +388,7 @@ export default function CheckoutModal({
                       <div key={installment.installmentNo} className="flex items-center justify-between p-3 bg-white rounded border">
                         <div className="flex items-center gap-3">
                           <Badge variant="outline">第{installment.installmentNo}期</Badge>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-text-muted-light">
                             到期日：{formatDate(installment.dueDate)}
                           </span>
                           {installment.isCustom && (

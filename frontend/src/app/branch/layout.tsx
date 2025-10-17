@@ -80,7 +80,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">驗證分店經理權限中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">驗證分店經理權限中...</p>
         </div>
       </div>
     );
@@ -107,7 +107,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
             <div className="absolute top-4 right-4">
               <button
                 type="button"
-                className="flex items-center justify-center h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex items-center justify-center h-10 w-10 rounded-full text-text-muted-light hover:text-text-secondary-light hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onClick={() => setSidebarOpen(false)}
               >
                 <X className="h-6 w-6" />
@@ -118,7 +118,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
             <div className="flex flex-col h-full pt-5 pb-4 overflow-y-auto">
               {/* Logo/標題 */}
               <div className="flex-shrink-0 flex items-center px-6 mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">刺青 CRM</h1>
+                <h1 className="text-2xl font-bold text-text-primary-light">刺青 CRM</h1>
               </div>
 
               {/* 導航選單 */}
@@ -134,7 +134,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
                       className={`${
                         isActive
                           ? 'bg-blue-100 text-blue-900 border-l-4 border-blue-600'
-                          : 'text-gray-700 hover:bg-gray-100 border-l-4 border-transparent'
+                          : 'text-text-secondary-light hover:bg-gray-100 border-l-4 border-transparent'
                       } group flex items-center px-4 py-3 text-base font-medium rounded-r-md transition-all duration-150`}
                     >
                       <IconComponent className="mr-4 h-6 w-6 flex-shrink-0" />
@@ -166,7 +166,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-grow bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
           <div className="flex items-center flex-shrink-0 px-4 py-4">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">刺青 CRM</h1>
+            <h1 className="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">刺青 CRM</h1>
           </div>
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
             {navigationItems.map((item) => {
@@ -179,7 +179,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
                   className={`${
                     isActive
                       ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      : 'text-text-muted-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-gray-700'
                   } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                 >
                   <IconComponent className="mr-3 h-6 w-6" />
@@ -200,12 +200,12 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
               <div className="flex items-center">
                 <button
                   type="button"
-                  className="px-4 border-r border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden"
+                  className="px-4 border-r border-gray-200 dark:border-gray-700 text-text-muted-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <Menu className="h-6 w-6" />
                 </button>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white ml-4">
+                <h2 className="text-lg font-medium text-text-primary-light dark:text-text-primary-dark ml-4">
                   分店管理後台
                 </h2>
               </div>

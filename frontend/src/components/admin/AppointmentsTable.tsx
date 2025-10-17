@@ -67,7 +67,7 @@ export default function AppointmentsTable({
       case 'CANCELED':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
   };
 
@@ -107,7 +107,7 @@ export default function AppointmentsTable({
       case 'CANCELLED':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
   };
 
@@ -158,28 +158,28 @@ export default function AppointmentsTable({
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[20%]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[20%]">
                   預約時間
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[15%]">
                   客戶資訊
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[12%]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[12%]">
                   分店
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[12%]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[12%]">
                   刺青師
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[15%]">
                   服務項目
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[8%]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[8%]">
                   狀態
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[8%]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[8%]">
                   訂單狀態
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[16%]">
+                <th className="px-4 py-3 text-right text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider w-[16%]">
                   操作
                 </th>
               </tr>
@@ -188,18 +188,18 @@ export default function AppointmentsTable({
               {appointments.map((appointment) => (
                 <tr key={appointment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3" data-label="預約時間">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
                       {formatDate(appointment.startAt)}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
                       {appointment.service?.durationMin} 分鐘
                     </div>
                   </td>
                   <td className="px-4 py-3" data-label="客戶資訊">
-                    <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
                       {appointment.user?.name || '未設定'}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
                       {appointment.user?.email || 'N/A'}
                     </div>
                   </td>
@@ -209,15 +209,15 @@ export default function AppointmentsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3" data-label="刺青師">
-                    <span className="text-sm text-gray-900 dark:text-white">
+                    <span className="text-sm text-text-primary-light dark:text-text-primary-dark">
                       {appointment.artist?.name || '未分配'}
                     </span>
                   </td>
                   <td className="px-4 py-3" data-label="服務項目">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
                       {appointment.service?.name || '未設定'}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
                       {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}
                     </div>
                   </td>
@@ -232,7 +232,7 @@ export default function AppointmentsTable({
                         {getOrderStatusText(appointment.order.status)}
                       </Badge>
                     ) : (
-                      <span className="text-xs text-gray-400">無訂單</span>
+                      <span className="text-xs text-text-muted-light">無訂單</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right" data-label="操作">

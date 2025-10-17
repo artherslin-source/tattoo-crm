@@ -200,7 +200,7 @@ export default function PublicAppointmentPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">載入中...</p>
+          <p className="text-text-muted-light">載入中...</p>
         </div>
       </div>
     );
@@ -215,8 +215,8 @@ export default function PublicAppointmentPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">預約成功！</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold text-text-primary-light mb-4">預約成功！</h2>
+          <p className="text-text-muted-light mb-6">
             您的預約已提交成功，我們將在 24 小時內與您聯繫確認預約時間。
           </p>
           <div className="space-y-3">
@@ -228,7 +228,7 @@ export default function PublicAppointmentPage() {
             </button>
             <button
               onClick={() => router.push('/home')}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
+              className="w-full bg-gray-100 hover:bg-gray-200 text-text-secondary-light font-medium py-2 px-4 rounded-lg transition-colors"
             >
               返回首頁
             </button>
@@ -242,8 +242,8 @@ export default function PublicAppointmentPage() {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">立即預約</h1>
-          <p className="text-lg text-gray-600">填寫以下資訊完成預約</p>
+          <h1 className="text-3xl font-bold text-text-primary-light mb-4">立即預約</h1>
+          <p className="text-lg text-text-muted-light">填寫以下資訊完成預約</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-8">
@@ -251,7 +251,7 @@ export default function PublicAppointmentPage() {
             {/* 基本資訊 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="name" className="block text-sm font-medium text-text-secondary-light mb-2">
                   姓名 *
                 </label>
                 <input
@@ -265,7 +265,7 @@ export default function PublicAppointmentPage() {
                 />
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-text-secondary-light mb-2">
                   Email *
                 </label>
                 <input
@@ -281,7 +281,7 @@ export default function PublicAppointmentPage() {
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phone" className="block text-sm font-medium text-text-secondary-light mb-2">
                 聯絡電話
               </label>
               <input
@@ -296,7 +296,7 @@ export default function PublicAppointmentPage() {
 
             {/* 刺青師選擇 */}
             <div>
-              <label htmlFor="artist" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="artist" className="block text-sm font-medium text-text-secondary-light mb-2">
                 選擇刺青師 *
               </label>
               <select
@@ -317,7 +317,7 @@ export default function PublicAppointmentPage() {
 
             {/* 服務選擇 */}
             <div>
-              <label htmlFor="service" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="service" className="block text-sm font-medium text-text-secondary-light mb-2">
                 選擇服務 *
               </label>
               <select
@@ -339,7 +339,7 @@ export default function PublicAppointmentPage() {
             {/* 時間選擇 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="startAt" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="startAt" className="block text-sm font-medium text-text-secondary-light mb-2">
                   開始時間 *
                 </label>
                 <input
@@ -352,7 +352,7 @@ export default function PublicAppointmentPage() {
                 />
               </div>
               <div>
-                <label htmlFor="endAt" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="endAt" className="block text-sm font-medium text-text-secondary-light mb-2">
                   結束時間 *
                 </label>
                 <input
@@ -368,7 +368,7 @@ export default function PublicAppointmentPage() {
 
             {/* 備註 */}
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="notes" className="block text-sm font-medium text-text-secondary-light mb-2">
                 備註需求
               </label>
               <textarea

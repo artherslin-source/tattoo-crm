@@ -205,7 +205,7 @@ export default function InstallmentPaymentSelector({
                     <div key={installment.installmentNo} className="flex items-center justify-between p-3 bg-white rounded border">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">第{installment.installmentNo}期</Badge>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-text-muted-light">
                           到期日：{formatDate(installment.dueDate)}
                         </span>
                       </div>

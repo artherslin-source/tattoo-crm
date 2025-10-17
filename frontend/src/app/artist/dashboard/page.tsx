@@ -128,7 +128,7 @@ export default function ArtistDashboard() {
       case 'CANCELED':
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-text-primary-light';
     }
   };
 
@@ -154,7 +154,7 @@ export default function ArtistDashboard() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">載入中...</p>
+          <p className="mt-2 text-text-muted-light">載入中...</p>
         </div>
       </div>
     );
@@ -178,8 +178,8 @@ export default function ArtistDashboard() {
     <div className="space-y-6">
       {/* 頁面標題 */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">刺青師工作台</h1>
-        <p className="text-gray-600 mt-2">歡迎回來！以下是您今日的工作概覽</p>
+        <h1 className="text-3xl font-bold text-text-primary-light">刺青師工作台</h1>
+        <p className="text-text-muted-light mt-2">歡迎回來！以下是您今日的工作概覽</p>
       </div>
 
       {/* 統計卡片 */}
@@ -234,8 +234,8 @@ export default function ArtistDashboard() {
           <CardContent>
             {dashboardData?.todayAppointments.length === 0 ? (
               <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">今日沒有預約</p>
+                <Calendar className="h-12 w-12 text-text-muted-light mx-auto mb-4" />
+                <p className="text-text-muted-light">今日沒有預約</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -248,7 +248,7 @@ export default function ArtistDashboard() {
                     <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 hover:shadow-md transition-all duration-200 cursor-pointer">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
+                          <Clock className="h-4 w-4 text-text-muted-light" />
                           <span className="font-medium">
                             {formatTime(appointment.startAt)} - {formatTime(appointment.endAt)}
                           </span>
@@ -258,13 +258,13 @@ export default function ArtistDashboard() {
                         </div>
                         
                         <div className="flex items-center space-x-2 mb-1">
-                          <User className="h-4 w-4 text-gray-500" />
+                          <User className="h-4 w-4 text-text-muted-light" />
                           <span className="font-medium">{appointment.user.name}</span>
                         </div>
                         
                         <div className="flex items-center space-x-2 mb-1">
-                          <Phone className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-600">{appointment.user.phone}</span>
+                          <Phone className="h-4 w-4 text-text-muted-light" />
+                          <span className="text-sm text-text-muted-light">{appointment.user.phone}</span>
                         </div>
                         
                         <div className="flex items-center space-x-2 mb-1">
@@ -281,19 +281,19 @@ export default function ArtistDashboard() {
                           </span>
                         </div>
                         
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-text-muted-light">
                           服務項目：{appointment.service.name} ({appointment.service.durationMin}分鐘)
                         </p>
                         
                         {appointment.notes && (
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-text-muted-light mt-1">
                             備註：{appointment.notes}
                           </p>
                         )}
                       </div>
                       
                       <div className="ml-4">
-                        <Eye className="h-5 w-5 text-gray-400" />
+                        <Eye className="h-5 w-5 text-text-muted-light" />
                       </div>
                     </div>
                   </Link>
@@ -325,8 +325,8 @@ export default function ArtistDashboard() {
           <CardContent>
             {dashboardData?.notifications.length === 0 ? (
               <div className="text-center py-8">
-                <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">暫無通知</p>
+                <Bell className="h-12 w-12 text-text-muted-light mx-auto mb-4" />
+                <p className="text-text-muted-light">暫無通知</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -340,13 +340,13 @@ export default function ArtistDashboard() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
-                          <h4 className="font-medium text-gray-900">{notification.title}</h4>
+                          <h4 className="font-medium text-text-primary-light">{notification.title}</h4>
                           {!notification.isRead && (
                             <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm text-text-muted-light mb-2">{notification.message}</p>
+                        <p className="text-xs text-text-muted-light">
                           {new Date(notification.createdAt).toLocaleString('zh-TW')}
                         </p>
                       </div>

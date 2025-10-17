@@ -58,7 +58,7 @@ const getStatusBadgeClass = (status: string) => {
     case 'PAID_COMPLETE':
       return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
   }
 };
 

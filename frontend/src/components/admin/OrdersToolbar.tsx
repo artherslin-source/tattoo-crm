@@ -278,7 +278,7 @@ export default function OrdersToolbar({
             <div className="space-y-4">
               {/* 分店篩選 */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">分店</label>
+                <label className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2 block">分店</label>
                 <Select value={branchId} onValueChange={onBranchChange}>
                   <SelectTrigger className="h-10 w-full">
                     <SelectValue placeholder="選擇分店" />
@@ -296,7 +296,7 @@ export default function OrdersToolbar({
 
               {/* 狀態篩選 */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">狀態</label>
+                <label className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2 block">狀態</label>
                 <Select value={status} onValueChange={onStatusChange}>
                   <SelectTrigger className="h-10 w-full">
                     <SelectValue placeholder="選擇狀態" />
@@ -312,7 +312,7 @@ export default function OrdersToolbar({
 
               {/* 排序依據 */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">排序依據</label>
+                <label className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2 block">排序依據</label>
                 <Select value={sortField} onValueChange={onSortFieldChange}>
                   <SelectTrigger className="h-10 w-full">
                     <SelectValue />
@@ -330,7 +330,7 @@ export default function OrdersToolbar({
 
               {/* 排序方向 */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">排序方向</label>
+                <label className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2 block">排序方向</label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -353,7 +353,7 @@ export default function OrdersToolbar({
 
               {/* 每頁顯示 */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">每頁顯示</label>
+                <label className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2 block">每頁顯示</label>
                 <Select value={itemsPerPage.toString()} onValueChange={onItemsPerPageChange}>
                   <SelectTrigger className="h-10 w-full">
                     <SelectValue />

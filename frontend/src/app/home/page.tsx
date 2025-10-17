@@ -384,7 +384,7 @@ export default function HomePage() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="hidden items-center gap-2 text-yellow-300 hover:bg-white hover:text-gray-600 lg:inline-flex"
+                    className="hidden items-center gap-2 text-yellow-300 hover:bg-white hover:text-text-muted-light lg:inline-flex"
                     onClick={scrollToBookingForm}
                   >
                     快速預約
@@ -480,7 +480,7 @@ export default function HomePage() {
                         </div>
                         <Button
                           variant="outline"
-                          className="w-full border-white/30 text-gray-600 hover:bg-white/10 hover:text-white"
+                          className="w-full border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white"
                           onClick={scrollToBookingForm}
                         >
                           預約此設計師
@@ -519,7 +519,7 @@ export default function HomePage() {
                             value={formData.name}
                             onChange={(event) => handleInputChange("name", event.target.value)}
                             placeholder="請輸入您的姓名"
-                            className="bg-white/10 text-white placeholder:text-gray-400 focus:ring-1 focus:ring-yellow-400/50"
+                            className="bg-white/10 text-white placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
                         </div>
@@ -531,7 +531,7 @@ export default function HomePage() {
                             value={formData.email}
                             onChange={(event) => handleInputChange("email", event.target.value)}
                             placeholder="請輸入您的 Email"
-                            className="bg-white/10 text-white placeholder:text-gray-400 focus:ring-1 focus:ring-yellow-400/50"
+                            className="bg-white/10 text-white placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
                         </div>
@@ -543,24 +543,24 @@ export default function HomePage() {
                             value={formData.phone}
                             onChange={(event) => handleInputChange("phone", event.target.value)}
                             placeholder="請輸入您的聯絡電話"
-                            className="bg-white/10 text-white placeholder:text-gray-400 focus:ring-1 focus:ring-yellow-400/50"
+                            className="bg-white/10 text-white placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
                           />
                         </div>
                         <div>
                           <Label htmlFor="branch">指定分店 *</Label>
                           <Select value={formData.branchId} onValueChange={(value) => handleInputChange("branchId", value)}>
-                            <SelectTrigger className="bg-white/10 text-white placeholder:text-gray-400">
+                            <SelectTrigger className="bg-white/10 text-white placeholder:text-text-muted-light">
                               <SelectValue placeholder="請選擇分店" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border border-gray-200">
                               {branches.length ? (
                                 branches.map((branch) => (
-                                  <SelectItem key={branch.id} value={branch.id} className="text-gray-900 hover:bg-gray-100">
+                                  <SelectItem key={branch.id} value={branch.id} className="text-text-primary-light hover:bg-gray-100">
                                     {branch.name}
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="placeholder" disabled className="text-gray-500">
+                                <SelectItem value="placeholder" disabled className="text-text-muted-light">
                                   目前尚無分店資料
                                 </SelectItem>
                               )}
@@ -576,7 +576,7 @@ export default function HomePage() {
                           value={formData.notes}
                           onChange={(event) => handleInputChange("notes", event.target.value)}
                           placeholder="請描述您的刺青想法、尺寸或預期預算..."
-                          className="bg-white/10 text-white placeholder:text-gray-400"
+                          className="bg-white/10 text-white placeholder:text-text-muted-light"
                           rows={4}
                         />
                       </div>
@@ -623,7 +623,7 @@ export default function HomePage() {
             <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
               立即預約
             </Button>
-            <Button variant="outline" size="lg" className="border-white/30 text-gray-600 hover:bg-white/10 hover:text-white" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
+            <Button variant="outline" size="lg" className="border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
               留下聯絡資訊
             </Button>
           </div>

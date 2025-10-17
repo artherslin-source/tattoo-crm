@@ -28,18 +28,18 @@ export default function BranchServicesPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    <div className="max-w-7xl mx-auto px-6 py-6 space-y-4">
+      <h1 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
         分店服務項目管理
       </h1>
-      <p className="text-gray-600 dark:text-gray-400">
+      <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
         這是分店服務項目管理頁面。您的分店 ID 是: {userBranchId}
       </p>
       {/* 這裡可以添加服務項目管理功能 */}

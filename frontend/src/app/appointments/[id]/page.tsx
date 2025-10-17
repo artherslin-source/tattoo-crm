@@ -136,7 +136,7 @@ export default function AppointmentDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">載入中...</div>
+        <div className="text-text-muted-light">載入中...</div>
       </div>
     );
   }
@@ -160,7 +160,7 @@ export default function AppointmentDetailPage() {
   if (!appointment) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">預約不存在</div>
+        <div className="text-text-muted-light">預約不存在</div>
       </div>
     );
   }
@@ -192,7 +192,7 @@ export default function AppointmentDetailPage() {
 
         <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-8">
           <div className="flex justify-between items-start mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-semibold text-text-primary-light dark:text-text-primary-dark">
               {appointment.service?.name || "未知服務"}
             </h2>
             <span
@@ -205,19 +205,19 @@ export default function AppointmentDetailPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                   開始時間
                 </label>
-                <div className="text-lg text-gray-900 dark:text-white">
+                <div className="text-lg text-text-primary-light dark:text-text-primary-dark">
                   {formatDateTime(appointment.startAt)}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                   結束時間
                 </label>
-                <div className="text-lg text-gray-900 dark:text-white">
+                <div className="text-lg text-text-primary-light dark:text-text-primary-dark">
                   {formatDateTime(appointment.endAt)}
                 </div>
               </div>
@@ -226,19 +226,19 @@ export default function AppointmentDetailPage() {
             {appointment.service && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                     服務價格
                   </label>
-                  <div className="text-lg text-gray-900 dark:text-white">
+                  <div className="text-lg text-text-primary-light dark:text-text-primary-dark">
                     ${appointment.service.price}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                     服務時長
                   </label>
-                  <div className="text-lg text-gray-900 dark:text-white">
+                  <div className="text-lg text-text-primary-light dark:text-text-primary-dark">
                     {appointment.service.durationMin} 分鐘
                   </div>
                 </div>
@@ -247,10 +247,10 @@ export default function AppointmentDetailPage() {
 
             {appointment.artist && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                   指定刺青師
                 </label>
-                <div className="text-lg text-gray-900 dark:text-white">
+                <div className="text-lg text-text-primary-light dark:text-text-primary-dark">
                   {appointment.artist.name}
                 </div>
               </div>
@@ -258,10 +258,10 @@ export default function AppointmentDetailPage() {
 
             {appointment.notes && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                   備註
                 </label>
-                <div className="text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div className="text-text-primary-light dark:text-text-primary-dark bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                   {appointment.notes}
                 </div>
               </div>
@@ -269,19 +269,19 @@ export default function AppointmentDetailPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                   建立時間
                 </label>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
                   {formatDateTime(appointment.createdAt)}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                   最後更新
                 </label>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
                   {formatDateTime(appointment.updatedAt)}
                 </div>
               </div>

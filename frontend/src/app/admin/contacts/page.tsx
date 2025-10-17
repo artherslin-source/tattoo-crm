@@ -35,7 +35,7 @@ const STATUS_OPTIONS = [
   { value: 'PENDING', label: '待處理', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'CONTACTED', label: '已聯繫', color: 'bg-blue-100 text-blue-800' },
   { value: 'CONVERTED', label: '已轉換', color: 'bg-green-100 text-green-800' },
-  { value: 'CLOSED', label: '已關閉', color: 'bg-gray-100 text-gray-800' },
+  { value: 'CLOSED', label: '已關閉', color: 'bg-gray-100 text-text-primary-light' },
 ];
 
 export default function AdminContactsPage() {
@@ -135,7 +135,7 @@ export default function AdminContactsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">載入中...</p>
+          <p className="text-text-muted-light">載入中...</p>
         </div>
       </div>
     );
@@ -168,11 +168,11 @@ export default function AdminContactsPage() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
               <MessageSquare className="mr-3 h-8 w-8" />
               管理聯絡通知
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
               管理客戶聯絡資料和轉換流程
             </p>
           </div>
@@ -243,26 +243,26 @@ export default function AdminContactsPage() {
       {/* 聯絡列表 */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">聯絡列表</h2>
+          <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">聯絡列表</h2>
         </div>
         
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   客戶資訊
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   分店
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   狀態
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   建立時間
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   操作
                 </th>
               </tr>
@@ -274,16 +274,16 @@ export default function AdminContactsPage() {
                   <tr key={contact.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{contact.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{contact.email}</div>
+                        <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{contact.name}</div>
+                        <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.email}</div>
                         {contact.phone && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{contact.phone}</div>
+                          <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.phone}</div>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">{contact.branch.name}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{contact.branch.address}</div>
+                      <div className="text-sm text-text-primary-light dark:text-text-primary-dark">{contact.branch.name}</div>
+                      <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.branch.address}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
@@ -301,7 +301,7 @@ export default function AdminContactsPage() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted-light dark:text-text-muted-dark">
                       {formatDate(contact.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -315,7 +315,7 @@ export default function AdminContactsPage() {
                         {contact.notes && (
                           <button
                             onClick={() => alert(`備註：${contact.notes}`)}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                            className="text-text-muted-light hover:text-text-primary-light dark:text-text-muted-dark dark:hover:text-text-secondary-dark"
                           >
                             查看備註
                           </button>
@@ -331,7 +331,7 @@ export default function AdminContactsPage() {
 
         {contacts.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-500 dark:text-gray-400">目前沒有聯絡資料</div>
+            <div className="text-text-muted-light dark:text-text-muted-dark">目前沒有聯絡資料</div>
           </div>
         )}
       </div>
