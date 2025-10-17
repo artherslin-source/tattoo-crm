@@ -267,7 +267,7 @@ export default function AdminArtistsPage() {
             <form onSubmit={editingArtist ? handleUpdateArtist : handleCreateArtist} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     姓名 *
                   </label>
                   <input
@@ -310,7 +310,7 @@ export default function AdminArtistsPage() {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                   所屬分店 {!editingArtist ? '*' : ''}
                 </label>
                 <select

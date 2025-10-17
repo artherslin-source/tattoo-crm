@@ -252,7 +252,7 @@ export default function AdminServicesPage() {
             <form onSubmit={editingService ? handleUpdateService : handleCreateService} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     服務名稱 *
                   </label>
                   <input
@@ -264,7 +264,7 @@ export default function AdminServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     分類
                   </label>
                   <input
@@ -278,7 +278,7 @@ export default function AdminServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                   服務描述
                 </label>
                 <textarea
@@ -292,7 +292,7 @@ export default function AdminServicesPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     價格 (NT$) *
                   </label>
                   <input
@@ -305,7 +305,7 @@ export default function AdminServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     時長 (分鐘) *
                   </label>
                   <input
@@ -318,7 +318,7 @@ export default function AdminServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     幣別
                   </label>
                   <select
@@ -334,7 +334,7 @@ export default function AdminServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                   圖片 URL
                 </label>
                 <input
@@ -354,7 +354,7 @@ export default function AdminServicesPage() {
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700 dark:text-text-secondary-dark">
                   啟用狀態
                 </label>
               </div>

@@ -780,7 +780,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     新密碼
                   </label>
                   <input
@@ -830,7 +830,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="topUpAmount" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="topUpAmount" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     儲值金額
                   </label>
                   <input
@@ -881,7 +881,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="spendAmount" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="spendAmount" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     消費金額
                   </label>
                   <input
@@ -933,7 +933,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="adjustAmount" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="adjustAmount" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     新餘額
                   </label>
                   <input
@@ -982,7 +982,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="memberName" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="memberName" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     姓名 *
                   </label>
                   <input
@@ -995,7 +995,7 @@ export default function AdminMembersPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberEmail" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     Email *
                   </label>
                   <input
@@ -1008,7 +1008,7 @@ export default function AdminMembersPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberPassword" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="memberPassword" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     密碼 *
                   </label>
                   <input
@@ -1021,7 +1021,7 @@ export default function AdminMembersPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberPhone" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="memberPhone" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     電話 *
                   </label>
                   <input
@@ -1034,7 +1034,7 @@ export default function AdminMembersPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberBranch" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="memberBranch" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     分店 *
                   </label>
                   <select
@@ -1049,7 +1049,7 @@ export default function AdminMembersPage() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="memberRole" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                  <label htmlFor="memberRole" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     角色
                   </label>
                   <select

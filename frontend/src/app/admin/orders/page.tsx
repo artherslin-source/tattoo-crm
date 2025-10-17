@@ -888,11 +888,11 @@ export default function AdminOrdersPage() {
               {/* 基本資訊 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-text-muted-light">訂單ID</label>
+                  <label className="text-sm font-medium text-gray-700">訂單ID</label>
                   <p className="text-lg font-mono">{selectedOrder.id}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-text-muted-light">訂單狀態</label>
+                  <label className="text-sm font-medium text-gray-700">訂單狀態</label>
                   <div className="mt-1">
                     <Badge className={`rounded-full px-2 py-0.5 text-xs ${getStatusBadgeClass(selectedOrder.status)}`}>
                       {getStatusText(selectedOrder.status)}
@@ -900,13 +900,13 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-text-muted-light">訂單金額</label>
+                  <label className="text-sm font-medium text-gray-700">訂單金額</label>
                   <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                     {formatCurrency(selectedOrder.totalAmount)}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-text-muted-light">建立時間</label>
+                  <label className="text-sm font-medium text-gray-700">建立時間</label>
                   <p className="text-sm">{formatDate(selectedOrder.createdAt)}</p>
                 </div>
               </div>
@@ -916,11 +916,11 @@ export default function AdminOrdersPage() {
                 <h3 className="text-lg font-medium mb-3">客戶資訊</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-text-muted-light">客戶姓名</label>
+                    <label className="text-sm font-medium text-gray-700">客戶姓名</label>
                     <p className="text-sm">{selectedOrder.member.name || '未設定'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-text-muted-light">客戶Email</label>
+                    <label className="text-sm font-medium text-gray-700">客戶Email</label>
                     <p className="text-sm">{selectedOrder.member.email}</p>
                   </div>
                 </div>
@@ -930,7 +930,7 @@ export default function AdminOrdersPage() {
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-3">分店資訊</h3>
                 <div>
-                  <label className="text-sm font-medium text-text-muted-light">所屬分店</label>
+                  <label className="text-sm font-medium text-gray-700">所屬分店</label>
                   <p className="text-sm">{selectedOrder.branch?.name || '未分配'}</p>
                 </div>
               </div>
