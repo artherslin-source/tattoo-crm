@@ -76,8 +76,8 @@ export default function MembersTable({
     <div className="hidden xl:block">
       <div className="overflow-x-auto">
         <table className="w-full table-fixed border-separate border-spacing-0 responsive-table">
-          <thead className="bg-white border-b border-gray-200">
-            <tr className="text-xs text-text-muted-light">
+          <thead>
+            <tr className="text-xs text-text-muted-light border-b border-gray-200 dark:border-gray-700">
               <th className="px-4 py-3 text-left w-[22%] font-medium">姓名 / Email</th>
               <th className="px-4 py-3 text-left w-[10%] md:table-cell hidden font-medium">分店</th>
               <th className="px-4 py-3 text-left w-[10%] lg:table-cell hidden font-medium">角色</th>
@@ -89,9 +89,9 @@ export default function MembersTable({
             </tr>
           </thead>
 
-          <tbody className="[&>tr]:border-b [&>tr]:border-gray-100">
+          <tbody>
             {members.map((member) => (
-              <tr key={member.id} className="odd:bg-gray-50">
+              <tr key={member.id} className="border-b border-gray-100 dark:border-gray-700">
                 <td className="px-4 py-3" data-label="姓名 / Email">
                   <div className="font-medium">{member.user?.name || '未設定'}</div>
                   <div className="text-text-muted-light text-xs truncate">{member.user?.email || 'N/A'}</div>
@@ -157,7 +157,7 @@ export default function MembersTable({
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white/85">
+                      <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800">
                         {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
                           <>
                             <DropdownMenuItem onClick={() => onSpend(member)}>

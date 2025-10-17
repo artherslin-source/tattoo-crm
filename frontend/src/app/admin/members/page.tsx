@@ -602,7 +602,7 @@ export default function AdminMembersPage() {
             <Button
               variant="outline"
               onClick={() => router.back()}
-              className="flex w-full items-center justify-center space-x-2 sm:w-auto"
+              className="flex w-full items-center justify-center space-x-2 sm:w-auto action-btn-cancel"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>回上一頁</span>
@@ -804,6 +804,7 @@ export default function AdminMembersPage() {
                 <Button
                   variant="outline"
                   onClick={handleCloseResetPasswordModal}
+                  className="action-btn-cancel"
                 >
                   取消
                 </Button>
@@ -854,6 +855,7 @@ export default function AdminMembersPage() {
                 <Button
                   variant="outline"
                   onClick={handleCloseTopUpModal}
+                  className="action-btn-cancel"
                 >
                   取消
                 </Button>
@@ -906,6 +908,7 @@ export default function AdminMembersPage() {
                 <Button
                   variant="outline"
                   onClick={handleCloseSpendModal}
+                  className="action-btn-cancel"
                 >
                   取消
                 </Button>
@@ -957,6 +960,7 @@ export default function AdminMembersPage() {
                 <Button
                   variant="outline"
                   onClick={handleCloseAdjustBalanceModal}
+                  className="action-btn-cancel"
                 >
                   取消
                 </Button>
@@ -1067,6 +1071,7 @@ export default function AdminMembersPage() {
                 <Button
                   variant="outline"
                   onClick={handleCloseCreateMemberModal}
+                  className="action-btn-cancel"
                 >
                   取消
                 </Button>
