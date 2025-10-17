@@ -227,11 +227,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">今日預約數</CardTitle>
-            <Calendar className="h-4 w-4 text-on-dark-subtle" />
+            <Calendar className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.todayAppointments}</div>
-            <p className="text-xs text-on-dark-subtle">
+            <p className="text-xs text-gray-700">
               今日新增的預約
             </p>
           </CardContent>
@@ -240,11 +240,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總會員數</CardTitle>
-            <Users className="h-4 w-4 text-on-dark-subtle" />
+            <Users className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            <p className="text-xs text-on-dark-subtle">
+            <p className="text-xs text-gray-700">
               已註冊的會員總數
             </p>
           </CardContent>
@@ -253,11 +253,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總預約數</CardTitle>
-            <Calendar className="h-4 w-4 text-on-dark-subtle" />
+            <Calendar className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalAppointments}</div>
-            <p className="text-xs text-on-dark-subtle">
+            <p className="text-xs text-gray-700">
               系統中的所有預約
             </p>
           </CardContent>
@@ -266,11 +266,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總營收</CardTitle>
-            <DollarSign className="h-4 w-4 text-on-dark-subtle" />
+            <DollarSign className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">NT$ {(stats.totalRevenue || 0).toLocaleString()}</div>
-            <p className="text-xs text-on-dark-subtle">
+            <p className="text-xs text-gray-700">
               所有已完成訂單的總營收
             </p>
           </CardContent>

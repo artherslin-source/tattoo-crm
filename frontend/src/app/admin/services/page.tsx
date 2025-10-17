@@ -205,7 +205,7 @@ export default function AdminServicesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總服務數</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+            <Settings className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{services.length}</div>
@@ -215,7 +215,7 @@ export default function AdminServicesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">啟用服務</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+            <Settings className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -227,7 +227,7 @@ export default function AdminServicesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">停用服務</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+            <Settings className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
