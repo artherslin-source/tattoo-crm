@@ -598,3 +598,54 @@
   background: #e5e7eb !important;
   color: #000000 !important;
 }
+
+/* 操作選單按鈕（三個點） */
+.action-menu-btn,
+.action-menu-btn * {
+  color: #333333 !important;
+}
+
+.dark .action-menu-btn,
+.dark .action-menu-btn *,
+.dark .action-menu-btn svg {
+  color: #333333 !important;
+  fill: #333333 !important;
+}
+
+/* 下拉選單項目文字顏色 */
+.dropdown-menu-item {
+  color: #111827 !important;
+}
+
+.dropdown-menu-item svg {
+  color: #111827 !important;
+  fill: #111827 !important;
+}
+
+.dark .dropdown-menu-item {
+  color: #000000 !important;
+}
+
+.dark .dropdown-menu-item svg {
+  color: #000000 !important;
+  fill: #000000 !important;
+}
+
+/* 下拉選單刪除項目 */
+.dropdown-menu-item-delete {
+  color: #dc2626 !important;
+}
+
+.dropdown-menu-item-delete svg {
+  color: #dc2626 !important;
+  fill: #dc2626 !important;
+}
+
+.dark .dropdown-menu-item-delete {
+  color: #dc2626 !important;
+}
+
+.dark .dropdown-menu-item-delete svg {
+  color: #dc2626 !important;
+  fill: #dc2626 !important;
+}

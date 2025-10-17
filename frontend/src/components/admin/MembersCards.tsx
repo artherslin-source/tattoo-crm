@@ -141,34 +141,34 @@ export default function MembersCards({
                 {/* 更多選單 */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="px-2">
+                    <Button variant="outline" size="sm" className="px-2 action-menu-btn">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white/85">
+                  <DropdownMenuContent align="end" className="bg-white dark:bg-white">
                     {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
                       <>
-                        <DropdownMenuItem onClick={() => onSpend(member)}>
+                        <DropdownMenuItem onClick={() => onSpend(member)} className="dropdown-menu-item">
                           <ShoppingCart className="h-4 w-4 mr-2" />
                           消費
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onAdjustBalance(member)}>
+                        <DropdownMenuItem onClick={() => onAdjustBalance(member)} className="dropdown-menu-item">
                           <Wallet className="h-4 w-4 mr-2" />
                           調整餘額
                         </DropdownMenuItem>
                       </>
                     )}
-                    <DropdownMenuItem onClick={() => onViewHistory(member.id)}>
+                    <DropdownMenuItem onClick={() => onViewHistory(member.id)} className="dropdown-menu-item">
                       <History className="h-4 w-4 mr-2" />
                       查看儲值紀錄
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onResetPassword(member)}>
+                    <DropdownMenuItem onClick={() => onResetPassword(member)} className="dropdown-menu-item">
                       <Key className="h-4 w-4 mr-2" />
                       重設密碼
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => onDelete(member.id)}
-                      className="text-red-600 focus:text-red-600"
+                      className="dropdown-menu-item-delete"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       刪除
@@ -242,34 +242,34 @@ export default function MembersCards({
               {/* 更多選單 */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="action-menu-btn">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white/85">
+                <DropdownMenuContent align="end" className="bg-white dark:bg-white">
                   {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
                     <>
-                      <DropdownMenuItem onClick={() => onSpend(member)}>
+                      <DropdownMenuItem onClick={() => onSpend(member)} className="dropdown-menu-item">
                         <ShoppingCart className="h-4 w-4 mr-2" />
                         消費
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onAdjustBalance(member)}>
+                      <DropdownMenuItem onClick={() => onAdjustBalance(member)} className="dropdown-menu-item">
                         <Wallet className="h-4 w-4 mr-2" />
                         調整餘額
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuItem onClick={() => onViewHistory(member.id)}>
+                  <DropdownMenuItem onClick={() => onViewHistory(member.id)} className="dropdown-menu-item">
                     <History className="h-4 w-4 mr-2" />
                     查看儲值紀錄
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onResetPassword(member)}>
+                  <DropdownMenuItem onClick={() => onResetPassword(member)} className="dropdown-menu-item">
                     <Key className="h-4 w-4 mr-2" />
                     重設密碼
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => onDelete(member.id)}
-                    className="text-red-600 focus:text-red-600"
+                    className="dropdown-menu-item-delete"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     刪除
