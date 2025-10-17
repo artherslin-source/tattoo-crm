@@ -538,3 +538,29 @@
 .dark .description-text {
   color: #A5A7AB;
 }
+
+/* 操作按鈕顏色控制（服務管理列表） */
+.action-btn-edit,
+.action-btn-edit * {
+  color: #333333 !important;
+}
+
+.action-btn-delete,
+.action-btn-delete * {
+  color: #dc2626 !important;
+}
+
+/* 夜間模式下的操作按鈕 */
+.dark .action-btn-edit,
+.dark .action-btn-edit *,
+.dark .action-btn-edit svg {
+  color: #333333 !important;
+  fill: #333333 !important;
+}
+
+.dark .action-btn-delete,
+.dark .action-btn-delete *,
+.dark .action-btn-delete svg {
+  color: #dc2626 !important;
+  fill: #dc2626 !important;
+}

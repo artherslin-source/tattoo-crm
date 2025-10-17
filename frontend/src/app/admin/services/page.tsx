@@ -434,19 +434,19 @@ export default function AdminServicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditService(service)}
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 action-btn-edit"
                         >
-                          <Edit className="h-3 w-3" style={{ color: '#333333 !important' }} />
-                          <span style={{ color: '#333333 !important' }}>編輯</span>
+                          <Edit className="h-3 w-3" />
+                          <span>編輯</span>
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteService(service.id)}
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 action-btn-delete"
                         >
-                          <Trash2 className="h-3 w-3" style={{ color: '#dc2626 !important' }} />
-                          <span style={{ color: '#dc2626 !important' }}>刪除</span>
+                          <Trash2 className="h-3 w-3" />
+                          <span>刪除</span>
                         </Button>
                       </div>
                     </td>
