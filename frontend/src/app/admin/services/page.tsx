@@ -434,7 +434,7 @@ export default function AdminServicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditService(service)}
-                          className="flex items-center space-x-1 dark:text-gray-300"
+                          className="flex items-center space-x-1 dark:!text-gray-300"
                         >
                           <Edit className="h-3 w-3" />
                           <span>編輯</span>
@@ -443,7 +443,7 @@ export default function AdminServicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteService(service.id)}
-                          className="flex items-center space-x-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          className="flex items-center space-x-1 text-red-600 hover:text-red-700 dark:!text-red-400 dark:hover:!text-red-300"
                         >
                           <Trash2 className="h-3 w-3" />
                           <span>刪除</span>
