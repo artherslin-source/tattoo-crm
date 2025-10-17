@@ -414,7 +414,7 @@ export default function AdminArtistsPage() {
               </thead>
               <tbody>
                 {artists.map((artist) => (
-                  <tr key={artist.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr key={artist.id} className="border-b border-gray-100 dark:border-gray-700">
                         <td className="py-3 px-4">
                           <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
                             {artist.user?.name || '未設定'}
@@ -463,7 +463,7 @@ export default function AdminArtistsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditArtist(artist)}
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 action-btn-edit"
                         >
                           <Edit className="h-3 w-3" />
                           <span>編輯</span>
@@ -472,7 +472,7 @@ export default function AdminArtistsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteArtist(artist.id)}
-                          className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                          className="flex items-center space-x-1 action-btn-delete"
                         >
                           <Trash2 className="h-3 w-3" />
                           <span>刪除</span>
