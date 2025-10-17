@@ -422,7 +422,7 @@ export default function AdminServicesPage() {
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         service.isActive 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-600' 
                           : 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark'
                       }`}>
                         {service.isActive ? '啟用' : '停用'}
@@ -434,7 +434,7 @@ export default function AdminServicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditService(service)}
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 dark:text-gray-300"
                         >
                           <Edit className="h-3 w-3" />
                           <span>編輯</span>
@@ -443,7 +443,7 @@ export default function AdminServicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteService(service.id)}
-                          className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                          className="flex items-center space-x-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                         >
                           <Trash2 className="h-3 w-3" />
                           <span>刪除</span>
