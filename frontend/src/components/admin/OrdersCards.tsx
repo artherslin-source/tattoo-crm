@@ -122,13 +122,13 @@ export default function OrdersCards({
       <div className="hidden md:block xl:hidden">
         <div className="space-y-4">
           {orders.map((order) => (
-            <div key={order.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-5 text-on-dark shadow-md hover:shadow-lg transition-shadow">
+            <div key={order.id} className="rounded-lg border border-gray-200 dark:border-[var(--line)] bg-white dark:bg-[var(--panel)] p-5 text-gray-900 dark:text-on-dark shadow-md hover:shadow-lg transition-shadow order-list-item">
               <div className="flex flex-col gap-4">
                 {/* 頂部：訂單編號和狀態 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="text-xl font-bold text-blue-600 dark:text-blue-400">#{order.id.slice(-8)}</div>
-                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-sm font-medium">
+                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                       {order.branch?.name || '未分配'}
                     </span>
                   </div>
@@ -141,26 +141,26 @@ export default function OrdersCards({
                 <div className="flex items-center justify-between gap-4 py-3 border-y border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
                   {/* 會員資訊 */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-on-dark-subtle mb-1">會員資訊</div>
-                    <div className="text-base font-medium truncate">
+                    <div className="text-xs text-gray-600 dark:text-on-dark-subtle mb-1">會員資訊</div>
+                    <div className="text-base font-medium truncate text-gray-900 dark:text-gray-100">
                       {order.member.name || '未設定'}
                     </div>
-                    <div className="text-sm text-on-dark-muted truncate">{order.member.email}</div>
+                    <div className="text-sm text-gray-600 dark:text-on-dark-muted truncate">{order.member.email}</div>
                   </div>
 
                   {/* 金額資訊 */}
                   <div className="flex items-center gap-8 flex-shrink-0">
                     <div className="text-right">
-                      <div className="text-xs text-on-dark-subtle mb-1">訂單金額</div>
+                      <div className="text-xs text-gray-600 dark:text-on-dark-subtle mb-1">訂單金額</div>
                       <div className="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
                         {formatCurrency(order.totalAmount)}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-on-dark-subtle mb-1">建立時間</div>
-                      <div className="text-sm font-medium text-on-dark-muted">
+                      <div className="text-xs text-gray-600 dark:text-on-dark-subtle mb-1">建立時間</div>
+                      <div className="text-sm font-medium text-gray-600 dark:text-on-dark-muted">
                       {formatDate(order.createdAt)}
-                    </div>
+                      </div>
                   </div>
                   </div>
                 </div>
@@ -281,16 +281,16 @@ export default function OrdersCards({
       {/* 手機版 - 優化垂直卡片布局 */}
       <div className="md:hidden space-y-4">
         {orders.map((order) => (
-          <div key={order.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-md">
+          <div key={order.id} className="rounded-xl border border-gray-200 dark:border-[var(--line)] bg-white dark:bg-[var(--panel)] p-4 text-gray-900 dark:text-on-dark shadow-md order-list-item">
             <div className="space-y-3">
               {/* 訂單標題和狀態 */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="text-lg font-bold text-blue-600 dark:text-blue-400">#{order.id.slice(-8)}</div>
-                  <div className="text-xs text-on-dark-subtle mt-1 truncate">
+                  <div className="text-xs text-gray-600 dark:text-on-dark-subtle mt-1 truncate">
                     {order.member.name || '未設定'}
                   </div>
-                  <div className="text-xs text-on-dark-muted truncate">{order.member.email}</div>
+                  <div className="text-xs text-gray-600 dark:text-on-dark-muted truncate">{order.member.email}</div>
                 </div>
                 <Badge className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap ${getStatusBadgeClass(order.status)}`}>
                   {getStatusText(order.status)}
@@ -300,18 +300,18 @@ export default function OrdersCards({
               {/* 詳細資訊 */}
               <div className="grid grid-cols-2 gap-3 py-3 border-y border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
                 <div>
-                  <div className="text-xs text-on-dark-subtle mb-1">分店</div>
-                  <div className="font-medium text-sm">{order.branch?.name || '未分配'}</div>
+                  <div className="text-xs text-gray-600 dark:text-on-dark-subtle mb-1">分店</div>
+                  <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{order.branch?.name || '未分配'}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs text-on-dark-subtle mb-1">訂單金額</div>
+                  <div className="text-xs text-gray-600 dark:text-on-dark-subtle mb-1">訂單金額</div>
                   <div className="font-bold text-lg text-blue-600 dark:text-blue-400 tabular-nums">
                     {formatCurrency(order.totalAmount)}
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <div className="text-xs text-on-dark-subtle mb-1">建立時間</div>
-                  <div className="text-sm font-medium text-on-dark-muted">{formatDate(order.createdAt)}</div>
+                  <div className="text-xs text-gray-600 dark:text-on-dark-subtle mb-1">建立時間</div>
+                  <div className="text-sm font-medium text-gray-600 dark:text-on-dark-muted">{formatDate(order.createdAt)}</div>
                 </div>
               </div>
 
