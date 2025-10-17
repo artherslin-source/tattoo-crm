@@ -89,6 +89,13 @@
   transform: translateY(-1px);
 }
 
+/* 夜間模式快捷功能卡片 */
+.dark .quick-card {
+  background: #1A1D23;
+  color: #FFFFFF;
+  border: 1px solid #2D3036;
+}
+
 /* 篩選列樣式（統一白天模式） */
 .filter-bar,
 .search-bar,
@@ -113,16 +120,16 @@
 /* 卡片與表格統一 */
 .stat-card{background:var(--card-light);color:var(--text-primary-light);border-radius:12px;padding:1rem;border:1px solid var(--border-soft);box-shadow:var(--card-shadow);transition:box-shadow .2s,transform .2s;}
 .stat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px);}
-.dark .stat-card{background:var(--card-dark);color:var(--text-primary-dark);box-shadow:0 1px 3px rgba(255,255,255,.06);border-color:#374151;}
+.dark .stat-card{background:#1A1D23;color:#FFFFFF;box-shadow:0 4px 10px rgba(0,0,0,0.4);border-color:#2D3036;}
 
 /* 表格標題與文字統一字色 */
 .table-list{width:100%;border-collapse:separate;border-spacing:0 8px;}
 .table-list th{text-align:left;font-size:.85rem;color:var(--text-sub);font-weight:600;padding:.75rem;}
 .dark .table-list th{color:var(--text-muted-dark);}
 .table-list td{background:var(--card-light);padding:.9rem;border-radius:10px;vertical-align:middle;color:var(--text-main);font-weight:500;border:1px solid var(--border-soft);}
-.dark .table-list td{background:var(--card-dark);color:var(--text-primary-dark);border-color:#374151;}
+.dark .table-list td{background:#1A1D23;color:#FFFFFF;border-color:#2D3036;}
 .table-list tr:hover td{background:#fafafa;box-shadow:0 2px 6px rgba(0,0,0,.06);}
-.dark .table-list tr:hover td{background:rgba(255,255,255,.06);}
+.dark .table-list tr:hover td{background:#22252B;}
 
 /* 標籤(狀態) */
 .tag{padding:3px 8px;border-radius:999px;font-size:.75rem;font-weight:600;letter-spacing:.2px;}
@@ -163,8 +170,9 @@
   transform: translateY(-1px);
 }
 .dark .order-list-item {
-  background: #1f2937;
-  border-color: #374151;
+  background: #1A1D23;
+  border-color: #2D3036;
+  color: #FFFFFF;
 }
 
 /* 金額顏色強調 */
@@ -435,13 +443,13 @@
   color: #E8EAED;
 }
 
-/* 卡片 / 表格容器：亮度提升 8% */
+/* 卡片 / 表格容器：統一深灰色 */
 .dark .card,
 .dark .stat-card,
 .dark .summary-card,
 .dark .table-list td,
 .dark .table-container {
-  background-color: #1E2025;
+  background-color: #1A1D23;
   border: 1px solid #2D3036;
   color: #FFFFFF;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
@@ -459,13 +467,13 @@
 .dark .card:hover,
 .dark .stat-card:hover,
 .dark .table-list tr:hover td {
-  background-color: #26292F;
+  background-color: #22252B;
   box-shadow: 0 6px 16px rgba(0,0,0,0.5);
 }
 
-/* 頂部統計卡：亮度 + 邊框區分 */
+/* 頂部統計卡：統一深灰色 */
 .dark .stat-card {
-  background: linear-gradient(180deg, #1F2227 0%, #191B20 100%);
+  background-color: #1A1D23;
   border: 1px solid #31343B;
   color: #FFFFFF;
 }
