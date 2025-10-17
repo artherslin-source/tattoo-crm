@@ -45,7 +45,7 @@ export default function AppointmentsToolbar({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   return (
-    <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 mb-6 border border-gray-200/50 dark:border-gray-700/50">
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 border border-gray-200 dark:border-gray-700 filter-bar">
       {/* 桌機版 (≥1024px) - 橫向展開 */}
       <div className="hidden xl:block">
         <div className="flex items-center gap-4">
