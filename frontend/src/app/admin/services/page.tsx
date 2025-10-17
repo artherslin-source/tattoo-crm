@@ -437,8 +437,8 @@ export default function AdminServicesPage() {
                           className="flex items-center space-x-1"
                           style={{ color: 'var(--text-secondary-light)' }}
                         >
-                          <Edit className="h-3 w-3" style={{ color: '#333333' }} />
-                          <span style={{ color: '#333333' }}>編輯</span>
+                          <Edit className="h-3 w-3" style={{ color: '#333333 !important' }} />
+                          <span style={{ color: '#333333 !important' }}>編輯</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -447,8 +447,8 @@ export default function AdminServicesPage() {
                           className="flex items-center space-x-1"
                           style={{ color: 'var(--text-secondary-light)' }}
                         >
-                          <Trash2 className="h-3 w-3" style={{ color: '#dc2626' }} />
-                          <span style={{ color: '#dc2626' }}>刪除</span>
+                          <Trash2 className="h-3 w-3" style={{ color: '#dc2626 !important' }} />
+                          <span style={{ color: '#dc2626 !important' }}>刪除</span>
                         </Button>
                       </div>
                     </td>
