@@ -26,6 +26,10 @@ export class AdminController {
   @Get('stats')
   async getStats(@Req() req: any, @Query('branchId') queryBranchId?: string) {
     try {
+      console.log('🔍 Admin stats endpoint called');
+      console.log('🔍 Request user:', req.user);
+      console.log('🔍 Query branchId:', queryBranchId);
+      
       const userRole = req.user.role;
       const userBranchId = req.user.branchId;
 

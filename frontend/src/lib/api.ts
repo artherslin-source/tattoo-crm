@@ -15,8 +15,14 @@ function detectApiBase(): string {
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     const hostname = window.location.hostname;
     if (hostname.includes('railway.app')) {
-      // Railway 部署：嘗試後端服務 URL
-      return `https://${hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`;
+      // Railway 部署：使用同一個域名，但後端在 /api 路徑
+      // 或者如果後端是獨立服務，使用環境變量
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (backendUrl) {
+        return backendUrl;
+      }
+      // 如果沒有設定後端 URL，假設是同一個域名
+      return `https://${hostname}`;
     } else {
       // 其他生產環境
       return window.location.origin.replace(/:\d+$/, ':4000');
