@@ -28,12 +28,12 @@ export default function Sidebar({ open, onClose }: Props) {
           <h1>雕川紋身 CRM</h1>
           <nav>
             <Link href="/admin/dashboard">📊 儀表板</Link>
-            <Link href="/admin/members">👥 會員管理</Link>
-            <Link href="/admin/orders">🧾 訂單管理</Link>
-            <Link href="/admin/appointments">📅 預約管理</Link>
-            <Link href="/admin/artists">🎨 刺青師管理</Link>
             <Link href="/admin/services">⚙️ 服務管理</Link>
+            <Link href="/admin/artists">🎨 刺青師管理</Link>
+            <Link href="/admin/members">👥 會員管理</Link>
             <Link href="/admin/contacts">💬 聯絡管理</Link>
+            <Link href="/admin/appointments">📅 預約管理</Link>
+            <Link href="/admin/orders">🧾 訂單管理</Link>
           </nav>
         </div>
         <div className="flex flex-col gap-3">
@@ -67,12 +67,12 @@ export default function Sidebar({ open, onClose }: Props) {
               </div>
               <nav className="flex flex-col gap-1">
                 <Link href="/admin/dashboard" onClick={onClose}>📊 儀表板</Link>
-                <Link href="/admin/members" onClick={onClose}>👥 會員管理</Link>
-                <Link href="/admin/orders" onClick={onClose}>🧾 訂單管理</Link>
-                <Link href="/admin/appointments" onClick={onClose}>📅 預約管理</Link>
-                <Link href="/admin/artists" onClick={onClose}>🎨 刺青師管理</Link>
                 <Link href="/admin/services" onClick={onClose}>⚙️ 服務管理</Link>
+                <Link href="/admin/artists" onClick={onClose}>🎨 刺青師管理</Link>
+                <Link href="/admin/members" onClick={onClose}>👥 會員管理</Link>
                 <Link href="/admin/contacts" onClick={onClose}>💬 聯絡管理</Link>
+                <Link href="/admin/appointments" onClick={onClose}>📅 預約管理</Link>
+                <Link href="/admin/orders" onClick={onClose}>🧾 訂單管理</Link>
               </nav>
               <div className="mt-6 flex flex-col gap-3">
                 <ThemeToggle />
