@@ -1041,7 +1041,7 @@ export default function AdminMembersPage() {
                     id="memberBranch"
                     value={createMemberModal.formData.branchId}
                     onChange={(e) => handleCreateMemberFormChange('branchId', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:bg-gray-700 dark:text-text-primary-dark"
                   >
                     <option value="">請選擇分店</option>
                     <option value="cmg9i8wsb0001sbc1oh5vfetl">三重店</option>
@@ -1056,7 +1056,7 @@ export default function AdminMembersPage() {
                     id="memberRole"
                     value={createMemberModal.formData.role}
                     onChange={(e) => handleCreateMemberFormChange('role', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:bg-gray-700 dark:text-text-primary-dark"
                   >
                     <option value="MEMBER">會員</option>
                     <option value="ADMIN">管理員</option>

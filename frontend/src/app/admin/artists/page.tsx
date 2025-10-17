@@ -317,7 +317,7 @@ export default function AdminArtistsPage() {
                   required={!editingArtist}
                   value={formData.branchId}
                   onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   disabled={!!(editingArtist && branches.length === 1)} // 如果只有一個分店且是編輯模式，禁用選擇
                 >
                   <option value="">請選擇分店</option>
