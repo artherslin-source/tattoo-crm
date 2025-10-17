@@ -380,7 +380,7 @@ export default function AdminArtistsPage() {
                 <Button type="submit">
                   {editingArtist ? '更新刺青師' : '新增刺青師'}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} className="action-btn-cancel">
                   取消
                 </Button>
               </div>

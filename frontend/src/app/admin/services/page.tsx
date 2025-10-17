@@ -363,7 +363,7 @@ export default function AdminServicesPage() {
                 <Button type="submit">
                   {editingService ? '更新服務' : '新增服務'}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} className="action-btn-cancel">
                   取消
                 </Button>
               </div>
