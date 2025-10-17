@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { postJSON, saveTokens, getJsonWithAuth, ApiError } from "@/lib/api";
@@ -61,70 +61,80 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold mb-6">註冊</h1>
+    <div className="auth-page">
+      <div className="auth-bg-glow" />
+      <div className="auth-bg-logo" aria-hidden="true">
+        <svg viewBox="0 0 800 800">
+          <defs>
+            <radialGradient id="inkGlow2" cx="50%" cy="50%" r="60%">
+              <stop offset="0%"  stopColor="#93C5FD" stopOpacity="0.8"/>
+              <stop offset="55%" stopColor="#C084FC" stopOpacity="0.35"/>
+              <stop offset="100%" stopColor="#111827" stopOpacity="0"/>
+            </radialGradient>
+            <linearGradient id="steelBlue2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#93C5FD"/>
+              <stop offset="50%" stopColor="#A78BFA"/>
+              <stop offset="100%" stopColor="#60A5FA"/>
+            </linearGradient>
+          </defs>
+          <circle cx="400" cy="400" r="260" fill="url(#inkGlow2)" opacity=".55"/>
+          <path
+            d="M380,140 C570,150 700,270 700,400 C700,540 560,680 390,670 C220,660 120,540 120,420 C120,300 250,200 380,140"
+            fill="none"
+            stroke="url(#steelBlue2)"
+            strokeWidth="18"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity=".9"
+          />
+        </svg>
+      </div>
+
+      <div className="auth-card" role="dialog" aria-labelledby="registerTitle">
+        <div className="auth-logo">🌀 雕川紋身 CRM</div>
+        <h2 id="registerTitle" className="auth-subtitle">建立您的後台帳號</h2>
+
         {error && (
-          <div className="mb-4 text-sm text-red-600" role="alert">
+          <div className="mb-4 text-sm text-red-300 bg-red-500/20 border border-red-500/30 rounded-lg p-3" role="alert">
             {error}
           </div>
         )}
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="email" className="text-sm">Email</label>
-            <input
-              id="email"
-              type="email"
-              className="border rounded px-3 py-2"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="password" className="text-sm">Password</label>
-            <input
-              id="password"
-              type="password"
-              className="border rounded px-3 py-2"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="name" className="text-sm">名稱</label>
-            <input
-              id="name"
-              type="text"
-              className="border rounded px-3 py-2"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-black text-white rounded py-2 disabled:opacity-60"
-          >
+
+        <form onSubmit={onSubmit}>
+          <input
+            type="text"
+            placeholder="姓名"
+            className="auth-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            aria-label="姓名"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            className="auth-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            aria-label="Email"
+          />
+          <input
+            type="password"
+            placeholder="密碼"
+            className="auth-input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            aria-label="密碼"
+          />
+          <button type="submit" disabled={loading} className="auth-button">
             {loading ? "註冊中..." : "註冊"}
           </button>
         </form>
-        
-        {/* 返回首頁按鈕 - 位於註冊按鈕下方中央 */}
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={() => router.push('/home')}
-            className="flex items-center gap-2 px-4 py-2 text-text-muted-light dark:text-text-muted-dark hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            返回首頁
-          </button>
-        </div>
+
+        <Link href="/login" className="auth-link">已有帳號？返回登入</Link>
       </div>
     </div>
   );

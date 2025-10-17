@@ -87,3 +87,190 @@
 /* 主題切換 */
 .theme-toggle{background:none;border:none;font-size:1.35rem;cursor:pointer;transition:transform .25s;}
 .theme-toggle:hover{transform:rotate(12deg);}
+
+/* === BRAND SVG BRUSH GLOW LAYER === */
+.auth-bg-logo {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1;               /* 置於 glow 上、卡片下 */
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-bg-logo svg {
+  width: min(70vmin, 780px);
+  height: auto;
+  opacity: .22;             /* 白天透明度 */
+  filter: drop-shadow(0 12px 40px rgba(37, 99, 235, .25));
+  animation: brandFloat 9s ease-in-out infinite alternate;
+  mix-blend-mode: screen;   /* 讓亮部柔和疊加 */
+}
+
+.dark .auth-bg-logo svg {
+  opacity: .18;             /* 夜間稍降，避免過亮 */
+  filter: drop-shadow(0 16px 60px rgba(99, 102, 241, .25));
+  mix-blend-mode: lighten;
+}
+
+@keyframes brandFloat {
+  0%   { transform: translateY(0px) rotate(0deg) scale(1); }
+  50%  { transform: translateY(-6px) rotate(2deg) scale(1.02); }
+  100% { transform: translateY(4px) rotate(-2deg) scale(1.01); }
+}
+
+/* 輔助「筆刷脈動」描邊動畫（內層環） */
+.auth-bg-logo .pulse {
+  stroke-dasharray: 6 14;
+  animation: dashPulse 6s ease-in-out infinite;
+  opacity: .6;
+}
+@keyframes dashPulse {
+  0%   { stroke-dashoffset: 0;   }
+  50%  { stroke-dashoffset: 60;  }
+  100% { stroke-dashoffset: 0;   }
+}
+
+/* 低動作使用者：關閉動畫 */
+@media (prefers-reduced-motion: reduce) {
+  .auth-bg-logo svg,
+  .auth-bg-logo .pulse,
+  .auth-bg-glow { animation: none !important; }
+}
+
+/* 層級確認（背景 → logo → 卡片） */
+.auth-bg-glow { z-index: 0; }
+.auth-bg-logo { z-index: 1; }
+.auth-card    { z-index: 2; }
+
+/* === AUTH PAGE LAYOUT === */
+.auth-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+}
+
+.dark .auth-page {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+}
+
+/* 背景柔光 */
+.auth-bg-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(147, 51, 234, 0.3) 0%, transparent 50%);
+  z-index: 0;
+}
+
+/* 玻璃卡片 */
+.auth-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.dark .auth-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-logo {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.auth-subtitle {
+  text-align: center;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+  font-weight: 500;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.auth-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.auth-button:hover {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.auth-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-link {
+  display: block;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.auth-link:hover {
+  color: white;
+  text-decoration: underline;
+}
