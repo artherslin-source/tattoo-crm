@@ -122,7 +122,7 @@ export default function OrdersCards({
       <div className="hidden md:block">
         <div className="space-y-3">
           {orders.map((order) => (
-            <div key={order.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <div key={order.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 {/* 左側：基本資訊 */}
                 <div className="flex-1 min-w-0">
@@ -137,7 +137,7 @@ export default function OrdersCards({
                       </Badge>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-500 truncate">
+                  <div className="text-sm text-on-dark-muted truncate">
                     {order.member.name || '未設定'} • {order.member.email}
                   </div>
                 </div>
@@ -145,14 +145,14 @@ export default function OrdersCards({
                 {/* 中間：金額資訊 */}
                 <div className="flex items-center gap-6 flex-shrink-0">
                   <div className="text-center">
-                    <div className="text-xs text-gray-500">訂單金額</div>
+                    <div className="text-xs text-on-dark-subtle">訂單金額</div>
                     <div className="text-lg font-semibold tabular-nums text-blue-600 dark:text-blue-400">
                       {formatCurrency(order.totalAmount)}
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xs text-gray-500">建立時間</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-xs text-on-dark-subtle">建立時間</div>
+                    <div className="text-sm text-on-dark-muted">
                       {formatDate(order.createdAt)}
                     </div>
                   </div>
@@ -177,7 +177,7 @@ export default function OrdersCards({
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white/85">
+                  <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light">
                       {order.status === 'PENDING_PAYMENT' && (
                         <DropdownMenuItem onClick={() => onUpdateStatus(order, 'PAID')}>
                           <CheckCircle className="h-4 w-4 mr-2" />
@@ -262,13 +262,13 @@ export default function OrdersCards({
       {/* 手機版 - 垂直卡片布局 */}
       <div className="md:hidden space-y-3">
         {orders.map((order) => (
-          <div key={order.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div key={order.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm">
             <div className="space-y-3">
               {/* 訂單標題和狀態 */}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="text-base font-semibold">訂單 #{order.id.slice(-8)}</div>
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-on-dark-subtle mt-1">
                     {order.member.name || '未設定'} • {order.member.email}
                   </div>
                 </div>
@@ -280,23 +280,23 @@ export default function OrdersCards({
               {/* 詳細資訊 */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <div className="text-gray-500 text-xs">分店</div>
+                  <div className="text-xs text-on-dark-subtle">分店</div>
                   <div className="font-medium">{order.branch?.name || '未分配'}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500 text-xs">訂單金額</div>
+                  <div className="text-xs text-on-dark-subtle">訂單金額</div>
                   <div className="font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
                     {formatCurrency(order.totalAmount)}
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <div className="text-gray-500 text-xs">建立時間</div>
-                  <div className="text-sm">{formatDate(order.createdAt)}</div>
+                  <div className="text-xs text-on-dark-subtle">建立時間</div>
+                  <div className="text-sm text-on-dark-muted">{formatDate(order.createdAt)}</div>
                 </div>
               </div>
 
               {/* 操作按鈕 */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
                 <Button
                   size="sm"
                   onClick={() => onViewDetails(order)}
@@ -311,7 +311,7 @@ export default function OrdersCards({
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white/85">
+                  <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light">
                     {order.status === 'PENDING_PAYMENT' && (
                       <DropdownMenuItem onClick={() => onUpdateStatus(order, 'PAID')}>
                         <CheckCircle className="h-4 w-4 mr-2" />

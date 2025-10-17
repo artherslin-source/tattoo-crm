@@ -95,10 +95,10 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--bg)] text-on-dark flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">驗證管理員權限中...</p>
+          <p className="text-on-dark-muted">驗證管理員權限中...</p>
         </div>
       </div>
     );
@@ -107,19 +107,19 @@ export default function AdminLayout({
   // 如果沒有 token 或權限不足，顯示錯誤頁面
   if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--bg)] text-on-dark flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-600 mb-4">
             <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <h2 className="text-2xl font-bold text-on-dark mb-2">
             {!token ? '需要登入' : '權限不足'}
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {!token 
-              ? '請先登入以訪問管理員功能' 
+          <p className="text-on-dark-muted mb-6">
+            {!token
+              ? '請先登入以訪問管理員功能'
               : '您沒有訪問管理員功能的權限'
             }
           </p>
@@ -134,7 +134,7 @@ export default function AdminLayout({
             )}
             <button
               onClick={() => router.push('/')}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              className="px-6 py-2 border border-[var(--line-light)] bg-[var(--paper)] text-on-light rounded-md hover:bg-[color-mix(in_srgb,var(--paper)_85%,#fff)]"
             >
               返回首頁
             </button>
@@ -145,7 +145,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen bg-[var(--bg)] text-on-dark">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -156,8 +156,8 @@ export default function AdminLayout({
           />
           
           {/* 側邊選單：從左側滑入、寬度佔螢幕的2/3、全屏高、純白色、右側陰影 */}
-          <div 
-            className={`fixed inset-y-0 left-0 w-2/3 bg-white shadow-2xl transform transition-transform duration-[900ms] ease-in-out ${
+          <div
+            className={`fixed inset-y-0 left-0 w-2/3 bg-[var(--paper)] text-on-light shadow-2xl transform transition-transform duration-[900ms] ease-in-out ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full'
             }`}
           >
@@ -165,7 +165,7 @@ export default function AdminLayout({
             <div className="absolute top-4 right-4">
               <button
                 type="button"
-                className="flex items-center justify-center h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex items-center justify-center h-10 w-10 rounded-full text-on-light-subtle hover:text-on-light focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-[color-mix(in_srgb,var(--paper)_85%,#fff)]"
                 onClick={() => setSidebarOpen(false)}
               >
                 <X className="h-6 w-6" />
@@ -176,7 +176,7 @@ export default function AdminLayout({
             <div className="flex flex-col h-full pt-5 pb-4 overflow-y-auto">
               {/* Logo/標題 */}
               <div className="flex-shrink-0 flex items-center px-6 mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">刺青 CRM</h1>
+                <h1 className="text-2xl font-bold text-on-light">刺青 CRM</h1>
               </div>
 
               {/* 導航選單 */}
@@ -191,8 +191,8 @@ export default function AdminLayout({
                       onClick={() => setSidebarOpen(false)}
                       className={`${
                         isActive
-                          ? 'bg-blue-100 text-blue-900 border-l-4 border-blue-600'
-                          : 'text-gray-700 hover:bg-gray-100 border-l-4 border-transparent'
+                          ? 'border-l-4 border-blue-500 bg-[color-mix(in_srgb,#2563eb_18%,var(--paper))] text-on-light'
+                          : 'border-l-4 border-transparent text-on-light-muted hover:bg-[color-mix(in_srgb,var(--paper)_88%,#000)]'
                       } group flex items-center px-4 py-3 text-base font-medium rounded-r-md transition-all duration-150`}
                     >
                       <IconComponent className="mr-4 h-6 w-6 flex-shrink-0" />
@@ -203,7 +203,7 @@ export default function AdminLayout({
               </nav>
 
               {/* 登出按鈕 */}
-              <div className="px-4 pb-4 border-t border-gray-200 pt-4">
+              <div className="px-4 pb-4 border-t border-[var(--line-light)] pt-4">
                 <button
                   onClick={() => {
                     setSidebarOpen(false);
@@ -222,9 +222,9 @@ export default function AdminLayout({
 
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col flex-grow bg-[var(--panel)] border-r border-[var(--line)] text-on-dark">
           <div className="flex items-center flex-shrink-0 px-4 py-4">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">刺青 CRM</h1>
+            <h1 className="text-xl font-bold text-on-dark">刺青 CRM</h1>
           </div>
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
             {navigationItems.map((item) => {
@@ -236,9 +236,9 @@ export default function AdminLayout({
                   href={item.href}
                   className={`${
                     isActive
-                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                      ? 'bg-[color-mix(in_srgb,#2563eb_16%,var(--panel))] text-on-dark'
+                      : 'text-on-dark-muted hover:bg-[color-mix(in_srgb,var(--panel)_82%,#000)]'
+                  } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors`}
                 >
                   <IconComponent className="mr-3 h-6 w-6" />
                   {item.name}
@@ -252,18 +252,18 @@ export default function AdminLayout({
       {/* Main content area - this is the scrolling container */}
       <main className="lg:pl-64 flex-1 overflow-y-auto">
         {/* Header - now inside the scrolling container with sticky positioning */}
-        <header className="sticky top-0 z-20 bg-white/95 dark:bg-gray-800/95 backdrop-blur shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <header className="sticky top-0 z-20 bg-[color-mix(in_srgb,var(--panel)_92%,#000)] backdrop-blur shadow-sm border-b border-[var(--line)]">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center">
                 <button
                   type="button"
-                  className="px-4 border-r border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden"
+                  className="px-4 border-r border-[var(--line)] text-on-dark-subtle focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <Menu className="h-6 w-6" />
                 </button>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white ml-4">
+                <h2 className="text-lg font-medium text-on-dark ml-4">
                   管理後台
                 </h2>
               </div>

@@ -1,16 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0d0f12;
-  --panel: #121418;
-  --text: #e8eaed;
-  --muted: #a6adb4;
-  --brand: #ffc043;
-  --accent: #2b6be6;
-  --line: #262a31;
+  /* surface colors */
+  --bg: #0d0f12; /* 全域深底 */
+  --panel: #121418; /* 卡片深面 */
+  --paper: #f9fafb; /* 少量淺面（如白卡片，若有） */
+
+  /* ON DARK SURFACE（適用深底）*/
+  --on-dark: #e6eaf2; /* 主文字：AA 可讀 */
+  --on-dark-muted: #c7cfda; /* 次文字 */
+  --on-dark-subtle: #a9b4c2; /* 補充/標註 */
+
+  /* ON LIGHT SURFACE（適用淺底）*/
+  --on-light: #111827; /* 主文字 */
+  --on-light-muted: #374151; /* 次文字 */
+  --on-light-subtle: #4b5563; /* 補充/標註 */
+
+  /* 功能性色 */
+  --brand: #ffc043; /* CTA 金色 */
+  --accent: #2b6be6; /* 次互動 */
+  --line: #262a31; /* 深面邊框 */
+  --line-light: #e5e7eb; /* 淺面邊框 */
 
   --background: var(--bg);
-  --foreground: var(--text);
+  --foreground: var(--on-dark);
 }
 
 @theme inline {
@@ -35,6 +48,38 @@ body {
   scrollbar-width: none;
 }
 
+/* 建立語意化文字工具類（避免用 opacity） */
+@layer utilities {
+  .text-on-dark {
+    color: var(--on-dark);
+  }
+
+  .text-on-dark-muted {
+    color: var(--on-dark-muted);
+  }
+
+  .text-on-dark-subtle {
+    color: var(--on-dark-subtle);
+  }
+
+  .text-on-light {
+    color: var(--on-light);
+  }
+
+  .text-on-light-muted {
+    color: var(--on-light-muted);
+  }
+
+  .text-on-light-subtle {
+    color: var(--on-light-subtle);
+  }
+
+  .no-text-opacity {
+    --tw-text-opacity: 1 !important;
+    opacity: 1 !important;
+  }
+}
+
 /* 響應式表格轉卡片樣式 */
 @media (max-width: 1024px) {
   .responsive-table {
@@ -48,10 +93,10 @@ body {
   .responsive-table tr {
     display: block;
     margin-bottom: 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--line-light);
     border-radius: 8px;
     padding: 12px;
-    background: white;
+    background: var(--paper);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
   
@@ -66,7 +111,7 @@ body {
   .responsive-table td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: #6b7280;
+    color: var(--on-light-muted);
     min-width: 80px;
   }
   
@@ -74,7 +119,7 @@ body {
     justify-content: flex-end;
     margin-top: 8px;
     padding-top: 12px;
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid var(--line-light);
   }
   
   .responsive-table td:last-child::before {

@@ -13,7 +13,7 @@ type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement>;
 export const Card: React.FC<CardProps> = ({ children, className = "", ...props }) => {
   return (
     <div
-      className={`rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 ${className}`}
+      className={`rounded-lg border border-[var(--line)] bg-[var(--panel)] text-on-dark shadow-sm ${className}`}
       {...props}
     >
       {children}
@@ -46,7 +46,7 @@ export const CardContent: React.FC<CardContentProps> = ({ children, className = 
 export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className = "", ...props }) => {
   return (
     <p
-      className={`text-sm text-gray-500 dark:text-gray-400 ${className}`}
+      className={`text-sm text-on-dark-subtle ${className}`}
       {...props}
     >
       {children}
@@ -57,7 +57,7 @@ export const CardDescription: React.FC<CardDescriptionProps> = ({ children, clas
 export const CardTitle: React.FC<CardTitleProps> = ({ children, className = "", ...props }) => {
   return (
     <h3
-      className={`text-lg font-semibold leading-none tracking-tight ${className}`}
+      className={`text-lg font-semibold leading-none tracking-tight text-on-dark ${className}`}
       {...props}
     >
       {children}
