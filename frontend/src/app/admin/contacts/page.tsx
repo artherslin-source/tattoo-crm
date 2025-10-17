@@ -32,10 +32,10 @@ interface ContactStats {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'PENDING', label: '待處理', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'CONTACTED', label: '已聯繫', color: 'bg-blue-100 text-blue-800' },
-  { value: 'CONVERTED', label: '已轉換', color: 'bg-green-100 text-green-800' },
-  { value: 'CLOSED', label: '已關閉', color: 'bg-gray-100 text-gray-800' },
+  { value: 'PENDING', label: '待處理', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' },
+  { value: 'CONTACTED', label: '已聯繫', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+  { value: 'CONVERTED', label: '已轉換', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
+  { value: 'CLOSED', label: '已關閉', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' },
 ];
 
 export default function AdminContactsPage() {
@@ -180,7 +180,7 @@ export default function AdminContactsPage() {
             <Button
               variant="outline"
               onClick={() => router.back()}
-              className="flex w-full items-center justify-center space-x-2 sm:w-auto"
+              className="flex w-full items-center justify-center space-x-2 sm:w-auto action-btn-cancel"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>回上一頁</span>
@@ -248,8 +248,8 @@ export default function AdminContactsPage() {
         
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   客戶資訊
                 </th>
@@ -267,11 +267,11 @@ export default function AdminContactsPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
               {contacts.map((contact) => {
                 const statusInfo = getStatusInfo(contact.status);
                 return (
-                  <tr key={contact.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr key={contact.id} className="border-b border-gray-100 dark:border-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{contact.name}</div>
