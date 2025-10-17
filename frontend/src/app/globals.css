@@ -6,6 +6,10 @@
   --panel: #121418; /* 卡片深面 */
   --paper: #f9fafb; /* 少量淺面（如白卡片，若有） */
 
+  /* font families */
+  --font-geist-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "SFMono-Regular", "Roboto Mono", Menlo, monospace;
+
   /* semantic typography palette */
   --text-primary-light: #1a1a1a;
   --text-secondary-light: #3a3a3a;
@@ -42,32 +46,20 @@
 }
 
 @theme {
-  colors: {
-    brand: {
-      blue: #2563eb,
-      orange: #ff7a00,
-    },
-    text: {
-      primary: {
-        light: #1a1a1a,
-        dark: #ffffff,
-      },
-      secondary: {
-        light: #3a3a3a,
-        dark: #eaeaea,
-      },
-      muted: {
-        light: #5a5a5a,
-        dark: #cccccc,
-      },
-    },
-  },
+  --color-brand-blue: #2563eb;
+  --color-brand-orange: #ff7a00;
+  --color-text-primary-light: #1a1a1a;
+  --color-text-primary-dark: #ffffff;
+  --color-text-secondary-light: #3a3a3a;
+  --color-text-secondary-dark: #eaeaea;
+  --color-text-muted-light: #5a5a5a;
+  --color-text-muted-dark: #cccccc;
 }
 
 body {
   background: var(--background);
   color: var(--text-primary-light);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans);
 }
 
 .dark body {
