@@ -105,9 +105,9 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
   return (
     <div className="hidden xl:block">
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-separate border-spacing-0 text-on-dark">
+        <table className="w-full table-fixed border-separate border-spacing-0">
           <thead>
-            <tr className="text-xs text-on-dark-subtle">
+            <tr className="text-xs text-gray-600 dark:text-on-dark-subtle">
               <th className="px-4 py-2 text-left w-[20%]">訂單ID / 客戶</th>
               <th className="px-4 py-2 text-left w-[12%] md:table-cell hidden">分店</th>
               <th className="px-4 py-2 text-left w-[10%] lg:table-cell hidden">狀態</th>
@@ -116,20 +116,20 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
               <th className="px-4 py-2 text-right w-[12%]">操作</th>
             </tr>
           </thead>
-          <tbody className="[&>tr]:border-b [&>tr]:border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {orders.map((order) => (
-              <tr key={order.id} className="odd:bg-[color-mix(in_srgb,var(--panel)_94%,#fff)]">
+              <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td className="px-4 py-3" data-label="訂單ID / 客戶">
-                  <div className="font-medium text-sm">{order.id.slice(-8)}</div>
-                  <div className="text-on-dark-muted text-xs truncate">
+                  <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{order.id.slice(-8)}</div>
+                  <div className="text-gray-600 dark:text-on-dark-muted text-xs truncate">
                     {order.member.name || '未設定'}
                   </div>
-                  <div className="text-on-dark-subtle text-xs truncate">
+                  <div className="text-gray-500 dark:text-on-dark-subtle text-xs truncate">
                     {order.member.email}
                   </div>
                 </td>
                 <td className="px-4 py-3 md:table-cell hidden" data-label="分店">
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                  <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300">
                     {order.branch?.name || '未分配'}
                   </span>
                 </td>
@@ -143,7 +143,7 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
                     {formatCurrency(order.totalAmount)}
                   </span>
                 </td>
-                <td className="px-4 py-3 xl:table-cell hidden text-sm text-on-dark-subtle" data-label="建立時間">
+                <td className="px-4 py-3 xl:table-cell hidden text-sm text-gray-600 dark:text-on-dark-subtle" data-label="建立時間">
                   {formatDate(order.createdAt)}
                 </td>
                 <td className="px-4 py-3 text-right" data-label="操作">
