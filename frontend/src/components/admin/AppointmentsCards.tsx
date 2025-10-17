@@ -155,7 +155,7 @@ export default function AppointmentsCards({
     <div className="xl:hidden">
       <div className="space-y-4">
         {appointments.map((appointment) => (
-          <div key={appointment.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <div key={appointment.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm">
             {/* 平板版 (768px ~ 1023px) - 橫向布局 */}
             <div className="hidden md:block">
               <div className="flex items-center justify-between gap-4">
@@ -167,7 +167,7 @@ export default function AppointmentsCards({
                       <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
                         {appointment.branch?.name || '未分配'}
                       </span>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-on-dark-muted">
                         {appointment.artist?.name || '未分配'}
                       </span>
                       <Badge className={`text-xs ${getStatusBadgeClass(appointment.status)}`}>
@@ -180,7 +180,7 @@ export default function AppointmentsCards({
                       )}
                     </div>
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-on-dark-subtle">
                     <div>{appointment.user?.name || '未設定'} ({appointment.user?.email || 'N/A'})</div>
                     <div>{appointment.service?.name || '未設定'} - {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}</div>
                   </div>
@@ -201,12 +201,12 @@ export default function AppointmentsCards({
 
                   {/* 更多選單 */}
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="px-2">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white/85">
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="px-2">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light">
                       {appointment.status === 'PENDING' && (
                         <>
                           <DropdownMenuItem 
@@ -305,7 +305,7 @@ export default function AppointmentsCards({
                 {/* 標題區域 */}
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                    <h3 className="text-lg font-semibold text-on-dark truncate">
                       {formatDate(appointment.startAt)}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
@@ -325,7 +325,7 @@ export default function AppointmentsCards({
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white/85">
+                  <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light">
                       {appointment.status === 'PENDING' && (
                         <>
                           <DropdownMenuItem 
@@ -418,11 +418,11 @@ export default function AppointmentsCards({
 
                 {/* 詳細資訊 */}
                 <details className="group">
-                  <summary className="flex items-center justify-between cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                  <summary className="flex items-center justify-between cursor-pointer text-sm font-medium text-on-dark hover:text-on-dark">
                     <span>詳細資訊</span>
                     <span className="transform transition-transform group-open:rotate-180">▼</span>
                   </summary>
-                  <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="mt-3 space-y-2 text-sm text-on-dark-muted">
                     <div className="flex justify-between">
                       <span>客戶姓名:</span>
                       <span className="font-medium">{appointment.user?.name || '未設定'}</span>

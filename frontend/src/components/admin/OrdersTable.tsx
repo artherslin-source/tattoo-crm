@@ -105,9 +105,9 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
   return (
     <div className="hidden xl:block">
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-separate border-spacing-0">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-on-dark">
           <thead>
-            <tr className="text-xs text-gray-500">
+            <tr className="text-xs text-on-dark-subtle">
               <th className="px-4 py-2 text-left w-[20%]">訂單ID / 客戶</th>
               <th className="px-4 py-2 text-left w-[12%] md:table-cell hidden">分店</th>
               <th className="px-4 py-2 text-left w-[10%] lg:table-cell hidden">狀態</th>
@@ -116,15 +116,15 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
               <th className="px-4 py-2 text-right w-[12%]">操作</th>
             </tr>
           </thead>
-          <tbody className="[&>tr]:border-b [&>tr]:border-gray-100">
+          <tbody className="[&>tr]:border-b [&>tr]:border-[color-mix(in_srgb,var(--panel)_85%,#fff)]">
             {orders.map((order) => (
-              <tr key={order.id} className="odd:bg-gray-50">
+              <tr key={order.id} className="odd:bg-[color-mix(in_srgb,var(--panel)_94%,#fff)]">
                 <td className="px-4 py-3" data-label="訂單ID / 客戶">
                   <div className="font-medium text-sm">{order.id.slice(-8)}</div>
-                  <div className="text-gray-500 text-xs truncate">
+                  <div className="text-on-dark-muted text-xs truncate">
                     {order.member.name || '未設定'}
                   </div>
-                  <div className="text-gray-400 text-xs truncate">
+                  <div className="text-on-dark-subtle text-xs truncate">
                     {order.member.email}
                   </div>
                 </td>
@@ -143,7 +143,7 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
                     {formatCurrency(order.totalAmount)}
                   </span>
                 </td>
-                <td className="px-4 py-3 xl:table-cell hidden text-gray-500 text-sm" data-label="建立時間">
+                <td className="px-4 py-3 xl:table-cell hidden text-sm text-on-dark-subtle" data-label="建立時間">
                   {formatDate(order.createdAt)}
                 </td>
                 <td className="px-4 py-3 text-right" data-label="操作">
@@ -162,7 +162,7 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white/85">
+                      <DropdownMenuContent align="end" className="bg-[color-mix(in_srgb,var(--paper)_94%,#fff)] text-on-light">
                         {order.status === 'PAID' && (
                           <DropdownMenuItem onClick={() => onUpdateStatus(order, 'COMPLETED')}>
                             <CheckCircle className="h-4 w-4 mr-2" />

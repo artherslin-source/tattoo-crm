@@ -145,10 +145,10 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--bg)] text-on-dark flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入中...</p>
+          <p className="text-on-dark-muted">載入中...</p>
         </div>
       </div>
     );
@@ -205,10 +205,10 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="mb-6 pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-on-dark">
             {role === 'BOSS' ? '管理後台' : '分店管理後台'}
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-on-dark-muted">
             歡迎回到管理後台，這裡是您的控制中心
           </p>
           {role === 'BOSS' && (
@@ -227,11 +227,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">今日預約數</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-on-dark-subtle" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.todayAppointments}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-on-dark-subtle">
               今日新增的預約
             </p>
           </CardContent>
@@ -240,11 +240,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總會員數</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-on-dark-subtle" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-on-dark-subtle">
               已註冊的會員總數
             </p>
           </CardContent>
@@ -253,11 +253,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總預約數</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-on-dark-subtle" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalAppointments}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-on-dark-subtle">
               系統中的所有預約
             </p>
           </CardContent>
@@ -266,11 +266,11 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總營收</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-on-dark-subtle" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">NT$ {(stats.totalRevenue || 0).toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-on-dark-subtle">
               所有已完成訂單的總營收
             </p>
           </CardContent>
@@ -279,7 +279,7 @@ export default function AdminDashboardPage() {
 
       {/* Quick Actions */}
       <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-2xl font-bold text-on-dark mb-6">
             快捷功能
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
