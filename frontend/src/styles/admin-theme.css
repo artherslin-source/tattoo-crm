@@ -570,16 +570,16 @@
   color: #FFFFFF !important;
 }
 
-/* 確保 Dialog 內 outline 按鈕的文字不會變成白色 */
-.dark [role="dialog"] button[class*="outline"],
-.dark [role="dialog"] button[class*="outline"] * {
-  color: inherit;
+/* 備註欄位專用樣式 - 只針對備註的 p 元素 */
+.dark [role="dialog"] p.bg-gray-50 {
+  background: #f9fafb !important;
+  color: #1f2937 !important;
 }
 
-/* 取消按鈕應該保持其原有樣式 */
-.dark [role="dialog"] .action-btn-cancel,
-.dark [role="dialog"] .action-btn-cancel * {
-  color: #000000 !important;
+/* Dialog 關閉按鈕專用樣式 */
+.dark [role="dialog"] .dialog-close-btn,
+.dark [role="dialog"] .dialog-close-btn * {
+  color: #1f2937 !important;
 }
 
 /* 表格空白狀態、說明文字 */

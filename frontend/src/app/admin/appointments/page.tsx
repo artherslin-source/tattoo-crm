@@ -640,7 +640,7 @@ export default function AdminAppointmentsPage() {
               {selectedAppointment.notes && (
                 <div className="space-y-2">
                   <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">備註</h4>
-                  <p className="text-sm text-text-muted-light dark:text-text-muted-dark bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <p className="text-sm text-gray-700 dark:text-gray-900 bg-gray-50 dark:bg-gray-200 p-3 rounded-lg">
                     {selectedAppointment.notes}
                   </p>
                       </div>
@@ -667,7 +667,7 @@ export default function AdminAppointmentsPage() {
                   <Button
                     variant="outline"
                     onClick={handleCloseDetailModal}
-                    className="flex-1"
+                    className="flex-1 dialog-close-btn"
                   >
                     關閉
                   </Button>
