@@ -132,10 +132,10 @@ export default function AdminContactsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-text-muted-light">載入中...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入聯絡資料中...</p>
         </div>
       </div>
     );
@@ -163,17 +163,17 @@ export default function AdminContactsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-text-primary-dark page-title">
               <MessageSquare className="mr-3 h-8 w-8" />
               管理聯絡通知
             </h1>
-            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
-              管理客戶聯絡資料和轉換流程
+            <p className="mt-2 text-gray-600 dark:text-text-muted-dark page-subtitle">
+              管理系統中的所有客戶聯絡資料
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -191,7 +191,7 @@ export default function AdminContactsPage() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">總聯絡數</CardTitle>

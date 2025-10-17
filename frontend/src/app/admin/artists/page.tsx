@@ -175,17 +175,17 @@ export default function AdminArtistsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-text-primary-dark page-title">
               <UserCheck className="mr-3 h-8 w-8" />
               管理刺青師
             </h1>
-            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
-              管理系統中的刺青師資料
+            <p className="mt-2 text-gray-600 dark:text-text-muted-dark page-subtitle">
+              管理系統中的所有刺青師資料
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -216,7 +216,7 @@ export default function AdminArtistsPage() {
       )}
 
       {/* Stats Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總刺青師數</CardTitle>
@@ -230,7 +230,7 @@ export default function AdminArtistsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">活躍刺青師</CardTitle>
-            <UserCheck className="h-4 w-4 text-gray-600" />
+            <div className="h-4 w-4 rounded-full bg-green-500"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -242,7 +242,7 @@ export default function AdminArtistsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">停用刺青師</CardTitle>
-            <UserCheck className="h-4 w-4 text-gray-600" />
+            <div className="h-4 w-4 rounded-full bg-red-500"></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
