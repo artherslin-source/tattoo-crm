@@ -1,327 +1,45 @@
+/* ========================================
+   🎨 Tattoo CRM — Global Styles
+   ======================================== */
+
+/* Import Tailwind CSS */
 @import "tailwindcss";
-@import "../styles/admin-theme.css";
 
-:root {
-  /* surface colors */
-  --bg: #0d0f12; /* 全域深底 */
-  --panel: #121418; /* 卡片深面 */
-  --paper: #f9fafb; /* 少量淺面（如白卡片，若有） */
+/* Import our token-based theme system */
+@import "../styles/index.css";
 
-  /* font families */
-  --font-geist-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-geist-mono: "SFMono-Regular", "Roboto Mono", Menlo, monospace;
+/* ==========================================
+   GLOBAL BASE STYLES
+   ========================================== */
 
-  /* semantic typography palette */
-  --text-primary-light: #1a1a1a;
-  --text-secondary-light: #3a3a3a;
-  --text-muted-light: #5a5a5a;
-  --text-primary-dark: #ffffff;
-  --text-secondary-dark: #eaeaea;
-  --text-muted-dark: #cccccc;
-
-  /* ON DARK SURFACE（適用深底）- 加深灰色提升可讀性 */
-  --on-dark: #f0f3f9; /* 主文字：更亮 */
-  --on-dark-muted: #d4dce8; /* 次文字：從 #c7cfda 加深 */
-  --on-dark-subtle: #bac4d1; /* 補充/標註：從 #a9b4c2 加深 */
-
-  /* ON LIGHT SURFACE（適用淺底）- 加深灰色提升可讀性 */
-  --on-light: #0f1419; /* 主文字：更深 */
-  --on-light-muted: #1f2937; /* 次文字：從 #374151 加深 */
-  --on-light-subtle: #374151; /* 補充/標註：從 #4b5563 加深 */
-
-  /* 功能性色 */
-  --brand: #ffc043; /* CTA 金色 */
-  --accent: #2b6be6; /* 次互動 */
-  --line: #262a31; /* 深面邊框 */
-  --line-light: #e5e7eb; /* 淺面邊框 */
-
-  --background: var(--bg);
-  --foreground: var(--on-dark);
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  transition: background-color var(--transition-slow), color var(--transition-slow);
 }
 
+/* ==========================================
+   TAILWIND THEME INTEGRATION
+   ========================================== */
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 @theme {
-  --color-brand-blue: #2563eb;
-  --color-brand-orange: #ff7a00;
+  /* Brand Colors */
+  --color-brand-blue: var(--color-primary);
+  --color-brand-orange: var(--color-accent);
+  
+  /* Text Colors */
   --color-text-primary-light: #1a1a1a;
   --color-text-primary-dark: #ffffff;
   --color-text-secondary-light: #3a3a3a;
   --color-text-secondary-dark: #eaeaea;
   --color-text-muted-light: #5a5a5a;
   --color-text-muted-dark: #cccccc;
-}
-
-body {
-  background: var(--background);
-  color: var(--text-primary-light);
-  font-family: var(--font-geist-sans);
-}
-
-.dark body {
-  color: var(--text-primary-dark);
-}
-
-.btn-primary {
-  background-color: #2563eb;
-  color: #fff;
-  font-weight: 600;
-  border-radius: 8px;
-  transition: all 0.2s ease-in-out;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
-}
-
-.btn-primary:hover {
-  background-color: #1e4fdb;
-  transform: translateY(-1px);
-}
-
-.btn-primary:active {
-  background-color: #163fbb;
-  transform: scale(0.98);
-}
-
-.btn-secondary {
-  background-color: #f5f5f5;
-  color: #1a1a1a;
-  border-radius: 8px;
-  transition: all 0.2s ease-in-out;
-}
-
-.btn-secondary:hover {
-  transform: translateY(-1px);
-}
-
-.btn-secondary:active {
-  transform: scale(0.98);
-}
-
-.dark .btn-secondary {
-  background-color: #333333;
-  color: #eaeaea;
-}
-
-.btn-reserve {
-  background-color: #ff7a00;
-  color: #fff;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.2s ease-in-out;
-}
-
-.btn-reserve:hover {
-  background-color: #ff8f33;
-  transform: translateY(-1px);
-}
-
-.btn-reserve:active {
-  background-color: #e56f00;
-  transform: scale(0.98);
-}
-
-.card {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background-color: #ffffff;
-  padding: 1rem;
-  transition: all 0.2s ease-in-out;
-}
-
-.card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
-}
-
-.dark .card {
-  background-color: #54514f;
-  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.05);
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* 建立語意化文字工具類（避免用 opacity） */
-@layer utilities {
-  .text-on-dark {
-    color: var(--on-dark);
-  }
-
-  .text-on-dark-muted {
-    color: var(--on-dark-muted);
-  }
-
-  .text-on-dark-subtle {
-    color: var(--on-dark-subtle);
-  }
-
-  .text-on-light {
-    color: var(--on-light);
-  }
-
-  .text-on-light-muted {
-    color: var(--on-light-muted);
-  }
-
-  .text-on-light-subtle {
-    color: var(--on-light-subtle);
-  }
-
-  .no-text-opacity {
-    --tw-text-opacity: 1 !important;
-    opacity: 1 !important;
-  }
-}
-
-/* 響應式表格轉卡片樣式 */
-@media (max-width: 1024px) {
-  .responsive-table {
-    display: block;
-  }
-  
-  .responsive-table thead {
-    display: none;  /* 小螢幕不顯示表頭列 */
-  }
-  
-  .responsive-table tr {
-    display: block;
-    margin-bottom: 12px;
-    border: 1px solid var(--line-light);
-    border-radius: 8px;
-    padding: 12px;
-    background: var(--paper);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-  
-  .responsive-table td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    border: none;
-  }
-  
-  .responsive-table td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: var(--on-light-muted);
-    min-width: 80px;
-  }
-  
-  .responsive-table td:last-child {
-    justify-content: flex-end;
-    margin-top: 8px;
-    padding-top: 12px;
-    border-top: 1px solid var(--line-light);
-  }
-  
-  .responsive-table td:last-child::before {
-    display: none;
-  }
-}
-
-/* === 🌞🌙 Tattoo CRM NightTheme v2.4 === */
-
-/* -------------------------------------------- */
-/*   1. 白天模式：柔光呼吸流光（淡金光）       */
-/* -------------------------------------------- */
-.brand-logo,
-.login-logo,
-.loading-logo {
-  position: relative;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  background: linear-gradient(110deg, #b5b5b5 0%, #f3f3f3 40%, #d0d0d0 80%, #b5b5b5 100%);
-  background-size: 250% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: light-sheen 8s ease-in-out infinite alternate;
-  text-shadow: 0 0 8px rgba(255,255,255,0.15);
-}
-
-@keyframes light-sheen {
-  0% { background-position: 0% center; opacity: 0.95; }
-  50% { background-position: 100% center; opacity: 1; }
-  100% { background-position: 0% center; opacity: 0.95; }
-}
-
-/* -------------------------------------------- */
-/*   2. 夜間模式：金屬流光掃描（鋼銀光澤）     */
-/* -------------------------------------------- */
-.dark .brand-logo,
-.dark .login-logo,
-.dark .loading-logo {
-  background: linear-gradient(120deg, #A0AEC0 0%, #E5E7EB 20%, #A0AEC0 40%, #6B7280 60%, #E5E7EB 80%, #A0AEC0 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: metallic-sheen 6s linear infinite;
-  text-shadow: 0 0 10px rgba(255,255,255,0.12);
-}
-
-@keyframes metallic-sheen {
-  0% { background-position: 200% center; }
-  100% { background-position: -200% center; }
-}
-
-/* -------------------------------------------- */
-/*   3. 背景過渡與卡片光感（保留v2.3.1設定）   */
-/* -------------------------------------------- */
-.dark body,
-.dark .layout,
-.dark .admin-page {
-  background-color: #0F1115;
-  color: #E5E7EB;
-  transition: background 0.5s ease, color 0.5s ease;
-}
-
-.dark .card,
-.dark .summary-card {
-  background-color: #54514f;
-  border: 1px solid #2F343C;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-  transition: all 0.25s ease;
-}
-
-.dark .card:hover {
-  background-color: #6B6B6B;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-}
-
-.light .card,
-.light .summary-card {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-/* -------------------------------------------- */
-/*   4. 自動主題切換動畫                       */
-/* -------------------------------------------- */
-@media (prefers-color-scheme: dark) {
-  :root { color-scheme: dark; }
-}
-@media (prefers-color-scheme: light) {
-  :root { color-scheme: light; }
-}
-
-/* -------------------------------------------- */
-/*   5. 登入與載入畫面動態（延續v2.3.1）       */
-/* -------------------------------------------- */
-.login-page, .loading-screen {
-  animation: bgFadeIn 1.2s ease forwards;
-}
-@keyframes bgFadeIn {
-  0% { opacity: 0; transform: scale(1.02); }
-  100% { opacity: 1; transform: scale(1); }
 }

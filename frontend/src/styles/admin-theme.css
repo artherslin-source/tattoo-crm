@@ -1,535 +1,188 @@
-:root{
-  /* Light Mode 統一色系 */
-  --bg-light:#ffffff; --bg-dark:#1e1e1e;
-  --card-light:#ffffff; --card-dark:#2a2a2a;
-  --bg-sub-light:#f9fafb; --bg-sub-dark:#1f2937;
+/* ========================================
+   🎨 Tattoo CRM — Admin Theme Styles
+   ======================================== */
 
-  /* 文字色彩 - Light Mode 高對比 */
-  --text-main: #111827;        /* 主要標題：深黑 */
-  --text-sub: #4B5563;         /* 副標題：中灰 */
-  --text-muted: #6B7280;       /* 說明文字：柔和灰 */
+/*
+  This file contains admin-specific styling using the token-based system.
+  All colors reference CSS variables from tokens.css
+*/
+
+/* Legacy color mappings for backward compatibility */
+:root {
+  /* Light Mode - map to tokens */
+  --bg-light: var(--color-bg);
+  --bg-dark: #1e1e1e;
+  --card-light: var(--color-card-bg);
+  --card-dark: #2a2a2a;
+  --bg-sub-light: var(--color-surface);
+  --bg-sub-dark: #1f2937;
+
+  /* Text mappings */
+  --text-main: var(--color-text);
+  --text-sub: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
   
-  --text-primary-light:#111827;
-  --text-secondary-light:#4B5563;
-  --text-muted-light:#6b7280;
+  --text-primary-light: var(--color-text);
+  --text-secondary-light: var(--color-text-secondary);
+  --text-muted-light: var(--color-text-muted);
 
-  /* Dark Mode 保持原樣 */
-  --text-primary-dark:#ffffff;
-  --text-secondary-dark:#e5e7eb;
-  --text-muted-dark:#9ca3af;
+  /* Dark mode text */
+  --text-primary-dark: #ffffff;
+  --text-secondary-dark: #e5e7eb;
+  --text-muted-dark: #9ca3af;
 
-  /* 邊框與陰影 */
-  --border-soft: #e5e7eb;
-  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  /* Border & shadow */
+  --border-soft: var(--color-border);
+  --card-shadow: var(--shadow-md);
 
-  /* 品牌色 */
-  --blue:#2563eb; --orange:#ff7a00;
-  --green:#22c55e; --yellow:#eab308; --red:#ef4444;
+  /* Brand colors */
+  --blue: var(--color-primary);
+  --orange: var(--color-accent);
+  --green: var(--color-success);
+  --yellow: var(--color-warning);
+  --red: var(--color-error);
 }
 
-/* 版面骨架 */
-.admin-layout{display:flex;min-height:100vh;background:var(--bg-light);color:var(--text-primary-light);transition:background-color .3s,color .3s;}
-.dark .admin-layout{background:var(--bg-dark);color:var(--text-primary-dark);}
+/* ==========================================
+   ADMIN LAYOUT (Now using tokens)
+   ========================================== */
 
-/* 桌機固定側欄 */
-.sidebar{
-  width:248px;background:var(--card-light);
-  border-right:1px solid rgba(0,0,0,.08);
-  display:flex;flex-direction:column;justify-content:space-between;
-  padding:1rem;transition:background-color .3s,border-color .3s;
-}
-.dark .sidebar{background:var(--card-dark);border-color:rgba(255,255,255,.1);}
-.sidebar h1{font-size:1.1rem;font-weight:800;color:var(--blue);letter-spacing:.2px;}
-.sidebar nav{margin-top:1rem;display:flex;flex-direction:column;gap:.5rem;}
-.sidebar a{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border-radius:8px;color:var(--text-secondary-light);transition:background-color .2s,color .2s;}
-.sidebar a:hover{background:rgba(37,99,235,.08);color:var(--blue);}
-.dark .sidebar a{color:var(--text-secondary-dark);}
-.dark .sidebar a:hover{background:rgba(37,99,235,.15);color:var(--blue);}
+/* Note: Layout components are now primarily defined in components.css
+   These remain here for backward compatibility */
 
-/* 主內容 */
-.main-content{flex:1;min-width:0;padding:1.25rem;}
-@media (min-width:1024px){.main-content{padding:2rem;}}
+/* ==========================================
+   ADMIN PAGE COMPONENTS
+   ========================================== */
 
-/* 行動版頂欄 */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-bottom:1px solid rgba(0,0,0,.08);background:var(--bg-light);position:sticky;top:0;z-index:30;}
-.dark .topbar{border-color:rgba(255,255,255,.1);background:var(--bg-dark);}
+/* Note: Component styles now use tokens from components.css */
 
-/* Drawer（行動/平板） */
-.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:saturate(120%) blur(2px);z-index:40;}
-.drawer-panel{position:fixed;top:0;bottom:0;left:0;width:280px;background:var(--card-light);border-right:1px solid rgba(0,0,0,.08);z-index:50;overflow:auto;}
-.dark .drawer-panel{background:var(--card-dark);border-color:rgba(255,255,255,.1);}
+/* ==========================================
+   FILTER & SEARCH BARS
+   ========================================== */
 
-/* === Light Mode 統一化樣式 === */
-
-/* 儀表板主體文字與說明 */
-.dashboard-title,
-.page-title {
-  color: var(--text-main);
-  font-weight: 700;
-}
-.dashboard-subtitle,
-.page-subtitle,
-.section-description {
-  color: var(--text-sub);
-  font-weight: 500;
-}
-
-/* 快捷功能卡片 */
-.quick-card {
-  background: var(--bg-light);
-  color: var(--text-main);
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--card-shadow);
-  transition: all 0.2s ease;
-  border-radius: 12px;
-  padding: 1rem;
-}
-.quick-card:hover {
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  transform: translateY(-1px);
-}
-
-/* 夜間模式快捷功能卡片 */
-.dark .quick-card {
-  background: #54514f;
-  color: #FFFFFF;
-  border: 1px solid #2D3036;
-}
-
-/* 篩選列樣式（統一白天模式） */
 .filter-bar,
 .search-bar,
 .select-bar {
-  background: var(--bg-light);
-  border: 1px solid var(--border-soft);
-  color: var(--text-sub);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
 }
+
 .filter-bar button,
 .select-bar select {
-  background: #f3f4f6;
-  color: var(--text-main);
-  border: 1px solid var(--border-soft);
-  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
   padding: 6px 12px;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-base);
 }
+
 .filter-bar button:hover {
-  background: #e5e7eb;
+  background: var(--color-border-light);
 }
 
-/* 卡片與表格統一 */
-.stat-card{background:var(--card-light);color:var(--text-primary-light);border-radius:12px;padding:1rem;border:1px solid var(--border-soft);box-shadow:var(--card-shadow);transition:box-shadow .2s,transform .2s;}
-.stat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px);}
-.dark .stat-card{background:#54514f;color:#FFFFFF;box-shadow:0 4px 10px rgba(0,0,0,0.4);border-color:#2D3036;}
+/* ==========================================
+   ADMIN TABLES & CARDS
+   ========================================== */
 
-/* 表格標題與文字統一字色 */
-.table-list{width:100%;border-collapse:separate;border-spacing:0 8px;}
-.table-list th{text-align:left;font-size:.85rem;color:var(--text-sub);font-weight:600;padding:.75rem;}
-.dark .table-list th{color:var(--text-muted-dark);}
-.table-list td{background:var(--card-light);padding:.9rem;border-radius:10px;vertical-align:middle;color:var(--text-main);font-weight:500;border:1px solid var(--border-soft);}
-.dark .table-list td{background:#54514f;color:#FFFFFF;border-color:#2D3036;}
-.table-list tr:hover td{background:#fafafa;box-shadow:0 2px 6px rgba(0,0,0,.06);}
-.dark .table-list tr:hover td{background:#6B6B6B;}
+/* Note: Base table and card styles are in components.css */
 
-/* 標籤(狀態) */
-.tag{padding:3px 8px;border-radius:999px;font-size:.75rem;font-weight:600;letter-spacing:.2px;}
-.tag-pending{background:#fef3c7;color:#92400e;}
-.tag-progress{background:#dbeafe;color:#1e40af;}
-.tag-success{background:#dcfce7;color:#166534;}
-.tag-failed{background:#fee2e2;color:#991b1b;}
-.dark .tag-pending{background:#78350f;color:#fef3c7;}
-.dark .tag-progress{background:#1e3a8a;color:#dbeafe;}
-.dark .tag-success{background:#14532d;color:#bbf7d0;}
-.dark .tag-failed{background:#7f1d1d;color:#fecaca;}
+/* ==========================================
+   STATUS TAGS & BADGES
+   ========================================== */
 
-/* 按鈕 */
-.btn-primary{background:var(--blue);color:#fff;border-radius:10px;padding:.55rem 1rem;font-weight:700;transition:background-color .2s,transform .1s;}
-.btn-primary:hover{background:#1e40af;transform:translateY(-1px);}
-.btn-secondary{background:#f3f4f6;color:var(--text-primary-light);border-radius:10px;padding:.5rem .9rem;}
-.btn-secondary:hover{background:#e5e7eb;}
-.dark .btn-secondary{background:#2f2f2f;color:var(--text-primary-dark);}
-.dark .btn-secondary:hover{background:#3a3a3a;}
+/* Note: Base tag styles now in components.css using semantic tokens */
 
-/* 文字層級（避免淡到不可讀） */
-.text-strong{color:var(--text-main);}
-.text-muted{color:var(--text-muted);}
-.dark .text-strong{color:var(--text-primary-dark);}
-.dark .text-muted{color:var(--text-muted-dark);}
-
-/* === 訂單列表視覺優化 === */
-.order-list-item {
-  background-color: var(--bg-light);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  box-shadow: var(--card-shadow);
-  padding: 12px 16px;
-  transition: all 0.25s ease;
-}
-.order-list-item:hover {
-  box-shadow: 0 4px 14px rgba(0,0,0,0.07);
-  transform: translateY(-1px);
-}
-.dark .order-list-item {
-  background: #54514f;
-  border-color: #2D3036;
-  color: #FFFFFF;
-}
-
-/* 金額顏色強調 */
-.amount {
-  color: #1d4ed8;
-  font-weight: 700;
-}
-.dark .amount {
-  color: #60a5fa;
-}
-
-/* 狀態標籤顏色優化 */
-.status-tag {
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-}
+/* Light mode status tags */
 .status-tag[data-status="待確認"],
 .status-tag[data-status="待結帳"] {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
+
 .status-tag[data-status="進行中"],
 .status-tag[data-status="部分付款"] {
-  background: #dbeafe;
-  color: #1e3a8a;
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
 }
+
 .status-tag[data-status="已完成"],
 .status-tag[data-status="已付款"] {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
+
 .status-tag[data-status="分期中"],
 .status-tag[data-status="分期付款中"] {
   background: #f3e8ff;
   color: #6b21a8;
 }
+
 .status-tag[data-status="已取消"] {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.dark .status-tag[data-status="待確認"],
-.dark .status-tag[data-status="待結帳"] {
-  background: #78350f;
-  color: #fef3c7;
-}
-.dark .status-tag[data-status="進行中"],
-.dark .status-tag[data-status="部分付款"] {
-  background: #1e3a8a;
-  color: #dbeafe;
-}
-.dark .status-tag[data-status="已完成"],
-.dark .status-tag[data-status="已付款"] {
-  background: #14532d;
-  color: #bbf7d0;
-}
-.dark .status-tag[data-status="分期中"],
-.dark .status-tag[data-status="分期付款中"] {
-  background: #581c87;
-  color: #f3e8ff;
-}
-.dark .status-tag[data-status="已取消"] {
-  background: #7f1d1d;
-  color: #fecaca;
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
-/* 主題切換 */
-.theme-toggle{background:none;border:none;font-size:1.35rem;cursor:pointer;transition:transform .25s;}
-.theme-toggle:hover{transform:rotate(12deg);}
+/* ==========================================
+   BUTTONS
+   ========================================== */
 
-/* === BRAND SVG BRUSH GLOW LAYER === */
-.auth-bg-logo {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  z-index: 1;               /* 置於 glow 上、卡片下 */
-  pointer-events: none;
-  user-select: none;
+/* Note: Button styles now in components.css using tokens */
+
+/* ==========================================
+   TEXT UTILITIES
+   ========================================== */
+
+/* Note: Text utilities now use semantic tokens from components.css */
+
+/* ==========================================
+   ORDER LIST COMPONENTS
+   ========================================== */
+
+.order-list-item {
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 12px 16px;
+  transition: all var(--transition-slow);
 }
 
-.auth-bg-logo svg {
-  width: min(70vmin, 780px);
-  height: auto;
-  opacity: .22;             /* 白天透明度 */
-  filter: drop-shadow(0 12px 40px rgba(37, 99, 235, .25));
-  animation: brandFloat 9s ease-in-out infinite alternate;
-  mix-blend-mode: screen;   /* 讓亮部柔和疊加 */
-}
-
-.dark .auth-bg-logo svg {
-  opacity: .18;             /* 夜間稍降，避免過亮 */
-  filter: drop-shadow(0 16px 60px rgba(99, 102, 241, .25));
-  mix-blend-mode: lighten;
-}
-
-@keyframes brandFloat {
-  0%   { transform: translateY(0px) rotate(0deg) scale(1); }
-  50%  { transform: translateY(-6px) rotate(2deg) scale(1.02); }
-  100% { transform: translateY(4px) rotate(-2deg) scale(1.01); }
-}
-
-/* 輔助「筆刷脈動」描邊動畫（內層環） */
-.auth-bg-logo .pulse {
-  stroke-dasharray: 6 14;
-  animation: dashPulse 6s ease-in-out infinite;
-  opacity: .6;
-}
-@keyframes dashPulse {
-  0%   { stroke-dashoffset: 0;   }
-  50%  { stroke-dashoffset: 60;  }
-  100% { stroke-dashoffset: 0;   }
-}
-
-/* 低動作使用者：關閉動畫 */
-@media (prefers-reduced-motion: reduce) {
-  .auth-bg-logo svg,
-  .auth-bg-logo .pulse,
-  .auth-bg-glow { animation: none !important; }
-}
-
-/* 層級確認（背景 → logo → 卡片） */
-.auth-bg-glow { z-index: 0; }
-.auth-bg-logo { z-index: 1; }
-.auth-card    { z-index: 2; }
-
-/* === AUTH PAGE LAYOUT === */
-.auth-page {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  overflow: hidden;
-}
-
-.dark .auth-page {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-}
-
-/* 背景柔光 */
-.auth-bg-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
-              radial-gradient(circle at 70% 80%, rgba(147, 51, 234, 0.3) 0%, transparent 50%);
-  z-index: 0;
-}
-
-/* 玻璃卡片 */
-.auth-card {
-  position: relative;
-  z-index: 2;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.auth-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.dark .auth-card {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.auth-logo {
-  text-align: center;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 0.5rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.auth-subtitle {
-  text-align: center;
-  font-size: 1.1rem;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 2rem;
-  font-weight: 500;
-}
-
-.auth-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  color: white;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.auth-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.auth-input:focus {
-  outline: none;
-  border-color: rgba(59, 130, 246, 0.5);
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.auth-button {
-  width: 100%;
-  padding: 0.75rem;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: 1rem;
-}
-
-.auth-button:hover {
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+.order-list-item:hover {
+  box-shadow: var(--shadow-lg);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.auth-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
+/* Amount display */
+.amount {
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
-.auth-link {
-  display: block;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-  transition: color 0.3s ease;
-}
+/* Note: Status tags moved to components.css and dark-mode-overrides.css */
 
-.auth-link:hover {
-  color: white;
-  text-decoration: underline;
-}
+/* Note: Auth page styles moved to components.css and branding.css */
 
-/* === 🌙 Tattoo CRM NightTheme v2.4.2 — 夜間亮度平衡修正版 === */
+/* ==========================================
+   DARK MODE COMPONENT OVERRIDES
+   ========================================== */
 
-/* 背景層：仍保留高質感暗色，但略提升亮度層差 */
-.dark body,
-.dark .layout,
-.dark .admin-layout,
-.dark .admin-page {
-  background-color: #0E0F12;
-  color: #E8EAED;
-}
+/* Note: Most dark mode styles moved to dark-mode-overrides.css
+   Keeping only admin-specific overrides here */
 
-/* 卡片 / 表格容器：統一深灰色 */
-.dark .card,
-.dark .stat-card,
-.dark .summary-card,
-.dark .table-list td,
-.dark .table-container {
-  background-color: #54514f;
-  border: 1px solid #2D3036;
-  color: #FFFFFF;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-  transition: all 0.25s ease;
-}
-
-/* 卡片內所有文字統一為白色，但保留特定顏色類別 */
+/* Card text color override for dark mode */
 .dark .card *:not([class*="text-green"]):not([class*="text-red"]):not([class*="text-gray"]):not([class*="text-blue"]):not([class*="text-yellow"]),
 .dark .stat-card *:not([class*="text-green"]):not([class*="text-red"]):not([class*="text-gray"]):not([class*="text-blue"]):not([class*="text-yellow"]),
 .dark .summary-card *:not([class*="text-green"]):not([class*="text-red"]):not([class*="text-gray"]):not([class*="text-blue"]):not([class*="text-yellow"]) {
-  color: #FFFFFF;
+  color: var(--color-text);
 }
 
-/* 懸停：只微亮一層，不突兀 */
-.dark .card:hover,
-.dark .stat-card:hover,
-.dark .table-list tr:hover td {
-  background-color: #6B6B6B;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
-}
-
-/* 頂部統計卡：統一深灰色 */
-.dark .stat-card {
-  background-color: #54514f;
-  border: 1px solid #31343B;
-  color: #FFFFFF;
-}
-
-/* 表格標題（thead） */
-.dark .table-list th {
-  color: #C7CAD1;
-  background-color: #17191D;
-  border-bottom: 1px solid #2E3238;
-}
-
-/* 行內按鈕：柔亮邊框提升辨識度 */
-.dark .btn-secondary {
-  background: #2A2E36;
-  border: 1px solid #3D424A;
-  color: #E5E7EB;
-}
-.dark .btn-secondary:hover {
-  background: #353941;
-  border-color: #4B5160;
-}
-
-/* 狀態標籤（tag）色彩微亮強化 */
-.dark .tag {
-  font-weight: 600;
-  border-radius: 8px;
-}
-.dark .tag-success { background: rgba(34,197,94,0.18); color: #34D399; }
-.dark .tag-pending { background: rgba(250,204,21,0.18); color: #FACC15; }
-.dark .tag-progress { background: rgba(59,130,246,0.18); color: #3B82F6; }
-.dark .tag-failed { background: rgba(239,68,68,0.18); color: #EF4444; }
-
-/* 列表主體色階補正 */
-.dark .table-list td {
-  color: #FFFFFF;
-  font-weight: 500;
-}
-.dark .table-list tr:nth-child(even) td {
-  background-color: #1A1C21;
-}
-
-/* 側邊欄與標題層次修正 */
-.dark .sidebar {
-  background: #14161A;
-  border-right: 1px solid #23262C;
-}
-.dark .sidebar a {
-  color: #D1D5DB;
-}
-.dark .sidebar a:hover {
-  background: rgba(37,99,235,0.15);
-  color: #60A5FA;
-}
-
-/* 頁面標題區域（統一黑字強對比） */
-.dark h1, .dark h2, .dark h3, .dark h4 {
+/* Page title contrast - black on dark for visibility */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4 {
   color: #000000;
 }
 
@@ -541,54 +194,16 @@
 .dark .dashboard-subtitle,
 .dark .page-subtitle,
 .dark .section-description {
-  color: #4B5563;
+  color: #4b5563;
 }
 
-/* Dialog 內的標題需要白色（因為 Dialog 背景是深黑色） */
-.dark [role="dialog"] h1,
-.dark [role="dialog"] h2,
-.dark [role="dialog"] h3,
-.dark [role="dialog"] h4 {
-  color: #FFFFFF !important;
-}
-
-/* Dialog 內容區域的標籤文字（如：預約ID、狀態、開始時間等）需要白色 */
-.dark [role="dialog"] .space-y-4 .text-text-muted-light,
-.dark [role="dialog"] .space-y-4 .text-text-muted-dark,
-.dark [role="dialog"] .space-y-4 .text-text-secondary-light,
-.dark [role="dialog"] .space-y-4 .text-text-secondary-dark {
-  color: #FFFFFF !important;
-}
-
-/* Dialog 內容區域的實際值文字（如：font-medium 的內容）需要白色 */
-.dark [role="dialog"] .space-y-4 .font-medium {
-  color: #FFFFFF !important;
-}
-
-/* Dialog 內 text-sm 區域的 span（實際值）需要白色 */
-.dark [role="dialog"] .space-y-4 .text-sm span.ml-2 {
-  color: #FFFFFF !important;
-}
-
-/* 備註欄位專用樣式 - 只針對備註的 p 元素 */
-.dark [role="dialog"] p.bg-gray-50 {
-  background: #f9fafb !important;
-  color: #1f2937 !important;
-}
-
-/* Dialog 關閉按鈕專用樣式 */
-.dark [role="dialog"] .dialog-close-btn,
-.dark [role="dialog"] .dialog-close-btn * {
-  color: #1f2937 !important;
-}
-
-/* 表格空白狀態、說明文字 */
+/* Empty state text */
 .dark .empty-state,
 .dark .description-text {
-  color: #A5A7AB;
+  color: #a5a7ab;
 }
 
-/* 操作按鈕顏色控制（服務管理列表） */
+/* Action button color overrides */
 .action-btn-edit,
 .action-btn-edit * {
   color: #333333 !important;
@@ -596,10 +211,9 @@
 
 .action-btn-delete,
 .action-btn-delete * {
-  color: #dc2626 !important;
+  color: var(--color-error) !important;
 }
 
-/* 夜間模式下的操作按鈕 */
 .dark .action-btn-edit,
 .dark .action-btn-edit *,
 .dark .action-btn-edit svg {
@@ -610,22 +224,21 @@
 .dark .action-btn-delete,
 .dark .action-btn-delete *,
 .dark .action-btn-delete svg {
-  color: #dc2626 !important;
-  fill: #dc2626 !important;
+  color: var(--color-error) !important;
+  fill: var(--color-error) !important;
 }
 
-/* 取消按鈕顏色控制（編輯表單） */
+/* Cancel button */
 .action-btn-cancel {
-  background: #ffffff !important;
-  color: #333333 !important;
-  border: 1px solid #d1d5db !important;
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
 }
 
 .action-btn-cancel:hover {
-  background: #f3f4f6 !important;
+  background: var(--color-surface) !important;
 }
 
-/* 夜間模式下的取消按鈕 */
 .dark .action-btn-cancel {
   background: #ffffff !important;
   color: #000000 !important;
@@ -637,7 +250,7 @@
   color: #000000 !important;
 }
 
-/* 操作選單按鈕（三個點） */
+/* Action menu buttons */
 .action-menu-btn,
 .action-menu-btn * {
   color: #333333 !important;
@@ -650,14 +263,14 @@
   fill: #333333 !important;
 }
 
-/* 下拉選單項目文字顏色 */
+/* Dropdown menu items */
 .dropdown-menu-item {
-  color: #111827 !important;
+  color: var(--color-text) !important;
 }
 
 .dropdown-menu-item svg {
-  color: #111827 !important;
-  fill: #111827 !important;
+  color: var(--color-text) !important;
+  fill: var(--color-text) !important;
 }
 
 .dark .dropdown-menu-item {
@@ -669,83 +282,11 @@
   fill: #000000 !important;
 }
 
-/* 下拉選單刪除項目 */
 .dropdown-menu-item-delete {
-  color: #dc2626 !important;
+  color: var(--color-error) !important;
 }
 
 .dropdown-menu-item-delete svg {
-  color: #dc2626 !important;
-  fill: #dc2626 !important;
-}
-
-.dark .dropdown-menu-item-delete {
-  color: #dc2626 !important;
-}
-
-.dark .dropdown-menu-item-delete svg {
-  color: #dc2626 !important;
-  fill: #dc2626 !important;
-}
-
-/* 分店標籤 */
-.branch-tag {
-  background: #f3f4f6 !important;
-  color: #111827 !important;
-}
-
-.dark .branch-tag {
-  background: #f3f4f6 !important;
-  color: #000000 !important;
-}
-
-/* 會員等級標籤 */
-.level-tag-bronze {
-  background: #fef3c7 !important;
-  color: #92400e !important;
-}
-
-.dark .level-tag-bronze {
-  background: #fef3c7 !important;
-  color: #92400e !important;
-}
-
-.level-tag-silver {
-  background: #f3f4f6 !important;
-  color: #111827 !important;
-}
-
-.dark .level-tag-silver {
-  background: #f3f4f6 !important;
-  color: #000000 !important;
-}
-
-.level-tag-gold {
-  background: #fef9c3 !important;
-  color: #854d0e !important;
-}
-
-.dark .level-tag-gold {
-  background: #fef9c3 !important;
-  color: #854d0e !important;
-}
-
-.level-tag-platinum {
-  background: #f3e8ff !important;
-  color: #6b21a8 !important;
-}
-
-.dark .level-tag-platinum {
-  background: #f3e8ff !important;
-  color: #6b21a8 !important;
-}
-
-.level-tag-default {
-  background: #f3f4f6 !important;
-  color: #111827 !important;
-}
-
-.dark .level-tag-default {
-  background: #f3f4f6 !important;
-  color: #000000 !important;
+  color: var(--color-error) !important;
+  fill: var(--color-error) !important;
 }

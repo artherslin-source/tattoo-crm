@@ -17,15 +17,15 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantClasses = {
     default:
-      "bg-brand-blue text-white shadow-sm hover:bg-[#1E4FDB] active:bg-[#163FBB] active:scale-95 focus:ring-[#2563EB]/50",
+      "bg-primary text-button-text shadow-sm hover:bg-primary-hover active:bg-primary-active active:scale-95 focus:ring-primary/50",
     outline:
-      "border border-gray-300 bg-white text-text-secondary-light hover:bg-gray-100 active:scale-95 focus:ring-[#2563EB]/40 dark:border-neutral-600 dark:bg-neutral-800 dark:text-text-secondary-dark dark:hover:bg-neutral-700",
+      "border border-border bg-bg text-text-secondary hover:bg-surface active:scale-95 focus:ring-primary/40",
     destructive:
-      "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 active:scale-95 focus:ring-red-500/60",
+      "bg-error text-button-text hover:opacity-90 active:opacity-80 active:scale-95 focus:ring-error/60",
     ghost:
-      "text-text-secondary-light hover:bg-gray-100 active:bg-gray-200 active:scale-95 focus:ring-[#2563EB]/30 dark:text-text-secondary-dark dark:hover:bg-neutral-800 dark:active:bg-neutral-700",
+      "text-text-secondary hover:bg-surface active:bg-border-light active:scale-95 focus:ring-primary/30",
     reserve:
-      "bg-brand-orange text-white shadow-sm hover:bg-[#FF8F33] active:bg-[#E56F00] active:scale-95 focus:ring-[#FF7A00]/50",
+      "bg-accent text-button-text shadow-sm hover:bg-accent-hover active:bg-accent-active active:scale-95 focus:ring-accent/50",
   };
   
   const sizeClasses = {
