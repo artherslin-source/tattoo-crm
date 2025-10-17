@@ -528,9 +528,20 @@
   color: #60A5FA;
 }
 
-/* 頁面標題區域（統一白字強對比） */
+/* 頁面標題區域（統一黑字強對比） */
 .dark h1, .dark h2, .dark h3, .dark h4 {
-  color: #FFFFFF;
+  color: #000000;
+}
+
+.dark .dashboard-title,
+.dark .page-title {
+  color: #000000;
+}
+
+.dark .dashboard-subtitle,
+.dark .page-subtitle,
+.dark .section-description {
+  color: #4B5563;
 }
 
 /* 表格空白狀態、說明文字 */
