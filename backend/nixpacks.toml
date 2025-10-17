@@ -10,3 +10,6 @@ cmds = ['npm run build']
 [start]
 cmd = 'npm run start:force-build'
 
+[variables]
+NPM_CONFIG_CACHE = '/tmp/npm-cache'
+
