@@ -263,7 +263,7 @@ export default function OrdersToolbar({
             <div className="space-y-5 py-4">
               {/* 分店篩選 */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">📍 選擇分店</label>
+                <label className="text-sm font-semibold text-gray-800 dark:text-gray-200">📍 選擇分店</label>
                 <Select value={branchId} onValueChange={(value) => { onBranchChange(value); }}>
                   <SelectTrigger className="h-12 text-base">
                     <SelectValue placeholder="選擇分店" />
@@ -281,7 +281,7 @@ export default function OrdersToolbar({
 
               {/* 狀態篩選 */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">🏷️ 訂單狀態</label>
+                <label className="text-sm font-semibold text-gray-800 dark:text-gray-200">🏷️ 訂單狀態</label>
                 <Select value={status} onValueChange={(value) => { onStatusChange(value); }}>
                   <SelectTrigger className="h-12 text-base">
                     <SelectValue placeholder="選擇狀態" />
@@ -298,7 +298,7 @@ export default function OrdersToolbar({
 
               {/* 排序欄位 */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">📊 排序方式</label>
+                <label className="text-sm font-semibold text-gray-800 dark:text-gray-200">📊 排序方式</label>
                 <Select value={sortField} onValueChange={(value) => { onSortFieldChange(value); }}>
                   <SelectTrigger className="h-12 text-base">
                     <SelectValue />
@@ -316,7 +316,7 @@ export default function OrdersToolbar({
 
               {/* 排序方向 */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">🔄 排序方向</label>
+                <label className="text-sm font-semibold text-gray-800 dark:text-gray-200">🔄 排序方向</label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant={sortOrder === 'asc' ? 'default' : 'outline'}
@@ -341,7 +341,7 @@ export default function OrdersToolbar({
 
               {/* 每頁顯示數量 */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">📄 每頁顯示</label>
+                <label className="text-sm font-semibold text-gray-800 dark:text-gray-200">📄 每頁顯示</label>
                 <Select value={itemsPerPage.toString()} onValueChange={(value) => { onItemsPerPageChange(value); }}>
                   <SelectTrigger className="h-12 text-base">
                     <SelectValue />

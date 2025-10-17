@@ -18,15 +18,15 @@
   --text-secondary-dark: #eaeaea;
   --text-muted-dark: #cccccc;
 
-  /* ON DARK SURFACE（適用深底）*/
-  --on-dark: #e6eaf2; /* 主文字：AA 可讀 */
-  --on-dark-muted: #c7cfda; /* 次文字 */
-  --on-dark-subtle: #a9b4c2; /* 補充/標註 */
+  /* ON DARK SURFACE（適用深底）- 加深灰色提升可讀性 */
+  --on-dark: #f0f3f9; /* 主文字：更亮 */
+  --on-dark-muted: #d4dce8; /* 次文字：從 #c7cfda 加深 */
+  --on-dark-subtle: #bac4d1; /* 補充/標註：從 #a9b4c2 加深 */
 
-  /* ON LIGHT SURFACE（適用淺底）*/
-  --on-light: #111827; /* 主文字 */
-  --on-light-muted: #374151; /* 次文字 */
-  --on-light-subtle: #4b5563; /* 補充/標註 */
+  /* ON LIGHT SURFACE（適用淺底）- 加深灰色提升可讀性 */
+  --on-light: #0f1419; /* 主文字：更深 */
+  --on-light-muted: #1f2937; /* 次文字：從 #374151 加深 */
+  --on-light-subtle: #374151; /* 補充/標註：從 #4b5563 加深 */
 
   /* 功能性色 */
   --brand: #ffc043; /* CTA 金色 */
