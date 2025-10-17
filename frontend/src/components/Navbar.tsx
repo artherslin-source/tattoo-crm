@@ -80,7 +80,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <button
               onClick={() => router.push('/home')}
-              className="text-xl font-bold text-text-primary-light transition-colors hover:text-blue-600 dark:text-text-primary-dark dark:hover:text-blue-400"
+              className="brand-logo text-xl font-bold text-text-primary-light transition-colors hover:text-blue-600 dark:text-text-primary-dark dark:hover:text-blue-400"
             >
               彫川紋身
             </button>
@@ -182,7 +182,7 @@ export default function Navbar() {
               <div className="min-w-0 flex-1">
                 <button
                   onClick={() => router.push('/home')}
-                  className="text-left text-xl font-semibold tracking-wide text-white"
+                  className="brand-logo text-left text-xl font-semibold tracking-wide text-white"
                 >
                   彫川紋身
                 </button>

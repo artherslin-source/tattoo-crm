@@ -25,7 +25,7 @@ export default function Sidebar({ open, onClose }: Props) {
     return (
       <aside className="sidebar">
         <div>
-          <h1>雕川紋身 CRM</h1>
+          <h1 className="brand-logo">雕川紋身 CRM</h1>
           <nav>
             <Link href="/admin/dashboard">📊 儀表板</Link>
             <Link href="/admin/services">⚙️ 服務管理</Link>
@@ -62,7 +62,7 @@ export default function Sidebar({ open, onClose }: Props) {
           >
             <div className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <h1>雕川紋身 CRM</h1>
+                <h1 className="brand-logo">雕川紋身 CRM</h1>
                 <button onClick={onClose} aria-label="關閉" className="text-2xl">✕</button>
               </div>
               <nav className="flex flex-col gap-1">

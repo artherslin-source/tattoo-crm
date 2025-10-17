@@ -229,3 +229,99 @@ body {
     display: none;
   }
 }
+
+/* === 🌞🌙 Tattoo CRM NightTheme v2.4 === */
+
+/* -------------------------------------------- */
+/*   1. 白天模式：柔光呼吸流光（淡金光）       */
+/* -------------------------------------------- */
+.brand-logo,
+.login-logo,
+.loading-logo {
+  position: relative;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  background: linear-gradient(110deg, #b5b5b5 0%, #f3f3f3 40%, #d0d0d0 80%, #b5b5b5 100%);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: light-sheen 8s ease-in-out infinite alternate;
+  text-shadow: 0 0 8px rgba(255,255,255,0.15);
+}
+
+@keyframes light-sheen {
+  0% { background-position: 0% center; opacity: 0.95; }
+  50% { background-position: 100% center; opacity: 1; }
+  100% { background-position: 0% center; opacity: 0.95; }
+}
+
+/* -------------------------------------------- */
+/*   2. 夜間模式：金屬流光掃描（鋼銀光澤）     */
+/* -------------------------------------------- */
+.dark .brand-logo,
+.dark .login-logo,
+.dark .loading-logo {
+  background: linear-gradient(120deg, #A0AEC0 0%, #E5E7EB 20%, #A0AEC0 40%, #6B7280 60%, #E5E7EB 80%, #A0AEC0 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: metallic-sheen 6s linear infinite;
+  text-shadow: 0 0 10px rgba(255,255,255,0.12);
+}
+
+@keyframes metallic-sheen {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* -------------------------------------------- */
+/*   3. 背景過渡與卡片光感（保留v2.3.1設定）   */
+/* -------------------------------------------- */
+.dark body,
+.dark .layout,
+.dark .admin-page {
+  background-color: #0F1115;
+  color: #E5E7EB;
+  transition: background 0.5s ease, color 0.5s ease;
+}
+
+.dark .card,
+.dark .summary-card {
+  background-color: #21242B;
+  border: 1px solid #2F343C;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  transition: all 0.25s ease;
+}
+
+.dark .card:hover {
+  background-color: #2A2E36;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+}
+
+.light .card,
+.light .summary-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* -------------------------------------------- */
+/*   4. 自動主題切換動畫                       */
+/* -------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; }
+}
+@media (prefers-color-scheme: light) {
+  :root { color-scheme: light; }
+}
+
+/* -------------------------------------------- */
+/*   5. 登入與載入畫面動態（延續v2.3.1）       */
+/* -------------------------------------------- */
+.login-page, .loading-screen {
+  animation: bgFadeIn 1.2s ease forwards;
+}
+@keyframes bgFadeIn {
+  0% { opacity: 0; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}

@@ -91,7 +91,7 @@ export default function RegisterPage() {
       </div>
 
       <div className="auth-card" role="dialog" aria-labelledby="registerTitle">
-        <div className="auth-logo">🌀 雕川紋身 CRM</div>
+        <div className="auth-logo login-logo">🌀 雕川紋身 CRM</div>
         <h2 id="registerTitle" className="auth-subtitle">建立您的後台帳號</h2>
 
         {error && (
