@@ -423,3 +423,103 @@
   color: white;
   text-decoration: underline;
 }
+
+/* === 🌙 Tattoo CRM NightTheme v2.4.2 — 夜間亮度平衡修正版 === */
+
+/* 背景層：仍保留高質感暗色，但略提升亮度層差 */
+.dark body,
+.dark .layout,
+.dark .admin-layout,
+.dark .admin-page {
+  background-color: #0E0F12;
+  color: #E8EAED;
+}
+
+/* 卡片 / 表格容器：亮度提升 8% */
+.dark .card,
+.dark .stat-card,
+.dark .summary-card,
+.dark .table-list td,
+.dark .table-container {
+  background-color: #1E2025;
+  border: 1px solid #2D3036;
+  color: #F1F3F5;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  transition: all 0.25s ease;
+}
+
+/* 懸停：只微亮一層，不突兀 */
+.dark .card:hover,
+.dark .stat-card:hover,
+.dark .table-list tr:hover td {
+  background-color: #26292F;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+
+/* 頂部統計卡：亮度 + 邊框區分 */
+.dark .stat-card {
+  background: linear-gradient(180deg, #1F2227 0%, #191B20 100%);
+  border: 1px solid #31343B;
+  color: #F5F6F7;
+}
+
+/* 表格標題（thead） */
+.dark .table-list th {
+  color: #C7CAD1;
+  background-color: #17191D;
+  border-bottom: 1px solid #2E3238;
+}
+
+/* 行內按鈕：柔亮邊框提升辨識度 */
+.dark .btn-secondary {
+  background: #2A2E36;
+  border: 1px solid #3D424A;
+  color: #E5E7EB;
+}
+.dark .btn-secondary:hover {
+  background: #353941;
+  border-color: #4B5160;
+}
+
+/* 狀態標籤（tag）色彩微亮強化 */
+.dark .tag {
+  font-weight: 600;
+  border-radius: 8px;
+}
+.dark .tag-success { background: rgba(34,197,94,0.18); color: #34D399; }
+.dark .tag-pending { background: rgba(250,204,21,0.18); color: #FACC15; }
+.dark .tag-progress { background: rgba(59,130,246,0.18); color: #3B82F6; }
+.dark .tag-failed { background: rgba(239,68,68,0.18); color: #EF4444; }
+
+/* 列表主體色階補正 */
+.dark .table-list td {
+  color: #F0F2F4;
+  font-weight: 500;
+}
+.dark .table-list tr:nth-child(even) td {
+  background-color: #1A1C21;
+}
+
+/* 側邊欄與標題層次修正 */
+.dark .sidebar {
+  background: #14161A;
+  border-right: 1px solid #23262C;
+}
+.dark .sidebar a {
+  color: #D1D5DB;
+}
+.dark .sidebar a:hover {
+  background: rgba(37,99,235,0.15);
+  color: #60A5FA;
+}
+
+/* 頁面標題區域（統一白字強對比） */
+.dark h1, .dark h2, .dark h3, .dark h4 {
+  color: #F3F4F6;
+}
+
+/* 表格空白狀態、說明文字 */
+.dark .empty-state,
+.dark .description-text {
+  color: #A5A7AB;
+}
