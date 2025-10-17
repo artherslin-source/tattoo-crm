@@ -572,6 +572,19 @@
   color: #FFFFFF !important;
 }
 
+/* 確保 Dialog 內 outline 按鈕的文字不會變成白色 */
+/* outline 按鈕應該保持原有的顏色（深灰或黑色） */
+.dark [role="dialog"] button[class*="outline"],
+.dark [role="dialog"] button[class*="outline"] * {
+  color: inherit;
+}
+
+/* 取消按鈕應該保持其原有樣式 */
+.dark [role="dialog"] .action-btn-cancel,
+.dark [role="dialog"] .action-btn-cancel * {
+  color: #000000 !important;
+}
+
 /* 表格空白狀態、說明文字 */
 .dark .empty-state,
 .dark .description-text {
