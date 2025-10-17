@@ -99,7 +99,7 @@ export default function NewAppointmentPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">載入中...</div>
+        <div className="text-text-muted-light">載入中...</div>
       </div>
     );
   }
@@ -117,14 +117,14 @@ export default function NewAppointmentPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="serviceId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="serviceId" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
               選擇服務 *
             </label>
             <select
               id="serviceId"
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
               required
             >
               <option value="">請選擇服務</option>
@@ -137,7 +137,7 @@ export default function NewAppointmentPage() {
           </div>
 
           <div>
-            <label htmlFor="startAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="startAt" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
               開始時間 *
             </label>
             <input
@@ -145,13 +145,13 @@ export default function NewAppointmentPage() {
               type="datetime-local"
               value={startAt}
               onChange={(e) => setStartAt(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="endAt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="endAt" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
               結束時間 *
             </label>
             <input
@@ -159,13 +159,13 @@ export default function NewAppointmentPage() {
               type="datetime-local"
               value={endAt}
               onChange={(e) => setEndAt(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="notes" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
               備註
             </label>
             <textarea
@@ -174,7 +174,7 @@ export default function NewAppointmentPage() {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="請輸入備註（選填）"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
             />
           </div>
 
@@ -182,7 +182,7 @@ export default function NewAppointmentPage() {
             <button
               type="button"
               onClick={() => router.push("/appointments/my")}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-gray-100 font-medium py-2.5 rounded-lg shadow-sm transition-colors"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-text-primary-light dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-text-primary-dark font-medium py-2.5 rounded-lg shadow-sm transition-colors"
             >
               返回預約列表
             </button>

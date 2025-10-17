@@ -563,7 +563,7 @@ export default function AdminOrdersPage() {
       case 'CANCELLED':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
   };
 
@@ -605,7 +605,7 @@ export default function AdminOrdersPage() {
       case 'CANCELLED':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
   };
 
@@ -645,7 +645,7 @@ export default function AdminOrdersPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入訂單資料中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入訂單資料中...</p>
         </div>
       </div>
     );
@@ -657,11 +657,11 @@ export default function AdminOrdersPage() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
               <ShoppingCart className="mr-3 h-8 w-8" />
               管理訂單
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
               管理系統中的所有客戶訂單
             </p>
           </div>
@@ -771,7 +771,7 @@ export default function AdminOrdersPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">每頁顯示：</span>
+            <span className="text-sm text-text-muted-light dark:text-text-muted-dark">每頁顯示：</span>
             <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
               <SelectTrigger className="w-20">
                 <SelectValue />
@@ -786,7 +786,7 @@ export default function AdminOrdersPage() {
           </div>
         </div>
         
-        <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
           共 {totalItems} 個訂單，第 {currentPage} / {getTotalPages()} 頁
         </div>
       </div>
@@ -821,7 +821,7 @@ export default function AdminOrdersPage() {
           />
           
           {orders.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
               目前沒有訂單資料
             </div>
           )}
@@ -855,7 +855,7 @@ export default function AdminOrdersPage() {
                     </Button>
                   );
                 } else if (page === currentPage - 3 || page === currentPage + 3) {
-                  return <span key={page} className="text-gray-500">...</span>;
+                  return <span key={page} className="text-text-muted-light">...</span>;
                 }
                 return null;
               })}
@@ -888,11 +888,11 @@ export default function AdminOrdersPage() {
               {/* 基本資訊 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">訂單ID</label>
+                  <label className="text-sm font-medium text-text-muted-light">訂單ID</label>
                   <p className="text-lg font-mono">{selectedOrder.id}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">訂單狀態</label>
+                  <label className="text-sm font-medium text-text-muted-light">訂單狀態</label>
                   <div className="mt-1">
                     <Badge className={`rounded-full px-2 py-0.5 text-xs ${getStatusBadgeClass(selectedOrder.status)}`}>
                       {getStatusText(selectedOrder.status)}
@@ -900,13 +900,13 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">訂單金額</label>
+                  <label className="text-sm font-medium text-text-muted-light">訂單金額</label>
                   <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                     {formatCurrency(selectedOrder.totalAmount)}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">建立時間</label>
+                  <label className="text-sm font-medium text-text-muted-light">建立時間</label>
                   <p className="text-sm">{formatDate(selectedOrder.createdAt)}</p>
                 </div>
               </div>
@@ -916,11 +916,11 @@ export default function AdminOrdersPage() {
                 <h3 className="text-lg font-medium mb-3">客戶資訊</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">客戶姓名</label>
+                    <label className="text-sm font-medium text-text-muted-light">客戶姓名</label>
                     <p className="text-sm">{selectedOrder.member.name || '未設定'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">客戶Email</label>
+                    <label className="text-sm font-medium text-text-muted-light">客戶Email</label>
                     <p className="text-sm">{selectedOrder.member.email}</p>
                   </div>
                 </div>
@@ -930,7 +930,7 @@ export default function AdminOrdersPage() {
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-3">分店資訊</h3>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">所屬分店</label>
+                  <label className="text-sm font-medium text-text-muted-light">所屬分店</label>
                   <p className="text-sm">{selectedOrder.branch?.name || '未分配'}</p>
                 </div>
               </div>
@@ -1009,7 +1009,7 @@ export default function AdminOrdersPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* 選擇會員 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                   選擇會員 *
                 </label>
                 <div className="relative">
@@ -1026,7 +1026,7 @@ export default function AdminOrdersPage() {
                       setShowMemberDropdown(searchValue.length > 0);
                     }}
                     onFocus={() => setShowMemberDropdown(createOrderData.memberSearch.length > 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                     placeholder="請輸入會員姓名或郵箱搜索"
                     required
                   />
@@ -1051,8 +1051,8 @@ export default function AdminOrdersPage() {
                               setShowMemberDropdown(false);
                             }}
                           >
-                            <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{member.email}</div>
+                            <div className="font-medium text-text-primary-light dark:text-text-primary-dark">{member.name}</div>
+                            <div className="text-xs text-text-muted-light dark:text-text-muted-dark">{member.email}</div>
                           </div>
                         ))}
                     </div>
@@ -1067,7 +1067,7 @@ export default function AdminOrdersPage() {
 
               {/* 選擇分店 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                   選擇分店 *
                 </label>
                 <div className="relative">
@@ -1084,7 +1084,7 @@ export default function AdminOrdersPage() {
                       setShowBranchDropdown(searchValue.length > 0);
                     }}
                     onFocus={() => setShowBranchDropdown(createOrderData.branchSearch.length > 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                     placeholder="請輸入分店名稱搜索"
                     required
                   />
@@ -1108,9 +1108,9 @@ export default function AdminOrdersPage() {
                               setShowBranchDropdown(false);
                             }}
                           >
-                            <div className="font-medium text-gray-900 dark:text-white">{branch.name}</div>
+                            <div className="font-medium text-text-primary-light dark:text-text-primary-dark">{branch.name}</div>
                             {branch.address && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{branch.address}</div>
+                              <div className="text-xs text-text-muted-light dark:text-text-muted-dark">{branch.address}</div>
                             )}
                           </div>
                         ))}
@@ -1127,7 +1127,7 @@ export default function AdminOrdersPage() {
 
             {/* 訂單金額 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                 訂單金額 (TWD) *
               </label>
               <input
@@ -1136,28 +1136,28 @@ export default function AdminOrdersPage() {
                 step="1"
                 value={createOrderData.totalAmount}
                 onChange={(e) => setCreateOrderData({ ...createOrderData, totalAmount: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                 placeholder="請輸入訂單金額"
                 required
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                 請輸入訂單總金額，單位為新台幣
               </p>
             </div>
 
             {/* 訂單備註 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                 訂單備註
               </label>
               <textarea
                 value={createOrderData.notes}
                 onChange={(e) => setCreateOrderData({ ...createOrderData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark resize-none"
                 placeholder="可選填訂單相關備註資訊"
                 rows={4}
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                 例如：服務項目、特殊需求等
               </p>
             </div>

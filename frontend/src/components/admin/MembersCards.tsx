@@ -41,13 +41,13 @@ const getLevelBadgeClass = (level?: string) => {
     case 'Bronze':
       return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
     case 'Silver':
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     case 'Gold':
       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     case 'Platinum':
       return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
   }
 };
 
@@ -99,26 +99,26 @@ export default function MembersCards({
                     </span>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500 truncate">{member.user?.email || 'N/A'}</div>
+                <div className="text-sm text-text-muted-light truncate">{member.user?.email || 'N/A'}</div>
               </div>
 
               {/* 中間：金額資訊 */}
               <div className="flex items-center gap-6 flex-shrink-0">
                 <div className="text-center">
-                  <div className="text-xs text-gray-500">累計消費</div>
+                  <div className="text-xs text-text-muted-light">累計消費</div>
                   <div className="text-lg font-semibold tabular-nums text-blue-600 dark:text-blue-400">
                     {formatCurrency(member.totalSpent)}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xs text-gray-500">儲值餘額</div>
+                  <div className="text-xs text-text-muted-light">儲值餘額</div>
                   <div className="text-lg font-semibold tabular-nums text-purple-600 dark:text-purple-400">
                     {formatCurrency(member.balance)}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xs text-gray-500">註冊時間</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-xs text-text-muted-light">註冊時間</div>
+                  <div className="text-sm text-text-muted-light">
                     {member.user?.createdAt ? formatDate(member.user.createdAt) : 'N/A'}
                   </div>
                 </div>
@@ -184,7 +184,7 @@ export default function MembersCards({
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
                 <div className="text-base font-semibold">{member.user?.name || '未設定'}</div>
-                <div className="text-xs text-gray-500">{member.user?.email || 'N/A'}</div>
+                <div className="text-xs text-text-muted-light">{member.user?.email || 'N/A'}</div>
                 <div className="mt-1 flex items-center gap-2 flex-wrap">
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
                     {member.user?.branch?.name || '未分配'}
@@ -203,7 +203,7 @@ export default function MembersCards({
               </div>
 
               <div className="text-right">
-                <div className="text-xs text-gray-500">累計消費</div>
+                <div className="text-xs text-text-muted-light">累計消費</div>
                 <div className="text-lg font-semibold tabular-nums text-blue-600 dark:text-blue-400">
                   {formatCurrency(member.totalSpent)}
                 </div>
@@ -211,16 +211,16 @@ export default function MembersCards({
             </div>
 
             <details className="mt-2">
-              <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">
+              <summary className="text-xs text-text-muted-light cursor-pointer hover:text-text-primary-light">
                 更多細節
               </summary>
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-500">儲值餘額</div>
+                <div className="text-text-muted-light">儲值餘額</div>
                 <div className="text-right tabular-nums font-medium text-purple-600 dark:text-purple-400">
                   {formatCurrency(member.balance)}
                 </div>
-                <div className="text-gray-500">註冊時間</div>
-                <div className="text-right text-gray-600">
+                <div className="text-text-muted-light">註冊時間</div>
+                <div className="text-right text-text-muted-light">
                   {member.user?.createdAt ? formatDate(member.user.createdAt) : 'N/A'}
                 </div>
               </div>

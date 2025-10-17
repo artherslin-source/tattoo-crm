@@ -92,7 +92,7 @@ export default function MyAppointmentsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">載入中...</div>
+        <div className="text-text-muted-light">載入中...</div>
       </div>
     );
   }
@@ -118,7 +118,7 @@ export default function MyAppointmentsPage() {
 
         {appointments.length === 0 ? (
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-8 text-center">
-            <div className="text-gray-500 text-lg mb-4">目前沒有預約記錄</div>
+            <div className="text-text-muted-light text-lg mb-4">目前沒有預約記錄</div>
             <button
               onClick={() => router.push("/appointments/new")}
               className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg shadow-sm transition-colors"
@@ -135,7 +135,7 @@ export default function MyAppointmentsPage() {
                 className="bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
                     {appointment.service?.name || "未知服務"}
                   </h3>
                   <span
@@ -145,7 +145,7 @@ export default function MyAppointmentsPage() {
                   </span>
                 </div>
 
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                <div className="space-y-2 text-sm text-text-muted-light dark:text-text-secondary-dark">
                   <div className="flex items-center">
                     <span className="font-medium">時間：</span>
                     <span>{formatDateTime(appointment.startAt)}</span>
@@ -169,13 +169,13 @@ export default function MyAppointmentsPage() {
                   {appointment.notes && (
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                       <span className="font-medium">備註：</span>
-                      <p className="mt-1 text-gray-600 dark:text-gray-400">{appointment.notes}</p>
+                      <p className="mt-1 text-text-muted-light dark:text-text-muted-dark">{appointment.notes}</p>
                     </div>
                   )}
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
                     建立時間：{formatDateTime(appointment.createdAt)}
                   </div>
                 </div>

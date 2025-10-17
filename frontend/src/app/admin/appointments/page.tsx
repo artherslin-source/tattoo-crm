@@ -298,7 +298,7 @@ export default function AdminAppointmentsPage() {
       case 'CANCELED':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
   };
 
@@ -341,7 +341,7 @@ export default function AdminAppointmentsPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入預約資料中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入預約資料中...</p>
         </div>
       </div>
     );
@@ -353,11 +353,11 @@ export default function AdminAppointmentsPage() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
               <Calendar className="mr-3 h-8 w-8" />
               管理預約
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
               管理系統中的所有預約記錄
             </p>
           </div>
@@ -473,9 +473,9 @@ export default function AdminAppointmentsPage() {
       {/* Appointments List */}
       {appointments.length === 0 ? (
         <div className="text-center py-12">
-          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">沒有找到預約</h3>
-          <p className="text-gray-500 dark:text-gray-400">目前沒有任何預約記錄</p>
+          <Calendar className="h-12 w-12 text-text-muted-light mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-text-primary-light dark:text-text-primary-dark mb-2">沒有找到預約</h3>
+          <p className="text-text-muted-light dark:text-text-muted-dark">目前沒有任何預約記錄</p>
         </div>
       ) : (
         <>
@@ -500,7 +500,7 @@ export default function AdminAppointmentsPage() {
       {/* Pagination */}
       {totalItems > itemsPerPage && (
         <div className="mt-8 flex items-center justify-between">
-          <div className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             顯示第 {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} 項，共 {totalItems} 項
           </div>
           <div className="flex items-center gap-2">
@@ -564,14 +564,14 @@ export default function AdminAppointmentsPage() {
             <div className="space-y-4">
               {/* 基本資訊 */}
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900 dark:text-white">基本資訊</h4>
+                <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">基本資訊</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">預約ID:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">預約ID:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.id}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">狀態:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">狀態:</span>
                     <Badge className={`ml-2 text-xs ${getStatusBadgeClass(selectedAppointment.status)}`}>
                       {getStatusText(selectedAppointment.status)}
                     </Badge>
@@ -581,18 +581,18 @@ export default function AdminAppointmentsPage() {
 
               {/* 時間資訊 */}
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900 dark:text-white">時間資訊</h4>
+                <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">時間資訊</h4>
                 <div className="space-y-1 text-sm">
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">開始時間:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">開始時間:</span>
                     <span className="ml-2 font-medium">{formatDate(selectedAppointment.startAt)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">結束時間:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">結束時間:</span>
                     <span className="ml-2 font-medium">{formatDate(selectedAppointment.endAt)}</span>
                   </div>
                       <div>
-                    <span className="text-gray-500 dark:text-gray-400">服務時長:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">服務時長:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.service?.durationMin || 'N/A'} 分鐘</span>
                         </div>
                         </div>
@@ -600,14 +600,14 @@ export default function AdminAppointmentsPage() {
 
               {/* 客戶資訊 */}
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900 dark:text-white">客戶資訊</h4>
+                <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">客戶資訊</h4>
                 <div className="space-y-1 text-sm">
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">姓名:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">姓名:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.user?.name || '未設定'}</span>
                   </div>
                         <div>
-                    <span className="text-gray-500 dark:text-gray-400">Email:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">Email:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.user?.email || 'N/A'}</span>
                           </div>
                           </div>
@@ -615,22 +615,22 @@ export default function AdminAppointmentsPage() {
 
               {/* 服務資訊 */}
               <div className="space-y-2">
-                <h4 className="font-medium text-gray-900 dark:text-white">服務資訊</h4>
+                <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">服務資訊</h4>
                 <div className="space-y-1 text-sm">
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">服務項目:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">服務項目:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.service?.name || '未設定'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">服務價格:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">服務價格:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.service?.price ? formatCurrency(selectedAppointment.service.price) : 'N/A'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">刺青師:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">刺青師:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.artist?.name || '未分配'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">分店:</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">分店:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.branch?.name || '未分配'}</span>
                   </div>
                         </div>
@@ -639,8 +639,8 @@ export default function AdminAppointmentsPage() {
               {/* 備註 */}
               {selectedAppointment.notes && (
                 <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 dark:text-white">備註</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">備註</h4>
+                  <p className="text-sm text-text-muted-light dark:text-text-muted-dark bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                     {selectedAppointment.notes}
                   </p>
                       </div>

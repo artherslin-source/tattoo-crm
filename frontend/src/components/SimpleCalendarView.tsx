@@ -143,9 +143,9 @@ export default function SimpleCalendarView({
       case 'CONFIRMED':
         return { text: '已確認', color: 'bg-yellow-100 text-yellow-800' };
       case 'PENDING':
-        return { text: '待確認', color: 'bg-gray-100 text-gray-800' };
+        return { text: '待確認', color: 'bg-gray-100 text-text-primary-light' };
       default:
-        return { text: status, color: 'bg-gray-100 text-gray-800' };
+        return { text: status, color: 'bg-gray-100 text-text-primary-light' };
     }
   };
 
@@ -309,7 +309,7 @@ export default function SimpleCalendarView({
       <div className="grid grid-cols-7 gap-1">
         {/* 星期標題 */}
         {['日', '一', '二', '三', '四', '五', '六'].map(day => (
-          <div key={day} className="p-2 text-center font-semibold text-gray-600 bg-gray-50">
+          <div key={day} className="p-2 text-center font-semibold text-text-muted-light bg-gray-50">
             {day}
           </div>
         ))}
@@ -328,7 +328,7 @@ export default function SimpleCalendarView({
               } ${isToday ? 'bg-blue-50 border-blue-300' : ''}`}
             >
               <div className={`text-sm font-medium mb-1 ${
-                isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                isCurrentMonth ? 'text-text-primary-light' : 'text-text-muted-light'
               } ${isToday ? 'text-blue-600' : ''}`}>
                 {day.getDate()}
               </div>
@@ -349,7 +349,7 @@ export default function SimpleCalendarView({
                   );
                 })}
                 {dayAppointments.length > 3 && (
-                  <div className="text-xs text-gray-500 text-center">
+                  <div className="text-xs text-text-muted-light text-center">
                     +{dayAppointments.length - 3} 更多
                   </div>
                 )}
@@ -385,10 +385,10 @@ export default function SimpleCalendarView({
           
           return (
             <div key={index} className="text-center">
-              <div className={`p-2 font-semibold ${isToday ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-600'}`}>
+              <div className={`p-2 font-semibold ${isToday ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-text-muted-light'}`}>
                 {dayName}
               </div>
-              <div className={`p-2 text-lg font-bold ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+              <div className={`p-2 text-lg font-bold ${isToday ? 'text-blue-600' : 'text-text-primary-light'}`}>
                 {day.getDate()}
               </div>
             </div>
@@ -494,12 +494,12 @@ export default function SimpleCalendarView({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-500" />
+                      <User className="h-4 w-4 text-text-muted-light" />
                       <span className="font-medium">姓名：</span>
                       <span>{selectedAppointment.user.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
+                      <Phone className="h-4 w-4 text-text-muted-light" />
                       <span className="font-medium">電話：</span>
                       <span>{selectedAppointment.user.phone}</span>
                     </div>
@@ -510,17 +510,17 @@ export default function SimpleCalendarView({
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <MapPin className="h-4 w-4 text-text-muted-light" />
                       <span className="font-medium">分店：</span>
                       <span>{selectedAppointment.branch.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
+                      <Clock className="h-4 w-4 text-text-muted-light" />
                       <span className="font-medium">時間：</span>
                       <span>{formatDate(selectedAppointment.startAt)} {formatTime(selectedAppointment.startAt)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
+                      <DollarSign className="h-4 w-4 text-text-muted-light" />
                       <span className="font-medium">價格：</span>
                       <span>NT$ {selectedAppointment.service.price.toLocaleString()}</span>
                     </div>
@@ -554,7 +554,7 @@ export default function SimpleCalendarView({
                   {selectedAppointment.status === 'COMPLETED' && <CheckCircle className="h-4 w-4 text-green-600" />}
                   {selectedAppointment.status === 'IN_PROGRESS' && <Play className="h-4 w-4 text-blue-600" />}
                   {selectedAppointment.status === 'CONFIRMED' && <AlertCircle className="h-4 w-4 text-yellow-600" />}
-                  {selectedAppointment.status === 'PENDING' && <Pause className="h-4 w-4 text-gray-600" />}
+                  {selectedAppointment.status === 'PENDING' && <Pause className="h-4 w-4 text-text-muted-light" />}
                   <Badge className={getStatusInfo(selectedAppointment.status).color}>
                     {getStatusInfo(selectedAppointment.status).text}
                   </Badge>
@@ -566,7 +566,7 @@ export default function SimpleCalendarView({
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">備註</h3>
                   <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-gray-700">{selectedAppointment.notes}</p>
+                    <p className="text-text-secondary-light">{selectedAppointment.notes}</p>
                   </div>
                 </div>
               )}

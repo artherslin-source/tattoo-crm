@@ -46,7 +46,7 @@ export function Hero({ loggedIn }: HeroProps) {
               <Button
                 variant="outline"
                 size="default"
-                className="w-full border-white/30 text-gray-200 hover:bg-white/10 hover:text-white sm:w-auto sm:px-6 sm:py-3 sm:text-base"
+                className="w-full border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white sm:w-auto sm:px-6 sm:py-3 sm:text-base"
                 onClick={() => (window.location.href = '/login')}
               >
                 會員登入

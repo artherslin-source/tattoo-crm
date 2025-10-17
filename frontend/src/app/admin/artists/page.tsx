@@ -168,7 +168,7 @@ export default function AdminArtistsPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入刺青師資料中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入刺青師資料中...</p>
         </div>
       </div>
     );
@@ -180,11 +180,11 @@ export default function AdminArtistsPage() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
               <UserCheck className="mr-3 h-8 w-8" />
               管理刺青師
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
               管理系統中的刺青師資料
             </p>
           </div>
@@ -267,7 +267,7 @@ export default function AdminArtistsPage() {
             <form onSubmit={editingArtist ? handleUpdateArtist : handleCreateArtist} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     姓名 *
                   </label>
                   <input
@@ -275,11 +275,11 @@ export default function AdminArtistsPage() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     Email *
                   </label>
                   <input
@@ -287,14 +287,14 @@ export default function AdminArtistsPage() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   />
                 </div>
               </div>
               
               {!editingArtist && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     密碼 *
                   </label>
                   <input
@@ -302,7 +302,7 @@ export default function AdminArtistsPage() {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                     placeholder="請輸入密碼（至少8個字符）"
                     minLength={8}
                   />
@@ -310,14 +310,14 @@ export default function AdminArtistsPage() {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                   所屬分店 {!editingArtist ? '*' : ''}
                 </label>
                 <select
                   required={!editingArtist}
                   value={formData.branchId}
                   onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   disabled={!!(editingArtist && branches.length === 1)} // 如果只有一個分店且是編輯模式，禁用選擇
                 >
                   <option value="">請選擇分店</option>
@@ -328,7 +328,7 @@ export default function AdminArtistsPage() {
                   ))}
                 </select>
                 {editingArtist && branches.length === 1 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     分店經理只能管理自己分店的刺青師
                   </p>
                 )}
@@ -336,26 +336,26 @@ export default function AdminArtistsPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     專長
                   </label>
                   <input
                     type="text"
                     value={formData.speciality}
                     onChange={(e) => setFormData({ ...formData, speciality: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                     placeholder="例如：傳統刺青、寫實風格、水彩風格等"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     作品集連結
                   </label>
                   <input
                     type="url"
                     value={formData.portfolioUrl}
                     onChange={(e) => setFormData({ ...formData, portfolioUrl: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                     placeholder="https://example.com/portfolio"
                   />
                 </div>
@@ -369,7 +369,7 @@ export default function AdminArtistsPage() {
                     onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
                     啟用狀態
                   </span>
                 </label>
@@ -402,36 +402,36 @@ export default function AdminArtistsPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">姓名</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Email</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">所屬分店</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">專長</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">作品集</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">狀態</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">建立時間</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">姓名</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">Email</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">所屬分店</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">專長</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">作品集</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">狀態</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">建立時間</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {artists.map((artist) => (
                   <tr key={artist.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="py-3 px-4">
-                          <div className="font-medium text-gray-900 dark:text-white">
+                          <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
                             {artist.user?.name || '未設定'}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                        <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                           {artist.user?.email || 'N/A'}
                         </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                        <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                           <span className="font-medium text-blue-600 dark:text-blue-400">
                             {artist.branch?.name || '未分配'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                        <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                           {artist.speciality || '未設定'}
                         </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                        <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                           {artist.portfolioUrl ? (
                             <a 
                               href={artist.portfolioUrl} 
@@ -449,12 +449,12 @@ export default function AdminArtistsPage() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             artist.active 
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                              : 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark'
                           }`}>
                             {artist.active ? '啟用' : '停用'}
                           </span>
                         </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                    <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                       {new Date(artist.createdAt).toLocaleDateString('zh-TW')}
                     </td>
                     <td className="py-3 px-4">
@@ -486,7 +486,7 @@ export default function AdminArtistsPage() {
           </div>
           
           {artists.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
               目前沒有刺青師資料
             </div>
           )}

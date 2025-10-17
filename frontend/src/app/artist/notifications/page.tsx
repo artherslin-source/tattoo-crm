@@ -127,7 +127,7 @@ export default function ArtistNotifications() {
       case 'SYSTEM':
         return <BellRing className="h-5 w-5 text-purple-600" />;
       default:
-        return <Bell className="h-5 w-5 text-gray-600" />;
+        return <Bell className="h-5 w-5 text-text-muted-light" />;
     }
   };
 
@@ -187,7 +187,7 @@ export default function ArtistNotifications() {
       case 'CANCELED':
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-text-primary-light';
     }
   };
 
@@ -198,7 +198,7 @@ export default function ArtistNotifications() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">載入中...</p>
+          <p className="mt-2 text-text-muted-light">載入中...</p>
         </div>
       </div>
     );
@@ -223,8 +223,8 @@ export default function ArtistNotifications() {
       {/* 頁面標題和操作 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">通知中心</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-text-primary-light">通知中心</h1>
+          <p className="text-text-muted-light mt-2">
             您有 {unreadCount} 則未讀通知
           </p>
         </div>
@@ -245,9 +245,9 @@ export default function ArtistNotifications() {
       {notifications.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <Bell className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">沒有通知</h3>
-            <p className="text-gray-500">您目前沒有任何通知</p>
+            <Bell className="h-16 w-16 text-text-muted-light mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-text-primary-light mb-2">沒有通知</h3>
+            <p className="text-text-muted-light">您目前沒有任何通知</p>
           </CardContent>
         </Card>
       ) : (
@@ -265,7 +265,7 @@ export default function ArtistNotifications() {
                     <div className="flex items-center space-x-3 mb-2">
                       {getNotificationIcon(notification.type)}
                       <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold text-gray-900">
+                        <h3 className="font-semibold text-text-primary-light">
                           {notification.title}
                         </h3>
                         <Badge variant="outline" className="text-xs">
@@ -279,7 +279,7 @@ export default function ArtistNotifications() {
                       </div>
                     </div>
 
-                    <p className="text-gray-700 mb-3">
+                    <p className="text-text-secondary-light mb-3">
                       {notification.message}
                     </p>
 
@@ -289,31 +289,31 @@ export default function ArtistNotifications() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                           {notification.data.customerName && (
                             <div className="flex items-center space-x-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-600">
+                              <User className="h-4 w-4 text-text-muted-light" />
+                              <span className="text-text-muted-light">
                                 顧客：{notification.data.customerName}
                               </span>
                             </div>
                           )}
                           {notification.data.serviceName && (
                             <div className="flex items-center space-x-2">
-                              <Info className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-600">
+                              <Info className="h-4 w-4 text-text-muted-light" />
+                              <span className="text-text-muted-light">
                                 服務：{notification.data.serviceName}
                               </span>
                             </div>
                           )}
                           {notification.data.appointmentTime && (
                             <div className="flex items-center space-x-2">
-                              <Clock className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-600">
+                              <Clock className="h-4 w-4 text-text-muted-light" />
+                              <span className="text-text-muted-light">
                                 時間：{new Date(notification.data.appointmentTime).toLocaleString('zh-TW')}
                               </span>
                             </div>
                           )}
                           {notification.data.appointmentStatus && (
                             <div className="flex items-center space-x-2">
-                              <span className="text-gray-600">狀態：</span>
+                              <span className="text-text-muted-light">狀態：</span>
                               <Badge className={getStatusColor(notification.data.appointmentStatus)}>
                                 {getStatusText(notification.data.appointmentStatus)}
                               </Badge>
@@ -324,7 +324,7 @@ export default function ArtistNotifications() {
                     )}
 
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-text-muted-light">
                         {formatDateTime(notification.createdAt)}
                       </span>
                       

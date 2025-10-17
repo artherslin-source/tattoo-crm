@@ -571,7 +571,7 @@ export default function AdminMembersPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入會員資料中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入會員資料中...</p>
         </div>
       </div>
     );
@@ -583,11 +583,11 @@ export default function AdminMembersPage() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
               <Users className="mr-3 h-8 w-8" />
               管理會員
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
               管理系統中的所有會員帳號
             </p>
           </div>
@@ -672,7 +672,7 @@ export default function AdminMembersPage() {
 
       {/* 分頁資訊 */}
       <div className="flex items-center justify-between mb-6">
-        <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
           共 {totalItems} 個會員，第 {currentPage} / {getTotalPages()} 頁
         </div>
       </div>
@@ -711,7 +711,7 @@ export default function AdminMembersPage() {
           />
           
           {members.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
               目前沒有會員資料
             </div>
           )}
@@ -751,7 +751,7 @@ export default function AdminMembersPage() {
                   page === currentPage - 3 ||
                   page === currentPage + 3
                 ) {
-                  return <span key={page} className="text-gray-500">...</span>;
+                  return <span key={page} className="text-text-muted-light">...</span>;
                 }
                 return null;
               })}
@@ -780,7 +780,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     新密碼
                   </label>
                   <input
@@ -791,11 +791,11 @@ export default function AdminMembersPage() {
                       ...prev,
                       newPassword: e.target.value
                     }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入新密碼（至少8個字符）"
                     minLength={8}
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     密碼長度至少需要 8 個字符
                   </p>
                 </div>
@@ -830,7 +830,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="topUpAmount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="topUpAmount" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     儲值金額
                   </label>
                   <input
@@ -841,11 +841,11 @@ export default function AdminMembersPage() {
                       ...prev,
                       amount: e.target.value
                     }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入儲值金額"
                     min="1"
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     儲值金額必須大於 0
                   </p>
                 </div>
@@ -881,7 +881,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="spendAmount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="spendAmount" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     消費金額
                   </label>
                   <input
@@ -892,12 +892,12 @@ export default function AdminMembersPage() {
                       ...prev,
                       amount: e.target.value
                     }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入消費金額"
                     min="1"
                     max={spendModal.member?.balance || 0}
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     消費金額不能超過餘額
                   </p>
                 </div>
@@ -933,7 +933,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="adjustAmount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="adjustAmount" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     新餘額
                   </label>
                   <input
@@ -944,11 +944,11 @@ export default function AdminMembersPage() {
                       ...prev,
                       amount: e.target.value
                     }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入新的餘額"
                     min="0"
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     餘額不能為負數
                   </p>
                 </div>
@@ -982,7 +982,7 @@ export default function AdminMembersPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="memberName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="memberName" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     姓名 *
                   </label>
                   <input
@@ -990,12 +990,12 @@ export default function AdminMembersPage() {
                     id="memberName"
                     value={createMemberModal.formData.name}
                     onChange={(e) => handleCreateMemberFormChange('name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入會員姓名"
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="memberEmail" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     Email *
                   </label>
                   <input
@@ -1003,12 +1003,12 @@ export default function AdminMembersPage() {
                     id="memberEmail"
                     value={createMemberModal.formData.email}
                     onChange={(e) => handleCreateMemberFormChange('email', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入會員Email"
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="memberPassword" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     密碼 *
                   </label>
                   <input
@@ -1016,12 +1016,12 @@ export default function AdminMembersPage() {
                     id="memberPassword"
                     value={createMemberModal.formData.password}
                     onChange={(e) => handleCreateMemberFormChange('password', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入密碼"
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="memberPhone" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     電話 *
                   </label>
                   <input
@@ -1029,19 +1029,19 @@ export default function AdminMembersPage() {
                     id="memberPhone"
                     value={createMemberModal.formData.phone}
                     onChange={(e) => handleCreateMemberFormChange('phone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入電話號碼"
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberBranch" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="memberBranch" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     分店 *
                   </label>
                   <select
                     id="memberBranch"
                     value={createMemberModal.formData.branchId}
                     onChange={(e) => handleCreateMemberFormChange('branchId', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                   >
                     <option value="">請選擇分店</option>
                     <option value="cmg9i8wsb0001sbc1oh5vfetl">三重店</option>
@@ -1049,14 +1049,14 @@ export default function AdminMembersPage() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="memberRole" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="memberRole" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     角色
                   </label>
                   <select
                     id="memberRole"
                     value={createMemberModal.formData.role}
                     onChange={(e) => handleCreateMemberFormChange('role', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                   >
                     <option value="MEMBER">會員</option>
                     <option value="ADMIN">管理員</option>
@@ -1104,7 +1104,7 @@ export default function AdminMembersPage() {
                               {t.type === 'SPEND' ? '消費' : '儲值'}
                             </span>
                           </div>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-text-muted-light">
                             {t.operator?.name 
                                ? `${t.operator.name} (${t.operator.email})` 
                                : t.operator?.email ?? '未知'}

@@ -270,7 +270,7 @@ export default function AppointmentForm({
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">載入中...</p>
+          <p className="text-text-muted-light">載入中...</p>
         </div>
       </div>
     );
@@ -290,8 +290,8 @@ export default function AppointmentForm({
             </svg>
             返回
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-          <p className="text-gray-600 mt-2">{description}</p>
+          <h1 className="text-3xl font-bold text-text-primary-light">{title}</h1>
+          <p className="text-text-muted-light mt-2">{description}</p>
         </div>
 
         {/* 表單 */}
@@ -300,7 +300,7 @@ export default function AppointmentForm({
             {/* 客戶資訊 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="name" className="block text-sm font-medium text-text-secondary-light mb-2">
                   客戶姓名 *
                 </label>
                 <input
@@ -313,7 +313,7 @@ export default function AppointmentForm({
                 />
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-text-secondary-light mb-2">
                   電子郵件 *
                 </label>
                 <input
@@ -328,7 +328,7 @@ export default function AppointmentForm({
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phone" className="block text-sm font-medium text-text-secondary-light mb-2">
                 聯絡電話
               </label>
               <input
@@ -343,7 +343,7 @@ export default function AppointmentForm({
             {/* 刺青師和分店 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="artistId" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="artistId" className="block text-sm font-medium text-text-secondary-light mb-2">
                   刺青師 *
                 </label>
                 <select
@@ -362,7 +362,7 @@ export default function AppointmentForm({
                 </select>
               </div>
               <div>
-                <label htmlFor="branchId" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="branchId" className="block text-sm font-medium text-text-secondary-light mb-2">
                   分店 *
                 </label>
                 <select
@@ -383,7 +383,7 @@ export default function AppointmentForm({
                   ))}
                 </select>
                 {formData.artistId && (
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-text-muted-light mt-1">
                     分店已根據選擇的刺青師自動設定
                   </p>
                 )}
@@ -392,7 +392,7 @@ export default function AppointmentForm({
 
             {/* 服務 */}
             <div>
-              <label htmlFor="serviceId" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="serviceId" className="block text-sm font-medium text-text-secondary-light mb-2">
                 服務 *
               </label>
               <select
@@ -414,7 +414,7 @@ export default function AppointmentForm({
             {/* 時間 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="startAt" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="startAt" className="block text-sm font-medium text-text-secondary-light mb-2">
                   開始時間 *
                 </label>
                 <input
@@ -427,7 +427,7 @@ export default function AppointmentForm({
                 />
               </div>
               <div>
-                <label htmlFor="endAt" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="endAt" className="block text-sm font-medium text-text-secondary-light mb-2">
                   結束時間 *
                 </label>
                 <input
@@ -443,7 +443,7 @@ export default function AppointmentForm({
 
             {/* 備註 */}
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="notes" className="block text-sm font-medium text-text-secondary-light mb-2">
                 備註
               </label>
               <textarea
@@ -474,7 +474,7 @@ export default function AppointmentForm({
               <button
                 type="button"
                 onClick={onCancel || (() => router.back())}
-                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="px-6 py-2 border border-gray-300 rounded-md text-text-secondary-light hover:bg-gray-50"
               >
                 取消
               </button>

@@ -72,7 +72,7 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
     return (
       <div className="flex items-center space-x-2">
         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-        <span className="text-sm text-gray-600">載入分店中...</span>
+        <span className="text-sm text-text-muted-light">載入分店中...</span>
       </div>
     );
   }
@@ -87,7 +87,7 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
 
   if (branches.length === 0) {
     return (
-      <div className="text-sm text-gray-500">
+      <div className="text-sm text-text-muted-light">
         暫無分店資料
       </div>
     );
@@ -97,7 +97,7 @@ export default function BranchSelector({ selectedBranchId, onBranchChange }: Bra
 
   return (
     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
         分店：
       </label>
       <Select value={selectedBranchId || 'all'} onValueChange={onBranchChange}>

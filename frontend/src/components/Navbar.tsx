@@ -80,7 +80,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <button
               onClick={() => router.push('/home')}
-              className="text-xl font-bold text-gray-900 transition-colors hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
+              className="text-xl font-bold text-text-primary-light transition-colors hover:text-blue-600 dark:text-text-primary-dark dark:hover:text-blue-400"
             >
               彫川紋身
             </button>
@@ -138,7 +138,7 @@ export default function Navbar() {
 
                 <button
                   onClick={() => router.push('/profile')}
-                  className={`${responsiveButtonBase} border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-gray-300 dark:hover:bg-neutral-700`}
+                  className={`${responsiveButtonBase} border border-gray-300 bg-white text-text-secondary-light hover:bg-gray-50 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-text-secondary-dark dark:hover:bg-neutral-700`}
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -160,7 +160,7 @@ export default function Navbar() {
               <>
                 <button
                   onClick={() => router.push('/login')}
-                  className={`${responsiveButtonBase} border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-gray-300 dark:hover:bg-neutral-700`}
+                  className={`${responsiveButtonBase} border border-gray-300 bg-white text-text-secondary-light hover:bg-gray-50 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-text-secondary-dark dark:hover:bg-neutral-700`}
                 >
                   登入
                 </button>

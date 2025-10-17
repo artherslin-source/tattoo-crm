@@ -153,7 +153,7 @@ export default function AdminServicesPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入服務資料中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入服務資料中...</p>
         </div>
       </div>
     );
@@ -165,11 +165,11 @@ export default function AdminServicesPage() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="flex items-center text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="flex items-center text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
               <Settings className="mr-3 h-8 w-8" />
               管理服務項目
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-text-muted-light dark:text-text-muted-dark">
               管理系統中的刺青服務項目
             </p>
           </div>
@@ -252,7 +252,7 @@ export default function AdminServicesPage() {
             <form onSubmit={editingService ? handleUpdateService : handleCreateService} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     服務名稱 *
                   </label>
                   <input
@@ -260,39 +260,39 @@ export default function AdminServicesPage() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     分類
                   </label>
                   <input
                     type="text"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                     placeholder="例如：傳統刺青、寫實風格"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                   服務描述
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   placeholder="詳細描述此服務項目"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     價格 (NT$) *
                   </label>
                   <input
@@ -301,11 +301,11 @@ export default function AdminServicesPage() {
                     min="0"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     時長 (分鐘) *
                   </label>
                   <input
@@ -314,17 +314,17 @@ export default function AdminServicesPage() {
                     min="1"
                     value={formData.durationMin}
                     onChange={(e) => setFormData({ ...formData, durationMin: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                     幣別
                   </label>
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   >
                     <option value="TWD">TWD</option>
                     <option value="USD">USD</option>
@@ -334,14 +334,14 @@ export default function AdminServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                   圖片 URL
                 </label>
                 <input
                   type="url"
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                   placeholder="https://example.com/image.jpg"
                 />
               </div>
@@ -354,7 +354,7 @@ export default function AdminServicesPage() {
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                <label htmlFor="isActive" className="ml-2 block text-sm text-text-secondary-light dark:text-text-secondary-dark">
                   啟用狀態
                 </label>
               </div>
@@ -385,12 +385,12 @@ export default function AdminServicesPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">服務名稱</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">分類</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">價格</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">時長</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">狀態</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">操作</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">服務名稱</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">分類</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">價格</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">時長</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">狀態</th>
+                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -398,32 +398,32 @@ export default function AdminServicesPage() {
                   <tr key={service.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="py-3 px-4">
                       <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
+                        <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
                           {service.name}
                         </div>
                         {service.description && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
                             {service.description}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                    <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                       {service.category || '未分類'}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                      <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
                         {service.currency} {service.price.toLocaleString()}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                    <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                       {service.durationMin} 分鐘
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         service.isActive 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                          : 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark'
                       }`}>
                         {service.isActive ? '啟用' : '停用'}
                       </span>
@@ -457,7 +457,7 @@ export default function AdminServicesPage() {
           </div>
           
           {services.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
               目前沒有服務項目
             </div>
           )}

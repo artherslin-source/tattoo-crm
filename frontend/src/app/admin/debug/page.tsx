@@ -22,7 +22,7 @@ export default function DebugPage() {
         <div>
           <strong>Access Token:</strong> {token ? "Present" : "Missing"}
           {token && (
-            <div className="mt-2 text-sm text-gray-600 break-all">
+            <div className="mt-2 text-sm text-text-muted-light break-all">
               {token}
             </div>
           )}

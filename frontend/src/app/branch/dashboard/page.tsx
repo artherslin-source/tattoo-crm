@@ -145,7 +145,7 @@ export default function BranchDashboardPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">載入中...</p>
+          <p className="text-text-muted-light dark:text-text-muted-dark">載入中...</p>
         </div>
       </div>
     );
@@ -197,7 +197,7 @@ export default function BranchDashboardPage() {
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
               <Building2 className="h-8 w-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
                 分店管理後台
               </h1>
             </div>
@@ -209,7 +209,7 @@ export default function BranchDashboardPage() {
                 </span>
               </div>
             )}
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-text-muted-light dark:text-text-muted-dark">
               歡迎回到分店管理後台，這裡是您的控制中心
             </p>
           </div>
@@ -217,7 +217,7 @@ export default function BranchDashboardPage() {
           {/* ✅ 問題3：BOSS 角色顯示分店選擇器 */}
           {userRole === 'BOSS' && branches.length > 0 && (
             <div className="ml-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
                 選擇分店
               </label>
               <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
@@ -295,7 +295,7 @@ export default function BranchDashboardPage() {
 
         {/* Quick Actions */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-6">
             快捷功能
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
