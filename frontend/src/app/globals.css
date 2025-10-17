@@ -138,7 +138,7 @@ body {
 }
 
 .dark .card {
-  background-color: #1e1e1e;
+  background-color: #54514f;
   box-shadow: 0 2px 6px rgba(255, 255, 255, 0.05);
 }
 
@@ -287,14 +287,14 @@ body {
 
 .dark .card,
 .dark .summary-card {
-  background-color: #21242B;
+  background-color: #54514f;
   border: 1px solid #2F343C;
   box-shadow: 0 4px 12px rgba(0,0,0,0.35);
   transition: all 0.25s ease;
 }
 
 .dark .card:hover {
-  background-color: #2A2E36;
+  background-color: #6B6B6B;
   box-shadow: 0 6px 18px rgba(0,0,0,0.45);
 }
 

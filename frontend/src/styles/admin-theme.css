@@ -91,7 +91,7 @@
 
 /* 夜間模式快捷功能卡片 */
 .dark .quick-card {
-  background: #565656;
+  background: #54514f;
   color: #FFFFFF;
   border: 1px solid #2D3036;
 }
@@ -120,14 +120,14 @@
 /* 卡片與表格統一 */
 .stat-card{background:var(--card-light);color:var(--text-primary-light);border-radius:12px;padding:1rem;border:1px solid var(--border-soft);box-shadow:var(--card-shadow);transition:box-shadow .2s,transform .2s;}
 .stat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px);}
-.dark .stat-card{background:#565656;color:#FFFFFF;box-shadow:0 4px 10px rgba(0,0,0,0.4);border-color:#2D3036;}
+.dark .stat-card{background:#54514f;color:#FFFFFF;box-shadow:0 4px 10px rgba(0,0,0,0.4);border-color:#2D3036;}
 
 /* 表格標題與文字統一字色 */
 .table-list{width:100%;border-collapse:separate;border-spacing:0 8px;}
 .table-list th{text-align:left;font-size:.85rem;color:var(--text-sub);font-weight:600;padding:.75rem;}
 .dark .table-list th{color:var(--text-muted-dark);}
 .table-list td{background:var(--card-light);padding:.9rem;border-radius:10px;vertical-align:middle;color:var(--text-main);font-weight:500;border:1px solid var(--border-soft);}
-.dark .table-list td{background:#565656;color:#FFFFFF;border-color:#2D3036;}
+.dark .table-list td{background:#54514f;color:#FFFFFF;border-color:#2D3036;}
 .table-list tr:hover td{background:#fafafa;box-shadow:0 2px 6px rgba(0,0,0,.06);}
 .dark .table-list tr:hover td{background:#6B6B6B;}
 
@@ -170,7 +170,7 @@
   transform: translateY(-1px);
 }
 .dark .order-list-item {
-  background: #565656;
+  background: #54514f;
   border-color: #2D3036;
   color: #FFFFFF;
 }
@@ -449,7 +449,7 @@
 .dark .summary-card,
 .dark .table-list td,
 .dark .table-container {
-  background-color: #565656;
+  background-color: #54514f;
   border: 1px solid #2D3036;
   color: #FFFFFF;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4);
@@ -473,7 +473,7 @@
 
 /* 頂部統計卡：統一深灰色 */
 .dark .stat-card {
-  background-color: #565656;
+  background-color: #54514f;
   border: 1px solid #31343B;
   color: #FFFFFF;
 }
