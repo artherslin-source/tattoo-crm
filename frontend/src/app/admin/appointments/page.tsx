@@ -348,7 +348,7 @@ export default function AdminAppointmentsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-white">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

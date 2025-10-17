@@ -201,7 +201,7 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-on-dark">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-white">
       {/* Header */}
       <div className="mb-6 pb-6">
         <div>
