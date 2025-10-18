@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth } from "@/lib/api";
 import BranchSelector from "@/components/BranchSelector";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   TrendingUp, 
   Users, 
@@ -14,7 +14,6 @@ import {
   Package,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
   CreditCard,
   UserCheck,
   BarChart3
@@ -192,7 +191,7 @@ export default function AnalyticsPage() {
               ].map((range) => (
                 <button
                   key={range.value}
-                  onClick={() => setDateRange(range.value as any)}
+                  onClick={() => setDateRange(range.value as '7d' | '30d' | '90d' | '1y')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     dateRange === range.value
                       ? 'bg-primary text-white'
