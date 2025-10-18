@@ -38,6 +38,10 @@ model User {
   customerReminders           CustomerReminder[]
   createdCustomerNotes        CustomerNote[] @relation("CustomerNoteCreator")
   createdCustomerReminders    CustomerReminder[] @relation("CustomerReminderCreator")
+  
+  @@index([branchId, role, isActive])
+  @@index([role, createdAt])
+  @@index([email])
 }
 
 model Member {
@@ -138,6 +142,11 @@ model Appointment {
   contact   Contact?          @relation(fields: [contactId], references: [id])
   order     Order?
   completedService CompletedService?
+  
+  @@index([branchId, createdAt, status])
+  @@index([status, startAt])
+  @@index([artistId, status])
+  @@index([serviceId, createdAt])
 }
 
 model Order {
@@ -160,6 +169,10 @@ model Order {
   branch        Branch        @relation(fields: [branchId], references: [id])
   member        User          @relation(fields: [memberId], references: [id])
   appointment   Appointment?  @relation(fields: [appointmentId], references: [id])
+  
+  @@index([branchId, createdAt, status])
+  @@index([memberId, status])
+  @@index([status, createdAt])
 }
 
 model Installment {
@@ -282,6 +295,10 @@ model CompletedService {
   artist        User        @relation("ArtistCompletedServices", fields: [artistId], references: [id])
   service       Service     @relation(fields: [serviceId], references: [id])
   branch        Branch      @relation(fields: [branchId], references: [id])
+  
+  @@index([branchId, completedAt])
+  @@index([artistId, completedAt])
+  @@index([serviceId, completedAt])
 }
 
 // 客戶標註模型

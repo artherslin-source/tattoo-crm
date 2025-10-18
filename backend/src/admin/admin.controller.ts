@@ -3,13 +3,17 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { CacheService } from '../common/cache.service';
 import { OrderStatus, Prisma } from '@prisma/client';
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('BOSS', 'BRANCH_MANAGER')
 export class AdminController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cacheService: CacheService,
+  ) {}
 
   @Get('dashboard')
   getDashboard() {
@@ -25,6 +29,17 @@ export class AdminController {
 
   @Get('stats')
   async getStats(@Req() req: any, @Query('branchId') queryBranchId?: string) {
+    // 使用快取
+    const cacheKey = `dashboard:stats:${req.user.role}:${queryBranchId || req.user.branchId || 'all'}`;
+    
+    return this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchDashboardStats(req, queryBranchId),
+      2 * 60 * 1000, // 2分鐘快取
+    );
+  }
+
+  private async fetchDashboardStats(@Req() req: any, @Query('branchId') queryBranchId?: string) {
     try {
       console.log('🔍 Admin stats endpoint called');
       console.log('🔍 Request user:', req.user);

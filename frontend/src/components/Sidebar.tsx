@@ -27,14 +27,14 @@ export default function Sidebar({ open, onClose }: Props) {
         <div>
           <h1 className="brand-logo">雕川紋身 CRM</h1>
           <nav>
-            <Link href="/admin/dashboard">📊 儀表板</Link>
-            <Link href="/admin/analytics">📈 統計報表</Link>
-            <Link href="/admin/services">⚙️ 服務管理</Link>
-            <Link href="/admin/artists">🎨 刺青師管理</Link>
-            <Link href="/admin/members">👥 會員管理</Link>
-            <Link href="/admin/contacts">💬 聯絡管理</Link>
-            <Link href="/admin/appointments">📅 預約管理</Link>
-            <Link href="/admin/orders">🧾 訂單管理</Link>
+            <Link href="/admin/dashboard" prefetch={true}>📊 儀表板</Link>
+            <Link href="/admin/analytics" prefetch={true}>📈 統計報表</Link>
+            <Link href="/admin/services" prefetch={true}>⚙️ 服務管理</Link>
+            <Link href="/admin/artists" prefetch={true}>🎨 刺青師管理</Link>
+            <Link href="/admin/members" prefetch={true}>👥 會員管理</Link>
+            <Link href="/admin/contacts" prefetch={true}>💬 聯絡管理</Link>
+            <Link href="/admin/appointments" prefetch={true}>📅 預約管理</Link>
+            <Link href="/admin/orders" prefetch={true}>🧾 訂單管理</Link>
           </nav>
         </div>
         <div className="flex flex-col gap-3">
@@ -67,14 +67,14 @@ export default function Sidebar({ open, onClose }: Props) {
                 <button onClick={onClose} aria-label="關閉" className="text-2xl">✕</button>
               </div>
               <nav className="flex flex-col gap-1">
-                <Link href="/admin/dashboard" onClick={onClose}>📊 儀表板</Link>
-                <Link href="/admin/analytics" onClick={onClose}>📈 統計報表</Link>
-                <Link href="/admin/services" onClick={onClose}>⚙️ 服務管理</Link>
-                <Link href="/admin/artists" onClick={onClose}>🎨 刺青師管理</Link>
-                <Link href="/admin/members" onClick={onClose}>👥 會員管理</Link>
-                <Link href="/admin/contacts" onClick={onClose}>💬 聯絡管理</Link>
-                <Link href="/admin/appointments" onClick={onClose}>📅 預約管理</Link>
-                <Link href="/admin/orders" onClick={onClose}>🧾 訂單管理</Link>
+                <Link href="/admin/dashboard" onClick={onClose} prefetch={true}>📊 儀表板</Link>
+                <Link href="/admin/analytics" onClick={onClose} prefetch={true}>📈 統計報表</Link>
+                <Link href="/admin/services" onClick={onClose} prefetch={true}>⚙️ 服務管理</Link>
+                <Link href="/admin/artists" onClick={onClose} prefetch={true}>🎨 刺青師管理</Link>
+                <Link href="/admin/members" onClick={onClose} prefetch={true}>👥 會員管理</Link>
+                <Link href="/admin/contacts" onClick={onClose} prefetch={true}>💬 聯絡管理</Link>
+                <Link href="/admin/appointments" onClick={onClose} prefetch={true}>📅 預約管理</Link>
+                <Link href="/admin/orders" onClick={onClose} prefetch={true}>🧾 訂單管理</Link>
               </nav>
               <div className="mt-6 flex flex-col gap-3">
                 <ThemeToggle />

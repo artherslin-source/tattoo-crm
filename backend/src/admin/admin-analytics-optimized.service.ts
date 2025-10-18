@@ -1,11 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CacheService } from '../common/cache.service';
 
 @Injectable()
 export class AdminAnalyticsOptimizedService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cacheService: CacheService,
+  ) {}
 
   async getAnalytics(branchId?: string, dateRange: string = '30d') {
+    // 使用快取
+    const cacheKey = `analytics:${branchId || 'all'}:${dateRange}`;
+    
+    return this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchAnalyticsData(branchId, dateRange),
+      3 * 60 * 1000, // 3分鐘快取
+    );
+  }
+
+  private async fetchAnalyticsData(branchId?: string, dateRange: string = '30d') {
     console.time('⏱️ Analytics Total Time');
     
     // 計算日期範圍
