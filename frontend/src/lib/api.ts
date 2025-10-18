@@ -15,14 +15,23 @@ function detectApiBase(): string {
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     const hostname = window.location.hostname;
     if (hostname.includes('railway.app')) {
-      // Railway 部署：使用同一個域名，但後端在 /api 路徑
-      // 或者如果後端是獨立服務，使用環境變量
+      // Railway 部署：前端和後端是分開的服務
+      // 前端：tattoo-crm-production.up.railway.app
+      // 後端：tattoo-crm-backend-production.up.railway.app
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       if (backendUrl) {
         return backendUrl;
       }
-      // 如果沒有設定後端 URL，假設是同一個域名
-      return `https://${hostname}`;
+      // 如果沒有設定後端 URL，嘗試推測後端 URL
+      // 將 frontend 替換為 backend
+      if (hostname.includes('frontend')) {
+        return hostname.replace('frontend', 'backend');
+      } else if (hostname.includes('tattoo-crm-production')) {
+        return hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production');
+      } else {
+        // 如果無法推測，使用同一個域名（可能會有問題）
+        return `https://${hostname}`;
+      }
     } else {
       // 其他生產環境
       return window.location.origin.replace(/:\d+$/, ':4000');
@@ -48,6 +57,13 @@ export async function checkBackendHealth(): Promise<boolean> {
 }
 
 const API_BASE = detectApiBase();
+
+// 調試信息
+if (typeof window !== 'undefined') {
+  console.log('🔍 API Base URL:', API_BASE);
+  console.log('🔍 Current hostname:', window.location.hostname);
+  console.log('🔍 Environment:', process.env.NODE_ENV);
+}
 
 function readFromLocalStorage(key: string) {
   try {
