@@ -233,14 +233,22 @@ export default function AnalyticsPage() {
               </div>
               <div className="flex items-center mt-2 text-sm">
                 {analytics.revenue.trend >= 0 ? (
-                  <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
+                  <>
+                    <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
+                    <span className="text-green-600 font-semibold">
+                      {formatPercentage(analytics.revenue.trend)}
+                    </span>
+                    <span className="text-muted ml-1">vs 上期</span>
+                  </>
                 ) : (
-                  <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
+                  <>
+                    <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
+                    <span className="text-red-600 font-semibold">
+                      {formatPercentage(analytics.revenue.trend)}
+                    </span>
+                    <span className="text-red-600 ml-1">vs 上期</span>
+                  </>
                 )}
-                <span className={analytics.revenue.trend >= 0 ? 'text-green-600' : 'text-red-600'}>
-                  {formatPercentage(analytics.revenue.trend)}
-                </span>
-                <span className="text-muted ml-1">vs 上期</span>
               </div>
             </CardContent>
           </Card>
