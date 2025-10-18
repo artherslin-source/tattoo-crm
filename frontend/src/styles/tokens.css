@@ -17,9 +17,10 @@
      ========================================== */
   
   /* Background Layers */
-  --color-bg: #ffffff;                    /* Main background */
-  --color-surface: #f9fafb;               /* Secondary surface */
-  --color-card-bg: #ffffff;               /* Card background */
+  --color-bg: #fafafa;                    /* Main background (page level) */
+  --color-surface: #f4f6f8;               /* Secondary surface (filter bars, secondary areas) */
+  --color-surface-elevated: #eef1f5;      /* Elevated surface (stat cards, highlights) */
+  --color-card-bg: #ffffff;               /* Card background (main content cards) */
   --color-panel: #ffffff;                 /* Panel background */
   
   /* Text Colors */
@@ -114,10 +115,11 @@
    ========================================== */
 
 .dark {
-  /* Background Layers */
-  --color-bg: #0e0f12;                    /* Main dark background */
-  --color-surface: #14161a;               /* Secondary dark surface */
-  --color-card-bg: #54514f;               /* Card background - warm dark gray */
+  /* Background Layers - with clear brightness hierarchy */
+  --color-bg: #0e0f12;                    /* Main dark background (page level) */
+  --color-surface: #14161a;               /* Secondary surface (filter bars) - 4% brighter */
+  --color-surface-elevated: #1f2429;      /* Elevated surface (stat cards) - 8% brighter */
+  --color-card-bg: #1a1e23;               /* Card background (main content cards) - 6% brighter */
   --color-panel: #1a1c21;                 /* Panel background */
   
   /* Text Colors */

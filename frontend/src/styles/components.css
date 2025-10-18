@@ -127,7 +127,7 @@
 }
 
 .stat-card {
-  background: var(--color-card-bg);
+  background: var(--color-surface-elevated);
   color: var(--color-text);
   border-radius: var(--border-radius-lg);
   padding: 1rem;

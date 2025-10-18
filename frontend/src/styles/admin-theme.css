@@ -63,9 +63,11 @@
 .filter-bar,
 .search-bar,
 .select-bar {
-  background: var(--color-bg);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
+  padding: 1rem;
+  border-radius: var(--border-radius-lg);
 }
 
 .filter-bar button,
@@ -115,8 +117,8 @@
 
 .status-tag[data-status="分期中"],
 .status-tag[data-status="分期付款中"] {
-  background: #f3e8ff;
-  color: #6b21a8;
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
 }
 
 .status-tag[data-status="已取消"] {
