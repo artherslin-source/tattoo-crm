@@ -48,10 +48,14 @@ export class AdminAnalyticsOptimizedService {
     // ========== 並行查詢所有數據 ==========
     const [
       // 營收相關
-      totalRevenueAgg,
-      monthlyRevenueAgg,
-      last7DaysRevenueAgg,
-      previousRevenueAgg,
+      oneTimeRevenueAgg,
+      installmentRevenueAgg,
+      monthlyOneTimeRevenueAgg,
+      monthlyInstallmentRevenueAgg,
+      last7DaysOneTimeRevenueAgg,
+      last7DaysInstallmentRevenueAgg,
+      previousOneTimeRevenueAgg,
+      previousInstallmentRevenueAgg,
       revenueByBranch,
       ordersWithServices,
       paymentMethodStats,
@@ -76,50 +80,99 @@ export class AdminAnalyticsOptimizedService {
       serviceBookings,
       serviceCompletions,
     ] = await Promise.all([
-      // 總營收
+      // 總營收（一次付清訂單）
       this.prisma.order.aggregate({
         where: {
           ...branchFilter,
           ...dateFilter,
-          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+          paymentType: 'ONE_TIME',
+          status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
       }),
       
-      // 月營收
+      // 總營收（分期付款已付金額）
+      this.prisma.installment.aggregate({
+        where: {
+          status: 'PAID',
+          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          order: branchFilter,
+        },
+        _sum: { amount: true },
+      }),
+      
+      // 月營收（一次付清）
       this.prisma.order.aggregate({
         where: {
           ...branchFilter,
-          createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) },
-          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+          paymentType: 'ONE_TIME',
+          paidAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) },
+          status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
       }),
       
-      // 過去7天營收
+      // 月營收（分期付款已付金額）
+      this.prisma.installment.aggregate({
+        where: {
+          status: 'PAID',
+          paidAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) },
+          order: branchFilter,
+        },
+        _sum: { amount: true },
+      }),
+      
+      // 過去7天營收（一次付清）
       this.prisma.order.aggregate({
         where: {
           ...branchFilter,
-          createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+          paymentType: 'ONE_TIME',
+          paidAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+          status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
       }),
       
-      // 上一期營收
+      // 過去7天營收（分期付款已付金額）
+      this.prisma.installment.aggregate({
+        where: {
+          status: 'PAID',
+          paidAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+          order: branchFilter,
+        },
+        _sum: { amount: true },
+      }),
+      
+      // 上一期營收（一次付清）
       startDate && days !== null
         ? this.prisma.order.aggregate({
             where: {
               ...branchFilter,
-              createdAt: {
+              paymentType: 'ONE_TIME',
+              paidAt: {
                 gte: new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000),
                 lt: startDate,
               },
-              status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+              status: { in: ['PAID', 'PAID_COMPLETE'] },
             },
             _sum: { finalAmount: true },
           })
         : Promise.resolve({ _sum: { finalAmount: 0 } }),
+      
+      // 上一期營收（分期付款已付金額）
+      startDate && days !== null
+        ? this.prisma.installment.aggregate({
+            where: {
+              status: 'PAID',
+              paidAt: {
+                gte: new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000),
+                lt: startDate,
+              },
+              order: branchFilter,
+            },
+            _sum: { amount: true },
+          })
+        : Promise.resolve({ _sum: { amount: 0 } }),
       
       // 分店營收排行
       this.prisma.order.groupBy({
@@ -262,11 +315,23 @@ export class AdminAnalyticsOptimizedService {
 
     // ========== 數據處理 ==========
     
-    // 營收數據
-    const totalRevenue = totalRevenueAgg._sum.finalAmount || 0;
-    const monthlyRevenue = monthlyRevenueAgg._sum.finalAmount || 0;
-    const dailyRevenue = Math.round((last7DaysRevenueAgg._sum.finalAmount || 0) / 7);
-    const previousRevenue = previousRevenueAgg._sum.finalAmount || 0;
+    // 營收數據（一次付清 + 已付分期）
+    const totalRevenue = 
+      (oneTimeRevenueAgg._sum.finalAmount || 0) + 
+      (installmentRevenueAgg._sum.amount || 0);
+    
+    const monthlyRevenue = 
+      (monthlyOneTimeRevenueAgg._sum.finalAmount || 0) + 
+      (monthlyInstallmentRevenueAgg._sum.amount || 0);
+    
+    const last7DaysRevenue = 
+      (last7DaysOneTimeRevenueAgg._sum.finalAmount || 0) + 
+      (last7DaysInstallmentRevenueAgg._sum.amount || 0);
+    const dailyRevenue = Math.round(last7DaysRevenue / 7);
+    
+    const previousRevenue = 
+      (previousOneTimeRevenueAgg._sum.finalAmount || 0) + 
+      (previousInstallmentRevenueAgg._sum.amount || 0);
     const trend = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
     // 分店營收（批次查詢分店名稱，避免 N+1）
