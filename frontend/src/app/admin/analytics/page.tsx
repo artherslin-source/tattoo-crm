@@ -194,7 +194,7 @@ export default function AnalyticsPage() {
                   onClick={() => setDateRange(range.value as '7d' | '30d' | '90d' | '1y')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     dateRange === range.value
-                      ? 'bg-primary text-white'
+                      ? 'bg-red-600 text-white hover:bg-red-700'
                       : 'bg-surface text-text hover:bg-surface-elevated'
                   }`}
                 >
