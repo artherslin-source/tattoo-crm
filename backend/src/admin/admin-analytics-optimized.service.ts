@@ -41,7 +41,7 @@ export class AdminAnalyticsOptimizedService {
     })() : null;
 
     const branchFilter = branchId && branchId !== 'all' ? { branchId } : {};
-    const dateFilter = startDate ? { createdAt: { gte: startDate } } : {};
+    const dateFilter = startDate ? { paidAt: { gte: startDate } } : {};
 
     console.time('⏱️ Parallel Queries');
     
@@ -56,9 +56,12 @@ export class AdminAnalyticsOptimizedService {
       last7DaysInstallmentRevenueAgg,
       previousOneTimeRevenueAgg,
       previousInstallmentRevenueAgg,
-      revenueByBranch,
-      ordersWithServices,
-      paymentMethodStats,
+      revenueByBranchOneTime,
+      revenueByBranchInstallments,
+      ordersWithServicesOneTime,
+      ordersWithServicesInstallments,
+      paymentMethodStatsOneTime,
+      paymentMethodStatsInstallments,
       
       // 會員相關
       totalMembers,
@@ -174,23 +177,37 @@ export class AdminAnalyticsOptimizedService {
           })
         : Promise.resolve({ _sum: { amount: 0 } }),
       
-      // 分店營收排行
+      // 分店營收排行（一次付清）
       this.prisma.order.groupBy({
         by: ['branchId'],
         where: {
+          ...branchFilter,
           ...dateFilter,
-          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+          paymentType: 'ONE_TIME',
+          status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
         orderBy: { _sum: { finalAmount: 'desc' } },
       }),
       
-      // 服務項目營收（優化：只查詢需要的欄位）
+      // 分店營收排行（分期付款已付金額）
+      this.prisma.installment.groupBy({
+        by: ['orderId'],
+        where: {
+          status: 'PAID',
+          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          order: branchFilter,
+        },
+        _sum: { amount: true },
+      }),
+      
+      // 服務項目營收（一次付清）
       this.prisma.order.findMany({
         where: {
           ...branchFilter,
           ...dateFilter,
-          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+          paymentType: 'ONE_TIME',
+          status: { in: ['PAID', 'PAID_COMPLETE'] },
           appointment: { serviceId: { not: null } },
         },
         select: {
@@ -203,15 +220,52 @@ export class AdminAnalyticsOptimizedService {
         },
       }),
       
-      // 付款方式統計
+      // 服務項目營收（分期付款已付金額）
+      this.prisma.installment.findMany({
+        where: {
+          status: 'PAID',
+          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          order: {
+            ...branchFilter,
+            appointment: { serviceId: { not: null } },
+          },
+        },
+        select: {
+          amount: true,
+          order: {
+            select: {
+              appointment: {
+                select: {
+                  service: { select: { id: true, name: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+      
+      // 付款方式統計（一次付清）
       this.prisma.order.groupBy({
         by: ['paymentMethod'],
         where: {
           ...branchFilter,
           ...dateFilter,
-          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+          paymentType: 'ONE_TIME',
+          status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
+        _count: true,
+      }),
+      
+      // 付款方式統計（分期付款已付金額）
+      this.prisma.installment.groupBy({
+        by: ['paymentMethod'],
+        where: {
+          status: 'PAID',
+          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          order: branchFilter,
+        },
+        _sum: { amount: true },
         _count: true,
       }),
       
@@ -334,8 +388,39 @@ export class AdminAnalyticsOptimizedService {
       (previousInstallmentRevenueAgg._sum.amount || 0);
     const trend = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
-    // 分店營收（批次查詢分店名稱，避免 N+1）
-    const branchIds = revenueByBranch.map((item) => item.branchId);
+    // 分店營收（合併一次付清和分期付款）
+    const branchRevenueMap: Record<string, { branchId: string; amount: number }> = {};
+    
+    // 處理一次付清分店營收
+    revenueByBranchOneTime.forEach((item) => {
+      if (!branchRevenueMap[item.branchId]) {
+        branchRevenueMap[item.branchId] = { branchId: item.branchId, amount: 0 };
+      }
+      branchRevenueMap[item.branchId].amount += item._sum.finalAmount || 0;
+    });
+    
+    // 處理分期付款分店營收（需要查詢訂單的分店）
+    const installmentOrderIds = revenueByBranchInstallments.map(item => item.orderId);
+    const installmentOrders = installmentOrderIds.length > 0
+      ? await this.prisma.order.findMany({
+          where: { id: { in: installmentOrderIds } },
+          select: { id: true, branchId: true },
+        })
+      : [];
+    const orderBranchMap = new Map(installmentOrders.map(o => [o.id, o.branchId]));
+    
+    revenueByBranchInstallments.forEach((item) => {
+      const branchId = orderBranchMap.get(item.orderId);
+      if (branchId) {
+        if (!branchRevenueMap[branchId]) {
+          branchRevenueMap[branchId] = { branchId, amount: 0 };
+        }
+        branchRevenueMap[branchId].amount += item._sum.amount || 0;
+      }
+    });
+    
+    // 批次查詢分店名稱
+    const branchIds = Object.keys(branchRevenueMap);
     const branches = branchIds.length > 0 
       ? await this.prisma.branch.findMany({
           where: { id: { in: branchIds } },
@@ -344,15 +429,19 @@ export class AdminAnalyticsOptimizedService {
       : [];
     const branchMap = new Map(branches.map((b) => [b.id, b.name]));
     
-    const branchRevenueWithNames = revenueByBranch.map((item) => ({
-      branchId: item.branchId,
-      branchName: branchMap.get(item.branchId) || '未知分店',
-      amount: item._sum.finalAmount || 0,
-    }));
+    const branchRevenueWithNames = Object.values(branchRevenueMap)
+      .map((item) => ({
+        branchId: item.branchId,
+        branchName: branchMap.get(item.branchId) || '未知分店',
+        amount: item.amount,
+      }))
+      .sort((a, b) => b.amount - a.amount);
 
-    // 服務項目營收
+    // 服務項目營收（合併一次付清和分期付款）
     const serviceRevenueMap: Record<string, { serviceId: string; serviceName: string; amount: number; count: number }> = {};
-    ordersWithServices.forEach((order) => {
+    
+    // 處理一次付清服務營收
+    ordersWithServicesOneTime.forEach((order) => {
       if (order.appointment?.service) {
         const serviceId = order.appointment.service.id;
         if (!serviceRevenueMap[serviceId]) {
@@ -367,14 +456,50 @@ export class AdminAnalyticsOptimizedService {
         serviceRevenueMap[serviceId].count += 1;
       }
     });
+    
+    // 處理分期付款服務營收
+    ordersWithServicesInstallments.forEach((installment) => {
+      if (installment.order?.appointment?.service) {
+        const serviceId = installment.order.appointment.service.id;
+        if (!serviceRevenueMap[serviceId]) {
+          serviceRevenueMap[serviceId] = {
+            serviceId,
+            serviceName: installment.order.appointment.service.name,
+            amount: 0,
+            count: 0,
+          };
+        }
+        serviceRevenueMap[serviceId].amount += installment.amount;
+        serviceRevenueMap[serviceId].count += 1;
+      }
+    });
+    
     const serviceRevenueList = Object.values(serviceRevenueMap).sort((a, b) => b.amount - a.amount);
 
-    // 付款方式統計
-    const paymentMethodList = paymentMethodStats.map((item) => ({
-      method: item.paymentMethod || '未設定',
-      amount: item._sum.finalAmount || 0,
-      count: item._count,
-    }));
+    // 付款方式統計（合併一次付清和分期付款）
+    const paymentMethodMap: Record<string, { method: string; amount: number; count: number }> = {};
+    
+    // 處理一次付清付款方式
+    paymentMethodStatsOneTime.forEach((item) => {
+      const method = item.paymentMethod || '未設定';
+      if (!paymentMethodMap[method]) {
+        paymentMethodMap[method] = { method, amount: 0, count: 0 };
+      }
+      paymentMethodMap[method].amount += item._sum.finalAmount || 0;
+      paymentMethodMap[method].count += item._count;
+    });
+    
+    // 處理分期付款付款方式
+    paymentMethodStatsInstallments.forEach((item) => {
+      const method = item.paymentMethod || '未設定';
+      if (!paymentMethodMap[method]) {
+        paymentMethodMap[method] = { method, amount: 0, count: 0 };
+      }
+      paymentMethodMap[method].amount += item._sum.amount || 0;
+      paymentMethodMap[method].count += item._count;
+    });
+    
+    const paymentMethodList = Object.values(paymentMethodMap).sort((a, b) => b.amount - a.amount);
 
     // 會員數據
     const byLevel = membersByLevel.map((item) => ({
