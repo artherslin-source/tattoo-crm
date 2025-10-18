@@ -41,7 +41,8 @@ export class AdminAnalyticsOptimizedService {
     })() : null;
 
     const branchFilter = branchId && branchId !== 'all' ? { branchId } : {};
-    const dateFilter = startDate ? { paidAt: { gte: startDate } } : {};
+    const dateFilter = startDate ? { createdAt: { gte: startDate } } : {};
+    const paidDateFilter = startDate ? { paidAt: { gte: startDate } } : {};
 
     console.time('⏱️ Parallel Queries');
     
@@ -98,7 +99,7 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.installment.aggregate({
         where: {
           status: 'PAID',
-          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          ...paidDateFilter,
           order: branchFilter,
         },
         _sum: { amount: true },
@@ -195,7 +196,7 @@ export class AdminAnalyticsOptimizedService {
         by: ['orderId'],
         where: {
           status: 'PAID',
-          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          ...paidDateFilter,
           order: branchFilter,
         },
         _sum: { amount: true },
@@ -224,7 +225,7 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.installment.findMany({
         where: {
           status: 'PAID',
-          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          ...paidDateFilter,
           order: {
             ...branchFilter,
             appointment: { serviceId: { not: null } },
@@ -262,7 +263,7 @@ export class AdminAnalyticsOptimizedService {
         by: ['paymentMethod'],
         where: {
           status: 'PAID',
-          ...(startDate ? { paidAt: { gte: startDate } } : {}),
+          ...paidDateFilter,
           order: branchFilter,
         },
         _sum: { amount: true },
