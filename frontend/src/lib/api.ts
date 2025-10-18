@@ -23,11 +23,21 @@ function detectApiBase(): string {
         return backendUrl;
       }
       // 如果沒有設定後端 URL，嘗試推測後端 URL
-      // 將 frontend 替換為 backend
+      // Railway 的後端服務通常有不同的子域名
       if (hostname.includes('frontend')) {
         return hostname.replace('frontend', 'backend');
       } else if (hostname.includes('tattoo-crm-production')) {
-        return hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production');
+        // 嘗試不同的後端 URL 模式
+        const possibleBackendUrls = [
+          hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
+          hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend'),
+          hostname.replace('tattoo-crm-production', 'tattoo-crm-backend'),
+          // 如果以上都不行，嘗試添加 -backend 後綴
+          hostname.replace('.up.railway.app', '-backend.up.railway.app'),
+        ];
+        
+        // 返回第一個可能的 URL，讓瀏覽器嘗試
+        return possibleBackendUrls[0];
       } else {
         // 如果無法推測，使用同一個域名（可能會有問題）
         return `https://${hostname}`;
@@ -54,6 +64,54 @@ export async function checkBackendHealth(): Promise<boolean> {
     console.error('Backend health check failed:', error);
     return false;
   }
+}
+
+// 智能檢測後端 URL
+export async function detectBackendUrl(): Promise<string> {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  if (typeof window === 'undefined' || window.location.hostname === 'localhost') {
+    return "http://localhost:4000";
+  }
+  
+  const hostname = window.location.hostname;
+  if (hostname.includes('railway.app')) {
+    // 嘗試多個可能的後端 URL
+    const possibleUrls = [
+      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
+      hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend'),
+      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend'),
+      hostname.replace('.up.railway.app', '-backend.up.railway.app'),
+      // 嘗試不同的模式
+      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production-413f'),
+      hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend-413f'),
+    ];
+    
+    // 測試每個 URL
+    for (const url of possibleUrls) {
+      try {
+        const response = await fetch(`https://${url}/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(3000)
+        });
+        if (response.ok) {
+          console.log('✅ Found working backend URL:', `https://${url}`);
+          return `https://${url}`;
+        }
+      } catch (error) {
+        // 繼續嘗試下一個 URL
+        continue;
+      }
+    }
+    
+    // 如果都失敗了，返回第一個可能的 URL
+    console.warn('⚠️ Could not detect backend URL, using fallback');
+    return `https://${possibleUrls[0]}`;
+  }
+  
+  return `https://${hostname}`;
 }
 
 const API_BASE = detectApiBase();
