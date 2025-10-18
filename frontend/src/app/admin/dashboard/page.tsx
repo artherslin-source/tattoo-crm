@@ -265,13 +265,13 @@ export default function AdminDashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">總營收</CardTitle>
+            <CardTitle className="text-sm font-medium">累計總營收</CardTitle>
             <DollarSign className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">NT$ {(stats.totalRevenue || 0).toLocaleString()}</div>
             <p className="text-xs text-gray-700">
-              所有已完成訂單的總營收
+              歷史累計所有已付款訂單
             </p>
           </CardContent>
         </Card>

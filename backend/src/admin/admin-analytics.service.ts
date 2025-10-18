@@ -13,19 +13,28 @@ export class AdminAnalyticsService {
       '30d': 30,
       '90d': 90,
       '1y': 365,
+      'all': null, // null 表示不限制時間
     };
     const days = dateRangeMap[dateRange] || 30;
-    const startDate = new Date(now);
-    startDate.setDate(startDate.getDate() - days);
+    
+    // 只有在非 'all' 時才設定 startDate
+    const startDate = days !== null ? (() => {
+      const date = new Date(now);
+      date.setDate(date.getDate() - days);
+      return date;
+    })() : null;
 
     // 構建分店過濾條件
     const branchFilter = branchId && branchId !== 'all' ? { branchId } : {};
+    
+    // 構建時間過濾條件（如果有 startDate）
+    const dateFilter = startDate ? { createdAt: { gte: startDate } } : {};
 
     // ========== 營收數據 ==========
     const orders = await this.prisma.order.findMany({
       where: {
         ...branchFilter,
-        createdAt: { gte: startDate },
+        ...dateFilter,
         status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
       },
       include: {
@@ -55,24 +64,27 @@ export class AdminAnalyticsService {
       .reduce((sum, order) => sum + order.finalAmount, 0);
     const dailyRevenue = Math.round(last7DaysRevenue / 7);
 
-    // 計算趨勢（與上一期對比）
-    const previousPeriodStart = new Date(startDate);
-    previousPeriodStart.setDate(previousPeriodStart.getDate() - days);
-    const previousOrders = await this.prisma.order.findMany({
-      where: {
-        ...branchFilter,
-        createdAt: { gte: previousPeriodStart, lt: startDate },
-        status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
-      },
-    });
-    const previousRevenue = previousOrders.reduce((sum, order) => sum + order.finalAmount, 0);
-    const trend = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    // 計算趨勢（與上一期對比）- 只有在有時間範圍時才計算
+    let trend = 0;
+    if (startDate && days !== null) {
+      const previousPeriodStart = new Date(startDate);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - days);
+      const previousOrders = await this.prisma.order.findMany({
+        where: {
+          ...branchFilter,
+          createdAt: { gte: previousPeriodStart, lt: startDate },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+        },
+      });
+      const previousRevenue = previousOrders.reduce((sum, order) => sum + order.finalAmount, 0);
+      trend = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    }
 
     // 分店營收排行
     const revenueByBranch = await this.prisma.order.groupBy({
       by: ['branchId'],
       where: {
-        createdAt: { gte: startDate },
+        ...dateFilter,
         status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
       },
       _sum: {
@@ -190,7 +202,7 @@ export class AdminAnalyticsService {
     const appointments = await this.prisma.appointment.findMany({
       where: {
         ...branchFilter,
-        createdAt: { gte: startDate },
+        ...dateFilter,
       },
     });
 
@@ -198,7 +210,7 @@ export class AdminAnalyticsService {
       by: ['status'],
       where: {
         ...branchFilter,
-        createdAt: { gte: startDate },
+        ...dateFilter,
       },
       _count: true,
     });
@@ -219,7 +231,7 @@ export class AdminAnalyticsService {
       by: ['artistId'],
       where: {
         ...branchFilter,
-        completedAt: { gte: startDate },
+        ...(startDate ? { completedAt: { gte: startDate } } : {}),
       },
       _count: true,
       _sum: {
@@ -256,7 +268,7 @@ export class AdminAnalyticsService {
       by: ['serviceId'],
       where: {
         ...branchFilter,
-        createdAt: { gte: startDate },
+        ...dateFilter,
         serviceId: { not: null },
       },
       _count: true,
@@ -266,7 +278,7 @@ export class AdminAnalyticsService {
       by: ['serviceId'],
       where: {
         ...branchFilter,
-        completedAt: { gte: startDate },
+        ...(startDate ? { completedAt: { gte: startDate } } : {}),
       },
       _count: true,
       _sum: {

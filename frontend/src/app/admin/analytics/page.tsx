@@ -87,7 +87,7 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '1y' | 'all'>('30d');
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
   const fetchAnalyticsData = useCallback(async (): Promise<AnalyticsData | null> => {
@@ -168,6 +168,17 @@ export default function AnalyticsPage() {
     return `${sign}${value.toFixed(1)}%`;
   };
 
+  const getDateRangeLabel = () => {
+    const labels = {
+      '7d': '近7天',
+      '30d': '近30天',
+      '90d': '近90天',
+      '1y': '近一年',
+      'all': '累計'
+    };
+    return labels[dateRange] || '近30天';
+  };
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6 sm:px-6">
       {/* Header */}
@@ -182,16 +193,17 @@ export default function AnalyticsPage() {
           
           <div className="flex flex-col sm:flex-row gap-3">
             {/* 日期範圍選擇 */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {[
                 { value: '7d', label: '近7天' },
                 { value: '30d', label: '近30天' },
                 { value: '90d', label: '近90天' },
-                { value: '1y', label: '近一年' }
+                { value: '1y', label: '近一年' },
+                { value: 'all', label: '全部時間' }
               ].map((range) => (
                 <button
                   key={range.value}
-                  onClick={() => setDateRange(range.value as '7d' | '30d' | '90d' | '1y')}
+                  onClick={() => setDateRange(range.value as '7d' | '30d' | '90d' | '1y' | 'all')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     dateRange === range.value
                       ? 'bg-red-600 text-white hover:bg-red-700'
@@ -225,31 +237,40 @@ export default function AnalyticsPage() {
           {/* 總營收 */}
           <Card className="stat-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted">總營收</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted">
+                {getDateRangeLabel()}總營收
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-600">
                 {formatCurrency(analytics.revenue.total)}
               </div>
-              <div className="flex items-center mt-2 text-sm">
-                {analytics.revenue.trend >= 0 ? (
-                  <>
-                    <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
-                    <span className="text-green-600 font-semibold">
-                      {formatPercentage(analytics.revenue.trend)}
-                    </span>
-                    <span className="text-muted ml-1">vs 上期</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
-                    <span className="text-red-600 font-semibold">
-                      {formatPercentage(analytics.revenue.trend)}
-                    </span>
-                    <span className="text-red-600 ml-1">vs 上期</span>
-                  </>
-                )}
-              </div>
+              {dateRange !== 'all' && (
+                <div className="flex items-center mt-2 text-sm">
+                  {analytics.revenue.trend >= 0 ? (
+                    <>
+                      <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
+                      <span className="text-green-600 font-semibold">
+                        {formatPercentage(analytics.revenue.trend)}
+                      </span>
+                      <span className="text-muted ml-1">vs 上期</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownRight className="h-4 w-4 text-red-600 mr-1" />
+                      <span className="text-red-600 font-semibold">
+                        {formatPercentage(analytics.revenue.trend)}
+                      </span>
+                      <span className="text-red-600 ml-1">vs 上期</span>
+                    </>
+                  )}
+                </div>
+              )}
+              {dateRange === 'all' && (
+                <p className="text-sm text-muted mt-2">
+                  歷史累計所有已付款訂單
+                </p>
+              )}
             </CardContent>
           </Card>
 
