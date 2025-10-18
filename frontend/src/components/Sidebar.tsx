@@ -28,6 +28,7 @@ export default function Sidebar({ open, onClose }: Props) {
           <h1 className="brand-logo">雕川紋身 CRM</h1>
           <nav>
             <Link href="/admin/dashboard">📊 儀表板</Link>
+            <Link href="/admin/analytics">📈 統計報表</Link>
             <Link href="/admin/services">⚙️ 服務管理</Link>
             <Link href="/admin/artists">🎨 刺青師管理</Link>
             <Link href="/admin/members">👥 會員管理</Link>
@@ -67,6 +68,7 @@ export default function Sidebar({ open, onClose }: Props) {
               </div>
               <nav className="flex flex-col gap-1">
                 <Link href="/admin/dashboard" onClick={onClose}>📊 儀表板</Link>
+                <Link href="/admin/analytics" onClick={onClose}>📈 統計報表</Link>
                 <Link href="/admin/services" onClick={onClose}>⚙️ 服務管理</Link>
                 <Link href="/admin/artists" onClick={onClose}>🎨 刺青師管理</Link>
                 <Link href="/admin/members" onClick={onClose}>👥 會員管理</Link>
