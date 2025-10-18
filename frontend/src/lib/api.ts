@@ -85,56 +85,31 @@ export async function detectBackendUrl(): Promise<string> {
   console.log('🔍 Current hostname:', hostname);
   
   if (hostname.includes('railway.app')) {
-    // 嘗試多個可能的後端 URL
-    const possibleUrls = [
-      // 標準模式
-      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
-      hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend'),
-      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend'),
-      hostname.replace('.up.railway.app', '-backend.up.railway.app'),
-      // 包含 413f 的變體
-      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production-413f'),
-      hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend-413f'),
-      // 嘗試不同的後綴模式
-      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production-413f'),
-      hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend-413f'),
-      // 嘗試添加 -backend 前綴
-      hostname.replace('tattoo-crm-production', 'backend-tattoo-crm-production'),
-      // 嘗試完全不同的命名
-      'tattoo-crm-backend-production.up.railway.app',
-      'tattoo-crm-backend-production-413f.up.railway.app',
-      'tattoo-crm-production-backend.up.railway.app',
-      'tattoo-crm-production-backend-413f.up.railway.app',
-    ];
+    // 基於 Railway 的常見命名模式，直接返回最可能的後端 URL
+    const backendUrl = 'https://tattoo-crm-backend-production.up.railway.app';
+    console.log('🔍 Using hardcoded backend URL:', backendUrl);
     
-    console.log('🔍 Possible backend URLs:', possibleUrls);
-    
-    // 測試每個 URL
-    for (const url of possibleUrls) {
-      const fullUrl = `https://${url}/health`;
-      console.log('🔍 Testing URL:', fullUrl);
+    // 測試 URL 是否可用
+    try {
+      const response = await fetch(`${backendUrl}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000)
+      });
+      console.log('🔍 Backend health check status:', response.status);
       
-      try {
-        const response = await fetch(fullUrl, {
-          method: 'GET',
-          signal: AbortSignal.timeout(3000)
-        });
-        console.log('🔍 Response status:', response.status, 'for URL:', fullUrl);
-        
-        if (response.ok) {
-          console.log('✅ Found working backend URL:', `https://${url}`);
-          return `https://${url}`;
-        }
-      } catch (error) {
-        console.log('🔍 Error testing URL:', fullUrl, error);
-        // 繼續嘗試下一個 URL
-        continue;
+      if (response.ok) {
+        console.log('✅ Backend URL is working:', backendUrl);
+        return backendUrl;
+      } else {
+        console.warn('⚠️ Backend URL returned status:', response.status);
+        // 即使健康檢查失敗，也返回這個 URL，因為可能是認證問題
+        return backendUrl;
       }
+    } catch (error) {
+      console.warn('⚠️ Backend health check failed:', error);
+      // 即使健康檢查失敗，也返回這個 URL
+      return backendUrl;
     }
-    
-    // 如果都失敗了，返回第一個可能的 URL
-    console.warn('⚠️ Could not detect backend URL, using fallback:', `https://${possibleUrls[0]}`);
-    return `https://${possibleUrls[0]}`;
   }
   
   console.log('🔍 Using hostname as fallback:', `https://${hostname}`);
