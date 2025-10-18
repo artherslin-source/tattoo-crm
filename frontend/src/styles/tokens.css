@@ -108,6 +108,15 @@
   --transition-fast: 0.15s ease;
   --transition-base: 0.2s ease;
   --transition-slow: 0.3s ease;
+  
+  /* ==========================================
+     BRAND LOGO GOLD COLORS
+     ========================================== */
+  
+  /* Metallic gold gradient (light mode) */
+  --logo-gold-gradient: linear-gradient(90deg, #B88746 0%, #F9D976 25%, #E8C547 50%, #F6E27A 75%, #B88746 100%);
+  --logo-gold-glow: rgba(255, 223, 128, 0.4);
+  --logo-gold-shadow: rgba(184, 135, 70, 0.3);
 }
 
 /* ==========================================
@@ -182,6 +191,11 @@
   --color-sidebar-bg: #14161a;
   --color-sidebar-border: rgba(255, 255, 255, 0.1);
   --color-topbar-bg: #0e0f12;
+  
+  /* Brand Logo Gold Colors (dark mode - brighter) */
+  --logo-gold-gradient: linear-gradient(90deg, #FFD580 0%, #FFEA94 20%, #FFC94D 50%, #EAB308 80%, #FFD580 100%);
+  --logo-gold-glow: rgba(255, 215, 128, 0.55);
+  --logo-gold-shadow: rgba(234, 179, 8, 0.5);
 }
 
 /* ==========================================

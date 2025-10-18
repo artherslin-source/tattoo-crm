@@ -11,58 +11,109 @@
    BRAND LOGO EFFECTS
    ========================================== */
 
-/* Light Mode: Soft breathing glow effect */
+/* Light Mode: Metallic gold gradient with shimmer */
 .brand-logo,
 .login-logo,
-.loading-logo {
+.loading-logo,
+.site-logo {
   position: relative;
   font-weight: 700;
   letter-spacing: 0.6px;
-  background: linear-gradient(110deg, #b5b5b5 0%, #f3f3f3 40%, #d0d0d0 80%, #b5b5b5 100%);
-  background-size: 250% auto;
+  background: linear-gradient(90deg, #B88746 0%, #F9D976 25%, #E8C547 50%, #F6E27A 75%, #B88746 100%);
+  background-size: 400% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: light-sheen 8s ease-in-out infinite alternate;
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+  animation: metallicGoldShine 3s linear infinite;
+  filter: drop-shadow(0 2px 4px rgba(184, 135, 70, 0.3));
+  transition: filter 0.4s ease;
 }
 
-@keyframes light-sheen {
+.brand-logo:hover,
+.login-logo:hover,
+.loading-logo:hover,
+.site-logo:hover {
+  filter: drop-shadow(0 0 8px rgba(255, 223, 128, 0.6)) drop-shadow(0 2px 4px rgba(184, 135, 70, 0.4));
+}
+
+@keyframes metallicGoldShine {
   0% {
     background-position: 0% center;
-    opacity: 0.95;
   }
   50% {
     background-position: 100% center;
-    opacity: 1;
   }
   100% {
-    background-position: 0% center;
-    opacity: 0.95;
+    background-position: 200% center;
   }
 }
 
-/* Dark Mode: Metallic scanning effect */
+/* Dark Mode: Brighter metallic gold with enhanced glow */
 .dark .brand-logo,
 .dark .login-logo,
-.dark .loading-logo {
-  background: linear-gradient(120deg, #a0aec0 0%, #e5e7eb 20%, #a0aec0 40%, #6b7280 60%, #e5e7eb 80%, #a0aec0 100%);
-  background-size: 200% auto;
+.dark .loading-logo,
+.dark .site-logo {
+  background: linear-gradient(90deg, #FFD580 0%, #FFEA94 20%, #FFC94D 50%, #EAB308 80%, #FFD580 100%);
+  background-size: 400% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: metallic-sheen 6s linear infinite;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.12);
+  animation: metallicGoldShine 3s linear infinite;
+  filter: drop-shadow(0 2px 6px rgba(255, 215, 128, 0.5));
 }
 
-@keyframes metallic-sheen {
-  0% {
-    background-position: 200% center;
-  }
-  100% {
-    background-position: -200% center;
-  }
+.dark .brand-logo:hover,
+.dark .login-logo:hover,
+.dark .loading-logo:hover,
+.dark .site-logo:hover {
+  filter: drop-shadow(0 0 12px rgba(255, 215, 128, 0.7)) drop-shadow(0 2px 8px rgba(234, 179, 8, 0.5));
 }
+
+/* SVG Logo Gold Effect */
+.brand-logo svg,
+.login-logo svg,
+.site-logo svg {
+  transition: filter 0.4s ease;
+}
+
+.brand-logo svg path,
+.login-logo svg path,
+.site-logo svg path {
+  fill: url(#logo-gold-gradient);
+  transition: filter 0.4s ease;
+}
+
+.brand-logo:hover svg,
+.login-logo:hover svg,
+.site-logo:hover svg {
+  filter: drop-shadow(0 0 8px rgba(255, 223, 128, 0.6));
+}
+
+.dark .brand-logo:hover svg,
+.dark .login-logo:hover svg,
+.dark .site-logo:hover svg {
+  filter: drop-shadow(0 0 12px rgba(255, 215, 128, 0.7));
+}
+
+/* Gold Gradient Definition for SVG (to be added to SVG as <defs>) */
+/*
+<defs>
+  <linearGradient id="logo-gold-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" style="stop-color:#B88746;stop-opacity:1" />
+    <stop offset="25%" style="stop-color:#F9D976;stop-opacity:1" />
+    <stop offset="50%" style="stop-color:#E8C547;stop-opacity:1" />
+    <stop offset="75%" style="stop-color:#F6E27A;stop-opacity:1" />
+    <stop offset="100%" style="stop-color:#B88746;stop-opacity:1" />
+  </linearGradient>
+  <linearGradient id="logo-gold-gradient-dark" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" style="stop-color:#FFD580;stop-opacity:1" />
+    <stop offset="20%" style="stop-color:#FFEA94;stop-opacity:1" />
+    <stop offset="50%" style="stop-color:#FFC94D;stop-opacity:1" />
+    <stop offset="80%" style="stop-color:#EAB308;stop-opacity:1" />
+    <stop offset="100%" style="stop-color:#FFD580;stop-opacity:1" />
+  </linearGradient>
+</defs>
+*/
 
 /* ==========================================
    AUTH PAGE BRAND LOGO SVG
