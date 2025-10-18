@@ -55,7 +55,8 @@ function detectApiBase(): string {
 // 檢查後端服務狀態
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE}/health`, {
+    const backendUrl = await detectBackendUrl();
+    const response = await fetch(`${backendUrl}/health`, {
       method: 'GET',
       signal: AbortSignal.timeout(5000)
     });
@@ -161,7 +162,8 @@ export function getApiBase() {
 
 export async function postJSON<T>(path: string, body: Record<string, unknown> | unknown) {
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const backendUrl = await detectBackendUrl();
+    const res = await fetch(`${backendUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -204,7 +206,8 @@ async function tryRefreshOnce(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
 
-  const res = await fetch(`${API_BASE}/auth/refresh`, {
+  const backendUrl = await detectBackendUrl();
+  const res = await fetch(`${backendUrl}/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ refreshToken }),
@@ -232,7 +235,10 @@ async function withAuthFetch(
   headers.set("Content-Type", headers.get("Content-Type") ?? "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  // 使用動態檢測的後端 URL
+  const backendUrl = await detectBackendUrl();
+  
+  const res = await fetch(`${backendUrl}${path}`, {
     ...init,
     headers,
     credentials: "include",
@@ -242,7 +248,8 @@ async function withAuthFetch(
     const refreshed = await tryRefreshOnce();
     if (refreshed) {
       headers.set("Authorization", `Bearer ${refreshed}`);
-      return fetch(`${API_BASE}${path}`, {
+      const backendUrl = await detectBackendUrl();
+      return fetch(`${backendUrl}${path}`, {
         ...init,
         headers,
         credentials: "include",
@@ -315,7 +322,10 @@ export async function postFormDataWithAuth<T>(
   if (token) headers.set("Authorization", `Bearer ${token}`);
   // 不要設置 Content-Type，讓瀏覽器自動設置 multipart/form-data
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  // 使用動態檢測的後端 URL
+  const backendUrl = await detectBackendUrl();
+  
+  const res = await fetch(`${backendUrl}${path}`, {
     method: "POST",
     headers,
     body: formData,
