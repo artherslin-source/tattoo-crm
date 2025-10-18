@@ -545,7 +545,9 @@ export class AdminAnalyticsOptimizedService {
     });
 
     // 服務項目（批次查詢名稱，避免 N+1）
-    const serviceIds = serviceBookings.map((item) => item.serviceId).filter(Boolean);
+    const serviceIds = serviceBookings
+      .map((item) => item.serviceId)
+      .filter((id): id is string => id !== null && id !== undefined);
     const services = serviceIds.length > 0
       ? await this.prisma.service.findMany({
           where: { id: { in: serviceIds } },
@@ -562,12 +564,23 @@ export class AdminAnalyticsOptimizedService {
     );
 
     const topServices = serviceBookings.slice(0, 6).map((item) => {
-      const completion = completionMap.get(item.serviceId);
+      const serviceId = item.serviceId;
+      if (!serviceId) {
+        return {
+          serviceId: 'unknown',
+          serviceName: '未知服務',
+          bookingCount: item._count,
+          completionRate: 0,
+          revenue: 0,
+        };
+      }
+      
+      const completion = completionMap.get(serviceId);
       const completionRate = item._count > 0 ? ((completion?.count || 0) / item._count) * 100 : 0;
       
       return {
-        serviceId: item.serviceId,
-        serviceName: serviceMap.get(item.serviceId) || '未知服務',
+        serviceId,
+        serviceName: serviceMap.get(serviceId) || '未知服務',
         bookingCount: item._count,
         completionRate,
         revenue: completion?.revenue || 0,
