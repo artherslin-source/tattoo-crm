@@ -142,8 +142,19 @@ export default function AnalyticsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted">載入統計數據中...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto mb-6"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 animate-pulse"></div>
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">載入統計數據中</h3>
+          <p className="text-muted text-sm">正在分析營收、會員、預約等數據...</p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-red-600 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="h-2 w-2 rounded-full bg-red-600 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="h-2 w-2 rounded-full bg-red-600 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
         </div>
       </div>
     );

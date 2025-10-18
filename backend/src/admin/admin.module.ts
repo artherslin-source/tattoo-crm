@@ -9,7 +9,7 @@ import { AdminAppointmentsController } from './admin-appointments.controller';
 import { AdminMembersController } from './admin-members.controller';
 import { AdminMembersService } from './admin-members.service';
 import { AdminAnalyticsController } from './admin-analytics.controller';
-import { AdminAnalyticsService } from './admin-analytics.service';
+import { AdminAnalyticsOptimizedService } from './admin-analytics-optimized.service';
 import { AdminCleanupController } from './admin-cleanup.controller';
 import { DiagnosticsController } from './diagnostics.controller';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -30,6 +30,6 @@ import { BranchesModule } from '../branches/branches.module';
     AdminCleanupController,
     DiagnosticsController
   ],
-  providers: [AdminAppointmentsService, AdminArtistsService, AdminMembersService, AdminAnalyticsService],
+  providers: [AdminAppointmentsService, AdminArtistsService, AdminMembersService, AdminAnalyticsOptimizedService],
 })
 export class AdminModule {}
