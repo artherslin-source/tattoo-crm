@@ -69,49 +69,75 @@ export async function checkBackendHealth(): Promise<boolean> {
 
 // 智能檢測後端 URL
 export async function detectBackendUrl(): Promise<string> {
+  console.log('🔍 detectBackendUrl() called');
+  
   if (process.env.NEXT_PUBLIC_API_URL) {
+    console.log('🔍 Using NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
   if (typeof window === 'undefined' || window.location.hostname === 'localhost') {
+    console.log('🔍 Using localhost for development');
     return "http://localhost:4000";
   }
   
   const hostname = window.location.hostname;
+  console.log('🔍 Current hostname:', hostname);
+  
   if (hostname.includes('railway.app')) {
     // 嘗試多個可能的後端 URL
     const possibleUrls = [
+      // 標準模式
       hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
       hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend'),
       hostname.replace('tattoo-crm-production', 'tattoo-crm-backend'),
       hostname.replace('.up.railway.app', '-backend.up.railway.app'),
-      // 嘗試不同的模式
+      // 包含 413f 的變體
       hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production-413f'),
       hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend-413f'),
+      // 嘗試不同的後綴模式
+      hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production-413f'),
+      hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend-413f'),
+      // 嘗試添加 -backend 前綴
+      hostname.replace('tattoo-crm-production', 'backend-tattoo-crm-production'),
+      // 嘗試完全不同的命名
+      'tattoo-crm-backend-production.up.railway.app',
+      'tattoo-crm-backend-production-413f.up.railway.app',
+      'tattoo-crm-production-backend.up.railway.app',
+      'tattoo-crm-production-backend-413f.up.railway.app',
     ];
+    
+    console.log('🔍 Possible backend URLs:', possibleUrls);
     
     // 測試每個 URL
     for (const url of possibleUrls) {
+      const fullUrl = `https://${url}/health`;
+      console.log('🔍 Testing URL:', fullUrl);
+      
       try {
-        const response = await fetch(`https://${url}/health`, {
+        const response = await fetch(fullUrl, {
           method: 'GET',
           signal: AbortSignal.timeout(3000)
         });
+        console.log('🔍 Response status:', response.status, 'for URL:', fullUrl);
+        
         if (response.ok) {
           console.log('✅ Found working backend URL:', `https://${url}`);
           return `https://${url}`;
         }
       } catch (error) {
+        console.log('🔍 Error testing URL:', fullUrl, error);
         // 繼續嘗試下一個 URL
         continue;
       }
     }
     
     // 如果都失敗了，返回第一個可能的 URL
-    console.warn('⚠️ Could not detect backend URL, using fallback');
+    console.warn('⚠️ Could not detect backend URL, using fallback:', `https://${possibleUrls[0]}`);
     return `https://${possibleUrls[0]}`;
   }
   
+  console.log('🔍 Using hostname as fallback:', `https://${hostname}`);
   return `https://${hostname}`;
 }
 
