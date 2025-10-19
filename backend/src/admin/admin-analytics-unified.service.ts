@@ -93,6 +93,7 @@ export class AdminAnalyticsUnifiedService {
     const rangeKey: RangeKey = dateRange === '7d' ? '7d' : 
                               dateRange === '30d' ? '30d' : 
                               dateRange === '90d' ? '90d' : 
+                              dateRange === '1y' ? '365d' :  // 修復：前端傳遞 '1y'，後端期望 '365d'
                               dateRange === '365d' ? '365d' : 
                               dateRange === 'all' ? 'all' : '30d';
     
@@ -147,14 +148,8 @@ export class AdminAnalyticsUnifiedService {
       // 月營收（使用統一查詢）
       this.revenueByPaidAt(monthRange, branchFilter),
       
-      // 活躍會員（近30天有消費）
-      this.getActiveMembers(
-        {
-          start: new Date(DateTime.now().setZone('Asia/Taipei').minus({ days: 30 }).startOf('day').toJSDate()),
-          end: new Date(DateTime.now().setZone('Asia/Taipei').endOf('day').toJSDate())
-        },
-        branchFilter
-      ),
+      // 活躍會員（根據選擇的時間範圍）
+      this.getActiveMembers(currentRange, branchFilter),
       
       // 分店營收排行（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: bigint | number }[]>(`

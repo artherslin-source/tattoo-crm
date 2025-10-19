@@ -479,7 +479,12 @@ export default function AnalyticsPage() {
               <div className="text-3xl font-bold text-blue-600">
                 {analytics.members.activeMembers}
               </div>
-              <p className="text-sm text-muted mt-2">近30天有消費</p>
+              <p className="text-sm text-muted mt-2">
+                {dateRange === 'all' 
+                  ? '歷史活躍會員' 
+                  : `近${dateRange === '7d' ? '7' : dateRange === '30d' ? '30' : dateRange === '90d' ? '90' : '365'}天有消費`
+                }
+              </p>
             </CardContent>
           </Card>
         </div>
