@@ -135,7 +135,10 @@ async function main() {
               saturday: '10:00-16:00',
               sunday: 'closed',
             },
-            createdAt: faker.date.past(),
+            createdAt: faker.date.between({ 
+            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+            to: new Date() // 現在
+          }),
           },
         });
       }
@@ -170,7 +173,10 @@ async function main() {
             saturday: '10:00-16:00',
             sunday: 'closed',
           },
-          createdAt: faker.date.past(),
+          createdAt: faker.date.between({ 
+            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+            to: new Date() // 現在
+          }),
         },
       });
       branches.push(branch);
@@ -282,7 +288,10 @@ async function main() {
           role: 'ARTIST',
           phone: faker.phone.number(),
           branchId: branches[artistData[i].branchIndex].id,
-          createdAt: faker.date.past(),
+          createdAt: faker.date.between({ 
+            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+            to: new Date() // 現在
+          }),
         },
       });
 
@@ -300,7 +309,10 @@ async function main() {
           ],
           branchId: branches[artistData[i].branchIndex].id,
           active: true,
-          createdAt: faker.date.past(),
+          createdAt: faker.date.between({ 
+            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+            to: new Date() // 現在
+          }),
         },
       });
       artists.push({ ...artist, user: artistUser });
@@ -390,7 +402,10 @@ async function main() {
           endAt,
           status: faker.helpers.arrayElement(['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED']),
           notes: `${artist.displayName} 的預約 - ${service.name}`,
-          createdAt: faker.date.past(),
+          createdAt: faker.date.between({ 
+            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+            to: new Date() // 現在
+          }),
         },
       });
       appointments.push(appointment);
@@ -428,7 +443,10 @@ async function main() {
           paymentType: 'ONE_TIME', // 預設為一次付清，結帳時再決定
           status: 'PENDING_PAYMENT', // 預設為待結帳狀態
           isInstallment: false,
-          createdAt: faker.date.past(),
+          createdAt: faker.date.between({ 
+            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+            to: new Date() // 現在
+          }),
         },
       });
       orders.push(order);
@@ -457,7 +475,10 @@ async function main() {
           status: 'PAID',
           paymentType: 'ONE_TIME',
           paymentMethod: faker.helpers.arrayElement(['CASH', 'CREDIT_CARD', 'BANK_TRANSFER']),
-          paidAt: faker.date.past(),
+          paidAt: faker.date.between({ 
+            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+            to: new Date() // 現在
+          }),
         },
       });
     } else {
@@ -492,7 +513,10 @@ async function main() {
             dueDate,
             amount,
             status: isPaid ? 'PAID' : 'UNPAID',
-            paidAt: isPaid ? faker.date.past() : null,
+            paidAt: isPaid ? faker.date.between({ 
+              from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+              to: new Date() // 現在
+            }) : null,
             paymentMethod: faker.helpers.arrayElement(['CASH', 'CREDIT_CARD', 'BANK_TRANSFER']),
             notes: faker.lorem.sentence(),
           },
