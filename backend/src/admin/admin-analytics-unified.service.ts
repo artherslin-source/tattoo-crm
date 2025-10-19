@@ -156,6 +156,15 @@ export class AdminAnalyticsUnifiedService {
       monthRange
     });
 
+    // 調試本月營收查詢
+    console.log('🔍 Monthly revenue debug:', {
+      monthStart: monthRange.start,
+      monthEnd: monthRange.end,
+      currentTime: DateTime.now().setZone('Asia/Taipei').toISO(),
+      monthStartISO: new Date(monthRange.start).toISOString(),
+      monthEndISO: new Date(monthRange.end).toISOString()
+    });
+
     // 按照 ChatGPT 方案：使用原生 SQL 查詢所有統計數據
     const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
     const baseParams = [currentRange.start, currentRange.end];
@@ -178,7 +187,15 @@ export class AdminAnalyticsUnifiedService {
       this.revenueByPaidAt(currentRange, branchFilter),
       
       // 月營收（使用統一查詢）
-      this.revenueByPaidAt(monthRange, branchFilter),
+      (async () => {
+        const monthlyRev = await this.revenueByPaidAt(monthRange, branchFilter);
+        console.log('🔍 Monthly revenue result:', {
+          monthlyRevenue: monthlyRev,
+          monthRange: monthRange,
+          branchFilter: branchFilter
+        });
+        return monthlyRev;
+      })(),
       
       // 活躍會員（根據選擇的時間範圍）
       this.getActiveMembers(currentRange, branchFilter),

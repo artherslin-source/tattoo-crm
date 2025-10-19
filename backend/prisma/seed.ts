@@ -475,10 +475,24 @@ async function main() {
           status: 'PAID',
           paymentType: 'ONE_TIME',
           paymentMethod: faker.helpers.arrayElement(['CASH', 'CREDIT_CARD', 'BANK_TRANSFER']),
-          paidAt: faker.date.between({ 
-            from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
-            to: new Date() // 現在
-          }),
+          paidAt: (() => {
+            // 確保有一些當前月份的數據
+            const now = new Date();
+            const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const isCurrentMonth = Math.random() < 0.3; // 30% 機率生成當前月份的數據
+            
+            if (isCurrentMonth) {
+              return faker.date.between({ 
+                from: currentMonth,
+                to: now
+              });
+            } else {
+              return faker.date.between({ 
+                from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+                to: currentMonth // 到當前月份之前
+              });
+            }
+          })(),
         },
       });
     } else {
@@ -513,10 +527,24 @@ async function main() {
             dueDate,
             amount,
             status: isPaid ? 'PAID' : 'UNPAID',
-            paidAt: isPaid ? faker.date.between({ 
-              from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
-              to: new Date() // 現在
-            }) : null,
+            paidAt: isPaid ? (() => {
+              // 確保有一些當前月份的數據
+              const now = new Date();
+              const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+              const isCurrentMonth = Math.random() < 0.3; // 30% 機率生成當前月份的數據
+              
+              if (isCurrentMonth) {
+                return faker.date.between({ 
+                  from: currentMonth,
+                  to: now
+                });
+              } else {
+                return faker.date.between({ 
+                  from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前
+                  to: currentMonth // 到當前月份之前
+                });
+              }
+            })() : null,
             paymentMethod: faker.helpers.arrayElement(['CASH', 'CREDIT_CARD', 'BANK_TRANSFER']),
             notes: faker.lorem.sentence(),
           },

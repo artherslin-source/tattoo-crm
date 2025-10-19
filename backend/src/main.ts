@@ -45,6 +45,6 @@ async function bootstrap() {
   console.log(`🚀 Server is running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Backend accessible at: http://0.0.0.0:${port}`);
-  console.log(`🔄 Deployment Version: 2025-10-19-16:55 - Fix Display Names for Branches and Payment Methods`);
+  console.log(`🔄 Deployment Version: 2025-10-19-17:05 - Fix Monthly Revenue Data and Add Debug Logs`);
 }
 bootstrap();
