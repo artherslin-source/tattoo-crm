@@ -10,6 +10,7 @@ import { AdminMembersController } from './admin-members.controller';
 import { AdminMembersService } from './admin-members.service';
 import { AdminAnalyticsController } from './admin-analytics.controller';
 import { AdminAnalyticsOptimizedService } from './admin-analytics-optimized.service';
+import { AdminAnalyticsUnifiedService } from './admin-analytics-unified.service';
 import { AdminCacheController } from './admin-cache.controller';
 import { AdminCleanupController } from './admin-cleanup.controller';
 import { DiagnosticsController } from './diagnostics.controller';
@@ -37,6 +38,7 @@ import { BranchesModule } from '../branches/branches.module';
     AdminArtistsService,
     AdminMembersService,
     AdminAnalyticsOptimizedService,
+    AdminAnalyticsUnifiedService,
   ],
 })
 export class AdminModule {}

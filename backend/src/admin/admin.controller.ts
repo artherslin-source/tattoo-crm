@@ -4,6 +4,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CacheService } from '../common/cache.service';
+import { AdminAnalyticsUnifiedService } from './admin-analytics-unified.service';
 import { OrderStatus, Prisma } from '@prisma/client';
 
 @Controller('admin')
@@ -13,6 +14,7 @@ export class AdminController {
   constructor(
     private prisma: PrismaService,
     private cacheService: CacheService,
+    private analyticsService: AdminAnalyticsUnifiedService,
   ) {}
 
   @Get('dashboard')

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CacheService } from '../common/cache.service';
+import { DateTime } from 'luxon';
+
+type TimeRange = { start: Date; end: Date };
+type RangeKey = '7d' | '30d' | '90d' | '365d' | 'all' | 'month';
 
 @Injectable()
 export class AdminAnalyticsOptimizedService {
@@ -8,6 +12,49 @@ export class AdminAnalyticsOptimizedService {
     private prisma: PrismaService,
     private cacheService: CacheService,
   ) {}
+
+  // 統一時間範圍解析函式
+  private resolveRange(range: RangeKey, now = DateTime.now().setZone('Asia/Taipei')): TimeRange {
+    if (range === 'month') {
+      const start = now.startOf('month');
+      const end = now.endOf('day');
+      return { start: start.toJSDate(), end: end.toJSDate() };
+    }
+    if (range === 'all') {
+      // 全部時間：從最早日期到現在
+      return { start: new Date('1970-01-01T00:00:00.000Z'), end: now.endOf('day').toJSDate() };
+    }
+    const days = range === '7d' ? 7 : range === '30d' ? 30 : range === '90d' ? 90 : 365;
+    const start = now.minus({ days: days - 1 }).startOf('day');  // 含今天，共 N 天
+    const end = now.endOf('day');                              // 含今天 23:59:59
+    return { start: start.toJSDate(), end: end.toJSDate() };
+  }
+
+  // 單一口徑：用 paidAt 聚合營收
+  private async revenueByPaidAt(range: TimeRange, branchFilter: any = {}) {
+    // 一次付清：直接用 Order.paidAt 累加 finalAmount
+    const oneTime = await this.prisma.order.aggregate({
+      _sum: { finalAmount: true },
+      where: {
+        paymentType: 'ONE_TIME',
+        status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
+        paidAt: { gte: range.start, lte: range.end },
+        ...branchFilter,
+      },
+    });
+
+    // 分期：以 Installment.paidAt 累加實收金額
+    const installments = await this.prisma.installment.aggregate({
+      _sum: { amount: true },
+      where: {
+        status: 'PAID',
+        paidAt: { gte: range.start, lte: range.end },
+        order: branchFilter,
+      },
+    });
+
+    return (oneTime._sum.finalAmount || 0) + (installments._sum.amount || 0);
+  }
 
   async getAnalytics(branchId?: string, dateRange: string = '30d') {
     // 使用快取
