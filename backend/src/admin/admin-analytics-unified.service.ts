@@ -176,7 +176,7 @@ export class AdminAnalyticsUnifiedService {
     // 總刺青師數
     const totalResult = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
       SELECT COUNT(*) AS count
-      FROM "Artist" a
+      FROM "TattooArtist" a
       WHERE a."active" = true
         ${branchCondition}
     `, ...params);
@@ -202,7 +202,7 @@ export class AdminAnalyticsUnifiedService {
         COUNT(CASE WHEN a."status" = 'COMPLETED' THEN 1 END) AS "completedCount",
         COALESCE(SUM(o."finalAmount"), 0) AS "totalRevenue"
       FROM "Appointment" a
-      JOIN "Artist" ar ON a."artistId" = ar.id
+      JOIN "TattooArtist" ar ON a."artistId" = ar.id
       LEFT JOIN "Order" o ON a."orderId" = o.id
       WHERE a."createdAt" BETWEEN $1 AND $2
         ${branchCondition}
