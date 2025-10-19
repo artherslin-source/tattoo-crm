@@ -117,10 +117,9 @@ export class AdminAnalyticsUnifiedService {
 
     // 按照 ChatGPT 方案：使用原生 SQL 查詢所有統計數據
     const branchCondition = branchFilter.branchId ? 'AND o.branch_id = $3' : '';
-    const params = [currentRange.start, currentRange.end];
-    if (branchFilter.branchId) {
-      params.push(branchFilter.branchId);
-    }
+    const baseParams = [currentRange.start, currentRange.end];
+    const branchParams = branchFilter.branchId ? [branchFilter.branchId] : [];
+    const allParams = [...baseParams, ...branchParams];
 
     const [
       totalRevenue,
@@ -166,7 +165,7 @@ export class AdminAnalyticsUnifiedService {
         GROUP BY branch_id
         ORDER BY revenue DESC
         LIMIT 5
-      `, ...params),
+      `, ...allParams),
       
       // 服務項目營收（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: number; count: number }[]>(`
@@ -190,7 +189,7 @@ export class AdminAnalyticsUnifiedService {
         GROUP BY s.id, s.name
         ORDER BY revenue DESC
         LIMIT 5
-      `, ...params),
+      `, ...allParams),
       
       // 付款方式統計（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ method: string; amount: number; count: number }[]>(`
@@ -208,7 +207,7 @@ export class AdminAnalyticsUnifiedService {
         ) t
         GROUP BY method
         ORDER BY amount DESC
-      `, ...params),
+      `, ...allParams),
       
       // 會員總數
       this.prisma.member.count(),
