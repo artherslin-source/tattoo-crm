@@ -235,7 +235,7 @@ export class AdminAnalyticsUnifiedService {
     const totalResult = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
       SELECT COUNT(*) AS count
       FROM "Service" s
-      WHERE s."active" = true
+      WHERE s."isActive" = true
     `);
 
     // 熱門服務 TOP 5（按預約數）
