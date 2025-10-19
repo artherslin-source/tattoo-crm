@@ -36,6 +36,11 @@ export class AdminAnalyticsOptimizedService {
     // 計算日期範圍 - 統一使用 UTC 時間，避免時區問題
     const now = new Date();
     
+    // 計算本月1日的 UTC 時間（避免時區偏移）
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth();
+    const monthStart = new Date(Date.UTC(currentYear, currentMonth, 1));
+    
     const dateRangeMap = {
       '7d': 7,
       '30d': 30,
@@ -130,7 +135,7 @@ export class AdminAnalyticsOptimizedService {
           ...branchFilter,
           paymentType: 'ONE_TIME',
           paidAt: { 
-            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            gte: monthStart,
             lte: now
           },
           status: { in: ['PAID', 'PAID_COMPLETE'] },
@@ -143,7 +148,7 @@ export class AdminAnalyticsOptimizedService {
         where: {
           status: 'PAID',
           paidAt: { 
-            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            gte: monthStart,
             lte: now
           },
           ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
@@ -321,7 +326,7 @@ export class AdminAnalyticsOptimizedService {
       // 本月新增會員
       this.prisma.member.count({
         where: {
-          user: { createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) } },
+          user: { createdAt: { gte: monthStart } },
         },
       }),
       
