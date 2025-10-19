@@ -167,10 +167,13 @@ export class AdminAnalyticsUnifiedService {
 
   // 刺青師績效查詢
   private async getArtistStats(range: TimeRange, branchFilter: any = {}) {
-    const branchCondition = branchFilter.branchId ? 'AND a."branchId" = $3' : '';
-    const params = [range.start, range.end];
+    const branchCondition = branchFilter.branchId ? 'AND a."branchId" = $1' : '';
+    const branchParams = branchFilter.branchId ? [branchFilter.branchId] : [];
+    
+    const timeParams = [range.start, range.end];
+    const fullParams = [...timeParams];
     if (branchFilter.branchId) {
-      params.push(branchFilter.branchId);
+      fullParams.push(branchFilter.branchId);
     }
 
     // 總刺青師數
@@ -179,17 +182,19 @@ export class AdminAnalyticsUnifiedService {
       FROM "TattooArtist" a
       WHERE a."active" = true
         ${branchCondition}
-    `, ...params);
+    `, ...branchParams);
 
     // 活躍刺青師（在指定時間範圍內有預約的刺青師）
+    const activeBranchCondition = branchFilter.branchId ? 'AND a."branchId" = $3' : '';
     const activeResult = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
       SELECT COUNT(DISTINCT a."artistId") AS count
       FROM "Appointment" a
       WHERE a."createdAt" BETWEEN $1 AND $2
-        ${branchCondition}
-    `, ...params);
+        ${activeBranchCondition}
+    `, ...fullParams);
 
     // 績效 TOP 5（按預約完成數）
+    const topPerformersBranchCondition = branchFilter.branchId ? 'AND a."branchId" = $3' : '';
     const topPerformersResult = await this.prisma.$queryRawUnsafe<{ 
       artistId: string, 
       artistName: string, 
@@ -205,11 +210,22 @@ export class AdminAnalyticsUnifiedService {
       JOIN "TattooArtist" ar ON a."artistId" = ar.id
       LEFT JOIN "Order" o ON a."orderId" = o.id
       WHERE a."createdAt" BETWEEN $1 AND $2
-        ${branchCondition}
+        ${topPerformersBranchCondition}
       GROUP BY a."artistId", ar."displayName"
       ORDER BY "completedCount" DESC, "totalRevenue" DESC
       LIMIT 5
-    `, ...params);
+    `, ...fullParams);
+
+    console.log('🎨 Artist Stats Debug:', {
+      totalArtists: this.safeBigIntToNumber(totalResult[0]?.count),
+      topPerformersCount: topPerformersResult.length,
+      topPerformers: topPerformersResult.map(item => ({
+        artistId: item.artistId,
+        artistName: item.artistName,
+        completedCount: item.completedCount,
+        totalRevenue: item.totalRevenue,
+      })),
+    });
 
     return {
       total: this.safeBigIntToNumber(totalResult[0]?.count),

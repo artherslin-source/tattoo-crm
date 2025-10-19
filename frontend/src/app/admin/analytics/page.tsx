@@ -656,37 +656,42 @@ export default function AnalyticsPage() {
                 <CardTitle>績效 TOP 5</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {analytics.artists.topPerformers.slice(0, 5).map((artist, index) => (
-                    <div key={artist.artistId} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                {analytics.artists.topPerformers.length > 0 ? (
+                  <div className="space-y-4">
+                    {analytics.artists.topPerformers.slice(0, 5).map((artist, index) => (
+                      <div key={artist.artistId} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                             index === 0 ? 'bg-yellow-500 text-white' :
                             index === 1 ? 'bg-gray-400 text-white' :
                             index === 2 ? 'bg-orange-600 text-white' :
-                            'bg-gray-200 text-gray-600'
+                            'bg-gray-200 text-gray-700'
                           }`}>
                             {index + 1}
                           </div>
-                          <span className="font-medium">{artist.artistName}</span>
+                          <div>
+                            <div className="font-medium">{artist.artistName}</div>
+                            <div className="flex items-center gap-3 text-sm text-muted mt-1">
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                {formatCurrency(artist.revenue)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Package className="h-3 w-3" />
+                                {artist.completedServices} 次
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-sm pl-9">
-                        <div className="flex items-center gap-4">
-                          <span className="text-muted">
-                            <DollarSign className="h-3 w-3 inline mr-1" />
-                            {formatCurrency(artist.revenue)}
-                          </span>
-                          <span className="text-muted">
-                            <Package className="h-3 w-3 inline mr-1" />
-                            {artist.completedServices} 次服務
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted">
+                    <UserCheck className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>暫無刺青師績效數據</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
