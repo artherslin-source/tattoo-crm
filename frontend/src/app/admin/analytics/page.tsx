@@ -313,7 +313,7 @@ export default function AnalyticsPage() {
               <p className="text-sm text-muted mt-2">
                 {analytics.revenue.actualDays 
                   ? `過去${analytics.revenue.actualDays}天平均`
-                  : '過去7天平均'
+                  : '歷史平均'
                 }
               </p>
             </CardContent>

@@ -321,7 +321,7 @@ export class AdminAnalyticsOptimizedService {
       // 活躍會員
       this.prisma.order.findMany({
         where: {
-          paidAt: { gte: new Date(taiwanNow.getTime() - 30 * 24 * 60 * 60 * 1000) },
+          paidAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
           status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
         },
         select: { memberId: true },
