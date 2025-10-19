@@ -265,46 +265,64 @@ export class AdminAnalyticsUnifiedService {
       _sum: { balance: true },
     });
 
-    // 按照 ChatGPT 方案處理結果格式
+    // 按照 ChatGPT 方案處理結果格式，完全匹配前端期望的數據結構
     const result = {
       revenue: {
         total: totalRevenue,
         monthly: monthlyRevenue,
         daily: dailyRevenue,
-        growthRate: 0, // 暫時設為0，後續可加入成長率計算
+        trend: 0, // 暫時設為0，後續可加入成長率計算
         actualDays,
+        byBranch: branchRevenue.map(item => ({
+          branchId: item.branch_id,
+          branchName: `分店 ${item.branch_id}`, // 簡化處理，實際應該查詢分店名稱
+          amount: this.safeBigIntToNumber(item.revenue),
+        })),
+        byService: serviceRevenue.map(item => ({
+          serviceId: item.service_name, // 簡化處理
+          serviceName: item.service_name,
+          amount: this.safeBigIntToNumber(item.revenue),
+          count: this.safeBigIntToNumber(item.count),
+        })),
+        byPaymentMethod: paymentMethodStats.map(item => ({
+          method: item.method,
+          amount: this.safeBigIntToNumber(item.amount),
+          count: this.safeBigIntToNumber(item.count),
+        })),
       },
-      branchRevenue: branchRevenue.map(item => ({
-        branchId: item.branch_id,
-        revenue: this.safeBigIntToNumber(item.revenue),
-      })),
-      serviceRevenue: serviceRevenue.map(item => ({
-        name: item.service_name,
-        revenue: this.safeBigIntToNumber(item.revenue),
-        count: this.safeBigIntToNumber(item.count),
-      })),
-      paymentMethodStats: paymentMethodStats.map(item => ({
-        method: item.method,
-        amount: this.safeBigIntToNumber(item.amount),
-        count: this.safeBigIntToNumber(item.count),
-        percentage: totalRevenue > 0 ? (this.safeBigIntToNumber(item.amount) / totalRevenue) * 100 : 0,
-      })),
       members: {
         total: totalMembers,
         newThisMonth: newMembersThisMonth,
-        active: activeMembers,
-        levelDistribution: memberLevelStats.map(item => ({
+        activeMembers: activeMembers,
+        byLevel: memberLevelStats.map(item => ({
           level: item.level,
           count: this.safeBigIntToNumber(item.count),
         })),
         topSpenders: topSpendersData.map(item => ({
-          id: item.id,
-          name: item.name,
-          level: item.level,
+          userId: item.id,
+          userName: item.name,
           totalSpent: this.safeBigIntToNumber(item.total_spent),
-          orderCount: 0, // 簡化處理
+          balance: 0, // 簡化處理，實際應該查詢餘額
         })),
-        totalStoredValue: this.safeBigIntToNumber(totalStoredValue._sum.balance),
+        totalBalance: this.safeBigIntToNumber(totalStoredValue._sum.balance),
+      },
+      appointments: {
+        total: 0, // 簡化處理，實際應該查詢預約總數
+        pending: 0,
+        confirmed: 0,
+        completed: 0,
+        cancelled: 0,
+        conversionRate: 0,
+        byStatus: [],
+        byTimeSlot: [],
+      },
+      artists: {
+        total: 0, // 簡化處理，實際應該查詢刺青師總數
+        topPerformers: [],
+      },
+      services: {
+        total: 0, // 簡化處理，實際應該查詢服務總數
+        topServices: [],
       },
     };
 

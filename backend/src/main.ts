@@ -45,6 +45,6 @@ async function bootstrap() {
   console.log(`🚀 Server is running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Backend accessible at: http://0.0.0.0:${port}`);
-  console.log(`🔄 Deployment Version: 2025-10-19-16:15 - Fix BigInt Serialization`);
+  console.log(`🔄 Deployment Version: 2025-10-19-16:25 - Fix Frontend Data Structure`);
 }
 bootstrap();
