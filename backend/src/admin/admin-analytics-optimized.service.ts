@@ -23,8 +23,11 @@ export class AdminAnalyticsOptimizedService {
   private async fetchAnalyticsData(branchId?: string, dateRange: string = '30d') {
     console.time('⏱️ Analytics Total Time');
     
-    // 計算日期範圍
+    // 計算日期範圍 - 使用台灣時區
     const now = new Date();
+    // 轉換為台灣時區 (UTC+8)
+    const taiwanNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    
     const dateRangeMap = {
       '7d': 7,
       '30d': 30,
@@ -35,9 +38,10 @@ export class AdminAnalyticsOptimizedService {
     const days = dateRangeMap[dateRange] || 30;
     
     const startDate = days !== null ? (() => {
-      const date = new Date(now);
+      const date = new Date(taiwanNow);
       date.setDate(date.getDate() - days);
-      return date;
+      // 轉回 UTC 時間
+      return new Date(date.getTime() - 8 * 60 * 60 * 1000);
     })() : null;
 
     const branchFilter = branchId && branchId !== 'all' ? { branchId } : {};
@@ -119,8 +123,8 @@ export class AdminAnalyticsOptimizedService {
           ...branchFilter,
           paymentType: 'ONE_TIME',
           paidAt: { 
-            gte: new Date(now.getFullYear(), now.getMonth(), 1),
-            lte: new Date()
+            gte: new Date(taiwanNow.getFullYear(), taiwanNow.getMonth(), 1),
+            lte: taiwanNow
           },
           status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
@@ -132,8 +136,8 @@ export class AdminAnalyticsOptimizedService {
         where: {
           status: 'PAID',
           paidAt: { 
-            gte: new Date(now.getFullYear(), now.getMonth(), 1),
-            lte: new Date()
+            gte: new Date(taiwanNow.getFullYear(), taiwanNow.getMonth(), 1),
+            lte: taiwanNow
           },
           ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
         },
@@ -148,12 +152,12 @@ export class AdminAnalyticsOptimizedService {
           ...(startDate ? {
             paidAt: { 
               gte: startDate,
-              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+              lte: taiwanNow
             }
           } : {
             paidAt: { 
-              gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-              lte: new Date()
+              gte: new Date(taiwanNow.getTime() - 7 * 24 * 60 * 60 * 1000),
+              lte: taiwanNow
             }
           }),
           status: { in: ['PAID', 'PAID_COMPLETE'] },
@@ -168,12 +172,12 @@ export class AdminAnalyticsOptimizedService {
           ...(startDate ? {
             paidAt: { 
               gte: startDate,
-              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+              lte: taiwanNow
             }
           } : {
             paidAt: { 
-              gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-              lte: new Date()
+              gte: new Date(taiwanNow.getTime() - 7 * 24 * 60 * 60 * 1000),
+              lte: taiwanNow
             }
           }),
           ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
@@ -310,14 +314,14 @@ export class AdminAnalyticsOptimizedService {
       // 本月新增會員
       this.prisma.member.count({
         where: {
-          user: { createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) } },
+          user: { createdAt: { gte: new Date(taiwanNow.getFullYear(), taiwanNow.getMonth(), 1) } },
         },
       }),
       
       // 活躍會員
       this.prisma.order.findMany({
         where: {
-          createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+          createdAt: { gte: new Date(taiwanNow.getTime() - 30 * 24 * 60 * 60 * 1000) },
           status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
         },
         select: { memberId: true },
@@ -418,7 +422,7 @@ export class AdminAnalyticsOptimizedService {
       (last7DaysInstallmentRevenueAgg._sum.amount || 0);
     
     // 計算實際天數
-    const actualDays = startDate ? Math.ceil((now.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) : 7;
+    const actualDays = startDate ? Math.ceil((taiwanNow.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) : 7;
     const dailyRevenue = actualDays > 0 ? Math.round(last7DaysRevenue / actualDays) : 0;
     
     const previousRevenue = 
