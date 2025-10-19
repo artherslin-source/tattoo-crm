@@ -197,12 +197,12 @@ export class AdminAnalyticsUnifiedService {
       this.prisma.$queryRawUnsafe<{ method: string; amount: number; count: number }[]>(`
         SELECT method, SUM(amount) AS amount, COUNT(*) AS count
         FROM (
-          SELECT COALESCE("paymentMethod", 'UNKNOWN') AS method, "finalAmount" AS amount FROM "Order" o
-            WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND "paidAt" BETWEEN $1 AND $2
+          SELECT COALESCE(o."paymentMethod", 'UNKNOWN') AS method, o."finalAmount" AS amount FROM "Order" o
+            WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND o."paidAt" BETWEEN $1 AND $2
               ${branchCondition}
           UNION ALL
-          SELECT COALESCE("paymentMethod", 'UNKNOWN') AS method, "amount" FROM "Installment" i
+          SELECT COALESCE(i."paymentMethod", 'UNKNOWN') AS method, i."amount" FROM "Installment" i
             JOIN "Order" o ON i."orderId" = o.id
             WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
               ${branchCondition}
