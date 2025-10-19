@@ -26,6 +26,7 @@ interface AnalyticsData {
     monthly: number;
     daily: number;
     trend: number; // 相比上期增長百分比
+    actualDays?: number; // 實際天數
     byBranch: Array<{ branchId: string; branchName: string; amount: number }>;
     byService: Array<{ serviceId: string; serviceName: string; amount: number; count: number }>;
     byPaymentMethod: Array<{ method: string; amount: number; count: number }>;
@@ -310,7 +311,10 @@ export default function AnalyticsPage() {
                 {formatCurrency(analytics.revenue.daily)}
               </div>
               <p className="text-sm text-muted mt-2">
-                過去7天平均
+                {analytics.revenue.actualDays 
+                  ? `過去${analytics.revenue.actualDays}天平均`
+                  : '過去7天平均'
+                }
               </p>
             </CardContent>
           </Card>

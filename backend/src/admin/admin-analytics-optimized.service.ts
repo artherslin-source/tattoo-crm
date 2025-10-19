@@ -96,7 +96,7 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.order.aggregate({
         where: {
           ...branchFilter,
-          ...(startDate ? dateFilter : allTimeFilter),
+          ...(startDate ? dateFilter : {}), // 全部時間時不限制日期
           paymentType: 'ONE_TIME',
           status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
@@ -107,54 +107,40 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.installment.aggregate({
         where: {
           status: 'PAID',
-          ...(startDate ? paidDateFilter : allTimeFilter),
+          ...(startDate ? paidDateFilter : {}), // 全部時間時不限制日期
           order: branchFilter,
         },
         _sum: { amount: true },
       }),
       
-      // 月營收（一次付清）
+      // 月營收（一次付清）- 固定為本月1日至今，不受時間篩選影響
       this.prisma.order.aggregate({
         where: {
           ...branchFilter,
           paymentType: 'ONE_TIME',
-          ...(startDate ? {
-            paidAt: { 
-              gte: startDate,
-              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
-            }
-          } : {
-            paidAt: { 
-              gte: new Date(now.getFullYear(), now.getMonth(), 1),
-              lte: new Date()
-            }
-          }),
+          paidAt: { 
+            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            lte: new Date()
+          },
           status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
       }),
       
-      // 月營收（分期付款已付金額）
+      // 月營收（分期付款已付金額）- 固定為本月1日至今，不受時間篩選影響
       this.prisma.installment.aggregate({
         where: {
           status: 'PAID',
-          ...(startDate ? {
-            paidAt: { 
-              gte: startDate,
-              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
-            }
-          } : {
-            paidAt: { 
-              gte: new Date(now.getFullYear(), now.getMonth(), 1),
-              lte: new Date()
-            }
-          }),
+          paidAt: { 
+            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            lte: new Date()
+          },
           order: branchFilter,
         },
         _sum: { amount: true },
       }),
       
-      // 過去7天營收（一次付清）
+      // 日均營收（一次付清）- 根據時間篩選動態計算
       this.prisma.order.aggregate({
         where: {
           ...branchFilter,
@@ -175,7 +161,7 @@ export class AdminAnalyticsOptimizedService {
         _sum: { finalAmount: true },
       }),
       
-      // 過去7天營收（分期付款已付金額）
+      // 日均營收（分期付款已付金額）- 根據時間篩選動態計算
       this.prisma.installment.aggregate({
         where: {
           status: 'PAID',
@@ -430,7 +416,10 @@ export class AdminAnalyticsOptimizedService {
     const last7DaysRevenue = 
       (last7DaysOneTimeRevenueAgg._sum.finalAmount || 0) + 
       (last7DaysInstallmentRevenueAgg._sum.amount || 0);
-    const dailyRevenue = Math.round(last7DaysRevenue / 7);
+    
+    // 計算實際天數
+    const actualDays = startDate ? Math.ceil((now.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) : 7;
+    const dailyRevenue = actualDays > 0 ? Math.round(last7DaysRevenue / actualDays) : 0;
     
     const previousRevenue = 
       (previousOneTimeRevenueAgg._sum.finalAmount || 0) + 
@@ -646,6 +635,7 @@ export class AdminAnalyticsOptimizedService {
         monthly: monthlyRevenue,
         daily: dailyRevenue,
         trend,
+        actualDays, // 添加實際天數信息
         byBranch: branchRevenueWithNames,
         byService: serviceRevenueList,
         byPaymentMethod: paymentMethodList,
