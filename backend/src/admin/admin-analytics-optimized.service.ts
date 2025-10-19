@@ -123,8 +123,8 @@ export class AdminAnalyticsOptimizedService {
           ...branchFilter,
           paymentType: 'ONE_TIME',
           paidAt: { 
-            gte: new Date(taiwanNow.getFullYear(), taiwanNow.getMonth(), 1),
-            lte: taiwanNow
+            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            lte: now
           },
           status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
@@ -136,8 +136,8 @@ export class AdminAnalyticsOptimizedService {
         where: {
           status: 'PAID',
           paidAt: { 
-            gte: new Date(taiwanNow.getFullYear(), taiwanNow.getMonth(), 1),
-            lte: taiwanNow
+            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            lte: now
           },
           ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
         },
@@ -421,8 +421,8 @@ export class AdminAnalyticsOptimizedService {
       (last7DaysOneTimeRevenueAgg._sum.finalAmount || 0) + 
       (last7DaysInstallmentRevenueAgg._sum.amount || 0);
     
-    // 計算實際天數
-    const actualDays = startDate ? Math.ceil((taiwanNow.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) : days;
+    // 計算實際天數 - 使用原始天數值，不計算時間差
+    const actualDays = days !== null ? days : 7;
     const dailyRevenue = actualDays > 0 ? Math.round(last7DaysRevenue / actualDays) : 0;
     
     const previousRevenue = 
