@@ -32,7 +32,7 @@ export class AdminAnalyticsUnifiedService {
 
   // 單一口徑：用 paidAt 聚合營收（使用原生 SQL 避免 Prisma 類型問題）
   private async revenueByPaidAt(range: TimeRange, branchFilter: any = {}) {
-    const branchCondition = branchFilter.branchId ? 'AND o.branch_id = $3' : '';
+    const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
     const params = [range.start, range.end];
     if (branchFilter.branchId) {
       params.push(branchFilter.branchId);
@@ -41,14 +41,14 @@ export class AdminAnalyticsUnifiedService {
     const result = await this.prisma.$queryRawUnsafe<{ total: number }[]>(`
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM (
-        SELECT final_amount AS amount FROM "Order" o
-          WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-            AND paid_at BETWEEN $1 AND $2
+        SELECT "finalAmount" AS amount FROM "Order" o
+          WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+            AND "paidAt" BETWEEN $1 AND $2
             ${branchCondition}
         UNION ALL
-        SELECT amount FROM "Installment" i
-          JOIN "Order" o ON i.order_id = o.id
-          WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+        SELECT "amount" FROM "Installment" i
+          JOIN "Order" o ON i."orderId" = o.id
+          WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
             ${branchCondition}
       ) t
     `, ...params);
@@ -58,24 +58,26 @@ export class AdminAnalyticsUnifiedService {
 
   // 活躍會員查詢（統一使用 paidAt）
   private async getActiveMembers(range: TimeRange, branchFilter: any = {}) {
+    const branchCondition = branchFilter.branchId ? 'AND "branchId" = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) {
+      params.push(branchFilter.branchId);
+    }
+
     const result = await this.prisma.$queryRawUnsafe<{ count: number }[]>(`
-      SELECT COUNT(DISTINCT member_id) AS count
+      SELECT COUNT(DISTINCT "memberId") AS count
       FROM (
-        SELECT member_id FROM "Order"
-          WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-            AND paid_at BETWEEN $1 AND $2
-            ${Object.keys(branchFilter).length > 0 ? 'AND branch_id = $3' : ''}
+        SELECT "memberId" FROM "Order"
+          WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+            AND "paidAt" BETWEEN $1 AND $2
+            ${branchCondition}
         UNION
-        SELECT o.member_id FROM "Installment" i
-          JOIN "Order" o ON i.order_id = o.id
-          WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
-            ${Object.keys(branchFilter).length > 0 ? 'AND o.branch_id = $3' : ''}
+        SELECT o."memberId" FROM "Installment" i
+          JOIN "Order" o ON i."orderId" = o.id
+          WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
+            ${branchCondition}
       ) t
-    `, 
-    range.start,
-    range.end,
-    ...(Object.keys(branchFilter).length > 0 ? [branchFilter.branchId] : [])
-    );
+    `, ...params);
     
     return result[0]?.count || 0;
   }
@@ -116,7 +118,7 @@ export class AdminAnalyticsUnifiedService {
     });
 
     // 按照 ChatGPT 方案：使用原生 SQL 查詢所有統計數據
-    const branchCondition = branchFilter.branchId ? 'AND o.branch_id = $3' : '';
+    const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
     const baseParams = [currentRange.start, currentRange.end];
     const branchParams = branchFilter.branchId ? [branchFilter.branchId] : [];
     const allParams = [...baseParams, ...branchParams];
@@ -150,19 +152,19 @@ export class AdminAnalyticsUnifiedService {
       
       // 分店營收排行（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: number }[]>(`
-        SELECT branch_id, SUM(amount) AS revenue
+        SELECT "branchId" AS branch_id, SUM(amount) AS revenue
         FROM (
-          SELECT o.branch_id, final_amount AS amount FROM "Order" o
-            WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND paid_at BETWEEN $1 AND $2
+          SELECT o."branchId", "finalAmount" AS amount FROM "Order" o
+            WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND "paidAt" BETWEEN $1 AND $2
               ${branchCondition}
           UNION ALL
-          SELECT o.branch_id, i.amount FROM "Installment" i
-            JOIN "Order" o ON i.order_id = o.id
-            WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+          SELECT o."branchId", i."amount" FROM "Installment" i
+            JOIN "Order" o ON i."orderId" = o.id
+            WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
               ${branchCondition}
         ) t
-        GROUP BY branch_id
+        GROUP BY "branchId"
         ORDER BY revenue DESC
         LIMIT 5
       `, ...allParams),
@@ -171,21 +173,21 @@ export class AdminAnalyticsUnifiedService {
       this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: number; count: number }[]>(`
         SELECT s.id AS service_id, s.name AS service_name, SUM(amount) AS revenue, COUNT(*) AS count
         FROM (
-          SELECT a.service_id, final_amount AS amount FROM "Order" o
-            JOIN "Appointment" a ON o.appointment_id = a.id
-            WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND paid_at BETWEEN $1 AND $2
+          SELECT a."serviceId", "finalAmount" AS amount FROM "Order" o
+            JOIN "Appointment" a ON o."appointmentId" = a.id
+            WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND "paidAt" BETWEEN $1 AND $2
               ${branchCondition}
-              AND a.service_id IS NOT NULL
+              AND a."serviceId" IS NOT NULL
           UNION ALL
-          SELECT a.service_id, i.amount FROM "Installment" i
-            JOIN "Order" o ON i.order_id = o.id
-            JOIN "Appointment" a ON o.appointment_id = a.id
-            WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+          SELECT a."serviceId", i."amount" FROM "Installment" i
+            JOIN "Order" o ON i."orderId" = o.id
+            JOIN "Appointment" a ON o."appointmentId" = a.id
+            WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
               ${branchCondition}
-              AND a.service_id IS NOT NULL
+              AND a."serviceId" IS NOT NULL
         ) t
-        JOIN "Service" s ON t.service_id = s.id
+        JOIN "Service" s ON t."serviceId" = s.id
         GROUP BY s.id, s.name
         ORDER BY revenue DESC
         LIMIT 5
@@ -195,14 +197,14 @@ export class AdminAnalyticsUnifiedService {
       this.prisma.$queryRawUnsafe<{ method: string; amount: number; count: number }[]>(`
         SELECT method, SUM(amount) AS amount, COUNT(*) AS count
         FROM (
-          SELECT COALESCE(payment_method, 'UNKNOWN') AS method, final_amount AS amount FROM "Order" o
-            WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND paid_at BETWEEN $1 AND $2
+          SELECT COALESCE("paymentMethod", 'UNKNOWN') AS method, "finalAmount" AS amount FROM "Order" o
+            WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND "paidAt" BETWEEN $1 AND $2
               ${branchCondition}
           UNION ALL
-          SELECT COALESCE(payment_method, 'UNKNOWN') AS method, amount FROM "Installment" i
-            JOIN "Order" o ON i.order_id = o.id
-            WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+          SELECT COALESCE("paymentMethod", 'UNKNOWN') AS method, "amount" FROM "Installment" i
+            JOIN "Order" o ON i."orderId" = o.id
+            WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
               ${branchCondition}
         ) t
         GROUP BY method
@@ -221,18 +223,18 @@ export class AdminAnalyticsUnifiedService {
       
       // 會員等級分布（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ level: string; count: number }[]>(`
-        SELECT COALESCE(membership_level, 'UNKNOWN') AS level, COUNT(*) AS count
+        SELECT COALESCE("membershipLevel", 'UNKNOWN') AS level, COUNT(*) AS count
         FROM "Member" m
-        GROUP BY membership_level
+        GROUP BY "membershipLevel"
         ORDER BY count DESC
       `),
       
       // 消費TOP10（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ id: string; name: string; level: string; total_spent: number }[]>(`
-        SELECT m.id, COALESCE(u.name, '未知') AS name, COALESCE(m.membership_level, 'UNKNOWN') AS level, m.total_spent
+        SELECT m.id, COALESCE(u.name, '未知') AS name, COALESCE(m."membershipLevel", 'UNKNOWN') AS level, m."totalSpent" AS total_spent
         FROM "Member" m
-        LEFT JOIN "User" u ON m.user_id = u.id
-        ORDER BY m.total_spent DESC
+        LEFT JOIN "User" u ON m."userId" = u.id
+        ORDER BY m."totalSpent" DESC
         LIMIT 10
       `),
     ]);
