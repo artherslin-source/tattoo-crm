@@ -62,6 +62,20 @@ export class AdminAnalyticsUnifiedService {
     return this.safeBigIntToNumber(result[0]?.total);
   }
 
+  // 付款方式本地化顯示名稱
+  private getPaymentMethodDisplayName(method: string): string {
+    const paymentMethodMap: { [key: string]: string } = {
+      'CASH': '現金',
+      'CREDIT_CARD': '信用卡',
+      'BANK_TRANSFER': '銀行轉帳',
+      'LINE_PAY': 'LINE Pay',
+      'APPLE_PAY': 'Apple Pay',
+      'GOOGLE_PAY': 'Google Pay',
+      'UNKNOWN': '未設定'
+    };
+    return paymentMethodMap[method] || method;
+  }
+
   // 查詢第一筆訂單的日期（用於計算全部時間的日均營收）
   private async getFirstOrderDate(): Promise<Date | null> {
     const result = await this.prisma.$queryRawUnsafe<{ first_date: Date }[]>(`
@@ -301,10 +315,17 @@ export class AdminAnalyticsUnifiedService {
         daily: dailyRevenue,
         trend: 0, // 暫時設為0，後續可加入成長率計算
         actualDays,
-        byBranch: branchRevenue.map(item => ({
-          branchId: item.branch_id,
-          branchName: `分店 ${item.branch_id}`, // 簡化處理，實際應該查詢分店名稱
-          amount: this.safeBigIntToNumber(item.revenue),
+        byBranch: await Promise.all(branchRevenue.map(async (item) => {
+          // 查詢分店名稱
+          const branch = await this.prisma.branch.findUnique({
+            where: { id: item.branch_id },
+            select: { name: true }
+          });
+          return {
+            branchId: item.branch_id,
+            branchName: branch?.name || `分店 ${item.branch_id}`,
+            amount: this.safeBigIntToNumber(item.revenue),
+          };
         })),
         byService: serviceRevenue.map(item => ({
           serviceId: item.service_name, // 簡化處理
@@ -313,7 +334,7 @@ export class AdminAnalyticsUnifiedService {
           count: this.safeBigIntToNumber(item.count),
         })),
         byPaymentMethod: paymentMethodStats.map(item => ({
-          method: item.method,
+          method: this.getPaymentMethodDisplayName(item.method),
           amount: this.safeBigIntToNumber(item.amount),
           count: this.safeBigIntToNumber(item.count),
         })),
