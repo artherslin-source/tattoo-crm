@@ -41,12 +41,12 @@ export class AdminAnalyticsUnifiedService {
     const result = await this.prisma.$queryRawUnsafe<{ total: number }[]>(`
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM (
-        SELECT "finalAmount" AS amount FROM "Order" o
-          WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-            AND "paidAt" BETWEEN $1 AND $2
+        SELECT o."finalAmount" AS amount FROM "Order" o
+          WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+            AND o."paidAt" BETWEEN $1 AND $2
             ${branchCondition}
         UNION ALL
-        SELECT "amount" FROM "Installment" i
+        SELECT i."amount" FROM "Installment" i
           JOIN "Order" o ON i."orderId" = o.id
           WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
             ${branchCondition}
@@ -58,7 +58,7 @@ export class AdminAnalyticsUnifiedService {
 
   // 活躍會員查詢（統一使用 paidAt）
   private async getActiveMembers(range: TimeRange, branchFilter: any = {}) {
-    const branchCondition = branchFilter.branchId ? 'AND "branchId" = $3' : '';
+    const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
     const params = [range.start, range.end];
     if (branchFilter.branchId) {
       params.push(branchFilter.branchId);
@@ -67,9 +67,9 @@ export class AdminAnalyticsUnifiedService {
     const result = await this.prisma.$queryRawUnsafe<{ count: number }[]>(`
       SELECT COUNT(DISTINCT "memberId") AS count
       FROM (
-        SELECT "memberId" FROM "Order"
-          WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-            AND "paidAt" BETWEEN $1 AND $2
+        SELECT o."memberId" FROM "Order" o
+          WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+            AND o."paidAt" BETWEEN $1 AND $2
             ${branchCondition}
         UNION
         SELECT o."memberId" FROM "Installment" i
@@ -154,9 +154,9 @@ export class AdminAnalyticsUnifiedService {
       this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: number }[]>(`
         SELECT "branchId" AS branch_id, SUM(amount) AS revenue
         FROM (
-          SELECT o."branchId", "finalAmount" AS amount FROM "Order" o
-            WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND "paidAt" BETWEEN $1 AND $2
+          SELECT o."branchId", o."finalAmount" AS amount FROM "Order" o
+            WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND o."paidAt" BETWEEN $1 AND $2
               ${branchCondition}
           UNION ALL
           SELECT o."branchId", i."amount" FROM "Installment" i
@@ -173,10 +173,10 @@ export class AdminAnalyticsUnifiedService {
       this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: number; count: number }[]>(`
         SELECT s.id AS service_id, s.name AS service_name, SUM(amount) AS revenue, COUNT(*) AS count
         FROM (
-          SELECT a."serviceId", "finalAmount" AS amount FROM "Order" o
+          SELECT a."serviceId", o."finalAmount" AS amount FROM "Order" o
             JOIN "Appointment" a ON o."appointmentId" = a.id
-            WHERE "paymentType"='ONE_TIME' AND "status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND "paidAt" BETWEEN $1 AND $2
+            WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND o."paidAt" BETWEEN $1 AND $2
               ${branchCondition}
               AND a."serviceId" IS NOT NULL
           UNION ALL
