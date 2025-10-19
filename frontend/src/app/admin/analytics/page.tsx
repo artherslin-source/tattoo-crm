@@ -695,10 +695,13 @@ export default function AnalyticsPage() {
 
       {/* ========== 服務項目分析 ========== */}
       <section className="mb-8">
-        <h2 className="text-2xl font-bold mb-4 page-title flex items-center gap-2">
-          <Package className="h-6 w-6 text-indigo-600" />
-          服務項目分析
-        </h2>
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold page-title flex items-center gap-2">
+            <Package className="h-6 w-6 text-indigo-600" />
+            服務項目分析
+          </h2>
+          <p className="text-sm text-muted mt-1 ml-8">依據預約次數排序，顯示熱門服務 TOP 5</p>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {analytics.services.topServices.map((service, index) => (
