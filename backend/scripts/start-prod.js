@@ -54,10 +54,10 @@ console.log(`📊 使用 PostgreSQL 資料庫`);
 run('npx prisma generate', '生成 Prisma Client');
 run('npx tsc -p tsconfig.build.json', '編譯 TypeScript 專案');
 
-// 強制執行種子數據 - 修正統計報表數據問題
-console.log('🔄 強制執行種子數據模式：修正統計報表數據問題');
-console.log('📊 使用 db push 同步資料庫 Schema...');
-run('npx prisma db push --accept-data-loss', '同步資料庫 Schema');
+// 強制重置並執行種子數據 - 修正統計報表數據問題
+console.log('🔄 強制重置並執行種子數據模式：修正統計報表數據問題');
+console.log('📊 使用 db push 強制重置資料庫...');
+run('npx prisma db push --force-reset --accept-data-loss', '強制重置並同步資料庫 Schema');
 
 // 強制執行 seeding 來修正數據問題
 console.log('🌱 強制執行資料庫 seeding...');
