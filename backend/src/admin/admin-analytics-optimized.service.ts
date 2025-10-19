@@ -321,7 +321,7 @@ export class AdminAnalyticsOptimizedService {
       // 活躍會員
       this.prisma.order.findMany({
         where: {
-          createdAt: { gte: new Date(taiwanNow.getTime() - 30 * 24 * 60 * 60 * 1000) },
+          paidAt: { gte: new Date(taiwanNow.getTime() - 30 * 24 * 60 * 60 * 1000) },
           status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
         },
         select: { memberId: true },
@@ -422,7 +422,7 @@ export class AdminAnalyticsOptimizedService {
       (last7DaysInstallmentRevenueAgg._sum.amount || 0);
     
     // 計算實際天數
-    const actualDays = startDate ? Math.ceil((taiwanNow.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) : 7;
+    const actualDays = startDate ? Math.ceil((taiwanNow.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) : days;
     const dailyRevenue = actualDays > 0 ? Math.round(last7DaysRevenue / actualDays) : 0;
     
     const previousRevenue = 
