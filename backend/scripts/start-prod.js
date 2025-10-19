@@ -67,7 +67,7 @@ try {
   
   // 驗證種子數據是否正確導入
   console.log('🔍 驗證種子數據導入結果...');
-  run('npx ts-node -e "const { PrismaClient } = require(\'@prisma/client\'); const prisma = new PrismaClient(); prisma.order.count().then(count => { console.log(\`📊 訂單總數: \${count}\`); prisma.order.aggregate({ _sum: { finalAmount: true }, where: { status: { in: [\'PAID\', \'PAID_COMPLETE\'] } } }).then(result => { console.log(\`💰 總營收: NT$ \${result._sum.finalAmount || 0}\`); prisma.\$disconnect(); }); });"', '驗證種子數據');
+  run('npx ts-node -e "const { PrismaClient } = require(\'@prisma/client\'); const prisma = new PrismaClient(); prisma.order.count().then(count => { console.log(\`📊 訂單總數: \${count}\`); prisma.order.aggregate({ _sum: { finalAmount: true }, where: { status: { in: [\'PAID\', \'PAID_COMPLETE\'] } } }).then(result => { console.log(\`💰 總營收: NT$ \${result._sum.finalAmount || 0}\`); prisma.installment.aggregate({ _sum: { amount: true }, where: { status: \'PAID\' } }).then(installResult => { console.log(\`💳 分期營收: NT$ \${installResult._sum.amount || 0}\`); console.log(\`🎯 總計營收: NT$ \${(result._sum.finalAmount || 0) + (installResult._sum.amount || 0)}\`); prisma.\$disconnect(); }); }); });"', '驗證種子數據');
 } catch (error) {
   console.warn('⚠️ Seeding 失敗，但服務將繼續啟動');
   console.warn('   錯誤訊息:', error.message);
