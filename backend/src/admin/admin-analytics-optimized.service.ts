@@ -431,9 +431,19 @@ export class AdminAnalyticsOptimizedService {
       (last7DaysOneTimeRevenueAgg._sum.finalAmount || 0) + 
       (last7DaysInstallmentRevenueAgg._sum.amount || 0);
     
-    // 計算實際天數 - 使用原始天數值，不計算時間差
-    const actualDays = days !== null ? days : 7;
-    const dailyRevenue = actualDays > 0 ? Math.round(last7DaysRevenue / actualDays) : 0;
+    // 計算實際天數和日均營收
+    let actualDays: number | null = null;
+    let dailyRevenue = 0;
+    
+    if (dateRange === 'all') {
+      // 全部時間：使用總營收作為"歷史平均"（標籤顯示"歷史平均"）
+      actualDays = null;
+      dailyRevenue = totalRevenue; // 全部時間顯示總營收作為歷史平均
+    } else {
+      // 其他時間段：使用對應天數計算日均
+      actualDays = days !== null ? days : 7;
+      dailyRevenue = actualDays > 0 ? Math.round(last7DaysRevenue / actualDays) : 0;
+    }
     
     const previousRevenue = 
       (previousOneTimeRevenueAgg._sum.finalAmount || 0) + 
