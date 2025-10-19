@@ -62,7 +62,7 @@ export class AdminAnalyticsOptimizedService {
     const dateFilter = startDate ? { paidAt: { gte: startDate } } : {};
     const paidDateFilter = startDate ? { paidAt: { gte: startDate } } : {};
     
-    // 全部時間查詢：不限制日期範圍
+    // 全部時間查詢：不限制日期範圍，使用空對象
     const allTimeFilter = {};
     
     // 預約相關查詢使用創建時間

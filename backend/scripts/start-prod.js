@@ -63,6 +63,10 @@ run('npx prisma db push --force-reset --accept-data-loss', '強制重置並同�
 console.log('🗑️ 額外確保數據庫完全清空...');
 run('npx prisma db push --force-reset --accept-data-loss', '二次確認數據庫重置');
 
+// 第三次強制重置，確保數據庫完全清空
+console.log('🗑️ 第三次強制重置，確保數據庫完全清空...');
+run('npx prisma db push --force-reset --accept-data-loss', '三次確認數據庫重置');
+
 // 強制執行 seeding 來修正數據問題
 console.log('🌱 強制執行資料庫 seeding...');
 try {
