@@ -30,30 +30,30 @@ export class AdminAnalyticsUnifiedService {
     return { start: start.toJSDate(), end: end.toJSDate() };
   }
 
-  // 單一口徑：用 paidAt 聚合營收
+  // 單一口徑：用 paidAt 聚合營收（使用原生 SQL 避免 Prisma 類型問題）
   private async revenueByPaidAt(range: TimeRange, branchFilter: any = {}) {
-    // 一次付清：直接用 Order.paidAt 累加 finalAmount
-    const oneTime = await this.prisma.order.aggregate({
-      _sum: { finalAmount: true },
-      where: {
-        paymentType: 'ONE_TIME',
-        status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
-        paidAt: { gte: range.start, lte: range.end },
-        ...branchFilter,
-      },
-    });
+    const branchCondition = branchFilter.branchId ? 'AND o.branch_id = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) {
+      params.push(branchFilter.branchId);
+    }
 
-    // 分期：以 Installment.paidAt 累加實收金額
-    const installments = await this.prisma.installment.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: 'PAID',
-        paidAt: { gte: range.start, lte: range.end },
-        order: branchFilter,
-      },
-    });
+    const result = await this.prisma.$queryRawUnsafe<{ total: number }[]>(`
+      SELECT COALESCE(SUM(amount), 0) AS total
+      FROM (
+        SELECT final_amount AS amount FROM "Order" o
+          WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+            AND paid_at BETWEEN $1 AND $2
+            ${branchCondition}
+        UNION ALL
+        SELECT amount FROM "Installment" i
+          JOIN "Order" o ON i.order_id = o.id
+          WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+            ${branchCondition}
+      ) t
+    `, ...params);
 
-    return (oneTime._sum.finalAmount || 0) + (installments._sum.amount || 0);
+    return Number(result[0]?.total || 0);
   }
 
   // 活躍會員查詢（統一使用 paidAt）
@@ -99,7 +99,7 @@ export class AdminAnalyticsUnifiedService {
     );
   }
 
-  private async fetchAnalyticsData(branchId?: string, dateRange: string = '30d', rangeKey: RangeKey) {
+  private async fetchAnalyticsData(branchId: string | undefined, dateRange: string, rangeKey: RangeKey) {
     // 分店篩選
     const branchFilter = branchId ? { branchId } : {};
     
@@ -115,35 +115,32 @@ export class AdminAnalyticsUnifiedService {
       monthRange
     });
 
+    // 按照 ChatGPT 方案：使用原生 SQL 查詢所有統計數據
+    const branchCondition = branchFilter.branchId ? 'AND o.branch_id = $3' : '';
+    const params = [currentRange.start, currentRange.end];
+    if (branchFilter.branchId) {
+      params.push(branchFilter.branchId);
+    }
+
     const [
-      // 總營收（使用統一查詢）
       totalRevenue,
-      // 月營收（使用統一查詢）
       monthlyRevenue,
-      // 活躍會員（近30天有消費）
       activeMembers,
-      // 分店營收排行
-      branchRevenueOneTime,
-      branchRevenueInstallments,
-      // 服務項目營收
-      serviceRevenueOneTime,
-      serviceRevenueInstallments,
-      // 付款方式統計
-      paymentMethodOneTime,
-      paymentMethodInstallments,
-      // 會員統計
+      branchRevenue,
+      serviceRevenue,
+      paymentMethodStats,
       totalMembers,
       newMembersThisMonth,
-      memberLevelDistribution,
-      topSpenders,
-    ] = await this.prisma.$transaction([
+      memberLevelStats,
+      topSpendersData,
+    ] = await Promise.all([
       // 總營收（使用統一查詢）
       this.revenueByPaidAt(currentRange, branchFilter),
       
       // 月營收（使用統一查詢）
       this.revenueByPaidAt(monthRange, branchFilter),
       
-      // 活躍會員（近30天有消費）- 使用統一查詢邏輯
+      // 活躍會員（近30天有消費）
       this.getActiveMembers(
         {
           start: new Date(DateTime.now().setZone('Asia/Taipei').minus({ days: 30 }).startOf('day').toJSDate()),
@@ -152,97 +149,66 @@ export class AdminAnalyticsUnifiedService {
         branchFilter
       ),
       
-      // 分店營收排行（一次付清）
-      this.prisma.order.groupBy({
-        by: ['branchId'],
-        where: {
-          ...branchFilter,
-          paymentType: 'ONE_TIME',
-          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
-          paidAt: { gte: currentRange.start, lte: currentRange.end },
-        },
-        _sum: { finalAmount: true },
-        orderBy: { _sum: { finalAmount: 'desc' } },
-      }),
+      // 分店營收排行（使用原生 SQL）
+      this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: number }[]>(`
+        SELECT branch_id, SUM(amount) AS revenue
+        FROM (
+          SELECT o.branch_id, final_amount AS amount FROM "Order" o
+            WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND paid_at BETWEEN $1 AND $2
+              ${branchCondition}
+          UNION ALL
+          SELECT o.branch_id, i.amount FROM "Installment" i
+            JOIN "Order" o ON i.order_id = o.id
+            WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+              ${branchCondition}
+        ) t
+        GROUP BY branch_id
+        ORDER BY revenue DESC
+        LIMIT 5
+      `, ...params),
       
-      // 分店營收排行（分期付款）
-      this.prisma.installment.groupBy({
-        by: ['orderId'],
-        where: {
-          status: 'PAID',
-          paidAt: { gte: currentRange.start, lte: currentRange.end },
-          order: branchFilter,
-        },
-        _sum: { amount: true },
-      }),
+      // 服務項目營收（使用原生 SQL）
+      this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: number; count: number }[]>(`
+        SELECT s.id AS service_id, s.name AS service_name, SUM(amount) AS revenue, COUNT(*) AS count
+        FROM (
+          SELECT a.service_id, final_amount AS amount FROM "Order" o
+            JOIN "Appointment" a ON o.appointment_id = a.id
+            WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND paid_at BETWEEN $1 AND $2
+              ${branchCondition}
+              AND a.service_id IS NOT NULL
+          UNION ALL
+          SELECT a.service_id, i.amount FROM "Installment" i
+            JOIN "Order" o ON i.order_id = o.id
+            JOIN "Appointment" a ON o.appointment_id = a.id
+            WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+              ${branchCondition}
+              AND a.service_id IS NOT NULL
+        ) t
+        JOIN "Service" s ON t.service_id = s.id
+        GROUP BY s.id, s.name
+        ORDER BY revenue DESC
+        LIMIT 5
+      `, ...params),
       
-      // 服務項目營收（一次付清）
-      this.prisma.order.findMany({
-        where: {
-          ...branchFilter,
-          paymentType: 'ONE_TIME',
-          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
-          paidAt: { gte: currentRange.start, lte: currentRange.end },
-          appointment: { serviceId: { not: null } },
-        },
-        select: {
-          finalAmount: true,
-          appointment: {
-            select: {
-              service: { select: { id: true, name: true } },
-            },
-          },
-        },
-      }),
-      
-      // 服務項目營收（分期付款）
-      this.prisma.installment.findMany({
-        where: {
-          status: 'PAID',
-          paidAt: { gte: currentRange.start, lte: currentRange.end },
-          order: {
-            ...branchFilter,
-            appointment: { serviceId: { not: null } },
-          },
-        },
-        select: {
-          amount: true,
-          order: {
-            select: {
-              appointment: {
-                select: {
-                  service: { select: { id: true, name: true } },
-                },
-              },
-            },
-          },
-        },
-      }),
-      
-      // 付款方式統計（一次付清）
-      this.prisma.order.groupBy({
-        by: ['paymentMethod'],
-        where: {
-          ...branchFilter,
-          paymentType: 'ONE_TIME',
-          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
-          paidAt: { gte: currentRange.start, lte: currentRange.end },
-        },
-        _sum: { finalAmount: true },
-        _count: true,
-      }),
-      
-      // 付款方式統計（分期付款）
-      this.prisma.installment.groupBy({
-        by: ['paymentMethod'],
-        where: {
-          status: 'PAID',
-          paidAt: { gte: currentRange.start, lte: currentRange.end },
-          order: branchFilter,
-        },
-        _sum: { amount: true },
-        _count: true,
-      }),
+      // 付款方式統計（使用原生 SQL）
+      this.prisma.$queryRawUnsafe<{ method: string; amount: number; count: number }[]>(`
+        SELECT method, SUM(amount) AS amount, COUNT(*) AS count
+        FROM (
+          SELECT COALESCE(payment_method, 'UNKNOWN') AS method, final_amount AS amount FROM "Order" o
+            WHERE payment_type='ONE_TIME' AND status IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+              AND paid_at BETWEEN $1 AND $2
+              ${branchCondition}
+          UNION ALL
+          SELECT COALESCE(payment_method, 'UNKNOWN') AS method, amount FROM "Installment" i
+            JOIN "Order" o ON i.order_id = o.id
+            WHERE i.status='PAID' AND i.paid_at BETWEEN $1 AND $2
+              ${branchCondition}
+        ) t
+        GROUP BY method
+        ORDER BY amount DESC
+      `, ...params),
       
       // 會員總數
       this.prisma.member.count(),
@@ -254,25 +220,22 @@ export class AdminAnalyticsUnifiedService {
         },
       }),
       
-      // 會員等級分布
-      this.prisma.member.groupBy({
-        by: ['membershipLevel'],
-        _count: true,
-      }),
+      // 會員等級分布（使用原生 SQL）
+      this.prisma.$queryRawUnsafe<{ level: string; count: number }[]>(`
+        SELECT COALESCE(membership_level, 'UNKNOWN') AS level, COUNT(*) AS count
+        FROM "Member" m
+        GROUP BY membership_level
+        ORDER BY count DESC
+      `),
       
-      // 消費TOP10
-      this.prisma.member.findMany({
-        select: {
-          id: true,
-          user: { select: { name: true } },
-          membershipLevel: true,
-          totalSpent: true,
-        },
-        orderBy: {
-          totalSpent: 'desc',
-        },
-        take: 10,
-      }),
+      // 消費TOP10（使用原生 SQL）
+      this.prisma.$queryRawUnsafe<{ id: string; name: string; level: string; total_spent: number }[]>(`
+        SELECT m.id, COALESCE(u.name, '未知') AS name, COALESCE(m.membership_level, 'UNKNOWN') AS level, m.total_spent
+        FROM "Member" m
+        LEFT JOIN "User" u ON m.user_id = u.id
+        ORDER BY m.total_spent DESC
+        LIMIT 10
+      `),
     ]);
 
     // 計算日均營收
@@ -290,124 +253,12 @@ export class AdminAnalyticsUnifiedService {
       actualDays = days;
     }
     
-    // 處理分店營收排行
-    const branchRevenueMap = new Map<string, number>();
-    
-    // 一次付清分店營收
-    branchRevenueOneTime.forEach(item => {
-      const current = branchRevenueMap.get(item.branchId) || 0;
-      branchRevenueMap.set(item.branchId, current + Number(item._sum.finalAmount || 0));
-    });
-    
-    // 分期付款分店營收（需要通過 orderId 查詢分店）
-    if (branchRevenueInstallments.length > 0) {
-      const orderIds = branchRevenueInstallments.map(item => item.orderId);
-      const orders = await this.prisma.order.findMany({
-        where: { id: { in: orderIds } },
-        select: { id: true, branchId: true },
-      });
-      
-      branchRevenueInstallments.forEach(installment => {
-        const order = orders.find(o => o.id === installment.orderId);
-        if (order) {
-          const current = branchRevenueMap.get(order.branchId) || 0;
-          branchRevenueMap.set(order.branchId, current + Number(installment._sum.amount || 0));
-        }
-      });
-    }
-    
-    const branchRevenue = Array.from(branchRevenueMap.entries())
-      .map(([branchId, revenue]) => ({ branchId, revenue }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-    
-    // 處理服務項目營收
-    const serviceRevenueMap = new Map<string, { name: string; revenue: number; count: number }>();
-    
-    // 一次付清服務營收
-    serviceRevenueOneTime.forEach(order => {
-      if (order.appointment?.service) {
-        const serviceId = order.appointment.service.id;
-        const serviceName = order.appointment.service.name;
-        const current = serviceRevenueMap.get(serviceId) || { name: serviceName, revenue: 0, count: 0 };
-        serviceRevenueMap.set(serviceId, {
-          name: serviceName,
-          revenue: current.revenue + Number(order.finalAmount || 0),
-          count: current.count + 1,
-        });
-      }
-    });
-    
-    // 分期付款服務營收
-    serviceRevenueInstallments.forEach(installment => {
-      if (installment.order?.appointment?.service) {
-        const serviceId = installment.order.appointment.service.id;
-        const serviceName = installment.order.appointment.service.name;
-        const current = serviceRevenueMap.get(serviceId) || { name: serviceName, revenue: 0, count: 0 };
-        serviceRevenueMap.set(serviceId, {
-          name: serviceName,
-          revenue: current.revenue + Number(installment.amount || 0),
-          count: current.count + 1,
-        });
-      }
-    });
-    
-    const serviceRevenue = Array.from(serviceRevenueMap.values())
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-    
-    // 處理付款方式統計
-    const paymentMethodMap = new Map<string, { amount: number; count: number }>();
-    
-    // 一次付清付款方式
-    paymentMethodOneTime.forEach(item => {
-      const method = item.paymentMethod || 'UNKNOWN';
-      const current = paymentMethodMap.get(method) || { amount: 0, count: 0 };
-      paymentMethodMap.set(method, {
-        amount: current.amount + Number(item._sum.finalAmount || 0),
-        count: current.count + item._count,
-      });
-    });
-    
-    // 分期付款付款方式
-    paymentMethodInstallments.forEach(item => {
-      const method = item.paymentMethod || 'UNKNOWN';
-      const current = paymentMethodMap.get(method) || { amount: 0, count: 0 };
-      paymentMethodMap.set(method, {
-        amount: current.amount + Number(item._sum.amount || 0),
-        count: current.count + item._count,
-      });
-    });
-    
-    const paymentMethodStats = Array.from(paymentMethodMap.entries())
-      .map(([method, data]) => ({
-        method,
-        amount: data.amount,
-        count: data.count,
-        percentage: totalRevenue > 0 ? (data.amount / totalRevenue) * 100 : 0,
-      }))
-      .sort((a, b) => b.amount - a.amount);
-    
-    // 處理會員等級分布
-    const memberLevelStats = memberLevelDistribution.map(item => ({
-      level: item.membershipLevel,
-      count: item._count,
-    }));
-    
-    // 處理消費TOP10
-    const topSpendersData = topSpenders.map(member => ({
-      id: member.id,
-      name: member.user?.name || '未知',
-      level: member.membershipLevel,
-      totalSpent: member.totalSpent,
-      orderCount: 0, // 簡化處理，不計算訂單數量
-    }));
-    
     // 計算會員總儲值
     const totalStoredValue = await this.prisma.member.aggregate({
       _sum: { balance: true },
     });
 
+    // 按照 ChatGPT 方案處理結果格式
     const result = {
       revenue: {
         total: totalRevenue,
@@ -416,15 +267,36 @@ export class AdminAnalyticsUnifiedService {
         growthRate: 0, // 暫時設為0，後續可加入成長率計算
         actualDays,
       },
-      branchRevenue,
-      serviceRevenue,
-      paymentMethodStats,
+      branchRevenue: branchRevenue.map(item => ({
+        branchId: item.branch_id,
+        revenue: Number(item.revenue),
+      })),
+      serviceRevenue: serviceRevenue.map(item => ({
+        name: item.service_name,
+        revenue: Number(item.revenue),
+        count: Number(item.count),
+      })),
+      paymentMethodStats: paymentMethodStats.map(item => ({
+        method: item.method,
+        amount: Number(item.amount),
+        count: Number(item.count),
+        percentage: totalRevenue > 0 ? (Number(item.amount) / totalRevenue) * 100 : 0,
+      })),
       members: {
         total: totalMembers,
         newThisMonth: newMembersThisMonth,
         active: activeMembers,
-        levelDistribution: memberLevelStats,
-        topSpenders: topSpendersData,
+        levelDistribution: memberLevelStats.map(item => ({
+          level: item.level,
+          count: Number(item.count),
+        })),
+        topSpenders: topSpendersData.map(item => ({
+          id: item.id,
+          name: item.name,
+          level: item.level,
+          totalSpent: Number(item.total_spent),
+          orderCount: 0, // 簡化處理
+        })),
         totalStoredValue: Number(totalStoredValue._sum.balance || 0),
       },
     };
