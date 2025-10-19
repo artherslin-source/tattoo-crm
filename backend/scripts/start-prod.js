@@ -59,6 +59,10 @@ console.log('🔄 強制重置並執行種子數據模式：修正統計報表�
 console.log('📊 使用 db push 強制重置資料庫...');
 run('npx prisma db push --force-reset --accept-data-loss', '強制重置並同步資料庫 Schema');
 
+// 額外確保數據庫完全清空
+console.log('🗑️ 額外確保數據庫完全清空...');
+run('npx prisma db push --force-reset --accept-data-loss', '二次確認數據庫重置');
+
 // 強制執行 seeding 來修正數據問題
 console.log('🌱 強制執行資料庫 seeding...');
 try {
