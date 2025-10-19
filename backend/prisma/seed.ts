@@ -456,6 +456,7 @@ async function main() {
         data: { 
           status: 'PAID',
           paymentType: 'ONE_TIME',
+          paymentMethod: faker.helpers.arrayElement(['CASH', 'CREDIT_CARD', 'BANK_TRANSFER']),
           paidAt: faker.date.past(),
         },
       });
@@ -492,6 +493,7 @@ async function main() {
             amount,
             status: isPaid ? 'PAID' : 'UNPAID',
             paidAt: isPaid ? faker.date.past() : null,
+            paymentMethod: faker.helpers.arrayElement(['CASH', 'CREDIT_CARD', 'BANK_TRANSFER']),
             notes: faker.lorem.sentence(),
           },
         });
