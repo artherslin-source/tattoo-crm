@@ -13,6 +13,12 @@ export class AdminAnalyticsUnifiedService {
     private cacheService: CacheService,
   ) {}
 
+  // 安全轉換 BigInt 為 Number（解決 PostgreSQL 原生查詢的 BigInt 序列化問題）
+  private safeBigIntToNumber(value: bigint | number | null | undefined): number {
+    if (value === null || value === undefined) return 0;
+    return typeof value === 'bigint' ? Number(value) : Number(value);
+  }
+
   // 統一時間範圍解析函式
   private resolveRange(range: RangeKey, now = DateTime.now().setZone('Asia/Taipei')): TimeRange {
     if (range === 'month') {
@@ -38,7 +44,7 @@ export class AdminAnalyticsUnifiedService {
       params.push(branchFilter.branchId);
     }
 
-    const result = await this.prisma.$queryRawUnsafe<{ total: number }[]>(`
+    const result = await this.prisma.$queryRawUnsafe<{ total: bigint | number }[]>(`
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM (
         SELECT o."finalAmount" AS amount FROM "Order" o
@@ -53,7 +59,7 @@ export class AdminAnalyticsUnifiedService {
       ) t
     `, ...params);
 
-    return Number(result[0]?.total || 0);
+    return this.safeBigIntToNumber(result[0]?.total);
   }
 
   // 活躍會員查詢（統一使用 paidAt）
@@ -64,8 +70,8 @@ export class AdminAnalyticsUnifiedService {
       params.push(branchFilter.branchId);
     }
 
-    const result = await this.prisma.$queryRawUnsafe<{ count: number }[]>(`
-      SELECT COUNT(DISTINCT "memberId") AS count
+    const result = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
+      SELECT COUNT(DISTINCT t."memberId") AS count
       FROM (
         SELECT o."memberId" FROM "Order" o
           WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
@@ -79,7 +85,7 @@ export class AdminAnalyticsUnifiedService {
       ) t
     `, ...params);
     
-    return result[0]?.count || 0;
+    return this.safeBigIntToNumber(result[0]?.count);
   }
 
   async getAnalytics(branchId?: string, dateRange: string = '30d') {
@@ -151,7 +157,7 @@ export class AdminAnalyticsUnifiedService {
       ),
       
       // 分店營收排行（使用原生 SQL）
-      this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: number }[]>(`
+      this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: bigint | number }[]>(`
         SELECT "branchId" AS branch_id, SUM(amount) AS revenue
         FROM (
           SELECT o."branchId", o."finalAmount" AS amount FROM "Order" o
@@ -170,7 +176,7 @@ export class AdminAnalyticsUnifiedService {
       `, ...allParams),
       
       // 服務項目營收（使用原生 SQL）
-      this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: number; count: number }[]>(`
+      this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: bigint | number; count: bigint | number }[]>(`
         SELECT s.id AS service_id, s.name AS service_name, SUM(amount) AS revenue, COUNT(*) AS count
         FROM (
           SELECT a."serviceId", o."finalAmount" AS amount FROM "Order" o
@@ -194,7 +200,7 @@ export class AdminAnalyticsUnifiedService {
       `, ...allParams),
       
       // 付款方式統計（使用原生 SQL）
-      this.prisma.$queryRawUnsafe<{ method: string; amount: number; count: number }[]>(`
+      this.prisma.$queryRawUnsafe<{ method: string; amount: bigint | number; count: bigint | number }[]>(`
         SELECT method, SUM(amount) AS amount, COUNT(*) AS count
         FROM (
           SELECT COALESCE(o."paymentMethod", 'UNKNOWN') AS method, o."finalAmount" AS amount FROM "Order" o
@@ -222,7 +228,7 @@ export class AdminAnalyticsUnifiedService {
       }),
       
       // 會員等級分布（使用原生 SQL）
-      this.prisma.$queryRawUnsafe<{ level: string; count: number }[]>(`
+      this.prisma.$queryRawUnsafe<{ level: string; count: bigint | number }[]>(`
         SELECT COALESCE("membershipLevel", 'UNKNOWN') AS level, COUNT(*) AS count
         FROM "Member" m
         GROUP BY "membershipLevel"
@@ -230,7 +236,7 @@ export class AdminAnalyticsUnifiedService {
       `),
       
       // 消費TOP10（使用原生 SQL）
-      this.prisma.$queryRawUnsafe<{ id: string; name: string; level: string; total_spent: number }[]>(`
+      this.prisma.$queryRawUnsafe<{ id: string; name: string; level: string; total_spent: bigint | number }[]>(`
         SELECT m.id, COALESCE(u.name, '未知') AS name, COALESCE(m."membershipLevel", 'UNKNOWN') AS level, m."totalSpent" AS total_spent
         FROM "Member" m
         LEFT JOIN "User" u ON m."userId" = u.id
@@ -270,18 +276,18 @@ export class AdminAnalyticsUnifiedService {
       },
       branchRevenue: branchRevenue.map(item => ({
         branchId: item.branch_id,
-        revenue: Number(item.revenue),
+        revenue: this.safeBigIntToNumber(item.revenue),
       })),
       serviceRevenue: serviceRevenue.map(item => ({
         name: item.service_name,
-        revenue: Number(item.revenue),
-        count: Number(item.count),
+        revenue: this.safeBigIntToNumber(item.revenue),
+        count: this.safeBigIntToNumber(item.count),
       })),
       paymentMethodStats: paymentMethodStats.map(item => ({
         method: item.method,
-        amount: Number(item.amount),
-        count: Number(item.count),
-        percentage: totalRevenue > 0 ? (Number(item.amount) / totalRevenue) * 100 : 0,
+        amount: this.safeBigIntToNumber(item.amount),
+        count: this.safeBigIntToNumber(item.count),
+        percentage: totalRevenue > 0 ? (this.safeBigIntToNumber(item.amount) / totalRevenue) * 100 : 0,
       })),
       members: {
         total: totalMembers,
@@ -289,16 +295,16 @@ export class AdminAnalyticsUnifiedService {
         active: activeMembers,
         levelDistribution: memberLevelStats.map(item => ({
           level: item.level,
-          count: Number(item.count),
+          count: this.safeBigIntToNumber(item.count),
         })),
         topSpenders: topSpendersData.map(item => ({
           id: item.id,
           name: item.name,
           level: item.level,
-          totalSpent: Number(item.total_spent),
+          totalSpent: this.safeBigIntToNumber(item.total_spent),
           orderCount: 0, // 簡化處理
         })),
-        totalStoredValue: Number(totalStoredValue._sum.balance || 0),
+        totalStoredValue: this.safeBigIntToNumber(totalStoredValue._sum.balance),
       },
     };
 
