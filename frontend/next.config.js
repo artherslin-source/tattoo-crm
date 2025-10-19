@@ -8,7 +8,11 @@ const nextConfig = {
         { source: '/api/:path*', destination: 'http://localhost:4000/:path*' },
       ];
     }
-    return [];
+    
+    // 生產環境：重寫到 Railway 後端服務
+    return [
+      { source: '/api/:path*', destination: 'https://tattoo-crm-production-413f.up.railway.app/:path*' },
+    ];
   },
 };
 
