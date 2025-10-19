@@ -41,8 +41,13 @@ export class AdminAnalyticsOptimizedService {
     })() : null;
 
     const branchFilter = branchId && branchId !== 'all' ? { branchId } : {};
-    const dateFilter = startDate ? { createdAt: { gte: startDate } } : {};
+    
+    // 統一使用付款時間作為營收查詢的基準
+    const dateFilter = startDate ? { paidAt: { gte: startDate } } : {};
     const paidDateFilter = startDate ? { paidAt: { gte: startDate } } : {};
+    
+    // 預約相關查詢使用創建時間
+    const appointmentDateFilter = startDate ? { createdAt: { gte: startDate } } : {};
 
     console.time('⏱️ Parallel Queries');
     
@@ -318,7 +323,7 @@ export class AdminAnalyticsOptimizedService {
         by: ['status'],
         where: {
           ...branchFilter,
-          ...dateFilter,
+          ...appointmentDateFilter,
         },
         _count: true,
       }),
@@ -347,7 +352,7 @@ export class AdminAnalyticsOptimizedService {
         by: ['serviceId'],
         where: {
           ...branchFilter,
-          ...dateFilter,
+          ...appointmentDateFilter,
           serviceId: { not: null },
         },
         _count: true,
