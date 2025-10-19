@@ -26,7 +26,7 @@ export class AdminAnalyticsOptimizedService {
   // 清除全部時間的快取
   async clearAllTimeCache(branchId?: string) {
     const cacheKey = `analytics:${branchId || 'all'}:all`;
-    await this.cacheService.delete(cacheKey);
+    this.cacheService.invalidate(cacheKey);
     console.log('🗑️ 已清除全部時間快取:', cacheKey);
   }
 
