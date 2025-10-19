@@ -13,11 +13,21 @@ export class AdminAnalyticsOptimizedService {
     // 使用快取
     const cacheKey = `analytics:${branchId || 'all'}:${dateRange}`;
     
+    // 全部時間使用較短的快取時間，避免快取舊數據
+    const cacheTime = dateRange === 'all' ? 30 * 1000 : 3 * 60 * 1000; // 全部時間30秒，其他3分鐘
+    
     return this.cacheService.getOrSet(
       cacheKey,
       () => this.fetchAnalyticsData(branchId, dateRange),
-      3 * 60 * 1000, // 3分鐘快取
+      cacheTime,
     );
+  }
+
+  // 清除全部時間的快取
+  async clearAllTimeCache(branchId?: string) {
+    const cacheKey = `analytics:${branchId || 'all'}:all`;
+    await this.cacheService.delete(cacheKey);
+    console.log('🗑️ 已清除全部時間快取:', cacheKey);
   }
 
   private async fetchAnalyticsData(branchId?: string, dateRange: string = '30d') {
