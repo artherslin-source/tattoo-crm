@@ -62,6 +62,24 @@ export class AdminAnalyticsUnifiedService {
     return this.safeBigIntToNumber(result[0]?.total);
   }
 
+  // 查詢第一筆訂單的日期（用於計算全部時間的日均營收）
+  private async getFirstOrderDate(): Promise<Date | null> {
+    const result = await this.prisma.$queryRawUnsafe<{ first_date: Date }[]>(`
+      SELECT MIN(paid_date) AS first_date
+      FROM (
+        SELECT o."paidAt" AS paid_date FROM "Order" o
+          WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+            AND o."paidAt" IS NOT NULL
+        UNION ALL
+        SELECT i."paidAt" AS paid_date FROM "Installment" i
+          JOIN "Order" o ON i."orderId" = o.id
+          WHERE i."status"='PAID' AND i."paidAt" IS NOT NULL
+      ) t
+    `);
+    
+    return result[0]?.first_date || null;
+  }
+
   // 活躍會員查詢（統一使用 paidAt）
   private async getActiveMembers(range: TimeRange, branchFilter: any = {}) {
     const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
@@ -245,9 +263,24 @@ export class AdminAnalyticsUnifiedService {
     let actualDays: number | null = null;
     
     if (rangeKey === 'all') {
-      // 全部時間：顯示總營收，不計算平均值
-      dailyRevenue = totalRevenue;
-      actualDays = null;
+      // 全部時間：計算從第一筆訂單到現在的實際天數
+      if (totalRevenue > 0) {
+        // 查詢第一筆訂單的日期
+        const firstOrderDate = await this.getFirstOrderDate();
+        if (firstOrderDate) {
+          const now = DateTime.now().setZone('Asia/Taipei');
+          const firstDate = DateTime.fromJSDate(firstOrderDate).setZone('Asia/Taipei');
+          const totalDays = Math.max(1, now.diff(firstDate, 'days').days); // 至少1天
+          dailyRevenue = Math.round(totalRevenue / totalDays);
+          actualDays = Math.round(totalDays);
+        } else {
+          dailyRevenue = 0;
+          actualDays = null;
+        }
+      } else {
+        dailyRevenue = 0;
+        actualDays = null;
+      }
     } else {
       // 計算日均營收
       const days = rangeKey === '7d' ? 7 : rangeKey === '30d' ? 30 : rangeKey === '90d' ? 90 : 365;
