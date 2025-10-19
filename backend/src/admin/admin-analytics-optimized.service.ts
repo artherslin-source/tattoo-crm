@@ -46,6 +46,9 @@ export class AdminAnalyticsOptimizedService {
     const dateFilter = startDate ? { paidAt: { gte: startDate } } : {};
     const paidDateFilter = startDate ? { paidAt: { gte: startDate } } : {};
     
+    // 全部時間查詢：不限制日期範圍
+    const allTimeFilter = {};
+    
     // 預約相關查詢使用創建時間
     const appointmentDateFilter = startDate ? { createdAt: { gte: startDate } } : {};
 
@@ -93,7 +96,7 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.order.aggregate({
         where: {
           ...branchFilter,
-          ...dateFilter,
+          ...(startDate ? dateFilter : allTimeFilter),
           paymentType: 'ONE_TIME',
           status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
@@ -104,7 +107,7 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.installment.aggregate({
         where: {
           status: 'PAID',
-          ...paidDateFilter,
+          ...(startDate ? paidDateFilter : allTimeFilter),
           order: branchFilter,
         },
         _sum: { amount: true },
@@ -115,7 +118,17 @@ export class AdminAnalyticsOptimizedService {
         where: {
           ...branchFilter,
           paymentType: 'ONE_TIME',
-          paidAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) },
+          ...(startDate ? {
+            paidAt: { 
+              gte: startDate,
+              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+            }
+          } : {
+            paidAt: { 
+              gte: new Date(now.getFullYear(), now.getMonth(), 1),
+              lte: new Date()
+            }
+          }),
           status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
@@ -125,7 +138,17 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.installment.aggregate({
         where: {
           status: 'PAID',
-          paidAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) },
+          ...(startDate ? {
+            paidAt: { 
+              gte: startDate,
+              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+            }
+          } : {
+            paidAt: { 
+              gte: new Date(now.getFullYear(), now.getMonth(), 1),
+              lte: new Date()
+            }
+          }),
           order: branchFilter,
         },
         _sum: { amount: true },
@@ -136,7 +159,17 @@ export class AdminAnalyticsOptimizedService {
         where: {
           ...branchFilter,
           paymentType: 'ONE_TIME',
-          paidAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+          ...(startDate ? {
+            paidAt: { 
+              gte: startDate,
+              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+            }
+          } : {
+            paidAt: { 
+              gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+              lte: new Date()
+            }
+          }),
           status: { in: ['PAID', 'PAID_COMPLETE'] },
         },
         _sum: { finalAmount: true },
@@ -146,7 +179,17 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.installment.aggregate({
         where: {
           status: 'PAID',
-          paidAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+          ...(startDate ? {
+            paidAt: { 
+              gte: startDate,
+              lte: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+            }
+          } : {
+            paidAt: { 
+              gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+              lte: new Date()
+            }
+          }),
           order: branchFilter,
         },
         _sum: { amount: true },
