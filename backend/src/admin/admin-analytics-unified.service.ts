@@ -120,6 +120,158 @@ export class AdminAnalyticsUnifiedService {
     return this.safeBigIntToNumber(result[0]?.count);
   }
 
+  // 預約統計查詢
+  private async getAppointmentStats(range: TimeRange, branchFilter: any = {}) {
+    const branchCondition = branchFilter.branchId ? 'AND a."branchId" = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) {
+      params.push(branchFilter.branchId);
+    }
+
+    // 總預約數
+    const totalResult = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
+      SELECT COUNT(*) AS count
+      FROM "Appointment" a
+      WHERE a."createdAt" BETWEEN $1 AND $2
+        ${branchCondition}
+    `, ...params);
+
+    // 預約狀態分布
+    const statusResult = await this.prisma.$queryRawUnsafe<{ status: string, count: bigint | number }[]>(`
+      SELECT a."status", COUNT(*) AS count
+      FROM "Appointment" a
+      WHERE a."createdAt" BETWEEN $1 AND $2
+        ${branchCondition}
+      GROUP BY a."status"
+    `, ...params);
+
+    // 轉換率計算（已完成預約 / 總預約）
+    const completedCount = statusResult.find(s => s.status === 'COMPLETED')?.count || 0;
+    const totalCount = this.safeBigIntToNumber(totalResult[0]?.count);
+    const conversionRate = totalCount > 0 ? (this.safeBigIntToNumber(completedCount) / totalCount) * 100 : 0;
+
+    return {
+      total: totalCount,
+      pending: this.safeBigIntToNumber(statusResult.find(s => s.status === 'PENDING')?.count || 0),
+      confirmed: this.safeBigIntToNumber(statusResult.find(s => s.status === 'CONFIRMED')?.count || 0),
+      completed: this.safeBigIntToNumber(completedCount),
+      cancelled: this.safeBigIntToNumber(statusResult.find(s => s.status === 'CANCELLED')?.count || 0),
+      conversionRate: Math.round(conversionRate * 100) / 100,
+      byStatus: statusResult.map(item => ({
+        status: item.status,
+        count: this.safeBigIntToNumber(item.count),
+      })),
+      byTimeSlot: [], // 暫時留空，可後續實現
+    };
+  }
+
+  // 刺青師績效查詢
+  private async getArtistStats(range: TimeRange, branchFilter: any = {}) {
+    const branchCondition = branchFilter.branchId ? 'AND a."branchId" = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) {
+      params.push(branchFilter.branchId);
+    }
+
+    // 總刺青師數
+    const totalResult = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
+      SELECT COUNT(*) AS count
+      FROM "Artist" a
+      WHERE a."active" = true
+        ${branchCondition}
+    `, ...params);
+
+    // 活躍刺青師（在指定時間範圍內有預約的刺青師）
+    const activeResult = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
+      SELECT COUNT(DISTINCT a."artistId") AS count
+      FROM "Appointment" a
+      WHERE a."createdAt" BETWEEN $1 AND $2
+        ${branchCondition}
+    `, ...params);
+
+    // 績效 TOP 5（按預約完成數）
+    const topPerformersResult = await this.prisma.$queryRawUnsafe<{ 
+      artistId: string, 
+      artistName: string, 
+      completedCount: bigint | number,
+      totalRevenue: bigint | number 
+    }[]>(`
+      SELECT 
+        a."artistId",
+        ar."displayName" AS "artistName",
+        COUNT(CASE WHEN a."status" = 'COMPLETED' THEN 1 END) AS "completedCount",
+        COALESCE(SUM(o."finalAmount"), 0) AS "totalRevenue"
+      FROM "Appointment" a
+      JOIN "Artist" ar ON a."artistId" = ar.id
+      LEFT JOIN "Order" o ON a."orderId" = o.id
+      WHERE a."createdAt" BETWEEN $1 AND $2
+        ${branchCondition}
+      GROUP BY a."artistId", ar."displayName"
+      ORDER BY "completedCount" DESC, "totalRevenue" DESC
+      LIMIT 5
+    `, ...params);
+
+    return {
+      total: this.safeBigIntToNumber(totalResult[0]?.count),
+      topPerformers: topPerformersResult.map(item => ({
+        artistId: item.artistId,
+        artistName: item.artistName,
+        revenue: this.safeBigIntToNumber(item.totalRevenue),
+        completedServices: this.safeBigIntToNumber(item.completedCount),
+        avgRating: 0, // 暫時設為0，可後續實現評分系統
+      })),
+    };
+  }
+
+  // 服務項目分析查詢
+  private async getServiceStats(range: TimeRange, branchFilter: any = {}) {
+    const branchCondition = branchFilter.branchId ? 'AND a."branchId" = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) {
+      params.push(branchFilter.branchId);
+    }
+
+    // 總服務數
+    const totalResult = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
+      SELECT COUNT(*) AS count
+      FROM "Service" s
+      WHERE s."active" = true
+    `);
+
+    // 熱門服務 TOP 5（按預約數）
+    const topServicesResult = await this.prisma.$queryRawUnsafe<{ 
+      serviceId: string, 
+      serviceName: string, 
+      appointmentCount: bigint | number,
+      totalRevenue: bigint | number 
+    }[]>(`
+      SELECT 
+        a."serviceId",
+        s."name" AS "serviceName",
+        COUNT(*) AS "appointmentCount",
+        COALESCE(SUM(o."finalAmount"), 0) AS "totalRevenue"
+      FROM "Appointment" a
+      JOIN "Service" s ON a."serviceId" = s.id
+      LEFT JOIN "Order" o ON a."orderId" = o.id
+      WHERE a."createdAt" BETWEEN $1 AND $2
+        ${branchCondition}
+      GROUP BY a."serviceId", s."name"
+      ORDER BY "appointmentCount" DESC, "totalRevenue" DESC
+      LIMIT 5
+    `, ...params);
+
+    return {
+      total: this.safeBigIntToNumber(totalResult[0]?.count),
+      topServices: topServicesResult.map(item => ({
+        serviceId: item.serviceId,
+        serviceName: item.serviceName,
+        bookingCount: this.safeBigIntToNumber(item.appointmentCount),
+        completionRate: 0, // 暫時設為0，可後續實現完成率計算
+        revenue: this.safeBigIntToNumber(item.totalRevenue),
+      })),
+    };
+  }
+
   async getAnalytics(branchId?: string, dateRange: string = '30d') {
     // 轉換 dateRange 為 RangeKey
     const rangeKey: RangeKey = dateRange === '7d' ? '7d' : 
@@ -372,24 +524,9 @@ export class AdminAnalyticsUnifiedService {
         })),
         totalBalance: this.safeBigIntToNumber(totalStoredValue._sum.balance),
       },
-      appointments: {
-        total: 0, // 簡化處理，實際應該查詢預約總數
-        pending: 0,
-        confirmed: 0,
-        completed: 0,
-        cancelled: 0,
-        conversionRate: 0,
-        byStatus: [],
-        byTimeSlot: [],
-      },
-      artists: {
-        total: 0, // 簡化處理，實際應該查詢刺青師總數
-        topPerformers: [],
-      },
-      services: {
-        total: 0, // 簡化處理，實際應該查詢服務總數
-        topServices: [],
-      },
+      appointments: await this.getAppointmentStats(currentRange, branchFilter),
+      artists: await this.getArtistStats(currentRange, branchFilter),
+      services: await this.getServiceStats(currentRange, branchFilter),
     };
 
     return result;
