@@ -114,7 +114,7 @@ export class AdminAnalyticsOptimizedService {
           ...branchFilter,
           ...(startDate ? dateFilter : {}), // 全部時間時不限制日期
           paymentType: 'ONE_TIME',
-          status: { in: ['PAID', 'PAID_COMPLETE'] },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
         },
         _sum: { finalAmount: true },
       }),
@@ -138,7 +138,7 @@ export class AdminAnalyticsOptimizedService {
             gte: monthStart,
             lte: now
           },
-          status: { in: ['PAID', 'PAID_COMPLETE'] },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
         },
         _sum: { finalAmount: true },
       }),
@@ -172,7 +172,7 @@ export class AdminAnalyticsOptimizedService {
               lte: now
             }
           }),
-          status: { in: ['PAID', 'PAID_COMPLETE'] },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
         },
         _sum: { finalAmount: true },
       }),
@@ -207,7 +207,7 @@ export class AdminAnalyticsOptimizedService {
                 gte: new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000),
                 lt: startDate,
               },
-              status: { in: ['PAID', 'PAID_COMPLETE'] },
+              status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
             },
             _sum: { finalAmount: true },
           })
@@ -235,7 +235,7 @@ export class AdminAnalyticsOptimizedService {
           ...branchFilter,
           ...dateFilter,
           paymentType: 'ONE_TIME',
-          status: { in: ['PAID', 'PAID_COMPLETE'] },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
         },
         _sum: { finalAmount: true },
         orderBy: { _sum: { finalAmount: 'desc' } },
@@ -258,7 +258,7 @@ export class AdminAnalyticsOptimizedService {
           ...branchFilter,
           ...dateFilter,
           paymentType: 'ONE_TIME',
-          status: { in: ['PAID', 'PAID_COMPLETE'] },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
           appointment: { serviceId: { not: null } },
         },
         select: {
@@ -302,7 +302,7 @@ export class AdminAnalyticsOptimizedService {
           ...branchFilter,
           ...dateFilter,
           paymentType: 'ONE_TIME',
-          status: { in: ['PAID', 'PAID_COMPLETE'] },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
         },
         _sum: { finalAmount: true },
         _count: true,
@@ -334,7 +334,7 @@ export class AdminAnalyticsOptimizedService {
       this.prisma.order.findMany({
         where: {
           paidAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
-          status: { in: ['PAID', 'PAID_COMPLETE', 'PARTIALLY_PAID'] },
+          status: { in: ['PAID', 'PAID_COMPLETE', 'INSTALLMENT_ACTIVE', 'PARTIALLY_PAID', 'COMPLETED'] },
         },
         select: { memberId: true },
         distinct: ['memberId'],
