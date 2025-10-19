@@ -54,39 +54,19 @@ console.log(`📊 使用 PostgreSQL 資料庫`);
 run('npx prisma generate', '生成 Prisma Client');
 run('npx tsc -p tsconfig.build.json', '編譯 TypeScript 專案');
 
-// 如果需要完全重置資料庫（清空所有數據並重新導入）
-if (process.env.RESET_DATABASE === 'true') {
-  console.log('🔄 完全重置資料庫模式：將清空並重建所有數據');
-  
-  // 使用 db push 代替 migrate reset 以避免 migration 錯誤
-  console.log('📊 使用 db push 清空並重建資料庫...');
-  run('npx prisma db push --force-reset --accept-data-loss', '強制重置並同步資料庫 Schema');
-  
-  // 重置後執行 seeding
-  console.log('🌱 執行資料庫 seeding...');
-  try {
-    run('npx ts-node prisma/seed.ts', '匯入預設種子資料');
-    console.log('✅ 資料庫種子數據導入成功');
-  } catch (error) {
-    console.warn('⚠️ Seeding 失敗，但服務將繼續啟動');
-    console.warn('   錯誤訊息:', error.message);
-  }
-} else {
-  // 正常模式：只同步 schema，不清空數據
-  run('npx prisma db push --accept-data-loss', '同步資料庫 Schema');
-  
-  // 只在環境變數明確設定為 true 時才執行 seeding
-  if (process.env.RUN_SEED === 'true') {
-    console.log('🌱 執行資料庫 seeding...');
-    try {
-      run('npx ts-node prisma/seed.ts', '匯入預設種子資料');
-    } catch (error) {
-      console.warn('⚠️ Seeding 失敗，但服務將繼續啟動');
-      console.warn('   這通常是因為資料庫已經有數據了');
-    }
-  } else {
-    console.log('⏭️ 跳過資料庫 seeding（RUN_SEED 未設定為 true）');
-  }
+// 強制執行種子數據 - 修正統計報表數據問題
+console.log('🔄 強制執行種子數據模式：修正統計報表數據問題');
+console.log('📊 使用 db push 同步資料庫 Schema...');
+run('npx prisma db push --accept-data-loss', '同步資料庫 Schema');
+
+// 強制執行 seeding 來修正數據問題
+console.log('🌱 強制執行資料庫 seeding...');
+try {
+  run('npx ts-node prisma/seed.ts', '匯入預設種子資料');
+  console.log('✅ 資料庫種子數據導入成功');
+} catch (error) {
+  console.warn('⚠️ Seeding 失敗，但服務將繼續啟動');
+  console.warn('   錯誤訊息:', error.message);
 }
 
 run('node dist/main.js', '啟動 NestJS 伺服器');
