@@ -108,7 +108,7 @@ export class AdminAnalyticsOptimizedService {
         where: {
           status: 'PAID',
           ...(startDate ? paidDateFilter : {}), // 全部時間時不限制日期
-          order: branchFilter,
+          ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
         },
         _sum: { amount: true },
       }),
@@ -135,7 +135,7 @@ export class AdminAnalyticsOptimizedService {
             gte: new Date(now.getFullYear(), now.getMonth(), 1),
             lte: new Date()
           },
-          order: branchFilter,
+          ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
         },
         _sum: { amount: true },
       }),
@@ -176,7 +176,7 @@ export class AdminAnalyticsOptimizedService {
               lte: new Date()
             }
           }),
-          order: branchFilter,
+          ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
         },
         _sum: { amount: true },
       }),
@@ -206,7 +206,7 @@ export class AdminAnalyticsOptimizedService {
                 gte: new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000),
                 lt: startDate,
               },
-              order: branchFilter,
+              ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
             },
             _sum: { amount: true },
           })
@@ -231,7 +231,7 @@ export class AdminAnalyticsOptimizedService {
         where: {
           status: 'PAID',
           ...paidDateFilter,
-          order: branchFilter,
+          ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
         },
         _sum: { amount: true },
       }),
@@ -261,7 +261,7 @@ export class AdminAnalyticsOptimizedService {
           status: 'PAID',
           ...paidDateFilter,
           order: {
-            ...branchFilter,
+            ...(Object.keys(branchFilter).length > 0 ? branchFilter : {}),
             appointment: { serviceId: { not: null } },
           },
         },
@@ -298,7 +298,7 @@ export class AdminAnalyticsOptimizedService {
         where: {
           status: 'PAID',
           ...paidDateFilter,
-          order: branchFilter,
+          ...(Object.keys(branchFilter).length > 0 ? { order: branchFilter } : {}),
         },
         _sum: { amount: true },
         _count: true,
