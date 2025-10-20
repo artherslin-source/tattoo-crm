@@ -2,12 +2,43 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
+  // 確保uploads目錄存在
+  const uploadsPath = join(process.cwd(), 'uploads');
+  const servicesPath = join(uploadsPath, 'services');
+  const portfolioPath = join(uploadsPath, 'portfolio');
+  
+  if (!existsSync(uploadsPath)) {
+    mkdirSync(uploadsPath, { recursive: true });
+    console.log('📁 Created uploads directory');
+  }
+  
+  if (!existsSync(servicesPath)) {
+    mkdirSync(servicesPath, { recursive: true });
+    console.log('📁 Created uploads/services directory');
+  }
+  
+  if (!existsSync(portfolioPath)) {
+    mkdirSync(portfolioPath, { recursive: true });
+    console.log('📁 Created uploads/portfolio directory');
+  }
+  
+  // 創建服務分類目錄
+  const serviceCategories = ['arm', 'leg', 'back', 'other'];
+  for (const category of serviceCategories) {
+    const categoryPath = join(servicesPath, category);
+    if (!existsSync(categoryPath)) {
+      mkdirSync(categoryPath, { recursive: true });
+      console.log(`📁 Created uploads/services/${category} directory`);
+    }
+  }
+  
   // 配置靜態文件服務
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+  app.useStaticAssets(uploadsPath, {
     prefix: '/uploads/',
   });
   
