@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { ServicesService } from '../services/services.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { extname, join } from 'path';
@@ -122,7 +122,72 @@ export class AdminServicesController {
     };
   }
 
-  // 新增：上傳服務項目圖片
+  // 新增：批次上傳服務項目圖片
+  @Post('images/batch-upload')
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'images', maxCount: 10 }
+  ], {
+    storage: diskStorage({
+      destination: (req, file, callback) => {
+        const category = req.body.category || 'other';
+        const uploadPath = join(process.cwd(), 'uploads', 'services', category);
+        
+        if (!existsSync(uploadPath)) {
+          mkdirSync(uploadPath, { recursive: true });
+        }
+        callback(null, uploadPath);
+      },
+      filename: (req, file, callback) => {
+        // 自動生成唯一檔名，不依賴原始檔名
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 8);
+        const ext = extname(file.originalname);
+        const filename = `service-${timestamp}-${randomString}${ext}`;
+        callback(null, filename);
+      },
+    }),
+    fileFilter: (req, file, callback) => {
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        return callback(new Error('只允許上傳圖片文件 (JPG, JPEG, PNG, GIF, WebP)'), false);
+      }
+      callback(null, true);
+    },
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB
+    },
+  }))
+  async batchUploadServiceImages(
+    @Body() body: { category: string },
+    @UploadedFiles() files: { images?: Express.Multer.File[] }
+  ) {
+    if (!files.images || files.images.length === 0) {
+      throw new Error('沒有上傳文件');
+    }
+
+    const category = body.category || 'other';
+    const uploadedImages = [];
+
+    for (const file of files.images) {
+      const imageUrl = `/uploads/services/${category}/${file.filename}`;
+      uploadedImages.push({
+        filename: file.filename,
+        originalName: file.originalname,
+        category,
+        url: imageUrl,
+        size: file.size,
+        displayName: file.originalname,
+      });
+    }
+
+    return {
+      success: true,
+      message: `成功上傳 ${uploadedImages.length} 張圖片`,
+      data: uploadedImages,
+      total: uploadedImages.length,
+    };
+  }
+
+  // 保留原有的單張上傳API
   @Post('images/upload')
   @UseInterceptors(FileInterceptor('image', {
     storage: diskStorage({

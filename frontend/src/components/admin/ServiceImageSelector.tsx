@@ -56,9 +56,12 @@ export function ServiceImageSelector({
   const [uploading, setUploading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadCategory, setUploadCategory] = useState<string>("other");
   const [searchTerm, setSearchTerm] = useState("");
   const [tempSelectedImage, setTempSelectedImage] = useState<string | null>(null);
+  const [batchUploading, setBatchUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   // 載入圖片列表
   const loadImages = async (category?: string) => {
@@ -79,6 +82,71 @@ export function ServiceImageSelector({
   };
 
   // 上傳圖片
+  // 處理多文件選擇
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      setUploadFiles(fileArray);
+    }
+  };
+
+  // 批次上傳圖片
+  const handleBatchUpload = async () => {
+    if (uploadFiles.length === 0) {
+      alert('請選擇要上傳的圖片');
+      return;
+    }
+
+    setBatchUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      const formData = new FormData();
+      
+      // 添加所有文件
+      uploadFiles.forEach((file) => {
+        formData.append('images', file);
+      });
+      formData.append('category', uploadCategory);
+
+      const response = await fetch('/api/admin/services/images/batch-upload', {
+        method: 'POST',
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('批次上傳失敗');
+      }
+
+      const result = await response.json();
+      console.log('批次上傳成功:', result);
+
+      // 模擬上傳進度
+      for (let i = 0; i <= 100; i += 10) {
+        setUploadProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // 重新載入圖片列表
+      await loadImages(selectedCategory);
+      
+      // 清空上傳文件
+      setUploadFiles([]);
+      
+      alert(`成功上傳 ${result.total} 張圖片！`);
+    } catch (error) {
+      console.error('批次上傳失敗:', error);
+      alert('批次上傳失敗，請重試');
+    } finally {
+      setBatchUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
   const handleUpload = async () => {
     if (!uploadFile) return;
 
@@ -184,40 +252,108 @@ export function ServiceImageSelector({
           {/* 上傳區域 */}
           <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
             <h3 className="text-sm font-medium mb-3">上傳新圖片</h3>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <Label htmlFor="upload-file">選擇圖片文件</Label>
-                <Input
-                  id="upload-file"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="mt-1"
-                />
+            
+            {/* 批次上傳區域 */}
+            <div className="mb-4 p-3 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Upload className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">批次上傳（推薦）</span>
               </div>
-              <div className="w-32">
-                <Label htmlFor="upload-category">分類</Label>
-                <Select value={uploadCategory} onValueChange={setUploadCategory}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <Label htmlFor="batch-upload-files">選擇多張圖片</Label>
+                  <Input
+                    id="batch-upload-files"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="mt-1"
+                  />
+                  {uploadFiles.length > 0 && (
+                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      已選擇 {uploadFiles.length} 張圖片
+                    </div>
+                  )}
+                </div>
+                <div className="w-32">
+                  <Label htmlFor="batch-upload-category">分類</Label>
+                  <Select value={uploadCategory} onValueChange={setUploadCategory}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  onClick={handleBatchUpload} 
+                  disabled={uploadFiles.length === 0 || batchUploading}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                >
+                  <Upload className="h-4 w-4" />
+                  {batchUploading ? `上傳中... ${uploadProgress}%` : "批次上傳"}
+                </Button>
               </div>
-              <Button 
-                onClick={handleUpload} 
-                disabled={!uploadFile || uploading}
-                className="mb-0"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {uploading ? "上傳中..." : "上傳"}
-              </Button>
+              {batchUploading && (
+                <div className="mt-3">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 單張上傳區域 */}
+            <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <ImageIcon className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">單張上傳</span>
+              </div>
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <Label htmlFor="upload-file">選擇單張圖片</Label>
+                  <Input
+                    id="upload-file"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="w-32">
+                  <Label htmlFor="upload-category">分類</Label>
+                  <Select value={uploadCategory} onValueChange={setUploadCategory}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  onClick={handleUpload} 
+                  disabled={!uploadFile || uploading}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploading ? "上傳中..." : "上傳"}
+                </Button>
+              </div>
             </div>
           </div>
 
