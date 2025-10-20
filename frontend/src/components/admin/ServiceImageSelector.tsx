@@ -26,6 +26,11 @@ interface ServiceImagesResponse {
   total: number;
 }
 
+interface DeleteImageResponse {
+  success: boolean;
+  message: string;
+}
+
 interface ServiceImageSelectorProps {
   isOpen: boolean;
   onClose: () => void;
@@ -111,7 +116,7 @@ export function ServiceImageSelector({
     if (!confirm(`確定要刪除圖片 "${image.filename}" 嗎？`)) return;
 
     try {
-      const response = await deleteJsonWithAuth(`/api/admin/services/images/${image.category}/${image.filename}`);
+      const response = await deleteJsonWithAuth(`/api/admin/services/images/${image.category}/${image.filename}`) as DeleteImageResponse;
       
       if (response.success) {
         // 重新載入圖片列表
