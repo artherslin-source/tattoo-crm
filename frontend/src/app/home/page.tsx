@@ -230,9 +230,9 @@ export default function HomePage() {
         }
         console.log("使用 API Base URL:", apiBase);
         const [servicesRes, artistsRes, branchesRes] = await Promise.all([
-          fetch(`${apiBase}/services`),
-          fetch(`${apiBase}/artists`),
-          fetch(`${apiBase}/branches/public`),
+          fetch(`/api/services`),
+          fetch(`/api/artists`),
+          fetch(`/api/branches/public`),
         ]);
 
         if (!servicesRes.ok || !artistsRes.ok || !branchesRes.ok) {
