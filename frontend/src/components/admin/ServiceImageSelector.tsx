@@ -58,6 +58,7 @@ export function ServiceImageSelector({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadCategory, setUploadCategory] = useState<string>("other");
   const [searchTerm, setSearchTerm] = useState("");
+  const [tempSelectedImage, setTempSelectedImage] = useState<string | null>(null);
 
   // 載入圖片列表
   const loadImages = async (category?: string) => {
@@ -128,9 +129,22 @@ export function ServiceImageSelector({
     }
   };
 
-  // 選擇圖片
-  const handleSelectImage = (imageUrl: string) => {
-    onSelect(imageUrl);
+  // 臨時選擇圖片（不立即套用）
+  const handleTempSelectImage = (imageUrl: string) => {
+    setTempSelectedImage(imageUrl);
+  };
+
+  // 確認選擇圖片
+  const handleConfirmSelection = () => {
+    if (tempSelectedImage) {
+      onSelect(tempSelectedImage);
+      onClose();
+    }
+  };
+
+  // 取消選擇
+  const handleCancelSelection = () => {
+    setTempSelectedImage(null);
     onClose();
   };
 
@@ -152,8 +166,9 @@ export function ServiceImageSelector({
   useEffect(() => {
     if (isOpen) {
       loadImages(selectedCategory);
+      setTempSelectedImage(currentImageUrl || null);
     }
-  }, [isOpen, selectedCategory]);
+  }, [isOpen, selectedCategory, currentImageUrl]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -251,11 +266,11 @@ export function ServiceImageSelector({
                   <div
                     key={image.path}
                     className={`relative group border rounded-lg overflow-hidden cursor-pointer transition-all ${
-                      currentImageUrl === image.url
+                      tempSelectedImage === image.url
                         ? "ring-2 ring-blue-500 border-blue-500"
                         : "border-gray-200 dark:border-gray-700 hover:border-blue-300"
                     }`}
-                    onClick={() => handleSelectImage(image.url)}
+                    onClick={() => handleTempSelectImage(image.url)}
                   >
                     {/* 圖片 */}
                     <div className="aspect-square relative bg-gray-100 dark:bg-gray-800">
@@ -268,7 +283,7 @@ export function ServiceImageSelector({
                       />
                       
                       {/* 選中標記 */}
-                      {currentImageUrl === image.url && (
+                      {tempSelectedImage === image.url && (
                         <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1">
                           <Check className="h-3 w-3" />
                         </div>
@@ -308,10 +323,28 @@ export function ServiceImageSelector({
         </div>
 
         {/* 底部按鈕 */}
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            取消
-          </Button>
+        <div className="flex justify-between items-center pt-4 border-t">
+          <div className="text-sm text-gray-500">
+            {tempSelectedImage ? (
+              <span className="text-green-600 dark:text-green-400">
+                ✓ 已選擇圖片
+              </span>
+            ) : (
+              <span>請選擇一張圖片</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleCancelSelection}>
+              取消
+            </Button>
+            <Button 
+              onClick={handleConfirmSelection}
+              disabled={!tempSelectedImage}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              確認選擇
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
