@@ -55,8 +55,7 @@ function detectApiBase(): string {
 // 檢查後端服務狀態
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const backendUrl = await detectBackendUrl();
-    const response = await fetch(`${backendUrl}/health`, {
+    const response = await fetch(`/api/health`, {
       method: 'GET',
       signal: AbortSignal.timeout(5000)
     });
@@ -163,8 +162,7 @@ export function getApiBase() {
 
 export async function postJSON<T>(path: string, body: Record<string, unknown> | unknown) {
   try {
-    const backendUrl = await detectBackendUrl();
-    const res = await fetch(`${backendUrl}${path}`, {
+    const res = await fetch(`/api${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
