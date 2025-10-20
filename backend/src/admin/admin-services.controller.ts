@@ -139,7 +139,7 @@ export class AdminServicesController {
     }),
     fileFilter: (req, file, callback) => {
       if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-        return callback(new Error('只允許上傳圖片文件 (JPG, PNG, GIF, WebP)'), false);
+        return callback(new Error('只允許上傳圖片文件 (JPG, JPEG, PNG, GIF, WebP)'), false);
       }
       callback(null, true);
     },
