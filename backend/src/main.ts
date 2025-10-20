@@ -42,28 +42,19 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
   
-  // CORS 配置 - 支援多個來源
-  const allowedOrigins = process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',') 
-    : ['http://localhost:4001', 'http://localhost:3000'];
-  
+  // CORS 配置 - 顯式允許 Railway 網域與本地開發
+  const dynamicOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+    : [];
+
   app.enableCors({
-    origin: (origin, callback) => {
-      // 允許沒有 origin 的請求（例如 mobile apps, curl）
-      if (!origin) return callback(null, true);
-      
-      // 生產環境允許所有來源（可以根據需求調整）
-      if (process.env.NODE_ENV === 'production') {
-        return callback(null, true);
-      }
-      
-      // 開發環境檢查白名單
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    // 使用 cors 套件原生的多型設定（string | RegExp | (string|RegExp)[]）
+    origin: [
+      /\.railway\.app$/, // 允許所有 Railway 子網域（前後端分服務）
+      'http://localhost:3000',
+      'http://localhost:4001',
+      ...dynamicOrigins,
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
