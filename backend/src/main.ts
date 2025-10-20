@@ -45,6 +45,6 @@ async function bootstrap() {
   console.log(`🚀 Server is running on port ${port}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Backend accessible at: http://0.0.0.0:${port}`);
-  console.log(`🔄 Deployment Version: 2025-10-19-19:30 - Service Image Folder Mode`);
+  console.log(`🔄 Deployment Version: 2025-10-20-06:00 - Fix Image Upload API`);
 }
 bootstrap();
