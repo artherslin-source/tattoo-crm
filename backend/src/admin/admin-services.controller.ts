@@ -52,7 +52,14 @@ export class AdminServicesController {
 
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    return this.services.delete(id);
+    try {
+      return await this.services.delete(id);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error('刪除服務時發生未知錯誤');
+    }
   }
 
   // 新增：獲取服務項目圖片列表

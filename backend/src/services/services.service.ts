@@ -83,10 +83,32 @@ export class ServicesService {
   async delete(id: string) {
     const service = await this.prisma.service.findUnique({
       where: { id },
+      include: {
+        appointments: true,
+        history: true,
+        completedServices: true,
+      },
     });
 
     if (!service) {
       throw new NotFoundException('Service not found');
+    }
+
+    // 檢查是否有相關的預約記錄
+    if (service.appointments.length > 0) {
+      throw new Error(`無法刪除服務 "${service.name}"，因為有 ${service.appointments.length} 個相關的預約記錄。請先處理這些預約記錄。`);
+    }
+
+    // 檢查是否有相關的已完成服務記錄
+    if (service.completedServices.length > 0) {
+      throw new Error(`無法刪除服務 "${service.name}"，因為有 ${service.completedServices.length} 個相關的已完成服務記錄。`);
+    }
+
+    // 刪除服務歷史記錄
+    if (service.history.length > 0) {
+      await this.prisma.serviceHistory.deleteMany({
+        where: { serviceId: id },
+      });
     }
 
     return this.prisma.service.delete({
