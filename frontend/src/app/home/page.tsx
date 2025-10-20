@@ -29,6 +29,7 @@ interface Service {
   durationMin: number;
   description?: string;
   category?: string | null;
+  imageUrl?: string | null;
 }
 
 interface Artist {
@@ -282,7 +283,7 @@ export default function HomePage() {
       grouped.get(key)?.items.push({
         id: service.id,
         title: service.name,
-        thumb: CATEGORY_IMAGES[key] ?? CATEGORY_IMAGES.Other,
+        thumb: service.imageUrl || CATEGORY_IMAGES[key] || CATEGORY_IMAGES.Other,
         tag: label,
         price: service.price,
         durationMin: service.durationMin,
