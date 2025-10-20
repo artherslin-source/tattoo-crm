@@ -59,10 +59,15 @@ async function main() {
     console.log('⚠️ ServiceHistory 表不存在，跳過清理');
   }
   
-  try {
-    await prisma.service.deleteMany();
-  } catch (e) {
-    console.log('⚠️ Service 表不存在，跳過清理');
+  // 服務數據 - 根據保護模式決定是否清理
+  if (!PROTECT_REAL_DATA) {
+    try {
+      await prisma.service.deleteMany();
+    } catch (e) {
+      console.log('⚠️ Service 表不存在，跳過清理');
+    }
+  } else {
+    console.log('🛡️ 保護模式：保留服務項目數據');
   }
   
   // 分店數據 - 根據保護模式決定是否清理
@@ -345,20 +350,28 @@ async function main() {
     { name: '雙胸到腹肚圖', price: 52000, duration: 540, category: 'Torso' },
   ];
 
-  for (const data of serviceData) {
-    const service = await prisma.service.create({
-      data: {
-        name: data.name,
-        description: `${data.name}服務，專業技術，品質保證`,
-        price: data.price,
-        durationMin: data.duration,
-        category: data.category,
-        createdAt: faker.date.past(),
-      },
-    });
-    services.push(service);
+  // 服務數據創建 - 根據保護模式決定是否創建
+  if (!PROTECT_REAL_DATA) {
+    for (const data of serviceData) {
+      const service = await prisma.service.create({
+        data: {
+          name: data.name,
+          description: `${data.name}服務，專業技術，品質保證`,
+          price: data.price,
+          durationMin: data.duration,
+          category: data.category,
+          createdAt: faker.date.past(),
+        },
+      });
+      services.push(service);
+    }
+    console.log(`✅ 建立 ${serviceData.length} 個服務`);
+  } else {
+    // 保護模式：使用現有服務數據
+    const existingServices = await prisma.service.findMany();
+    services.push(...existingServices);
+    console.log(`🛡️ 保護模式：使用現有 ${existingServices.length} 個服務項目`);
   }
-  console.log(`✅ 建立 ${serviceData.length} 個服務`);
 
   // 7. 建立預約（按照刺青師平均分配）
   const appointments: any[] = [];
