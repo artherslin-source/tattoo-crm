@@ -458,7 +458,7 @@ export default function HomePage() {
 
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {(artists.length ? artists : []).slice(0, 6).map((artist) => (
-                    <Card key={artist.id} className="border-white/10 bg-white/5 text-white">
+                    <Card key={artist.id} className="border-white/10 bg-white/5 text-white" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
                       <CardHeader>
                         <div className="relative h-48 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900">
                           {artist.photoUrl ? (
@@ -484,7 +484,7 @@ export default function HomePage() {
                         <div className="flex flex-col sm:flex-row gap-2">
                           <Button
                             variant="outline"
-                            className="flex-1 border-white/40 bg-white/5 text-white hover:bg-white/20 hover:border-white/60 transition-all"
+                            className="flex-1 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
                             onClick={() => {
                               setSelectedArtist(artist);
                               setPortfolioDialogOpen(true);
@@ -494,7 +494,7 @@ export default function HomePage() {
                           </Button>
                           <Button
                             variant="outline"
-                            className="flex-1 border-white/40 bg-white/5 text-white hover:bg-white/20 hover:border-white/60 transition-all"
+                            className="flex-1 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
                             onClick={scrollToBookingForm}
                           >
                             立即預約
