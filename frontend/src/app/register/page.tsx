@@ -17,7 +17,7 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      const resp = await postJSON<{ accessToken: string; refreshToken?: string }>(
+      const resp = await postJSON(
         "/auth/register", 
         { email, password, name }
       );

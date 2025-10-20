@@ -25,7 +25,7 @@ export default function LoginPage() {
         return;
       }
       
-      const resp = await postJSON<{ accessToken: string; refreshToken?: string }>(
+      const resp = await postJSON(
         "/auth/login",
         { email, password }
       );
