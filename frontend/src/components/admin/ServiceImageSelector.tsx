@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X, Image as ImageIcon, Check, Trash2 } from "lucide-react";
-import { getJsonWithAuth, postJsonWithAuth, deleteJsonWithAuth } from "@/lib/api";
+import { Upload, Image as ImageIcon, Check, Trash2 } from "lucide-react";
+import { getJsonWithAuth, deleteJsonWithAuth } from "@/lib/api";
 import Image from "next/image";
 
 interface ServiceImage {
@@ -18,6 +18,12 @@ interface ServiceImage {
   url: string;
   size: number;
   lastModified: string;
+}
+
+interface ServiceImagesResponse {
+  images: ServiceImage[];
+  categories: string[];
+  total: number;
 }
 
 interface ServiceImageSelectorProps {
@@ -57,7 +63,7 @@ export function ServiceImageSelector({
         params.append("category", category);
       }
       
-      const response = await getJsonWithAuth(`/api/admin/services/images?${params.toString()}`);
+      const response = await getJsonWithAuth(`/api/admin/services/images?${params.toString()}`) as ServiceImagesResponse;
       setImages(response.images || []);
     } catch (error) {
       console.error("載入圖片失敗:", error);
