@@ -43,18 +43,10 @@ async function bootstrap() {
   });
   
   // CORS 配置 - 顯式允許 Railway 網域與本地開發
-  const dynamicOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
-    : [];
-
+  // 生產環境快速解法：反射請求來源（等同允許所有合法來源）
+  // 若需更嚴格控制，可改回白名單陣列
   app.enableCors({
-    // 使用 cors 套件原生的多型設定（string | RegExp | (string|RegExp)[]）
-    origin: [
-      /\.railway\.app$/, // 允許所有 Railway 子網域（前後端分服務）
-      'http://localhost:3000',
-      'http://localhost:4001',
-      ...dynamicOrigins,
-    ],
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
