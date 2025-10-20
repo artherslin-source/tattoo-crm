@@ -62,11 +62,11 @@ export default function Sidebar({ open, onClose }: Props) {
             transition={{ type: "tween", duration: 0.25 }}
           >
             <div className="p-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-6">
                 <h1 className="brand-logo">雕川紋身 CRM</h1>
                 <button onClick={onClose} aria-label="關閉" className="text-2xl">✕</button>
               </div>
-              <nav className="flex flex-col gap-1">
+              <nav className="flex flex-col gap-3">
                 <Link href="/admin/dashboard" onClick={onClose} prefetch={true}>📊 儀表板</Link>
                 <Link href="/admin/analytics" onClick={onClose} prefetch={true}>📈 統計報表</Link>
                 <Link href="/admin/services" onClick={onClose} prefetch={true}>⚙️ 服務管理</Link>
@@ -76,7 +76,7 @@ export default function Sidebar({ open, onClose }: Props) {
                 <Link href="/admin/appointments" onClick={onClose} prefetch={true}>📅 預約管理</Link>
                 <Link href="/admin/orders" onClick={onClose} prefetch={true}>🧾 訂單管理</Link>
               </nav>
-              <div className="mt-6 flex flex-col gap-3">
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-neutral-700 flex flex-col gap-4">
                 <ThemeToggle />
                 <Link href="/admin/profile" onClick={onClose} className="text-sm">👤 個人資料</Link>
                 <button onClick={handleLogout} className="text-sm text-red-500 hover:underline">🚪 登出</button>

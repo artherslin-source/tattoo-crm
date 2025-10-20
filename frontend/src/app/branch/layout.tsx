@@ -122,7 +122,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
               </div>
 
               {/* 導航選單 */}
-              <nav className="flex-1 px-4 space-y-2">
+              <nav className="flex-1 px-4 space-y-3">
                 {navigationItems.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = pathname === item.href;
@@ -135,7 +135,7 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
                         isActive
                           ? 'bg-blue-100 text-blue-900 border-l-4 border-blue-600'
                           : 'text-text-secondary-light hover:bg-gray-100 border-l-4 border-transparent'
-                      } group flex items-center px-4 py-3 text-base font-medium rounded-r-md transition-all duration-150`}
+                      } group flex items-center px-4 py-3.5 text-base font-medium rounded-r-md transition-all duration-150`}
                     >
                       <IconComponent className="mr-4 h-6 w-6 flex-shrink-0" />
                       <span>{item.name}</span>
@@ -145,13 +145,13 @@ export default function BranchLayout({ children }: BranchLayoutProps) {
               </nav>
 
               {/* 登出按鈕 */}
-              <div className="px-4 pb-4 border-t border-gray-200 pt-4">
+              <div className="px-4 pb-4 border-t border-gray-200 dark:border-neutral-700 pt-6 mt-4">
                 <button
                   onClick={() => {
                     setSidebarOpen(false);
                     handleLogout();
                   }}
-                  className="w-full flex items-center px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 rounded-md transition-all duration-150"
+                  className="w-full flex items-center px-4 py-3.5 text-base font-medium text-red-600 hover:bg-red-50 rounded-md transition-all duration-150"
                 >
                   <LogOut className="mr-4 h-6 w-6 flex-shrink-0" />
                   <span>登出</span>
