@@ -277,8 +277,8 @@ export function ServiceImageSelector({
 
                     {/* 圖片資訊 */}
                     <div className="p-2">
-                      <div className="text-xs font-medium truncate mb-1">
-                        {image.filename}
+                      <div className="text-xs font-medium truncate mb-1" title={image.filename}>
+                        {image.filename.replace(/^service-\d+-[a-z0-9]+/i, '圖片')}
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <Badge variant="secondary" className="text-xs">

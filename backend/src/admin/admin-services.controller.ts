@@ -129,11 +129,11 @@ export class AdminServicesController {
         callback(null, uploadPath);
       },
       filename: (req, file, callback) => {
-        // 使用原始檔名，但確保唯一性
+        // 自動生成唯一檔名，不依賴原始檔名
         const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 8);
         const ext = extname(file.originalname);
-        const nameWithoutExt = file.originalname.replace(ext, '');
-        const filename = `${nameWithoutExt}-${timestamp}${ext}`;
+        const filename = `service-${timestamp}-${randomString}${ext}`;
         callback(null, filename);
       },
     }),
@@ -167,7 +167,7 @@ export class AdminServicesController {
         category,
         url: imageUrl,
         size: file.size,
-        path: file.path,
+        displayName: file.originalname, // 用於前端顯示的名稱
       },
     };
   }
