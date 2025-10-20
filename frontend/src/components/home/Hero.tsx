@@ -7,16 +7,16 @@ interface HeroProps {
 
 export function Hero({ loggedIn }: HeroProps) {
   return (
-    <section className="relative isolate overflow-hidden bg-[#080808]">
+    <section className="relative isolate overflow-hidden bg-[#1a1a1a]">
       <div className="absolute inset-0">
         <Image
           src="/images/banner/tattoo-monk.jpg"
           alt="專業紋身師正在進行精細的紋身工作，展現東方禪意與現代工藝的完美結合"
           fill
           priority
-          className="object-cover"
+          className="object-cover brightness-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-black via-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-transparent" />
       </div>
 
       <div className="relative mx-auto flex min-h-[70vh] w-full max-w-6xl flex-col justify-center gap-12 px-4 py-24 sm:px-6 lg:flex-row lg:items-center lg:gap-16 lg:px-8">
