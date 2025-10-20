@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
+import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { ServiceImageSelector } from "@/components/admin/ServiceImageSelector";
 
 interface Service {
   id: string;
@@ -27,6 +28,7 @@ export default function AdminServicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [showImageSelector, setShowImageSelector] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -335,15 +337,42 @@ export default function AdminServicesPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
-                  圖片 URL
+                  服務圖片
                 </label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
-                  placeholder="https://example.com/image.jpg"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
+                    placeholder="/uploads/services/arm/example.jpg"
+                    readOnly
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowImageSelector(true)}
+                    className="px-4"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    選擇圖片
+                  </Button>
+                </div>
+                {formData.imageUrl && (
+                  <div className="mt-2">
+                    <div className="text-xs text-gray-500 mb-1">預覽：</div>
+                    <div className="w-20 h-20 border rounded overflow-hidden">
+                      <img
+                        src={formData.imageUrl}
+                        alt="預覽"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center">
@@ -463,6 +492,17 @@ export default function AdminServicesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 圖片選擇器 */}
+      <ServiceImageSelector
+        isOpen={showImageSelector}
+        onClose={() => setShowImageSelector(false)}
+        onSelect={(imageUrl) => {
+          setFormData({ ...formData, imageUrl });
+          setShowImageSelector(false);
+        }}
+        currentImageUrl={formData.imageUrl}
+      />
     </div>
   );
 }
