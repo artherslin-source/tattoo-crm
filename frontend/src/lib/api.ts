@@ -52,12 +52,11 @@ function detectApiBase(): string {
   return "http://localhost:4000";
 }
 
-// 檢查後端服務狀態
+// 檢查後端服務狀態（帶重試機制）
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`/api/health`, {
+    const response = await fetchWithRetry(`/api/health/simple`, {
       method: 'GET',
-      signal: AbortSignal.timeout(5000)
     });
     return response.ok;
   } catch (error) {
@@ -162,7 +161,7 @@ export function getApiBase() {
 
 export async function postJSON<T>(path: string, body: Record<string, unknown> | unknown) {
   try {
-    const res = await fetch(`/api${path}`, {
+    const res = await fetchWithRetry(`/api${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

@@ -17,6 +17,7 @@ import { AdminMembersModule } from './admin/admin-members.module';
 import { BranchModule } from './branch/branch.module';
 import { ArtistModule } from './artist/artist.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ContactsModule } from './contacts/contacts.module';
     AdminModule,
     BranchModule,
     ContactsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { postJSON, getAccessToken, getApiBase } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
+import { smartApiCall } from "@/lib/api-fallback";
 import type { Branch as BranchType } from "@/types/branch";
 import { debugApiUrls, findWorkingApiUrl } from "@/lib/api-debug";
 import { CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
@@ -229,20 +230,12 @@ export default function HomePage() {
           }
         }
         console.log("使用 API Base URL:", apiBase);
-        const [servicesRes, artistsRes, branchesRes] = await Promise.all([
-          fetch(`/api/services`),
-          fetch(`/api/artists`),
-          fetch(`/api/branches/public`),
-        ]);
-
-        if (!servicesRes.ok || !artistsRes.ok || !branchesRes.ok) {
-          throw new Error("無法載入資料");
-        }
-
+        
+        // 使用智能 API 調用（自動重試 + 降級）
         const [servicesData, artistsData, branchesData] = await Promise.all([
-          servicesRes.json(),
-          artistsRes.json(),
-          branchesRes.json(),
+          smartApiCall<Service[]>('/api/services', {}, []),
+          smartApiCall<Artist[]>('/api/artists', {}, []),
+          smartApiCall<Branch[]>('/api/branches/public', {}, []),
         ]);
 
         setServices(servicesData);
