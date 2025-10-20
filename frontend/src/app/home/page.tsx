@@ -8,6 +8,7 @@ import { Accordion } from "@/components/home/Accordion";
 import { HorizontalScroller } from "@/components/home/HorizontalScroller";
 import { ServiceCard } from "@/components/home/ServiceCard";
 import { StickyCTA } from "@/components/home/StickyCTA";
+import { PortfolioDialog } from "@/components/home/PortfolioDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,6 +173,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null);
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
+  const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -478,13 +481,25 @@ export default function HomePage() {
                             </Badge>
                           ))}
                         </div>
-                        <Button
-                          variant="outline"
-                          className="w-full border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white"
-                          onClick={scrollToBookingForm}
-                        >
-                          預約此設計師
-                        </Button>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white"
+                            onClick={() => {
+                              setSelectedArtist(artist);
+                              setPortfolioDialogOpen(true);
+                            }}
+                          >
+                            查看作品集
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="flex-1 border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white"
+                            onClick={scrollToBookingForm}
+                          >
+                            立即預約
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -629,6 +644,16 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 作品集對話框 */}
+      <PortfolioDialog
+        artist={selectedArtist}
+        open={portfolioDialogOpen}
+        onClose={() => {
+          setPortfolioDialogOpen(false);
+          setSelectedArtist(null);
+        }}
+      />
 
       <footer className="border-t border-white/10 bg-black py-10 text-center text-sm text-neutral-400">
         <div className="mx-auto max-w-6xl px-6">
