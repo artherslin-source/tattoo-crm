@@ -113,6 +113,18 @@ export default function AdminServicesPage() {
       isActive: service.isActive
     });
     setShowCreateForm(true);
+    
+    // 自動滾動到編輯表單
+    setTimeout(() => {
+      const editForm = document.getElementById('edit-service-form');
+      if (editForm) {
+        editForm.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
   };
 
   const handleUpdateService = async (e: React.FormEvent) => {
@@ -242,7 +254,7 @@ export default function AdminServicesPage() {
 
       {/* Create/Edit Form */}
       {showCreateForm && (
-        <Card className="mb-8">
+        <Card id="edit-service-form" className="mb-8">
           <CardHeader>
             <CardTitle>
               {editingService ? '編輯服務項目' : '新增服務項目'}
