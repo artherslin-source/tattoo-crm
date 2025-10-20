@@ -432,18 +432,12 @@ export default function AdminArtistsPage() {
                           {artist.speciality || '未設定'}
                         </td>
                         <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
-                          {artist.portfolioUrl ? (
-                            <a 
-                              href={artist.portfolioUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 underline"
-                            >
-                              查看作品集
-                            </a>
-                          ) : (
-                            '未設定'
-                          )}
+                          <button
+                            onClick={() => window.open(`/artist/portfolio?artistId=${artist.id}`, '_blank')}
+                            className="text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                          >
+                            查看作品集
+                          </button>
                         </td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

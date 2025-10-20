@@ -18,7 +18,10 @@
     "rebuild:dev": "npx ts-node scripts/smart-rebuild.ts -r \"開發環境重建\"",
     "rebuild:protect": "npx ts-node scripts/smart-rebuild.ts -p -r \"保護性重建\"",
     "restore": "npx ts-node scripts/restore-backup.ts",
-    "backup:list": "npx ts-node scripts/restore-backup.ts --list"
+    "backup:list": "npx ts-node scripts/restore-backup.ts --list",
+    "business-data": "node scripts/run-business-data.js",
+    "business-data:small": "node scripts/run-business-data.js --contacts=20 --appointments=15 --orders=10",
+    "business-data:large": "node scripts/run-business-data.js --contacts=100 --appointments=80 --orders=60"
   },
   "dependencies": {
     "@faker-js/faker": "^8.3.1",
