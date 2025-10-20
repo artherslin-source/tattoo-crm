@@ -9,6 +9,22 @@ import { existsSync, mkdirSync } from 'fs';
 import { extname, join } from 'path';
 import { z } from 'zod';
 
+// 嘗試將瀏覽器上傳時以 latin1/ISO-8859-1 編碼的檔名轉為 UTF-8（支援繁體中文）
+function normalizeFilename(name: string): string {
+  try {
+    // 若本身就是 ASCII 或已是 UTF-8，直接回傳
+    if (/^[\x00-\x7F]+$/.test(name)) return name;
+    // 嘗試以 latin1 轉為 UTF-8
+    const converted = Buffer.from(name, 'latin1').toString('utf8');
+    // 若轉換後包含中日韓統一表意文字，視為正常中文
+    if (/[\u4E00-\u9FFF]/.test(converted)) return converted;
+    // 否則回傳原值
+    return name;
+  } catch {
+    return name;
+  }
+}
+
 const CreateServiceSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
@@ -109,8 +125,10 @@ export class AdminServicesController {
               if (existsSync(metaPath)) {
                 const raw = fs.readFileSync(metaPath, 'utf-8');
                 const meta = JSON.parse(raw);
-                originalName = meta.originalName || meta.displayName;
-                displayName = meta.displayName || meta.originalName;
+                const o = meta.originalName || meta.displayName;
+                const d = meta.displayName || meta.originalName;
+                originalName = o ? normalizeFilename(o) : undefined;
+                displayName = d ? normalizeFilename(d) : undefined;
               }
             } catch {}
 
@@ -190,15 +208,16 @@ export class AdminServicesController {
       // 寫入中繼資料檔 (保存原始檔名)
       try {
         const metaPath = join(process.cwd(), 'uploads', 'services', category, `${file.filename}.meta.json`);
-        fs.writeFileSync(metaPath, JSON.stringify({ originalName: file.originalname, displayName: file.originalname }, null, 2));
+        const originalName = normalizeFilename(file.originalname);
+        fs.writeFileSync(metaPath, JSON.stringify({ originalName, displayName: originalName }, null, 2));
       } catch {}
       uploadedImages.push({
         filename: file.filename,
-        originalName: file.originalname,
+        originalName: normalizeFilename(file.originalname),
         category,
         url: imageUrl,
         size: file.size,
-        displayName: file.originalname,
+        displayName: normalizeFilename(file.originalname),
       });
     }
 
@@ -257,7 +276,8 @@ export class AdminServicesController {
     try {
       const fs = require('fs');
       const metaPath = join(process.cwd(), 'uploads', 'services', category, `${file.filename}.meta.json`);
-      fs.writeFileSync(metaPath, JSON.stringify({ originalName: file.originalname, displayName: file.originalname }, null, 2));
+      const originalName = normalizeFilename(file.originalname);
+      fs.writeFileSync(metaPath, JSON.stringify({ originalName, displayName: originalName }, null, 2));
     } catch {}
 
     return {
