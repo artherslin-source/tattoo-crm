@@ -18,6 +18,8 @@ interface ServiceImage {
   url: string;
   size: number;
   lastModified: string;
+  originalName?: string;
+  displayName?: string;
 }
 
 interface ServiceImagesResponse {
@@ -195,7 +197,7 @@ export function ServiceImageSelector({
 
   // 過濾圖片
   const filteredImages = images.filter(image => 
-    image.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (image.displayName || image.originalName || image.filename).toLowerCase().includes(searchTerm.toLowerCase()) ||
     CATEGORY_LABELS[image.category as keyof typeof CATEGORY_LABELS]?.includes(searchTerm)
   );
 
@@ -355,8 +357,8 @@ export function ServiceImageSelector({
 
                     {/* 圖片資訊 */}
                     <div className="p-2">
-                      <div className="text-xs font-medium truncate mb-1" title={image.filename}>
-                        {image.filename.replace(/^service-\d+-[a-z0-9]+/i, '圖片')}
+                      <div className="text-xs font-medium truncate mb-1" title={(image.displayName || image.originalName || image.filename)}>
+                        {image.displayName || image.originalName || image.filename}
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <Badge variant="secondary" className="text-xs">

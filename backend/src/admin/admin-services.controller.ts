@@ -82,6 +82,8 @@ export class AdminServicesController {
       url: string;
       size: number;
       lastModified: Date;
+      originalName?: string;
+      displayName?: string;
     }> = [];
 
     // 定義分類資料夾
@@ -99,6 +101,19 @@ export class AdminServicesController {
           
           // 只處理圖片文件
           if (stats.isFile() && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)) {
+            // 嘗試讀取同名的中繼資料 (原始檔名)
+            let originalName: string | undefined;
+            let displayName: string | undefined;
+            try {
+              const metaPath = `${filePath}.meta.json`;
+              if (existsSync(metaPath)) {
+                const raw = fs.readFileSync(metaPath, 'utf-8');
+                const meta = JSON.parse(raw);
+                originalName = meta.originalName || meta.displayName;
+                displayName = meta.displayName || meta.originalName;
+              }
+            } catch {}
+
             images.push({
               filename: file,
               path: `/uploads/services/${cat}/${file}`,
@@ -106,6 +121,8 @@ export class AdminServicesController {
               url: `/uploads/services/${cat}/${file}`,
               size: stats.size,
               lastModified: stats.mtime,
+              originalName,
+              displayName,
             });
           }
         }
@@ -167,8 +184,14 @@ export class AdminServicesController {
     const category = body.category || 'other';
     const uploadedImages = [];
 
+    const fs = require('fs');
     for (const file of files.images) {
       const imageUrl = `/uploads/services/${category}/${file.filename}`;
+      // 寫入中繼資料檔 (保存原始檔名)
+      try {
+        const metaPath = join(process.cwd(), 'uploads', 'services', category, `${file.filename}.meta.json`);
+        fs.writeFileSync(metaPath, JSON.stringify({ originalName: file.originalname, displayName: file.originalname }, null, 2));
+      } catch {}
       uploadedImages.push({
         filename: file.filename,
         originalName: file.originalname,
@@ -229,6 +252,13 @@ export class AdminServicesController {
 
     const category = body.category || 'other';
     const imageUrl = `/uploads/services/${category}/${file.filename}`;
+
+    // 寫入中繼資料檔 (保存原始檔名)
+    try {
+      const fs = require('fs');
+      const metaPath = join(process.cwd(), 'uploads', 'services', category, `${file.filename}.meta.json`);
+      fs.writeFileSync(metaPath, JSON.stringify({ originalName: file.originalname, displayName: file.originalname }, null, 2));
+    } catch {}
 
     return {
       success: true,
