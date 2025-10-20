@@ -159,7 +159,7 @@ export function getApiBase() {
   return API_BASE;
 }
 
-export async function postJSON<T>(path: string, body: Record<string, unknown> | unknown) {
+export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
   try {
     const res = await fetchWithRetry(`/api${path}`, {
       method: 'POST',

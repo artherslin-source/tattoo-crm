@@ -73,12 +73,12 @@ export async function fetchWithRetry(
 /**
  * 判斷錯誤是否可重試
  */
-function isRetryableError(error: any): boolean {
+function isRetryableError(error: unknown): boolean {
   if (error instanceof TypeError && error.message.includes('fetch')) {
     return true; // 網路錯誤
   }
   
-  if (error.name === 'AbortError') {
+  if (error instanceof Error && error.name === 'AbortError') {
     return true; // 超時錯誤
   }
   
