@@ -236,10 +236,8 @@ async function withAuthFetch(
   headers.set("Content-Type", headers.get("Content-Type") ?? "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  // 使用動態檢測的後端 URL
-  const backendUrl = await detectBackendUrl();
-  
-  const res = await fetch(`${backendUrl}${path}`, {
+  // 使用相對路徑，讓 Next.js rewrite 處理
+  const res = await fetch(path, {
     ...init,
     headers,
     credentials: "include",
@@ -249,8 +247,7 @@ async function withAuthFetch(
     const refreshed = await tryRefreshOnce();
     if (refreshed) {
       headers.set("Authorization", `Bearer ${refreshed}`);
-      const backendUrl = await detectBackendUrl();
-      return fetch(`${backendUrl}${path}`, {
+      return fetch(path, {
         ...init,
         headers,
         credentials: "include",
