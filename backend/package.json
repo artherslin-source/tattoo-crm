@@ -12,7 +12,7 @@
     "start:dev": "cross-env PORT=4000 nest start --watch",
     "start:prod": "node scripts/start-prod.js",
     "start:force-build": "npm run build && npm run start:prod",
-    "postinstall": "npx prisma generate && npm run build:tsc",
+    "postinstall": "npx prisma generate",
     "seed": "npx ts-node prisma/seed.ts",
     "rebuild": "npx ts-node scripts/smart-rebuild.ts",
     "rebuild:dev": "npx ts-node scripts/smart-rebuild.ts -r \"開發環境重建\"",
