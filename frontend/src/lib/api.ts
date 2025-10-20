@@ -236,8 +236,20 @@ async function withAuthFetch(
   headers.set("Content-Type", headers.get("Content-Type") ?? "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  // 使用相對路徑，讓 Next.js rewrite 處理
-  const res = await fetch(path, {
+  // 對於圖片管理API使用相對路徑，其他API使用絕對路徑
+  const isImageApi = path.includes('/admin/services/images');
+  
+  let url: string;
+  if (isImageApi) {
+    // 使用相對路徑，讓 Next.js rewrite 處理
+    url = path;
+  } else {
+    // 使用動態檢測的後端 URL
+    const backendUrl = await detectBackendUrl();
+    url = `${backendUrl}${path}`;
+  }
+  
+  const res = await fetch(url, {
     ...init,
     headers,
     credentials: "include",
@@ -247,7 +259,7 @@ async function withAuthFetch(
     const refreshed = await tryRefreshOnce();
     if (refreshed) {
       headers.set("Authorization", `Bearer ${refreshed}`);
-      return fetch(path, {
+      return fetch(url, {
         ...init,
         headers,
         credentials: "include",
