@@ -484,7 +484,7 @@ export default function HomePage() {
                         <div className="flex flex-col sm:flex-row gap-2">
                           <Button
                             variant="outline"
-                            className="flex-1 border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white"
+                            className="flex-1 border-white/40 bg-white/5 text-white hover:bg-white/20 hover:border-white/60 transition-all"
                             onClick={() => {
                               setSelectedArtist(artist);
                               setPortfolioDialogOpen(true);
@@ -494,7 +494,7 @@ export default function HomePage() {
                           </Button>
                           <Button
                             variant="outline"
-                            className="flex-1 border-white/30 text-text-muted-light hover:bg-white/10 hover:text-white"
+                            className="flex-1 border-white/40 bg-white/5 text-white hover:bg-white/20 hover:border-white/60 transition-all"
                             onClick={scrollToBookingForm}
                           >
                             立即預約
