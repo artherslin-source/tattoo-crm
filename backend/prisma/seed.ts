@@ -90,7 +90,7 @@ async function main() {
   console.log('✅ 清理現有資料完成');
 
   // 1. 建立管理員帳號
-  const hashedPassword = await bcrypt.hash('12345678', 12);
+  const hashedPassword = await bcrypt.hash('admin123', 12);
   const admin = await prisma.user.create({
     data: {
       email: 'admin@test.com',
