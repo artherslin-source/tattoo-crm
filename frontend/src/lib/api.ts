@@ -61,7 +61,8 @@ function detectApiBase(): string {
   
   // 如果無法檢測，返回錯誤提示
   console.error('❌ 無法檢測 API URL，請設定 NEXT_PUBLIC_API_BASE_URL 環境變數');
-  return window.location.origin;
+  // SSR 時返回空字符串，避免 build 失敗
+  return typeof window !== 'undefined' ? window.location.origin : '';
 }
 
 // 檢查後端服務狀態（帶重試機制）
@@ -128,13 +129,21 @@ export async function detectBackendUrl(): Promise<string> {
   return `https://${hostname}`;
 }
 
-const API_BASE = detectApiBase();
+// Lazy evaluation to avoid SSR issues
+let API_BASE: string | null = null;
 
-// 調試信息
-if (typeof window !== 'undefined') {
-  console.log('🔍 API Base URL:', API_BASE);
-  console.log('🔍 Current hostname:', window.location.hostname);
-  console.log('🔍 Environment:', process.env.NODE_ENV);
+function getApiBase(): string {
+  if (API_BASE === null) {
+    API_BASE = detectApiBase();
+    
+    // 調試信息
+    if (typeof window !== 'undefined') {
+      console.log('🔍 API Base URL:', API_BASE);
+      console.log('🔍 Current hostname:', window.location.hostname);
+      console.log('🔍 Environment:', process.env.NODE_ENV);
+    }
+  }
+  return API_BASE;
 }
 
 function readFromLocalStorage(key: string) {
@@ -169,9 +178,7 @@ export function saveTokens(accessToken: string, refreshToken?: string, userRole?
   if (userBranchId) writeToLocalStorage("userBranchId", userBranchId);
 }
 
-export function getApiBase() {
-  return API_BASE;
-}
+export { getApiBase };
 
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
   try {
