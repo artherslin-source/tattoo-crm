@@ -5,6 +5,11 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 
 async function bootstrap() {
+  // 修復 BigInt 序列化問題
+  (BigInt.prototype as any).toJSON = function() {
+    return this.toString();
+  };
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
   // 確保uploads目錄存在
