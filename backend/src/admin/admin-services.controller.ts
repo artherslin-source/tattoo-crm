@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -72,9 +72,15 @@ export class AdminServicesController {
       return await this.services.delete(id);
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(error.message);
+        throw new BadRequestException({
+          message: error.message,
+          statusCode: 400,
+        });
       }
-      throw new Error('刪除服務時發生未知錯誤');
+      throw new BadRequestException({
+        message: '刪除服務時發生未知錯誤',
+        statusCode: 400,
+      });
     }
   }
 
