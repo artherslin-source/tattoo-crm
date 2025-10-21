@@ -4,12 +4,12 @@ import Navbar from "@/components/Navbar";
 import BackToTopButton from "@/components/BackToTopButton";
 
 export const metadata: Metadata = {
-  title: "貂蟬 TATTOO - 專業刺青工作室管理系統",
+  title: "彫川紋身 - 專業刺青工作室管理系統",
   description: "為熱愛刺青的你打造專屬體驗，透過 Tattoo CRM 預約、管理與追蹤每一次刺青旅程",
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/images/logo/diaochan-tattoo-logo.png',
+    apple: '/images/logo/彫川紋身-logo.png',
   },
 };
 

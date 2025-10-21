@@ -76,8 +76,8 @@ export default function LoginPage() {
       {/* 品牌 LOGO 背景層 */}
       <div className="auth-bg-logo" aria-hidden="true">
         <img 
-          src="/images/logo/diaochan-tattoo-logo.png" 
-          alt="貂蟬 TATTOO" 
+          src="/images/logo/彫川紋身-logo.png" 
+          alt="彫川紋身" 
           className="w-full max-w-md opacity-20"
         />
       </div>

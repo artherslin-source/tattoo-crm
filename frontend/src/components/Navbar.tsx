@@ -83,8 +83,8 @@ export default function Navbar() {
               className="brand-logo transition-all duration-300 hover:scale-105"
             >
               <img 
-                src="/images/logo/diaochan-tattoo-logo.png" 
-                alt="貂蟬 TATTOO" 
+                src="/images/logo/彫川紋身-logo.png" 
+                alt="彫川紋身" 
                 className="h-8 w-auto logo-metallic"
               />
             </button>
@@ -189,8 +189,8 @@ export default function Navbar() {
                   className="brand-logo transition-all duration-300 hover:scale-105"
                 >
                   <img 
-                    src="/images/logo/diaochan-tattoo-logo.png" 
-                    alt="貂蟬 TATTOO" 
+                    src="/images/logo/彫川紋身-logo.png" 
+                    alt="彫川紋身" 
                     className="h-6 w-auto logo-metallic"
                   />
                 </button>

@@ -1,4 +1,4 @@
-# 🎉 貂蟬 TATTOO LOGO 整合完成報告
+# 🎉 彫川紋身 LOGO 整合完成報告
 
 ## ✅ 整合摘要
 
@@ -59,7 +59,7 @@
 
 ### 5️⃣ **頁面 Favicon** ✅
 **檔案：** `frontend/src/app/layout.tsx`
-- ✅ 更新頁面標題為「貂蟬 TATTOO」
+- ✅ 更新頁面標題為「彫川紋身」
 - ✅ 設置 favicon 圖標
 - ✅ 添加 Apple Touch Icon
 
@@ -293,7 +293,7 @@ frontend/
 
 ## 🎉 整合完成！
 
-**✅ 所有 5 個位置已成功整合「貂蟬 TATTOO」LOGO**
+**✅ 所有 5 個位置已成功整合「彫川紋身」LOGO**
 
 **🎨 3 種動畫效果完美融合現有系統**
 

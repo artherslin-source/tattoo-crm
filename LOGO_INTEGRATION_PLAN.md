@@ -1,4 +1,4 @@
-# 🎨 貂蟬 TATTOO LOGO 整合方案
+# 🎨 彫川紋身 LOGO 整合方案
 
 ## 📋 整合位置分析
 
@@ -18,7 +18,7 @@
   {/* 替換為 LOGO 圖片 */}
   <img 
     src="/images/logo/diaochan-tattoo-logo.png" 
-    alt="貂蟬 TATTOO" 
+    alt="彫川紋身" 
     className="h-8 w-auto"
   />
 </button>
@@ -31,7 +31,7 @@
   {/* 替換為 LOGO 圖片 */}
   <img 
     src="/images/logo/diaochan-tattoo-logo.png" 
-    alt="貂蟬 TATTOO" 
+    alt="彫川紋身" 
     className="h-6 w-auto"
   />
 </button>
@@ -59,7 +59,7 @@
   <div className="relative">
     <img 
       src="/images/logo/diaochan-tattoo-logo.png" 
-      alt="貂蟬 TATTOO" 
+      alt="彫川紋身" 
       className="h-16 w-auto lg:h-20"
     />
     {/* 保持現有的能量光效果 */}
@@ -94,7 +94,7 @@
 >
   <img 
     src="/images/logo/diaochan-tattoo-logo.png" 
-    alt="貂蟬 TATTOO" 
+    alt="彫川紋身" 
     className="h-20 w-auto lg:h-24"
   />
 </motion.div>
@@ -119,7 +119,7 @@
 <div className="auth-bg-logo">
   <img 
     src="/images/logo/diaochan-tattoo-logo.png" 
-    alt="貂蟬 TATTOO" 
+    alt="彫川紋身" 
     className="w-full max-w-md opacity-20"
   />
 </div>
@@ -300,4 +300,4 @@ frontend/public/images/logo/
 3. **添加動畫效果** 與現有系統融合
 4. **測試響應式** 確保所有裝置正常顯示
 
-**準備好了嗎？讓我們開始整合這個精美的「貂蟬 TATTOO」LOGO！** 🎨✨
+**準備好了嗎？讓我們開始整合這個精美的「彫川紋身」LOGO！** 🎨✨
