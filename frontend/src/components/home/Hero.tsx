@@ -28,7 +28,15 @@ export function Hero({ loggedIn }: HeroProps) {
           
           {/* Logo with persistent energy glow */}
           <div className="flex justify-center lg:justify-start mb-4">
-            <LogoEnergy />
+            <div className="relative logo-energy-scan">
+              <img 
+                src="/images/logo/diaochan-tattoo-logo.png" 
+                alt="貂蟬 TATTOO" 
+                className="h-16 w-auto lg:h-20 logo-metallic"
+              />
+              {/* 保持現有的能量光效果 */}
+              <LogoEnergy />
+            </div>
           </div>
           
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">

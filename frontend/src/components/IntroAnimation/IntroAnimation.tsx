@@ -37,15 +37,19 @@ export default function IntroAnimation({ onFinish }: { onFinish: () => void }) {
             transition={{ duration: 1.6, ease: "easeInOut" }}
           />
 
-          {/* Logo */}
-          <motion.h1
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.8, duration: 1.2, ease: "easeOut" }}
-            className="text-6xl font-extrabold text-center bg-gradient-to-r from-[#B88746] via-[#FFD580] to-[#F6E27A] bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,220,140,0.4)] tracking-[0.05em]"
-          >
-            TATTOO CRM
-          </motion.h1>
+                 {/* Logo */}
+                 <motion.div
+                   initial={{ opacity: 0, scale: 0.9 }}
+                   animate={{ opacity: 1, scale: 1 }}
+                   transition={{ delay: 0.8, duration: 1.2, ease: "easeOut" }}
+                   className="flex justify-center"
+                 >
+                   <img 
+                     src="/images/logo/diaochan-tattoo-logo.png" 
+                     alt="貂蟬 TATTOO" 
+                     className="h-20 w-auto lg:h-24 logo-metallic"
+                   />
+                 </motion.div>
 
           {/* Tagline */}
           <motion.p

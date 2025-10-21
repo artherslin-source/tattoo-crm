@@ -80,9 +80,13 @@ export default function Navbar() {
           <div className="flex items-center">
             <button
               onClick={() => router.push('/home')}
-              className="brand-logo text-xl font-bold text-text-primary-light transition-colors hover:text-blue-600 dark:text-text-primary-dark dark:hover:text-blue-400"
+              className="brand-logo transition-all duration-300 hover:scale-105"
             >
-              彫川紋身
+              <img 
+                src="/images/logo/diaochan-tattoo-logo.png" 
+                alt="貂蟬 TATTOO" 
+                className="h-8 w-auto logo-metallic"
+              />
             </button>
           </div>
 
@@ -182,9 +186,13 @@ export default function Navbar() {
               <div className="min-w-0 flex-1">
                 <button
                   onClick={() => router.push('/home')}
-                  className="brand-logo text-left text-xl font-semibold tracking-wide text-white"
+                  className="brand-logo transition-all duration-300 hover:scale-105"
                 >
-                  彫川紋身
+                  <img 
+                    src="/images/logo/diaochan-tattoo-logo.png" 
+                    alt="貂蟬 TATTOO" 
+                    className="h-6 w-auto logo-metallic"
+                  />
                 </button>
                 <p
                   className={`mt-1 text-xs text-white/70 transition-all duration-300 ${

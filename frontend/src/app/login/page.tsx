@@ -73,8 +73,17 @@ export default function LoginPage() {
       {/* 背景柔光 */}
       <div className="auth-bg-glow" />
 
-      {/* 品牌 SVG 筆刷光暈層 */}
+      {/* 品牌 LOGO 背景層 */}
       <div className="auth-bg-logo" aria-hidden="true">
+        <img 
+          src="/images/logo/diaochan-tattoo-logo.png" 
+          alt="貂蟬 TATTOO" 
+          className="w-full max-w-md opacity-20"
+        />
+      </div>
+
+      {/* 品牌 SVG 筆刷光暈層 */}
+      <div className="auth-bg-svg" aria-hidden="true">
         <svg viewBox="0 0 800 800" role="img">
           <defs>
             {/* 放射性漸層 */}

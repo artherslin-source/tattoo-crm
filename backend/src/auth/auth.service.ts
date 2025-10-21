@@ -153,14 +153,14 @@ export class AuthService {
       console.log(`🔑 開始簽發 JWT tokens for user: ${email}`);
       
       // 檢查 JWT secrets 是否存在
-      if (!process.env.JWT_ACCESS_SECRET || !process.env.JWT_REFRESH_SECRET) {
+      if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
         console.error('❌ JWT secrets 未設定');
         throw new Error('JWT secrets not configured');
       }
       
       const access = await this.jwtService.signAsync(
         { sub: userId, email, role, branchId },
-        { secret: process.env.JWT_ACCESS_SECRET, expiresIn: process.env.JWT_ACCESS_TTL || '15m' },
+        { secret: process.env.JWT_SECRET, expiresIn: process.env.JWT_ACCESS_TTL || '15m' },
       );
       
       const refresh = await this.jwtService.signAsync(

@@ -1,186 +1,193 @@
-# 🎯 前端 API 連線問題修復指南
+# 🚨 前端 API 連線修復方案
 
-## 📊 問題分析
+## 📋 問題分析
 
-### 錯誤現象
-- 前端首頁顯示：「載入資料失敗，已展示範例內容」
-- 預約諮詢表格的分店下拉選單無法載入資料
-- 前端無法連接到後端 API
-
-### 根本原因
-前端代碼中缺少正確的 `NEXT_PUBLIC_API_URL` 環境變數，導致：
-1. 前端嘗試從 `http://localhost:4000` 獲取資料（生產環境中不存在）
-2. 無法找到正確的後端服務 URL
+**症狀：** 前端首頁沒有顯示「管理者後台」按鈕  
+**根本原因：** 前端無法獲取用戶角色資訊  
+**錯誤訊息：** `ERR_CONNECTION_REFUSED localhost:4000` 和 `沒有找到可用的 API URL`
 
 ---
 
-## 🔧 解決方案
+## 🔍 問題診斷
 
-### 方案 1: 設定 Railway 環境變數（推薦）
+### 1. 環境變數檢查
+- ✅ 前端 `NEXT_PUBLIC_API_BASE_URL` 已正確設置
+- ✅ 後端健康檢查通過
+- ❌ 登入功能失敗（可能是 seeding 問題）
 
-#### 步驟 1: 找到您的後端服務 URL
-1. 前往 [Railway Dashboard](https://railway.app/)
-2. 選擇您的專案
-3. 點擊後端服務（通常是 `tattoo-crm` 或 `backend`）
-4. 在 "Settings" 或 "Variables" 標籤中找到服務的 URL
-5. 複製完整的 URL（例如：`https://tattoo-crm-backend-production.up.railway.app`）
+### 2. API 連線問題
+- 前端嘗試連接到 `localhost:4000`（錯誤）
+- 應該連接到 `https://carefree-determination-production-1f1f.up.railway.app`
 
-#### 步驟 2: 設定前端環境變數
-1. 在 Railway Dashboard 中，點擊前端服務
-2. 前往 "Variables" 標籤
-3. 新增環境變數：
+---
+
+## 🛠️ 修復方案
+
+### 方案 1: 手動創建管理員帳號
+
+#### 1.1 直接訪問後端 API
+```bash
+# 創建管理員帳號
+curl -X POST https://carefree-determination-production-1f1f.up.railway.app/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@test.com",
+    "password": "admin123",
+    "name": "管理員",
+    "role": "BOSS"
+  }'
+```
+
+#### 1.2 如果註冊失敗，手動設置用戶角色
+在瀏覽器 Console 中執行：
+```javascript
+// 手動設置用戶角色
+localStorage.setItem('userRole', 'BOSS');
+localStorage.setItem('userBranchId', '1');
+console.log('✅ 已設置為 BOSS 角色');
+location.reload();
+```
+
+### 方案 2: 修復前端 API 配置
+
+#### 2.1 檢查前端環境變數
+確保前端已重新部署並載入正確的環境變數：
+```bash
+cd frontend && railway up --detach
+```
+
+#### 2.2 強制刷新前端
+- 清除瀏覽器快取
+- 硬重新載入頁面 (Ctrl+Shift+R)
+- 檢查開發者工具中的網路請求
+
+### 方案 3: 直接訪問管理後台
+
+#### 3.1 使用直接 URL
+```
+https://tattoo-crm-frontend-staging-production.up.railway.app/admin/dashboard
+```
+
+#### 3.2 手動設置認證
+在瀏覽器 Console 中執行：
+```javascript
+// 設置認證資訊
+localStorage.setItem('accessToken', 'manual-admin-token');
+localStorage.setItem('userRole', 'BOSS');
+localStorage.setItem('userBranchId', '1');
+console.log('✅ 已設置管理員認證');
+location.href = '/admin/dashboard';
+```
+
+---
+
+## 🚀 立即執行步驟
+
+### 步驟 1: 手動設置用戶角色（最快）
+1. 按 F12 打開開發者工具
+2. 切換到 Console 標籤
+3. 執行以下代碼：
+```javascript
+localStorage.setItem('userRole', 'BOSS');
+localStorage.setItem('userBranchId', '1');
+console.log('✅ 已設置為 BOSS 角色');
+location.reload();
+```
+
+### 步驟 2: 檢查管理後台按鈕
+1. 頁面重新載入後，檢查導航列
+2. 應該會看到「管理者後台」按鈕
+3. 點擊按鈕測試功能
+
+### 步驟 3: 如果按鈕仍然不顯示
+1. 直接訪問管理後台 URL：
    ```
-   NEXT_PUBLIC_API_URL=https://your-backend-url.railway.app
+   https://tattoo-crm-frontend-staging-production.up.railway.app/admin/dashboard
    ```
-4. 重新部署前端服務
+2. 或者執行完整的手動認證設置
 
-### 方案 2: 使用代碼修復（已實施）
+---
 
-我已經修改了代碼，讓它能夠自動檢測 API URL：
+## 🔧 技術修復
 
-#### 修改的文件
-1. ✅ `frontend/src/lib/api.ts` - 智能 API URL 檢測
-2. ✅ `frontend/src/app/home/page.tsx` - 自動檢測後端 URL
-3. ✅ `frontend/src/app/appointments/public/page.tsx` - 統一 API URL 邏輯
-4. ✅ `frontend/src/lib/api-debug.ts` - 調試工具（新增）
-
-#### 自動檢測邏輯
+### 修復前端 API 檢測邏輯
 ```typescript
-// 智能檢測 API URL
-function getApiBase(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
+// 在 frontend/src/lib/api.ts 中添加調試
+function detectApiBase(): string {
+  console.log('🔍 檢測 API Base URL...');
+  console.log('NEXT_PUBLIC_API_BASE_URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
+  console.log('window.location.hostname:', typeof window !== 'undefined' ? window.location.hostname : 'undefined');
   
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    const hostname = window.location.hostname;
-    if (hostname.includes('railway.app')) {
-      // Railway 部署：嘗試後端服務 URL
-      return `https://${hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`;
-    } else {
-      // 其他生產環境
-      return window.location.origin.replace(/:\d+$/, ':4000');
-    }
+  // 現有的檢測邏輯...
+}
+```
+
+### 添加 API 連線測試
+```typescript
+// 在應用程式啟動時測試 API 連線
+async function testApiConnection() {
+  try {
+    const response = await fetch('/api/health');
+    console.log('✅ API 連線正常');
+  } catch (error) {
+    console.error('❌ API 連線失敗:', error);
   }
-  
-  // 開發環境
-  return "http://localhost:4000";
 }
 ```
 
 ---
 
-## 🚀 立即修復步驟
+## 📊 測試清單
 
-### 選項 A: 快速修復（推薦）
-1. **找到後端 URL**：
-   - 前往 Railway Dashboard
-   - 查看後端服務的 URL
-   - 複製完整的 URL
+### 前端測試
+- [ ] 環境變數正確載入
+- [ ] API 連線正常
+- [ ] 用戶角色獲取成功
+- [ ] 管理後台按鈕顯示
+- [ ] 點擊按鈕可正常跳轉
 
-2. **設定環境變數**：
-   - 在前端服務的 Variables 中新增：
-   ```
-   NEXT_PUBLIC_API_URL=https://your-actual-backend-url.railway.app
-   ```
+### 後端測試
+- [ ] 健康檢查通過
+- [ ] 登入功能正常
+- [ ] 用戶資訊 API 正常
+- [ ] 角色權限正確
 
-3. **重新部署**：
-   - Railway 會自動重新部署前端
+---
 
-### 選項 B: 使用代碼修復
-1. **推送修復的代碼**：
+## 🚨 緊急處理
+
+### 如果所有方法都失敗
+
+1. **使用本地開發環境**
    ```bash
-   git add .
-   git commit -m "fix: Add intelligent API URL detection for production"
-   git push origin main
+   cd frontend && npm run dev
+   cd backend && npm run start:dev
    ```
 
-2. **等待自動部署**：
-   - Railway 會自動重新部署
-   - 代碼會自動檢測正確的後端 URL
+2. **檢查 Railway 服務狀態**
+   - 前往 Railway Dashboard
+   - 檢查前端和後端服務狀態
+   - 查看部署日誌
+
+3. **聯繫支援**
+   - 提供錯誤日誌
+   - 說明具體問題
+   - 請求技術支援
 
 ---
 
-## 🔍 調試工具
+## 🎯 下一步行動
 
-我已經添加了調試工具來幫助診斷問題：
+### 立即執行
+1. **手動設置用戶角色** - 臨時解決方案
+2. **測試管理後台功能** - 確認功能正常
+3. **檢查 API 連線** - 診斷根本問題
 
-### 在瀏覽器控制台中查看
-1. 打開瀏覽器開發者工具（F12）
-2. 前往 Console 標籤
-3. 重新整理頁面
-4. 查看以下調試資訊：
-   ```
-   🔍 API URL 調試資訊:
-   Hostname: tattoo-crm-production.up.railway.app
-   Origin: https://tattoo-crm-production.up.railway.app
-   Environment: production
-   NEXT_PUBLIC_API_URL: undefined
-   可能的 API URLs: [...]
-   ```
-
-### 手動測試 API 連線
-在瀏覽器控制台中執行：
-```javascript
-// 測試不同的 API URL
-fetch('https://your-backend-url.railway.app/services')
-  .then(response => console.log('✅ 連線成功:', response.status))
-  .catch(error => console.log('❌ 連線失敗:', error));
-```
+### 後續優化
+1. **修復登入功能** - 解決 seeding 問題
+2. **改善錯誤處理** - 提供更好的用戶體驗
+3. **添加監控機制** - 提前發現問題
 
 ---
 
-## 📋 常見的後端 URL 模式
-
-根據 Railway 的命名慣例，您的後端 URL 可能是：
-
-1. `https://tattoo-crm-backend-production.up.railway.app`
-2. `https://tattoo-crm-production.up.railway.app` (同一個服務)
-3. `https://backend-production.up.railway.app`
-4. `https://api-production.up.railway.app`
-
-### 如何確認正確的 URL
-1. 前往 Railway Dashboard
-2. 點擊後端服務
-3. 查看 "Settings" 或 "Deployments" 標籤
-4. 找到 "Domain" 或 "URL" 欄位
-
----
-
-## ✅ 驗證修復
-
-### 修復成功的標誌
-1. ✅ 首頁不再顯示「載入資料失敗」錯誤
-2. ✅ 預約諮詢表格的分店下拉選單有資料
-3. ✅ 瀏覽器控制台沒有 API 連線錯誤
-4. ✅ 所有動態內容正常載入
-
-### 測試步驟
-1. 重新整理首頁
-2. 檢查預約諮詢表格
-3. 確認分店下拉選單有選項
-4. 查看瀏覽器控制台的調試資訊
-
----
-
-## 🆘 如果仍然有問題
-
-### 檢查清單
-- [ ] 後端服務是否正在運行？
-- [ ] 後端 URL 是否正確？
-- [ ] 環境變數是否已設定？
-- [ ] 前端是否已重新部署？
-
-### 進一步調試
-1. 查看 Railway 後端服務的日誌
-2. 檢查後端服務的健康狀態
-3. 確認後端 API 端點是否可訪問
-4. 測試後端 API 的直接連線
-
----
-
-**預計修復時間**: 5-10 分鐘  
-**難度**: 簡單  
-**狀態**: 🟡 等待您選擇修復方案
-
-請選擇上述其中一種方案來修復問題！
+**🚀 立即執行手動設置用戶角色來顯示管理後台按鈕！**
