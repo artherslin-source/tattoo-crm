@@ -13,13 +13,14 @@ export function debugApiUrls() {
   
   // 嘗試不同的後端 URL 模式
   const possibleUrls = [
+    process.env.NEXT_PUBLIC_API_BASE_URL,
     process.env.NEXT_PUBLIC_API_URL,
     `https://${hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`,
     `https://${hostname.replace('tattoo-crm-production', 'tattoo-crm')}`,
     `https://${hostname.replace('tattoo-crm-production', 'backend')}`,
     `https://${hostname.replace('tattoo-crm-production', 'api')}`,
     origin.replace(/:\d+$/, ':4000'),
-    'http://localhost:4000'
+    ...(hostname === 'localhost' ? ['http://localhost:4000'] : [])
   ].filter(Boolean);
   
   console.log('可能的 API URLs:', possibleUrls);

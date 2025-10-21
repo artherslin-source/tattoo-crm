@@ -55,7 +55,13 @@ function detectApiBase(): string {
   }
   
   // 開發環境
-  return "http://localhost:4000";
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return "http://localhost:4000";
+  }
+  
+  // 如果無法檢測，返回錯誤提示
+  console.error('❌ 無法檢測 API URL，請設定 NEXT_PUBLIC_API_BASE_URL 環境變數');
+  return window.location.origin;
 }
 
 // 檢查後端服務狀態（帶重試機制）

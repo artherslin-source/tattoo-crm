@@ -52,7 +52,7 @@ export default function PublicAppointmentPage() {
     const fetchData = async () => {
       try {
         // 使用統一的 API URL 檢測邏輯
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || 
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 
           (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
             ? (window.location.hostname.includes('railway.app') 
                 ? `https://${window.location.hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`

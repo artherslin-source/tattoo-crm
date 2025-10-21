@@ -225,7 +225,13 @@ export default function HomePage() {
                 apiBase = window.location.origin.replace(/:\d+$/, ':4000');
               }
             } else {
-              apiBase = "http://localhost:4000";
+              // 只有在真正的 localhost 開發環境才使用 localhost:4000
+              if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+                apiBase = "http://localhost:4000";
+              } else {
+                // 生產環境使用環境變數或當前域名
+                apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || window.location.origin;
+              }
             }
           }
         }
