@@ -10,6 +10,12 @@ export class ApiError extends Error {
 
 // 智能檢測 API URL
 function detectApiBase(): string {
+  // 優先讀取環境變數
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  
+  // 向下兼容舊的環境變數名稱
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
@@ -18,30 +24,28 @@ function detectApiBase(): string {
     const hostname = window.location.hostname;
     if (hostname.includes('railway.app')) {
       // Railway 部署：前端和後端是分開的服務
-      // 前端：tattoo-crm-production.up.railway.app
-      // 後端：tattoo-crm-backend-production.up.railway.app
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      // 檢查是否有設定後端 URL（支援多種環境變數名稱）
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
       if (backendUrl) {
         return backendUrl;
       }
+      
       // 如果沒有設定後端 URL，嘗試推測後端 URL
       // Railway 的後端服務通常有不同的子域名
       if (hostname.includes('frontend')) {
-        return hostname.replace('frontend', 'backend');
-      } else if (hostname.includes('tattoo-crm-production')) {
+        return `https://${hostname.replace('frontend', 'backend')}`;
+      } else if (hostname.includes('tattoo-crm')) {
         // 嘗試不同的後端 URL 模式
         const possibleBackendUrls = [
-          hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
-          hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend'),
-          hostname.replace('tattoo-crm-production', 'tattoo-crm-backend'),
-          // 如果以上都不行，嘗試添加 -backend 後綴
-          hostname.replace('.up.railway.app', '-backend.up.railway.app'),
+          `https://${hostname.replace('tattoo-crm', 'tattoo-crm-backend')}`,
+          `https://${hostname.replace('.up.railway.app', '-backend.up.railway.app')}`,
         ];
         
-        // 返回第一個可能的 URL，讓瀏覽器嘗試
+        // 返回第一個可能的 URL
         return possibleBackendUrls[0];
       } else {
-        // 如果無法推測，使用同一個域名（可能會有問題）
+        // 如果無法推測，返回錯誤提示
+        console.error('❌ 無法檢測後端 URL，請設定 NEXT_PUBLIC_API_BASE_URL 環境變數');
         return `https://${hostname}`;
       }
     } else {
@@ -71,6 +75,13 @@ export async function checkBackendHealth(): Promise<boolean> {
 export async function detectBackendUrl(): Promise<string> {
   console.log('🔍 detectBackendUrl() called');
   
+  // 優先讀取環境變數
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    console.log('🔍 Using NEXT_PUBLIC_API_BASE_URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  
+  // 向下兼容舊的環境變數名稱
   if (process.env.NEXT_PUBLIC_API_URL) {
     console.log('🔍 Using NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
     return process.env.NEXT_PUBLIC_API_URL;
@@ -85,31 +96,26 @@ export async function detectBackendUrl(): Promise<string> {
   console.log('🔍 Current hostname:', hostname);
   
   if (hostname.includes('railway.app')) {
-    // 基於 Railway 的常見命名模式，直接返回最可能的後端 URL
-    const backendUrl = 'https://tattoo-crm-production-413f.up.railway.app';
-    console.log('🔍 Using hardcoded backend URL:', backendUrl);
-    
-    // 測試 URL 是否可用
-    try {
-      const response = await fetch(`${backendUrl}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000)
-      });
-      console.log('🔍 Backend health check status:', response.status);
-      
-      if (response.ok) {
-        console.log('✅ Backend URL is working:', backendUrl);
-        return backendUrl;
-      } else {
-        console.warn('⚠️ Backend URL returned status:', response.status);
-        // 即使健康檢查失敗，也返回這個 URL，因為可能是認證問題
-        return backendUrl;
-      }
-    } catch (error) {
-      console.warn('⚠️ Backend health check failed:', error);
-      // 即使健康檢查失敗，也返回這個 URL
+    // 檢查環境變數（在這個階段應該已經檢查過了，但以防萬一）
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (backendUrl) {
+      console.log('🔍 Using configured backend URL:', backendUrl);
       return backendUrl;
     }
+    
+    // 如果沒有設定環境變數，記錄錯誤
+    console.error('❌ 未設定 NEXT_PUBLIC_API_BASE_URL，請在 Railway 環境變數中設定後端 URL');
+    
+    // 嘗試推測後端 URL 作為後備方案
+    let guessedUrl = `https://${hostname}`;
+    if (hostname.includes('frontend')) {
+      guessedUrl = `https://${hostname.replace('frontend', 'backend')}`;
+    } else if (hostname.includes('tattoo-crm')) {
+      guessedUrl = `https://${hostname.replace('tattoo-crm', 'tattoo-crm-backend')}`;
+    }
+    
+    console.warn('⚠️ 使用推測的後端 URL（可能不正確）:', guessedUrl);
+    return guessedUrl;
   }
   
   console.log('🔍 Using hostname as fallback:', `https://${hostname}`);

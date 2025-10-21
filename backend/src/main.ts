@@ -47,11 +47,15 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
   
-  // CORS 配置 - 顯式允許 Railway 網域與本地開發
-  // 生產環境快速解法：反射請求來源（等同允許所有合法來源）
-  // 若需更嚴格控制，可改回白名單陣列
+  // CORS 配置 - 從環境變數讀取允許的網域
+  const corsOrigin = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : true; // 預設允許所有來源（開發/staging 環境）
+  
+  console.log('🌐 CORS Origin:', corsOrigin);
+  
   app.enableCors({
-    origin: true,
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

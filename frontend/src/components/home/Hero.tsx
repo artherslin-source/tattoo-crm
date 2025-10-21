@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import LogoEnergy from "@/components/LogoEnergy/LogoEnergy";
 
 interface HeroProps {
   loggedIn: boolean;
@@ -24,6 +25,12 @@ export function Hero({ loggedIn }: HeroProps) {
           <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-1 text-xs uppercase tracking-[0.3em] text-white/70">
             Premium Tattoo Studio
           </span>
+          
+          {/* Logo with persistent energy glow */}
+          <div className="flex justify-center lg:justify-start mb-4">
+            <LogoEnergy />
+          </div>
+          
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
             為熱愛刺青的你
             <br className="hidden sm:block" />

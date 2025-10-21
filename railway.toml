@@ -4,7 +4,7 @@
 [backend]
 builder = "NIXPACKS"
 buildCommand = "npm install && npm run build"
-startCommand = "npm run start:prod"
+startCommand = "bash railway-start.sh"
 root = "backend"
 healthcheckPath = "/"
 healthcheckTimeout = 300
