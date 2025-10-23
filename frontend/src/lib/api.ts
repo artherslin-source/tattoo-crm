@@ -1,4 +1,5 @@
 import { fetchWithRetry } from './api-fallback';
+import { API_BASE, apiUrl } from './config';
 
 export class ApiError extends Error {
   status: number;
@@ -8,143 +9,9 @@ export class ApiError extends Error {
   }
 }
 
-// 智能檢測 API URL
-function detectApiBase(): string {
-  // 優先讀取環境變數
-  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-    return process.env.NEXT_PUBLIC_API_BASE_URL;
-  }
-  
-  // 向下兼容舊的環境變數名稱
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    const hostname = window.location.hostname;
-    if (hostname.includes('railway.app')) {
-      // Railway 部署：前端和後端是分開的服務
-      // 檢查是否有設定後端 URL（支援多種環境變數名稱）
-      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (backendUrl) {
-        return backendUrl;
-      }
-      
-      // 如果沒有設定後端 URL，嘗試推測後端 URL
-      // Railway 的後端服務通常有不同的子域名
-      if (hostname.includes('frontend')) {
-        return `https://${hostname.replace('frontend', 'backend')}`;
-      } else if (hostname.includes('tattoo-crm')) {
-        // 嘗試不同的後端 URL 模式
-        const possibleBackendUrls = [
-          `https://${hostname.replace('tattoo-crm', 'tattoo-crm-backend')}`,
-          `https://${hostname.replace('.up.railway.app', '-backend.up.railway.app')}`,
-        ];
-        
-        // 返回第一個可能的 URL
-        return possibleBackendUrls[0];
-      } else {
-        // 如果無法推測，返回錯誤提示
-        console.error('❌ 無法檢測後端 URL，請設定 NEXT_PUBLIC_API_BASE_URL 環境變數');
-        return `https://${hostname}`;
-      }
-    } else {
-      // 其他生產環境
-      return window.location.origin.replace(/:\d+$/, ':4000');
-    }
-  }
-  
-  // 開發環境
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return "http://localhost:4000";
-  }
-  
-  // 如果無法檢測，返回錯誤提示
-  console.error('❌ 無法檢測 API URL，請設定 NEXT_PUBLIC_API_BASE_URL 環境變數');
-  // SSR 時返回空字符串，避免 build 失敗
-  return typeof window !== 'undefined' ? window.location.origin : '';
-}
-
-// 檢查後端服務狀態（帶重試機制）
-export async function checkBackendHealth(): Promise<boolean> {
-  try {
-    const response = await fetchWithRetry(`/api/health/simple`, {
-      method: 'GET',
-    });
-    return response.ok;
-  } catch (error) {
-    console.error('Backend health check failed:', error);
-    return false;
-  }
-}
-
-// 智能檢測後端 URL
-export async function detectBackendUrl(): Promise<string> {
-  console.log('🔍 detectBackendUrl() called');
-  
-  // 優先讀取環境變數
-  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-    console.log('🔍 Using NEXT_PUBLIC_API_BASE_URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
-    return process.env.NEXT_PUBLIC_API_BASE_URL;
-  }
-  
-  // 向下兼容舊的環境變數名稱
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    console.log('🔍 Using NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  
-  if (typeof window === 'undefined' || window.location.hostname === 'localhost') {
-    console.log('🔍 Using localhost for development');
-    return "http://localhost:4000";
-  }
-  
-  const hostname = window.location.hostname;
-  console.log('🔍 Current hostname:', hostname);
-  
-  if (hostname.includes('railway.app')) {
-    // 檢查環境變數（在這個階段應該已經檢查過了，但以防萬一）
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-    if (backendUrl) {
-      console.log('🔍 Using configured backend URL:', backendUrl);
-      return backendUrl;
-    }
-    
-    // 如果沒有設定環境變數，記錄錯誤
-    console.error('❌ 未設定 NEXT_PUBLIC_API_BASE_URL，請在 Railway 環境變數中設定後端 URL');
-    
-    // 嘗試推測後端 URL 作為後備方案
-    let guessedUrl = `https://${hostname}`;
-    if (hostname.includes('frontend')) {
-      guessedUrl = `https://${hostname.replace('frontend', 'backend')}`;
-    } else if (hostname.includes('tattoo-crm')) {
-      guessedUrl = `https://${hostname.replace('tattoo-crm', 'tattoo-crm-backend')}`;
-    }
-    
-    console.warn('⚠️ 使用推測的後端 URL（可能不正確）:', guessedUrl);
-    return guessedUrl;
-  }
-  
-  console.log('🔍 Using hostname as fallback:', `https://${hostname}`);
-  return `https://${hostname}`;
-}
-
-// Lazy evaluation to avoid SSR issues
-let API_BASE: string | null = null;
-
-function getApiBase(): string {
-  if (API_BASE === null) {
-    API_BASE = detectApiBase();
-    
-    // 調試信息
-    if (typeof window !== 'undefined') {
-      console.log('🔍 API Base URL:', API_BASE);
-      console.log('🔍 Current hostname:', window.location.hostname);
-      console.log('🔍 Environment:', process.env.NODE_ENV);
-    }
-  }
-  return API_BASE;
-}
+// ==========================================
+// LocalStorage Helpers
+// ==========================================
 
 function readFromLocalStorage(key: string) {
   try {
@@ -162,8 +29,11 @@ function writeToLocalStorage(key: string, val: string) {
   } catch {}
 }
 
+// ==========================================
+// Token Management
+// ==========================================
+
 export function getAccessToken(): string | null {
-  // 先讀 localStorage；若你們有把 token 放 cookie，也可在這裡補 cookie 讀取
   return readFromLocalStorage("accessToken");
 }
 
@@ -178,11 +48,54 @@ export function saveTokens(accessToken: string, refreshToken?: string, userRole?
   if (userBranchId) writeToLocalStorage("userBranchId", userBranchId);
 }
 
-export { getApiBase };
+export function getUserRole(): string | null {
+  return readFromLocalStorage("userRole");
+}
+
+export function getUserBranchId(): string | null {
+  return readFromLocalStorage("userBranchId");
+}
+
+export function clearAuth() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("userRole");
+  localStorage.removeItem("userBranchId");
+}
+
+// ==========================================
+// API Base Getters (for backwards compatibility)
+// ==========================================
+
+export function getApiBase(): string {
+  return API_BASE;
+}
+
+// ==========================================
+// Backend Health Check
+// ==========================================
+
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const response = await fetchWithRetry(apiUrl('/health/simple'), {
+      method: 'GET',
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Backend health check failed:', error);
+    return false;
+  }
+}
+
+// ==========================================
+// Simple POST JSON (for login, no auth)
+// ==========================================
 
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
   try {
-    const res = await fetchWithRetry(`/api${path}`, {
+    const url = apiUrl(path);
+    const res = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -193,7 +106,6 @@ export async function postJSON(path: string, body: Record<string, unknown> | unk
     return { ok: res.ok, status: res.status, data: data ?? text };
   } catch (error) {
     console.error('postJSON fetch error:', error);
-    // 如果是網路錯誤，提供更友好的錯誤訊息
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new ApiError(0, '無法連接到伺服器，請檢查網路連線或稍後再試');
     }
@@ -201,167 +113,146 @@ export async function postJSON(path: string, body: Record<string, unknown> | unk
   }
 }
 
-// 認證相關函數
-export function getUserRole(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('userRole');
-}
+// ==========================================
+// Refresh Token Logic
+// ==========================================
 
-export function getUserBranchId(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('userBranchId');
-}
-
-export function clearTokens(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('userRole');
-  localStorage.removeItem('userBranchId');
-}
-
-
-async function tryRefreshOnce(): Promise<string | null> {
+async function tryRefreshToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
 
-  const backendUrl = await detectBackendUrl();
-  const res = await fetch(`${backendUrl}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+  const refreshUrl = apiUrl('/auth/refresh');
+  const response = await fetch(refreshUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
     body: JSON.stringify({ refreshToken }),
-    credentials: "include",
+    credentials: 'include',
   });
 
-  if (!res.ok) return null;
+  if (!response.ok) return null;
 
-  const data = await res.json().catch(() => ({}));
-  // 依你們的 refresh 回傳格式調整這兩個 key 名稱
-  const newAccess = data.accessToken || data.token || null;
-  const newRefresh = data.refreshToken || null;
-  if (newAccess) saveTokens(newAccess, newRefresh ?? undefined);
-  return newAccess;
+  const data = await response.json().catch(() => ({}));
+  const newAccessToken = data.accessToken || data.token || null;
+  const newRefreshToken = data.refreshToken || null;
+
+  if (newAccessToken) {
+    saveTokens(newAccessToken, newRefreshToken ?? undefined);
+  }
+
+  return newAccessToken;
 }
 
-async function withAuthFetch(
-  path: string,
-  init: RequestInit = {},
-  retry = true
-): Promise<Response> {
-  const token = getAccessToken();
-  const headers = new Headers(init.headers ?? {});
-  headers.set("Accept", "application/json");
-  headers.set("Content-Type", headers.get("Content-Type") ?? "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+// ==========================================
+// Authenticated Fetch Wrapper
+// ==========================================
 
-  // 對於圖片管理API使用相對路徑，其他API使用絕對路徑
-  const isImageApi = path.includes('/admin/services/images');
-  
-  let url: string;
-  if (isImageApi) {
-    // 使用相對路徑，讓 Next.js rewrite 處理
-    url = path;
-  } else {
-    // 使用動態檢測的後端 URL
-    const backendUrl = await detectBackendUrl();
-    url = `${backendUrl}${path}`;
+async function fetchWithAuth(
+  path: string,
+  options: RequestInit = {},
+  retryRefresh: boolean = true
+): Promise<Response> {
+  const url = apiUrl(path);
+  const accessToken = getAccessToken();
+  const headers = new Headers(options.headers ?? {});
+
+  headers.set('Accept', 'application/json');
+  headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
   }
-  
-  const res = await fetch(url, {
-    ...init,
+
+  const response = await fetch(url, {
+    ...options,
     headers,
-    credentials: "include",
+    credentials: 'include',
   });
 
-  if (res.status === 401 && retry) {
-    const refreshed = await tryRefreshOnce();
-    if (refreshed) {
-      headers.set("Authorization", `Bearer ${refreshed}`);
+  // If 401 and we can retry, try refreshing token
+  if (response.status === 401 && retryRefresh) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      headers.set('Authorization', `Bearer ${newToken}`);
       return fetch(url, {
-        ...init,
+        ...options,
         headers,
-        credentials: "include",
+        credentials: 'include',
       });
     }
   }
 
-  return res;
+  return response;
 }
 
-async function parseOrThrow(res: Response) {
-  if (!res.ok) {
-    const err = await res
-      .json()
-      .catch(() => ({ message: "Request failed" }));
-    throw new ApiError(res.status, err.message || "Request failed");
+// ==========================================
+// Response Parser
+// ==========================================
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new ApiError(response.status, errorData.message || 'Request failed');
   }
-  return res.json();
+  return response.json();
 }
 
-export async function getJsonWithAuth<T>(path: string): Promise<T> {
-  const res = await withAuthFetch(path, { method: "GET" });
-  return parseOrThrow(res);
+// ==========================================
+// Convenience Methods
+// ==========================================
+
+export async function getJSON<T = unknown>(path: string): Promise<T> {
+  return parseResponse(await fetchWithAuth(path, { method: 'GET' }));
 }
 
-export async function postJsonWithAuth<T>(
-  path: string,
-  body: unknown
-): Promise<T> {
-  const res = await withAuthFetch(path, {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-  return parseOrThrow(res);
+export async function postJSONWithAuth<T = unknown>(path: string, body: unknown): Promise<T> {
+  return parseResponse(
+    await fetchWithAuth(path, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  );
 }
 
-export async function patchJsonWithAuth<T>(
-  path: string,
-  body: unknown
-): Promise<T> {
-  const res = await withAuthFetch(path, {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
-  return parseOrThrow(res);
+export async function patchJSON<T = unknown>(path: string, body: unknown): Promise<T> {
+  return parseResponse(
+    await fetchWithAuth(path, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    })
+  );
 }
 
-export async function putJsonWithAuth<T>(
-  path: string,
-  body: unknown
-): Promise<T> {
-  const res = await withAuthFetch(path, {
-    method: "PUT",
-    body: JSON.stringify(body),
-  });
-  return parseOrThrow(res);
+export async function putJSON<T = unknown>(path: string, body: unknown): Promise<T> {
+  return parseResponse(
+    await fetchWithAuth(path, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    })
+  );
 }
 
-export async function deleteJsonWithAuth<T>(path: string): Promise<T> {
-  const res = await withAuthFetch(path, { method: "DELETE" });
-  return parseOrThrow(res);
+export async function deleteJSON<T = unknown>(path: string): Promise<T> {
+  return parseResponse(await fetchWithAuth(path, { method: 'DELETE' }));
 }
 
-export async function postFormDataWithAuth<T>(
-  path: string,
-  formData: FormData
-): Promise<T> {
-  const token = getAccessToken();
+export async function uploadFile<T = unknown>(path: string, formData: FormData): Promise<T> {
+  const url = apiUrl(path);
+  const accessToken = getAccessToken();
   const headers = new Headers();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  // 不要設置 Content-Type，讓瀏覽器自動設置 multipart/form-data
 
-  // 使用動態檢測的後端 URL
-  const backendUrl = await detectBackendUrl();
-  
-  const res = await fetch(`${backendUrl}${path}`, {
-    method: "POST",
-    headers,
-    body: formData,
-    credentials: "include",
-  });
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
 
-  return parseOrThrow(res);
+  return parseResponse(
+    await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    })
+  );
 }
-
-// 別名導出
-export { postJSON as postJson };
