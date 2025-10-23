@@ -45,7 +45,7 @@ export default function IntroAnimation({ onFinish }: { onFinish: () => void }) {
                    className="flex justify-center"
                  >
                    <img 
-                     src="/images/logo/彫川紋身-logo.png" 
+                     src="/images/logo/diaochan-tattoo-logo.png" 
                      alt="彫川紋身" 
                      className="h-20 w-auto lg:h-24 logo-metallic"
                    />

@@ -30,7 +30,7 @@ export function Hero({ loggedIn }: HeroProps) {
           <div className="flex justify-center lg:justify-start mb-4">
             <div className="relative logo-energy-scan">
               <img 
-                src="/images/logo/彫川紋身-logo.png" 
+                src="/images/logo/diaochan-tattoo-logo.png" 
                 alt="彫川紋身" 
                 className="h-16 w-auto lg:h-20 logo-metallic"
               />

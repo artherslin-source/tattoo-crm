@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/images/logo/彫川紋身-logo.png',
+    apple: '/images/logo/diaochan-tattoo-logo.png',
   },
 };
 
