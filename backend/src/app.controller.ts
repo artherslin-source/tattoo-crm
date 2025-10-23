@@ -20,6 +20,14 @@ export class AppController {
     };
   }
 
+  @Get('api/health/simple')
+  getHealthSimple() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Get('admin/dashboard')
   getAdminDashboard() {
     return {
