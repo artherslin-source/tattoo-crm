@@ -151,9 +151,9 @@ export function ServiceImageSelector({
       setUploadFiles([]);
       
       alert(`成功上傳 ${result.total} 張圖片！`);
-    } catch (error: any) {
+    } catch (error) {
       console.error('批次上傳失敗:', error);
-      const errorMessage = error.message || '批次上傳失敗，請檢查：\n1. 文件大小是否超過 10MB\n2. 文件格式是否為圖片（JPG、PNG、GIF、WebP）\n3. 網路連線是否正常';
+      const errorMessage = error instanceof Error ? error.message : '批次上傳失敗，請檢查：\n1. 文件大小是否超過 10MB\n2. 文件格式是否為圖片（JPG、PNG、GIF、WebP）\n3. 網路連線是否正常';
       alert(errorMessage);
     } finally {
       setBatchUploading(false);

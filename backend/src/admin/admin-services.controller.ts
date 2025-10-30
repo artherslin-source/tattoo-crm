@@ -197,7 +197,7 @@ export class AdminServicesController {
           callback(null, uploadPath);
         } catch (error) {
           console.error('❌ 創建上傳目錄失敗:', error);
-          callback(new Error('無法創建上傳目錄'), false);
+          callback(new Error('無法創建上傳目錄'));
         }
       },
       filename: (req, file, callback) => {
@@ -210,7 +210,7 @@ export class AdminServicesController {
           callback(null, filename);
         } catch (error) {
           console.error('❌ 生成檔名失敗:', error);
-          callback(new Error('無法生成檔名'), false);
+          callback(new Error('無法生成檔名'));
         }
       },
     }),
