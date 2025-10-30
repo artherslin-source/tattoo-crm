@@ -398,26 +398,14 @@ export default function HomePage() {
                 {categories.map((category, index) => (
                   <div key={category.id} className="space-y-4">
                     <div id={category.id} className="scroll-mt-24">
-                      {/* 手機版：Accordion + 橫向滑動 */}
-                      <div className="sm:hidden">
-                        <Accordion id={`${category.id}-mobile`} title={category.title} defaultOpen={false}>
-                          <HorizontalScroller ariaLabel={`${category.title} 服務列表`}>
-                            {category.items.map((item) => (
-                              <ServiceCard key={item.id} item={item} variant="compact" />
-                            ))}
-                          </HorizontalScroller>
-                        </Accordion>
-                      </div>
-
-                      {/* 平板版：Accordion + 兩欄網格 */}
-                      <div className="hidden sm:block lg:hidden">
-                        <Accordion id={`${category.id}-tablet`} title={category.title} defaultOpen={index === 0}>
-                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            {category.items.map((item) => (
-                              <ServiceCard key={item.id} item={item} />
-                            ))}
-                          </div>
-                        </Accordion>
+                      {/* 手機/平板：瀑布式（直向下滑），手機1欄、平板2欄 */}
+                      <div className="block lg:hidden">
+                        <h3 className="mb-3 text-xl font-semibold text-white">{category.title}</h3>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          {category.items.map((item) => (
+                            <ServiceCard key={item.id} item={item} variant="compact" />
+                          ))}
+                        </div>
                       </div>
 
                       {/* 桌機版：分類標題 + 網格布局 */}
