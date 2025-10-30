@@ -28,8 +28,8 @@ const nextConfig = {
     
     // 生產環境：重寫到 Railway 後端服務
     return [
-      { source: '/api/:path*', destination: 'https://tattoo-crm-production-413f.up.railway.app/:path*' },
-      { source: '/uploads/:path*', destination: 'https://tattoo-crm-production-413f.up.railway.app/uploads/:path*' },
+      { source: '/api/:path*', destination: 'https://tattoo-crm-production.up.railway.app/:path*' },
+      { source: '/uploads/:path*', destination: 'https://tattoo-crm-production.up.railway.app/uploads/:path*' },
     ];
   },
 };
