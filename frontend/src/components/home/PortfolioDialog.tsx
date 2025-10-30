@@ -3,6 +3,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { X, Image as ImageIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getApiBase } from "@/lib/api";
 
 interface Artist {
   id: string;
@@ -11,6 +13,13 @@ interface Artist {
   styles: string[];
   speciality: string;
   photoUrl?: string;
+}
+
+interface PortfolioItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  imageUrl: string;
 }
 
 interface PortfolioDialogProps {
@@ -33,6 +42,29 @@ const MOCK_PORTFOLIO_COLORS = [
 ];
 
 export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps) {
+  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchPortfolio = async () => {
+      if (!artist || !open) return;
+      try {
+        setLoading(true);
+        // 後端 /artists/:artistId/portfolio 的 artistId = User.id
+        // 首頁傳入的 artist 型別在此元件沒有 user.id，因此改為由首頁在開啟前注入 userId 至 artist.id
+        const base = getApiBase();
+        const res = await fetch(`${base}/artists/${artist.id}/portfolio`, { cache: "no-store" });
+        const data = await res.json();
+        setItems(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPortfolio();
+  }, [artist, open]);
+
   if (!artist) return null;
 
   return (
@@ -77,37 +109,18 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
 
           {/* 作品集網格 - 完整響應式 */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
-            {MOCK_PORTFOLIO_COLORS.map((item) => (
-              <div
-                key={item.id}
-                className="group relative aspect-square overflow-hidden rounded-lg sm:rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl"
-              >
-                {/* 色塊暫時替代圖片 */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-90 group-hover:opacity-100 transition-opacity duration-300`} />
-                
-                {/* 圖片圖標 */}
-                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 sm:p-2 bg-white/20 backdrop-blur-sm rounded-full">
-                  <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+            {(items.length ? items : []).map((item) => (
+              <div key={item.id} className="group relative aspect-square overflow-hidden rounded-lg sm:rounded-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.imageUrl || 'https://placehold.co/800x800?text=Work'} alt={item.title} className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
+                  <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title || '作品'}</p>
                 </div>
-
-                {/* 作品標題（懸停顯示） */}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                  <p className="text-white text-xs sm:text-sm font-medium truncate">
-                    {item.title}
-                  </p>
-                </div>
-
-                {/* 作品編號（桌面版顯示） */}
-                <div className="hidden md:flex absolute inset-0 items-center justify-center">
-                  <div className="text-white text-2xl sm:text-3xl md:text-4xl font-bold opacity-10 group-hover:opacity-20 transition-opacity">
-                    #{item.id}
-                  </div>
-                </div>
-
-                {/* 懸停遮罩效果 */}
-                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
               </div>
             ))}
+            {!loading && items.length === 0 && (
+              <div className="col-span-full text-center text-neutral-400">目前尚無作品</div>
+            )}
           </div>
 
           {/* 提示訊息 - 響應式 */}

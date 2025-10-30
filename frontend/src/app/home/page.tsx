@@ -468,7 +468,8 @@ export default function HomePage() {
                             variant="outline"
                             className="flex-1 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
                             onClick={() => {
-                              setSelectedArtist(artist);
+                              // 傳入 userId 給作品集對話框使用（覆寫 id 為 user.id）
+                              setSelectedArtist({ ...artist, id: artist.user.id } as unknown as Artist);
                               setPortfolioDialogOpen(true);
                             }}
                           >
