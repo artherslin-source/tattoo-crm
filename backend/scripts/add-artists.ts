@@ -10,28 +10,41 @@ async function ensureBranchByName(name: string) {
   return branch;
 }
 
+async function hasUserPersonIdColumn(): Promise<boolean> {
+  try {
+    const rows = await prisma.$queryRawUnsafe<{ exists: boolean }[]>(
+      "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE lower(table_name) = 'user' AND column_name = 'personid') as exists"
+    );
+    return !!rows?.[0]?.exists;
+  } catch {
+    return false;
+  }
+}
+
 async function ensureArtist(params: {
   name: string;
   email: string;
   branchId: string;
   speciality?: string;
   photoUrl?: string;
+  personId?: string;
 }) {
-  const { name, email, branchId, speciality, photoUrl } = params;
+  const { name, email, branchId, speciality, photoUrl, personId } = params;
+  const canUsePersonId = await hasUserPersonIdColumn();
 
   // If user exists, reuse; otherwise create
   let user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        role: 'ARTIST',
-        branchId,
-        isActive: true,
-        hashedPassword: 'temp_password_12345678',
-      },
-    });
+    const data: Record<string, unknown> = {
+      email,
+      name,
+      role: 'ARTIST',
+      branchId,
+      isActive: true,
+      hashedPassword: 'temp_password_12345678',
+    };
+    if (canUsePersonId && personId) data.personId = personId;
+    user = await prisma.user.create({ data });
   }
 
   // If artist exists for this user, update branch/speciality/photo; else create
@@ -79,12 +92,14 @@ async function main() {
   });
 
   // 2) 朱川進（東港店、三重店）→ 以兩個分店建立兩個 Artist/User 帳號，分開統計與排程
+  const zhuPersonId = 'person-zhu-chuanjin';
   await ensureArtist({
     name: '朱川進',
     email: 'zhu-chuanjin-donggang@tattoo.local',
     branchId: donggang.id,
     speciality: '寫實與線條',
     photoUrl: placeholder,
+    personId: zhuPersonId,
   });
 
   await ensureArtist({
@@ -93,6 +108,7 @@ async function main() {
     branchId: sanchong.id,
     speciality: '寫實與線條',
     photoUrl: placeholder,
+    personId: zhuPersonId,
   });
 
   console.log('✅ 已建立/更新：陳翔男（東港店）、朱川進（東港店、三重店）');
