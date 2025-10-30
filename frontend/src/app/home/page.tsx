@@ -216,10 +216,17 @@ export default function HomePage() {
           smartApiCall<Branch[]>(`${apiBase}/branches/public`, { cache: 'no-store' }, []),
         ]);
 
+        console.log("API 回應:", { services: servicesData.length, artists: artistsData.length, branches: branchesData.length });
+
         setServices(servicesData);
         setArtists(artistsData);
         const uniqueBranches = sortBranchesByName(getUniqueBranches(branchesData));
         setBranches(uniqueBranches as Branch[]);
+        
+        // 如果沒有資料，顯示錯誤訊息
+        if (artistsData.length === 0) {
+          setMessage({ type: "error", text: "無法載入刺青師資料，請稍後再試" });
+        }
       } catch (error) {
         console.error("載入資料失敗:", error);
         setMessage({ type: "error", text: "載入資料失敗，已展示範例內容" });
