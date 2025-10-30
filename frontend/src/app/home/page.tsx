@@ -209,11 +209,17 @@ export default function HomePage() {
         const apiBase = getApiBase();
         console.log("使用 API Base URL:", apiBase);
         
-        // 使用智能 API 調用（自動重試 + 降級）+ 直接命中後端 API Base，避免前端 Rewrite 快取干擾
+        // 直接使用 fetch 呼叫後端 API
+        const [servicesResponse, artistsResponse, branchesResponse] = await Promise.all([
+          fetch(`${apiBase}/services`, { cache: 'no-store' }),
+          fetch(`${apiBase}/artists`, { cache: 'no-store' }),
+          fetch(`${apiBase}/branches/public`, { cache: 'no-store' }),
+        ]);
+
         const [servicesData, artistsData, branchesData] = await Promise.all([
-          smartApiCall<Service[]>(`${apiBase}/services`, { cache: 'no-store' }, []),
-          smartApiCall<Artist[]>(`${apiBase}/artists`, { cache: 'no-store' }, []),
-          smartApiCall<Branch[]>(`${apiBase}/branches/public`, { cache: 'no-store' }, []),
+          servicesResponse.ok ? servicesResponse.json() : [],
+          artistsResponse.ok ? artistsResponse.json() : [],
+          branchesResponse.ok ? branchesResponse.json() : [],
         ]);
 
         console.log("API 回應:", { services: servicesData.length, artists: artistsData.length, branches: branchesData.length });
