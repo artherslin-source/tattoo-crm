@@ -23,7 +23,8 @@
     "business-data:small": "node scripts/run-business-data.js --contacts=20 --appointments=15 --orders=10",
     "business-data:large": "node scripts/run-business-data.js --contacts=100 --appointments=80 --orders=60",
     "add:artists": "npx ts-node scripts/add-artists.ts",
-    "fix:artists-branch": "npx ts-node scripts/fix-artists-branch.ts"
+    "fix:artists-branch": "npx ts-node scripts/fix-artists-branch.ts",
+    "add:portfolio:samples": "npx ts-node scripts/add-portfolio-samples.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^8.3.1",
