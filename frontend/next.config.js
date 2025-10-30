@@ -17,7 +17,6 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    // 在生產環境中，API 請求直接發送到後端服務
     // 在開發環境中，重寫到 localhost:4000
     if (process.env.NODE_ENV === 'development') {
       return [
@@ -27,6 +26,7 @@ const nextConfig = {
     }
     
     // 生產環境：重寫到 Railway 後端服務
+    console.log('Using production rewrite rules');
     return [
       { source: '/api/:path*', destination: 'https://tattoo-crm-production.up.railway.app/:path*' },
       { source: '/uploads/:path*', destination: 'https://tattoo-crm-production.up.railway.app/uploads/:path*' },
