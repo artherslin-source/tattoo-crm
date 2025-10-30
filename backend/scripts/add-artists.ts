@@ -35,7 +35,7 @@ async function ensureArtist(params: {
   // If user exists, reuse; otherwise create
   let user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
-    const data: Record<string, unknown> = {
+    const data: any = {
       email,
       name,
       role: 'ARTIST',
