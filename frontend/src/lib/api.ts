@@ -116,11 +116,27 @@ export async function detectBackendUrl(): Promise<string> {
   return `https://${hostname}`;
 }
 
-const API_BASE = detectApiBase();
+// 動態獲取 API Base URL
+function getApiBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return "http://localhost:4000";
+  }
+  
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  const hostname = window.location.hostname;
+  if (hostname.includes('railway.app')) {
+    return 'https://tattoo-crm-production.up.railway.app';
+  }
+  
+  return "http://localhost:4000";
+}
 
 // 調試信息
 if (typeof window !== 'undefined') {
-  console.log('🔍 API Base URL:', API_BASE);
+  console.log('🔍 API Base URL:', getApiBaseUrl());
   console.log('🔍 Current hostname:', window.location.hostname);
   console.log('🔍 Environment:', process.env.NODE_ENV);
 }
@@ -158,7 +174,7 @@ export function saveTokens(accessToken: string, refreshToken?: string, userRole?
 }
 
 export function getApiBase() {
-  return API_BASE;
+  return getApiBaseUrl();
 }
 
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {

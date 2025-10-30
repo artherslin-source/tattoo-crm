@@ -205,30 +205,8 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 調試 API URLs
-        debugApiUrls();
-        
-        // 自動檢測 API URL
-        let apiBase = process.env.NEXT_PUBLIC_API_URL;
-        if (!apiBase) {
-          // 嘗試找到可用的 API URL
-          const workingUrl = await findWorkingApiUrl();
-          if (workingUrl) {
-            apiBase = workingUrl;
-          } else {
-            // 回退到預設邏輯
-            if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-              const hostname = window.location.hostname;
-              if (hostname.includes('railway.app')) {
-                apiBase = `https://${hostname.replace('tattoo-crm-production', 'tattoo-crm-backend')}`;
-              } else {
-                apiBase = window.location.origin.replace(/:\d+$/, ':4000');
-              }
-            } else {
-              apiBase = "http://localhost:4000";
-            }
-          }
-        }
+        // 使用修正的 API Base URL 檢測
+        const apiBase = getApiBase();
         console.log("使用 API Base URL:", apiBase);
         
         // 使用智能 API 調用（自動重試 + 降級）+ 直接命中後端 API Base，避免前端 Rewrite 快取干擾
