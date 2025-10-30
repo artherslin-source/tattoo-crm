@@ -92,7 +92,7 @@ const FALLBACK_CATEGORIES: Category[] = [
       {
         id: "arm-1",
         title: "上下手臂全肢",
-        thumb: "/images/services/full-arm-sleeve.jpg",
+        thumb: "https://placehold.co/640x400?text=Tattoo+Arm",
         tag: CATEGORY_LABELS.Arm,
         price: 45000,
         durationMin: 480,
@@ -100,7 +100,7 @@ const FALLBACK_CATEGORIES: Category[] = [
       {
         id: "arm-2",
         title: "上手臂",
-        thumb: "/images/services/upper-arm-sleeve.jpg",
+        thumb: "https://placehold.co/640x400?text=Upper+Arm",
         tag: CATEGORY_LABELS.Arm,
         price: 28000,
         durationMin: 300,
@@ -108,7 +108,7 @@ const FALLBACK_CATEGORIES: Category[] = [
       {
         id: "arm-3",
         title: "前手臂",
-        thumb: "/images/services/forearm-sleeve.jpg",
+        thumb: "https://placehold.co/640x400?text=Forearm",
         tag: CATEGORY_LABELS.Arm,
         price: 18000,
         durationMin: 200,
@@ -457,7 +457,7 @@ export default function HomePage() {
                       <CardContent className="space-y-4 text-sm text-neutral-200">
                         <p>{artist.bio}</p>
                         <div className="flex flex-wrap gap-2">
-                          {artist.styles.map((style) => (
+                          {(artist.styles || []).map((style) => (
                             <Badge key={style} variant="secondary" className="bg-white/10 text-white">
                               {style}
                             </Badge>
