@@ -136,7 +136,7 @@ export async function smartApiCall<T>(
     console.error(`API 調用失敗: ${url}`, error);
     
     // 只有在明確提供 fallbackData 且不是空陣列時才使用
-    if (fallbackData !== undefined && !Array.isArray(fallbackData) || (Array.isArray(fallbackData) && fallbackData.length > 0)) {
+    if (fallbackData !== undefined && (!Array.isArray(fallbackData) || (Array.isArray(fallbackData) && fallbackData.length > 0))) {
       console.warn('使用降級資料');
       return fallbackData;
     }
