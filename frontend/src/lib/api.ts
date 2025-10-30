@@ -86,7 +86,7 @@ export async function detectBackendUrl(): Promise<string> {
   
   if (hostname.includes('railway.app')) {
     // 基於 Railway 的常見命名模式，直接返回最可能的後端 URL
-    const backendUrl = 'https://tattoo-crm-production.up.railway.app';
+    const backendUrl = 'https://tattoo-crm-production-413f.up.railway.app';
     console.log('🔍 Using hardcoded backend URL:', backendUrl);
     
     // 測試 URL 是否可用
@@ -128,7 +128,7 @@ function getApiBaseUrl(): string {
   
   const hostname = window.location.hostname;
   if (hostname.includes('railway.app')) {
-    return 'https://tattoo-crm-production.up.railway.app';
+    return 'https://tattoo-crm-production-413f.up.railway.app';
   }
   
   return "http://localhost:4000";
