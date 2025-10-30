@@ -81,7 +81,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
                 {artist.speciality}
               </p>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
-                {artist.styles.map((style) => (
+                {(artist.styles || []).map((style) => (
                   <Badge key={style} variant="secondary" className="text-[10px] sm:text-xs px-2 py-0.5">
                     {style}
                   </Badge>
@@ -118,8 +118,22 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
                 </div>
               </div>
             ))}
+
+            {/* 若沒有作品，顯示示意色塊作為暫時替代 */}
             {!loading && items.length === 0 && (
-              <div className="col-span-full text-center text-neutral-400">目前尚無作品</div>
+              <>
+                {MOCK_PORTFOLIO_COLORS.map((item) => (
+                  <div
+                    key={item.id}
+                    className="group relative aspect-square overflow-hidden rounded-lg sm:rounded-xl"
+                  >
+                    <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-90`} />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
+                      <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title}</p>
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
           </div>
 
