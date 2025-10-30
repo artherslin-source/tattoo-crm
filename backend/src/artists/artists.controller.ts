@@ -24,6 +24,18 @@ export class ArtistsController {
     const durationMinutes = Math.max(15, parseInt(duration || '60', 10));
     return this.artists.availability(artistId, date, durationMinutes);
   }
+
+  // 公開：取得作品集（artistId = User.id）
+  @Get(':artistId/portfolio')
+  async portfolio(@Param('artistId') artistId: string) {
+    return this.artists.getPortfolioPublic(artistId);
+  }
+
+  // 公開：取得單一刺青師（artistId = User.id）
+  @Get(':artistId')
+  async getOne(@Param('artistId') artistId: string) {
+    return this.artists.getArtistPublicByUserId(artistId);
+  }
 }
 
 

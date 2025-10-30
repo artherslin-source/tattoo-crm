@@ -51,6 +51,24 @@ export class ArtistsService {
     return { date, durationMinutes, slots };
   }
 
+  async getPortfolioPublic(artistUserId: string) {
+    // artistUserId 對應的是 User.id（作為 appointment 的 artistId）
+    return this.prisma.portfolioItem.findMany({
+      where: { artistId: artistUserId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getArtistPublicByUserId(artistUserId: string) {
+    return this.prisma.artist.findFirst({
+      where: { userId: artistUserId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        branch: { select: { id: true, name: true } },
+      },
+    });
+  }
+
   // 管理功能方法
   async getAllArtists(userRole: string, userBranchId?: string) {
     console.log('getAllArtists called, prisma:', !!this.prisma);

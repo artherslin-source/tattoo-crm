@@ -26,6 +26,32 @@ export class AppointmentsService {
       }
     }
 
+    // 檢查同一真人 (personId) 在相同時段的衝突（跨分店）
+    if (input.artistId) {
+      const artistUser = await this.prisma.user.findUnique({ where: { id: input.artistId }, select: { personId: true } });
+      let artistIdsToCheck: string[] = [input.artistId];
+      if (artistUser?.personId) {
+        const samePersonUsers = await this.prisma.user.findMany({ where: { personId: artistUser.personId }, select: { id: true } });
+        artistIdsToCheck = samePersonUsers.map(u => u.id);
+      }
+
+      const conflict = await this.prisma.appointment.findFirst({
+        where: {
+          artistId: { in: artistIdsToCheck },
+          status: { in: ["PENDING", "CONFIRMED", "IN_PROGRESS"] },
+          OR: [
+            {
+              startAt: { lte: input.endAt },
+              endAt: { gte: input.startAt },
+            },
+          ],
+        },
+      });
+      if (conflict) {
+        throw new BadRequestException("該刺青師於此時段已在其他分店/帳號有預約");
+      }
+    }
+
     return this.prisma.appointment.create({ 
       data: {
         ...input,

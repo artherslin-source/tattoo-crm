@@ -165,16 +165,24 @@ export class AdminAppointmentsService {
         throw new BadRequestException("分店不存在");
       }
 
-      // 檢查時間衝突：同一個 artistId，時間區間重疊的預約狀態為 PENDING、CONFIRMED 或 IN_PROGRESS
-      console.log('🔍 檢查時間衝突:', {
+      // 檢查時間衝突（跨分店）：同一位真人 (personId) 的所有帳號，在同時段不得重疊
+      console.log('🔍 檢查時間衝突(跨店/personId):', {
         artistId: input.artistId,
         startAt: input.startAt,
         endAt: input.endAt
       });
-      
+
+      // 取得該刺青師使用者的 personId
+      const artistUser = await this.prisma.user.findUnique({ where: { id: input.artistId }, select: { personId: true } });
+      let artistIdsToCheck: string[] = [input.artistId];
+      if (artistUser?.personId) {
+        const samePersonUsers = await this.prisma.user.findMany({ where: { personId: artistUser.personId }, select: { id: true } });
+        artistIdsToCheck = samePersonUsers.map(u => u.id);
+      }
+
       const conflicts = await this.prisma.appointment.findMany({
         where: {
-          artistId: input.artistId,
+          artistId: { in: artistIdsToCheck },
           status: { in: ["PENDING", "CONFIRMED", "IN_PROGRESS"] },
           OR: [
             {
