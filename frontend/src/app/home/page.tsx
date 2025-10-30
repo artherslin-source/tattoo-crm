@@ -244,6 +244,27 @@ export default function HomePage() {
     fetchData();
   }, []);
 
+  // 過濾重複的朱川進，只保留第一個（通常是東港店）
+  const uniqueArtists = useMemo(() => {
+    if (!artists.length) return [];
+    const seenNames = new Set<string>();
+    const filtered: Artist[] = [];
+    
+    for (const artist of artists) {
+      if (artist.displayName === '朱川進') {
+        // 只保留第一個朱川進
+        if (!seenNames.has('朱川進')) {
+          seenNames.add('朱川進');
+          filtered.push(artist);
+        }
+      } else {
+        filtered.push(artist);
+      }
+    }
+    
+    return filtered;
+  }, [artists]);
+
   const categories: Category[] = useMemo(() => {
     if (!services.length) {
       return FALLBACK_CATEGORIES;
@@ -430,8 +451,12 @@ export default function HomePage() {
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {(artists.length ? artists : []).slice(0, 6).map((artist) => (
-                    <Card key={artist.id} className="border-white/10 bg-white/5 text-white" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                  {uniqueArtists.slice(0, 6).map((artist) => (
+                    <Card 
+                      key={artist.id} 
+                      className="border-white/10 bg-white/5 text-white"
+                      style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                    >
                       <CardHeader>
                         <div className="relative h-48 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900">
                           {artist.photoUrl ? (
@@ -478,7 +503,7 @@ export default function HomePage() {
                     </Card>
                   ))}
 
-                  {!artists.length && (
+                  {!uniqueArtists.length && (
                     <div className="col-span-full rounded-2xl border border-dashed border-white/10 p-8 text-center text-neutral-300">
                       正在載入刺青師資訊，敬請稍候。
                     </div>
