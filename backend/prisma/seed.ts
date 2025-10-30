@@ -568,12 +568,65 @@ async function main() {
   
   console.log('✅ 模擬結帳流程：10 個訂單完成結帳（一次付清和分期付款）');
 
-  console.log('🎉 Seeding 完成！');
+  // 自動添加新刺青師（無論保護模式）
+  console.log('\n🔍 檢查並添加新刺青師...');
+  try {
+    const donggangBranch = branches.find(b => b.name === '東港店');
+    const sanchongBranch = branches.find(b => b.name === '三重店');
+    
+    if (donggangBranch && sanchongBranch) {
+      const newArtistEmails = [
+        { email: 'chen-xiangnan@tattoo.local', name: '陳翔男', branchId: donggangBranch.id, speciality: '日式與傳統風格' },
+        { email: 'zhu-chuanjin-donggang@tattoo.local', name: '朱川進', branchId: donggangBranch.id, speciality: '寫實與線條' },
+        { email: 'zhu-chuanjin-sanchong@tattoo.local', name: '朱川進', branchId: sanchongBranch.id, speciality: '寫實與線條' }
+      ];
+      
+      for (const artistData of newArtistEmails) {
+        const existingUser = await prisma.user.findUnique({ where: { email: artistData.email } });
+        if (!existingUser) {
+          const hashedPassword = await bcrypt.hash('temp_password_12345678', 12);
+          const user = await prisma.user.create({
+            data: {
+              email: artistData.email,
+              name: artistData.name,
+              hashedPassword,
+              role: 'ARTIST',
+              branchId: artistData.branchId,
+              isActive: true
+            }
+          });
+          
+          const photoUrl = artistData.name === '陳翔男' 
+            ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face'
+            : 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face';
+          
+          await prisma.artist.create({
+            data: {
+              userId: user.id,
+              displayName: artistData.name,
+              branchId: artistData.branchId,
+              speciality: artistData.speciality,
+              photoUrl,
+              active: true
+            }
+          });
+          console.log(`✅ 添加新刺青師：${artistData.name} (${artistData.email})`);
+        } else {
+          console.log(`ℹ️ 刺青師已存在：${artistData.name} (${artistData.email})`);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ 添加新刺青師時發生錯誤:', error.message);
+  }
+
+  console.log('\n🎉 Seeding 完成！');
   console.log('📊 資料統計：');
   console.log(`   - BOSS: 1 個 (admin@test.com / 12345678)`);
   console.log(`   - 分店經理: ${managers.length} 個 (manager1@test.com, manager2@test.com / 12345678)`);
   console.log(`   - 會員: ${members.length} 個 (member1@test.com ~ member12@test.com / 12345678)`);
-  console.log(`   - 刺青師: ${artists.length} 個 (artist1@test.com ~ artist3@test.com / 12345678)`);
+  const totalArtists = await prisma.artist.count();
+  console.log(`   - 刺青師: ${totalArtists} 個 (包含新添加的刺青師)`);
   console.log(`   - 分店: ${branches.length} 個 (三重店、東港店)`);
   console.log(`   - 服務: ${services.length} 個`);
   console.log(`   - 預約: ${appointments.length} 個 (每位刺青師8個預約)`);
@@ -581,8 +634,8 @@ async function main() {
   console.log(`   - 訂單: ${orders.length} 個 (待結帳和已結帳)`);
   console.log('💰 財務資料已更新到會員帳號中');
   console.log('🏪 分店配置：');
-  console.log('   - 東港店：陳震宇 (1位刺青師)');
-  console.log('   - 三重店：黃晨洋、林承葉 (2位刺青師)');
+  console.log('   - 東港店：陳震宇、陳翔男、朱川進 (3位刺青師)');
+  console.log('   - 三重店：黃晨洋、林承葉、朱川進 (3位刺青師)');
 }
 
 main()

@@ -11,14 +11,8 @@ async function ensureBranchByName(name: string) {
 }
 
 async function hasUserPersonIdColumn(): Promise<boolean> {
-  try {
-    const rows = await prisma.$queryRawUnsafe<{ exists: boolean }[]>(
-      "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE lower(table_name) = 'user' AND column_name = 'personid') as exists"
-    );
-    return !!rows?.[0]?.exists;
-  } catch {
-    return false;
-  }
+  // 暫時返回 false，因為資料庫中沒有 personId 欄位
+  return false;
 }
 
 async function ensureArtist(params: {
@@ -43,7 +37,8 @@ async function ensureArtist(params: {
       isActive: true,
       hashedPassword: 'temp_password_12345678',
     };
-    if (canUsePersonId && personId) data.personId = personId;
+    // 暫時跳過 personId 欄位
+    // if (canUsePersonId && personId) data.personId = personId;
     user = await prisma.user.create({ data });
   }
 
@@ -77,8 +72,6 @@ async function ensureArtist(params: {
 }
 
 async function main() {
-  const placeholder = 'https://placehold.co/600x800?text=Artist';
-
   const donggang = await ensureBranchByName('東港店');
   const sanchong = await ensureBranchByName('三重店');
 
@@ -88,18 +81,17 @@ async function main() {
     email: 'chen-xiangnan@tattoo.local',
     branchId: donggang.id,
     speciality: '日式與傳統風格',
-    photoUrl: placeholder,
+    photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
   });
 
   // 2) 朱川進（東港店、三重店）→ 以兩個分店建立兩個 Artist/User 帳號，分開統計與排程
-  const zhuPersonId = 'person-zhu-chuanjin';
+  // 暫時跳過 personId 功能
   await ensureArtist({
     name: '朱川進',
     email: 'zhu-chuanjin-donggang@tattoo.local',
     branchId: donggang.id,
     speciality: '寫實與線條',
-    photoUrl: placeholder,
-    personId: zhuPersonId,
+    photoUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face',
   });
 
   await ensureArtist({
@@ -107,11 +99,32 @@ async function main() {
     email: 'zhu-chuanjin-sanchong@tattoo.local',
     branchId: sanchong.id,
     speciality: '寫實與線條',
-    photoUrl: placeholder,
-    personId: zhuPersonId,
+    photoUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face',
   });
 
-  console.log('✅ 已建立/更新：陳翔男（東港店）、朱川進（東港店、三重店）');
+  // 驗證結果
+  const totalArtists = await prisma.artist.count();
+  console.log(`✅ 已建立/更新：陳翔男（東港店）、朱川進（東港店、三重店）`);
+  console.log(`📊 目前總刺青師數量：${totalArtists}`);
+  
+  const newArtists = await prisma.artist.findMany({
+    where: {
+      OR: [
+        { user: { email: 'chen-xiangnan@tattoo.local' } },
+        { user: { email: 'zhu-chuanjin-donggang@tattoo.local' } },
+        { user: { email: 'zhu-chuanjin-sanchong@tattoo.local' } }
+      ]
+    },
+    include: {
+      user: { select: { name: true, email: true } },
+      branch: { select: { name: true } }
+    }
+  });
+  
+  console.log('📋 新增的刺青師：');
+  newArtists.forEach(a => {
+    console.log(`  - ${a.displayName} (${a.branch.name})`);
+  });
 }
 
 main()
