@@ -57,7 +57,8 @@ function detectApiBase(): string {
 // 檢查後端服務狀態（帶重試機制）
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const response = await fetchWithRetry(`/api/health/simple`, {
+    const backendUrl = await detectBackendUrl();
+    const response = await fetchWithRetry(`${backendUrl}/health/simple`, {
       method: 'GET',
     });
     return response.ok;
@@ -179,7 +180,9 @@ export function getApiBase() {
 
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
   try {
-    const res = await fetchWithRetry(`/api${path}`, {
+    const backendUrl = await detectBackendUrl();
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const res = await fetchWithRetry(`${backendUrl}${normalizedPath}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -190,7 +193,6 @@ export async function postJSON(path: string, body: Record<string, unknown> | unk
     return { ok: res.ok, status: res.status, data: data ?? text };
   } catch (error) {
     console.error('postJSON fetch error:', error);
-    // 如果是網路錯誤，提供更友好的錯誤訊息
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new ApiError(0, '無法連接到伺服器，請檢查網路連線或稍後再試');
     }
