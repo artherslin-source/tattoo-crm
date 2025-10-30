@@ -120,17 +120,29 @@ export function ServiceImageSelector({
       });
 
       if (!response.ok) {
-        throw new Error('批次上傳失敗');
+        // 嘗試解析錯誤訊息
+        let errorMessage = '批次上傳失敗';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          // 如果無法解析 JSON，使用狀態文字
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
       console.log('批次上傳成功:', result);
 
-      // 模擬上傳進度
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 50));
+      // 真實的上傳進度（基於實際進度）
+      if (result.total > 0) {
+        for (let i = 0; i <= 100; i += Math.ceil(100 / result.total)) {
+          setUploadProgress(Math.min(i, 100));
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
       }
+      setUploadProgress(100);
 
       // 重新載入圖片列表
       await loadImages(selectedCategory);
@@ -139,9 +151,10 @@ export function ServiceImageSelector({
       setUploadFiles([]);
       
       alert(`成功上傳 ${result.total} 張圖片！`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('批次上傳失敗:', error);
-      alert('批次上傳失敗，請重試');
+      const errorMessage = error.message || '批次上傳失敗，請檢查：\n1. 文件大小是否超過 10MB\n2. 文件格式是否為圖片（JPG、PNG、GIF、WebP）\n3. 網路連線是否正常';
+      alert(errorMessage);
     } finally {
       setBatchUploading(false);
       setUploadProgress(0);

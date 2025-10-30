@@ -44,6 +44,23 @@ const UpdateServiceSchema = CreateServiceSchema.partial();
 export class AdminServicesController {
   constructor(private readonly services: ServicesService) {}
 
+  // 錯誤處理中間件：捕獲 Multer 上傳錯誤
+  private handleMulterError(error: any): never {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      throw new BadRequestException('文件大小超過限制（最大 10MB）');
+    }
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      throw new BadRequestException('上傳文件數量超過限制（最多 10 張）');
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      throw new BadRequestException('上傳欄位名稱不正確');
+    }
+    if (error.message && error.message.includes('只允許上傳圖片文件')) {
+      throw new BadRequestException(error.message);
+    }
+    throw new BadRequestException(error.message || '上傳失敗，請檢查文件格式和大小');
+  }
+
   @Get()
   async findAll(
     @Query('category') category?: string,
@@ -170,69 +187,123 @@ export class AdminServicesController {
   ], {
     storage: diskStorage({
       destination: (req, file, callback) => {
-        const category = req.body.category || 'other';
-        const uploadPath = join(process.cwd(), 'uploads', 'services', category);
-        
-        if (!existsSync(uploadPath)) {
-          mkdirSync(uploadPath, { recursive: true });
+        try {
+          const category = req.body.category || 'other';
+          const uploadPath = join(process.cwd(), 'uploads', 'services', category);
+          
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          callback(null, uploadPath);
+        } catch (error) {
+          console.error('❌ 創建上傳目錄失敗:', error);
+          callback(new Error('無法創建上傳目錄'), false);
         }
-        callback(null, uploadPath);
       },
       filename: (req, file, callback) => {
-        // 自動生成唯一檔名，不依賴原始檔名
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 8);
-        const ext = extname(file.originalname);
-        const filename = `service-${timestamp}-${randomString}${ext}`;
-        callback(null, filename);
+        try {
+          // 自動生成唯一檔名，不依賴原始檔名
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substring(2, 8);
+          const ext = extname(file.originalname || '');
+          const filename = `service-${timestamp}-${randomString}${ext}`;
+          callback(null, filename);
+        } catch (error) {
+          console.error('❌ 生成檔名失敗:', error);
+          callback(new Error('無法生成檔名'), false);
+        }
       },
     }),
     fileFilter: (req, file, callback) => {
-      if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-        return callback(new Error('只允許上傳圖片文件 (JPG, JPEG, PNG, GIF, WebP)'), false);
+      try {
+        if (!file || !file.originalname) {
+          return callback(new Error('文件資訊不完整'), false);
+        }
+        
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          return callback(new Error('只允許上傳圖片文件 (JPG, JPEG, PNG, GIF, WebP)'), false);
+        }
+        callback(null, true);
+      } catch (error) {
+        console.error('❌ 文件過濾失敗:', error);
+        callback(new Error('文件驗證失敗'), false);
       }
-      callback(null, true);
     },
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
+      files: 10, // 最多 10 個文件
     },
   }))
   async batchUploadServiceImages(
     @Body() body: { category: string },
     @UploadedFiles() files: { images?: Express.Multer.File[] }
   ) {
-    if (!files.images || files.images.length === 0) {
-      throw new Error('沒有上傳文件');
-    }
-
-    const category = body.category || 'other';
-    const uploadedImages = [];
-
-    const fs = require('fs');
-    for (const file of files.images) {
-      const imageUrl = `/uploads/services/${category}/${file.filename}`;
-      // 寫入中繼資料檔 (保存原始檔名)
-      try {
-        const metaPath = join(process.cwd(), 'uploads', 'services', category, `${file.filename}.meta.json`);
-        const originalName = normalizeFilename(file.originalname);
-        fs.writeFileSync(metaPath, JSON.stringify({ originalName, displayName: originalName }, null, 2));
-      } catch {}
-      uploadedImages.push({
-        filename: file.filename,
-        originalName: normalizeFilename(file.originalname),
-        category,
-        url: imageUrl,
-        size: file.size,
-        displayName: normalizeFilename(file.originalname),
+    try {
+      console.log('📤 批次上傳請求:', { 
+        category: body.category, 
+        filesCount: files?.images?.length || 0 
       });
-    }
 
-    return {
-      success: true,
-      message: `成功上傳 ${uploadedImages.length} 張圖片`,
-      data: uploadedImages,
-      total: uploadedImages.length,
-    };
+      if (!files || !files.images || files.images.length === 0) {
+        console.error('❌ 沒有上傳文件');
+        throw new BadRequestException('沒有選擇要上傳的圖片文件');
+      }
+
+      const category = body.category || 'other';
+      const uploadedImages = [];
+      const fs = require('fs');
+
+      for (const file of files.images) {
+        try {
+          const imageUrl = `/uploads/services/${category}/${file.filename}`;
+          
+          // 寫入中繼資料檔 (保存原始檔名)
+          try {
+            const metaPath = join(process.cwd(), 'uploads', 'services', category, `${file.filename}.meta.json`);
+            const originalName = normalizeFilename(file.originalname);
+            fs.writeFileSync(metaPath, JSON.stringify({ originalName, displayName: originalName }, null, 2));
+          } catch (metaError) {
+            console.warn('⚠️ 寫入中繼資料失敗:', metaError);
+            // 不影響上傳，繼續處理
+          }
+
+          uploadedImages.push({
+            filename: file.filename,
+            originalName: normalizeFilename(file.originalname),
+            category,
+            url: imageUrl,
+            size: file.size,
+            displayName: normalizeFilename(file.originalname),
+          });
+
+          console.log('✅ 上傳成功:', file.filename);
+        } catch (fileError) {
+          console.error('❌ 處理單個文件失敗:', fileError);
+          // 記錄錯誤但繼續處理其他文件
+        }
+      }
+
+      if (uploadedImages.length === 0) {
+        throw new BadRequestException('沒有成功上傳任何圖片');
+      }
+
+      console.log(`✅ 批次上傳完成: ${uploadedImages.length} 張圖片`);
+      
+      return {
+        success: true,
+        message: `成功上傳 ${uploadedImages.length} 張圖片`,
+        data: uploadedImages,
+        total: uploadedImages.length,
+      };
+    } catch (error) {
+      console.error('❌ 批次上傳錯誤:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error.message || '批次上傳失敗，請檢查文件格式和大小（最大 10MB）'
+      );
+    }
   }
 
   // 保留原有的單張上傳API

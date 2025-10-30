@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   // 修復 BigInt 序列化問題
@@ -11,6 +12,9 @@ async function bootstrap() {
   };
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  
+  // 註冊全局異常過濾器（處理 Multer 錯誤等）
+  app.useGlobalFilters(new HttpExceptionFilter());
   
   // 確保uploads目錄存在
   const uploadsPath = join(process.cwd(), 'uploads');
