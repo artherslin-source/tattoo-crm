@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getApiBaseUrl } from "@/lib/config";
+import { getApiBase } from "../../../lib/api";
 
 interface ArtistDetail {
   user: { id: string; name: string; email: string };
@@ -22,7 +22,7 @@ interface PortfolioItem {
 export default function ArtistPortfolioPage() {
   const params = useParams<{ id: string }>();
   const artistId = params?.id as string;
-  const base = getApiBaseUrl();
+  const base = getApiBase();
   const [artist, setArtist] = useState<ArtistDetail | null>(null);
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);

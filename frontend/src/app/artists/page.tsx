@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getApiBaseUrl } from "@/lib/config";
+import { getApiBase } from "../../lib/api";
 
 interface ArtistItem {
   user: { id: string; name: string; email: string };
@@ -15,7 +15,7 @@ interface ArtistItem {
 export default function ArtistsPage() {
   const [artists, setArtists] = useState<ArtistItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const base = getApiBaseUrl();
+  const base = getApiBase();
 
   useEffect(() => {
     (async () => {
