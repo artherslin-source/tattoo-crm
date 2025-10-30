@@ -231,11 +231,11 @@ export default function HomePage() {
         }
         console.log("使用 API Base URL:", apiBase);
         
-        // 使用智能 API 調用（自動重試 + 降級）
+        // 使用智能 API 調用（自動重試 + 降級）+ 直接命中後端 API Base，避免前端 Rewrite 快取干擾
         const [servicesData, artistsData, branchesData] = await Promise.all([
-          smartApiCall<Service[]>('/api/services', {}, []),
-          smartApiCall<Artist[]>('/api/artists', {}, []),
-          smartApiCall<Branch[]>('/api/branches/public', {}, []),
+          smartApiCall<Service[]>(`${apiBase}/services`, { cache: 'no-store' }, []),
+          smartApiCall<Artist[]>(`${apiBase}/artists`, { cache: 'no-store' }, []),
+          smartApiCall<Branch[]>(`${apiBase}/branches/public`, { cache: 'no-store' }, []),
         ]);
 
         setServices(servicesData);
