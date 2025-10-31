@@ -20,15 +20,16 @@ export function Chip({ active, disabled, children, onClick, icon, className }: C
       aria-pressed={active}
       disabled={disabled}
       className={cn(
-        "px-3 h-9 rounded-full text-sm transition-colors whitespace-nowrap border flex items-center gap-2",
+        "px-2.5 h-8 rounded-full text-xs transition-colors whitespace-nowrap border flex items-center gap-1.5 flex-shrink-0",
         "border-[var(--line)] bg-[#0F1216] text-[var(--muted)] hover:border-[var(--accent)]/40",
+        "sm:px-3 sm:h-9 sm:text-sm sm:gap-2",
         active && "border-[var(--brand)]/60 bg-[#1A1405] text-[var(--text)] shadow-[0_6px_14px_rgba(0,0,0,.25)]",
         disabled && "opacity-60 cursor-not-allowed",
         className
       )}
     >
-      {icon && <span className="text-[var(--muted)]">{icon}</span>}
-      <span className="truncate">{children}</span>
+      {icon && <span className="text-[var(--muted)] flex-shrink-0">{icon}</span>}
+      <span className="truncate max-w-[200px] sm:max-w-none">{children}</span>
     </button>
   );
 }

@@ -464,7 +464,7 @@ export default function ArtistPortfolio() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--bg)] text-[var(--text)]">
       <TopBar 
         onCreate={isAdminView ? undefined : () => setShowUploadForm(true)} 
         onImportExport={isAdminView ? undefined : handleImportExport} 
@@ -477,7 +477,7 @@ export default function ArtistPortfolio() {
       )}
 
       <main className="mx-auto w-full max-w-7xl px-3 pb-24 pt-4 sm:px-4 sm:pt-6 lg:px-8">
-        <div className="space-y-4 sm:space-y-6">
+        <div className="w-full space-y-4 sm:space-y-6">
           <Toolbar
             searchValue={searchInput}
             onSearchChange={setSearchInput}

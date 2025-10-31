@@ -27,8 +27,8 @@ export function Toolbar({
   onToggleSelectionMode,
 }: ToolbarProps) {
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_24px_rgba(0,0,0,.35)] p-4 sm:p-5 lg:p-6 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="w-full rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_24px_rgba(0,0,0,.35)] p-4 sm:p-5 lg:p-6 space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
           <input
