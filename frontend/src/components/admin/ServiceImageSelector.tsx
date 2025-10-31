@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Image as ImageIcon, Check, Trash2 } from "lucide-react";
-import { getJsonWithAuth, deleteJsonWithAuth } from "@/lib/api";
+import { getJsonWithAuth, deleteJsonWithAuth, getApiBase } from "@/lib/api";
 import Image from "next/image";
 
 interface ServiceImage {
@@ -111,36 +111,70 @@ export function ServiceImageSelector({
       });
       formData.append('category', uploadCategory);
 
-      const response = await fetch('/api/admin/services/images/batch-upload', {
+      // 直接使用後端 URL，不通過 Next.js rewrite（multipart/form-data 需要直接連接）
+      const backendUrl = getApiBase();
+      const uploadUrl = `${backendUrl}/admin/services/images/batch-upload`;
+      
+      console.log('📤 開始批次上傳:', {
+        url: uploadUrl,
+        filesCount: uploadFiles.length,
+        category: uploadCategory
+      });
+
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
+          // 不要設置 Content-Type，讓瀏覽器自動設置 multipart/form-data boundary
         },
         body: formData,
+      });
+
+      console.log('📥 批次上傳響應:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       });
 
       if (!response.ok) {
         // 嘗試解析錯誤訊息
         let errorMessage = '批次上傳失敗';
+        let errorDetails = '';
+        
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
+          const errorText = await response.text();
+          console.error('❌ 錯誤響應內容:', errorText);
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+            errorDetails = errorData.details || '';
+          } catch (parseError) {
+            // 如果不是 JSON，使用原始文字
+            errorMessage = errorText || response.statusText || errorMessage;
+          }
         } catch (e) {
-          // 如果無法解析 JSON，使用狀態文字
+          console.error('❌ 讀取錯誤響應失敗:', e);
           errorMessage = response.statusText || errorMessage;
         }
+        
+        console.error('❌ 批次上傳失敗:', {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage,
+          details: errorDetails
+        });
+        
         throw new Error(errorMessage);
       }
 
       const result = await response.json();
-      console.log('批次上傳成功:', result);
+      console.log('✅ 批次上傳成功:', result);
 
-      // 真實的上傳進度（基於實際進度）
-      if (result.total > 0) {
-        for (let i = 0; i <= 100; i += Math.ceil(100 / result.total)) {
-          setUploadProgress(Math.min(i, 100));
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
+      // 模擬上傳進度（實際進度無法追蹤，因為是單個請求）
+      for (let i = 0; i <= 100; i += 10) {
+        setUploadProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 30));
       }
       setUploadProgress(100);
 
@@ -152,8 +186,10 @@ export function ServiceImageSelector({
       
       alert(`成功上傳 ${result.total} 張圖片！`);
     } catch (error) {
-      console.error('批次上傳失敗:', error);
-      const errorMessage = error instanceof Error ? error.message : '批次上傳失敗，請檢查：\n1. 文件大小是否超過 10MB\n2. 文件格式是否為圖片（JPG、PNG、GIF、WebP）\n3. 網路連線是否正常';
+      console.error('❌ 批次上傳異常:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : '批次上傳失敗，請檢查：\n1. 文件大小是否超過 10MB\n2. 文件格式是否為圖片（JPG、PNG、GIF、WebP）\n3. 網路連線是否正常\n4. 後端服務是否正常運行';
       alert(errorMessage);
     } finally {
       setBatchUploading(false);

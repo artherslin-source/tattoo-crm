@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -237,21 +237,32 @@ export class AdminServicesController {
     },
   }))
   async batchUploadServiceImages(
-    @Body() body: { category: string },
-    @UploadedFiles() files: { images?: Express.Multer.File[] }
+    @Body() body: { category?: string },
+    @UploadedFiles() files: { images?: Express.Multer.File[] },
+    @Req() req: any
   ) {
     try {
+      // Multer 處理 multipart/form-data 時，category 可能在 req.body 中
+      const category = body.category || req.body?.category || 'other';
+      
       console.log('📤 批次上傳請求:', { 
-        category: body.category, 
-        filesCount: files?.images?.length || 0 
+        category,
+        bodyCategory: body.category,
+        reqBodyCategory: req.body?.category,
+        filesCount: files?.images?.length || 0,
+        hasFiles: !!files?.images,
+        filesKeys: files ? Object.keys(files) : []
       });
 
       if (!files || !files.images || files.images.length === 0) {
-        console.error('❌ 沒有上傳文件');
-        throw new BadRequestException('沒有選擇要上傳的圖片文件');
+        console.error('❌ 沒有上傳文件:', {
+          files: files ? 'exists' : 'null',
+          images: files?.images ? `array length: ${files.images.length}` : 'undefined',
+          filesKeys: files ? Object.keys(files) : []
+        });
+        throw new BadRequestException('沒有選擇要上傳的圖片文件，請重新選擇圖片');
       }
 
-      const category = body.category || 'other';
       const uploadedImages = [];
       const fs = require('fs');
 
