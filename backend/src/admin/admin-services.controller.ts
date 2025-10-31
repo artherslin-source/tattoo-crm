@@ -197,7 +197,8 @@ export class AdminServicesController {
           callback(null, uploadPath);
         } catch (error) {
           console.error('❌ 創建上傳目錄失敗:', error);
-          callback(new Error('無法創建上傳目錄'));
+          // Multer callback 類型要求兩個參數，但運行時只檢查第一個參數
+          callback(new Error('無法創建上傳目錄'), '');
         }
       },
       filename: (req, file, callback) => {
@@ -210,7 +211,8 @@ export class AdminServicesController {
           callback(null, filename);
         } catch (error) {
           console.error('❌ 生成檔名失敗:', error);
-          callback(new Error('無法生成檔名'));
+          // Multer callback 類型要求兩個參數，但運行時只檢查第一個參數
+          callback(new Error('無法生成檔名'), '');
         }
       },
     }),
@@ -311,21 +313,33 @@ export class AdminServicesController {
   @UseInterceptors(FileInterceptor('image', {
     storage: diskStorage({
       destination: (req, file, callback) => {
-        const category = req.body.category || 'other';
-        const uploadPath = join(process.cwd(), 'uploads', 'services', category);
-        
-        if (!existsSync(uploadPath)) {
-          mkdirSync(uploadPath, { recursive: true });
+        try {
+          const category = req.body.category || 'other';
+          const uploadPath = join(process.cwd(), 'uploads', 'services', category);
+          
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          callback(null, uploadPath);
+        } catch (error) {
+          console.error('❌ 創建上傳目錄失敗:', error);
+          // Multer callback 類型要求兩個參數，但運行時只檢查第一個參數
+          callback(new Error('無法創建上傳目錄'), '');
         }
-        callback(null, uploadPath);
       },
       filename: (req, file, callback) => {
-        // 自動生成唯一檔名，不依賴原始檔名
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 8);
-        const ext = extname(file.originalname);
-        const filename = `service-${timestamp}-${randomString}${ext}`;
-        callback(null, filename);
+        try {
+          // 自動生成唯一檔名，不依賴原始檔名
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substring(2, 8);
+          const ext = extname(file.originalname || '');
+          const filename = `service-${timestamp}-${randomString}${ext}`;
+          callback(null, filename);
+        } catch (error) {
+          console.error('❌ 生成檔名失敗:', error);
+          // Multer callback 類型要求兩個參數，但運行時只檢查第一個參數
+          callback(new Error('無法生成檔名'), '');
+        }
       },
     }),
     fileFilter: (req, file, callback) => {
