@@ -71,17 +71,17 @@ export function FilterDrawer({
         <DialogPrimitive.Content
           className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-[var(--line)] bg-[var(--panel)] text-[var(--text)] shadow-[0_8px_24px_rgba(0,0,0,.5)]"
         >
-          <div className="flex items-center justify-between border-b border-[var(--line)] px-6 py-5">
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-4 sm:px-6 sm:py-5">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-[var(--brand)]/70">Filter</p>
-              <h2 className="text-xl font-semibold">更多條件</h2>
+              <h2 className="text-lg font-semibold sm:text-xl">更多條件</h2>
             </div>
-            <DialogPrimitive.Close className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)]">
+            <DialogPrimitive.Close className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:h-10 sm:w-10">
               <X className="h-4 w-4" />
             </DialogPrimitive.Close>
           </div>
 
-          <div className="flex-1 space-y-8 overflow-y-auto px-6 py-6">
+          <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4 sm:space-y-8 sm:px-6 sm:py-6">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-[var(--text)]">日期區間</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -91,7 +91,7 @@ export function FilterDrawer({
                     type="date"
                     value={draftFilters.dateRange.from ?? ""}
                     onChange={(event) => handleDateChange("from", event.target.value)}
-                    className="h-11 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] sm:h-11"
                   />
                 </label>
                 <label className="space-y-2">
@@ -100,7 +100,7 @@ export function FilterDrawer({
                     type="date"
                     value={draftFilters.dateRange.to ?? ""}
                     onChange={(event) => handleDateChange("to", event.target.value)}
-                    className="h-11 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] sm:h-11"
                   />
                 </label>
               </div>
@@ -115,7 +115,7 @@ export function FilterDrawer({
                     inputMode="numeric"
                     value={draftFilters.priceRange.min}
                     onChange={(event) => handlePriceChange("min", event.target.value)}
-                    className="h-11 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] sm:h-11"
                     placeholder="0"
                   />
                 </label>
@@ -125,7 +125,7 @@ export function FilterDrawer({
                     inputMode="numeric"
                     value={draftFilters.priceRange.max}
                     onChange={(event) => handlePriceChange("max", event.target.value)}
-                    className="h-11 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#0F1216] px-3 text-sm text-[var(--text)] placeholder:text-[var(--muted)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] sm:h-11"
                     placeholder="不限"
                   />
                 </label>
@@ -169,12 +169,12 @@ export function FilterDrawer({
             </section>
           </div>
 
-          <div className="border-t border-[var(--line)] px-6 py-5">
+          <div className="border-t border-[var(--line)] px-4 py-4 sm:px-6 sm:py-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
               <button
                 type="button"
                 onClick={onReset}
-                className="h-11 rounded-xl border border-[var(--line)] px-4 text-sm font-medium text-[var(--muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+                className="h-10 rounded-xl border border-[var(--line)] px-4 text-sm font-medium text-[var(--muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:h-11"
               >
                 重置
               </button>
@@ -182,7 +182,7 @@ export function FilterDrawer({
                 type="button"
                 onClick={onApply}
                 className={cn(
-                  "h-11 rounded-xl bg-[var(--brand)] px-6 text-sm font-semibold text-black shadow-md transition hover:brightness-110"
+                  "h-10 rounded-xl bg-[var(--brand)] px-6 text-sm font-semibold text-black shadow-md transition hover:brightness-110 sm:h-11"
                 )}
               >
                 套用

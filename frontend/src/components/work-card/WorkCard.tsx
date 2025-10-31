@@ -143,23 +143,23 @@ export function WorkCardSkeleton() {
 
 export function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-6 py-16 text-center shadow-[0_8px_24px_rgba(0,0,0,.35)]">
-      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#1A1D23] text-3xl">🎨</div>
-      <h3 className="text-xl font-semibold text-[var(--text)]">還沒有作品</h3>
-      <p className="mt-2 max-w-md text-sm text-[var(--muted)]">
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-12 text-center shadow-[0_8px_24px_rgba(0,0,0,.35)] sm:px-6 sm:py-16">
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#1A1D23] text-2xl sm:mb-6 sm:h-20 sm:w-20 sm:text-3xl">🎨</div>
+      <h3 className="text-lg font-semibold text-[var(--text)] sm:text-xl">還沒有作品</h3>
+      <p className="mt-2 max-w-md px-2 text-sm text-[var(--muted)]">
         建立您的第一個作品集，展示獨特的刺青風格。也可以先了解如何建立分類，讓作品呈現更有層次。
       </p>
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-6 flex w-full flex-col gap-3 sm:mt-8 sm:w-auto sm:flex-row">
         <button
           type="button"
           onClick={onCreate}
-          className="rounded-xl bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-black shadow-md transition hover:brightness-110"
+          className="w-full rounded-xl bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-black shadow-md transition hover:brightness-110 sm:w-auto"
         >
           新增作品
         </button>
         <a
           href="#"
-          className="rounded-xl border border-[var(--line)] px-6 py-3 text-sm font-medium text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+          className="w-full rounded-xl border border-[var(--line)] px-6 py-3 text-sm font-medium text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:w-auto"
         >
           了解如何建立分類
         </a>

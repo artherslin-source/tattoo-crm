@@ -459,13 +459,13 @@ export default function ArtistPortfolio() {
       <TopBar onCreate={() => setShowUploadForm(true)} onImportExport={handleImportExport} />
 
       {toast && (
-        <div className="fixed right-4 top-24 z-50 max-w-xs rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-sm shadow-[0_8px_24px_rgba(0,0,0,.45)]">
+        <div className="fixed right-3 top-20 z-50 max-w-xs rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-sm shadow-[0_8px_24px_rgba(0,0,0,.45)] sm:right-4 sm:top-24 sm:px-4 sm:py-3">
           <p className={toast.type === "success" ? "text-[var(--text)]" : "text-red-400"}>{toast.message}</p>
         </div>
       )}
 
-      <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:px-8">
-        <div className="space-y-6">
+      <main className="mx-auto w-full max-w-7xl px-3 pb-24 pt-4 sm:px-4 sm:pt-6 lg:px-8">
+        <div className="space-y-4 sm:space-y-6">
           <Toolbar
             searchValue={searchInput}
             onSearchChange={setSearchInput}
@@ -487,24 +487,24 @@ export default function ArtistPortfolio() {
 
           {showUploadForm && (
             <section className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_24px_rgba(0,0,0,.35)]">
-              <div className="flex items-center justify-between border-b border-[var(--line)] px-6 py-5">
+              <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-4 sm:px-6 sm:py-5">
                 <div>
                   <p className="text-xs uppercase tracking-[0.35em] text-[var(--brand)]/70">{editingItem ? "Edit" : "Create"}</p>
-                  <h2 className="text-xl font-semibold text-[var(--text)]">{editingItem ? "編輯作品" : "新增作品"}</h2>
+                  <h2 className="text-lg font-semibold text-[var(--text)] sm:text-xl">{editingItem ? "編輯作品" : "新增作品"}</h2>
                 </div>
                 <button
                   type="button"
                   onClick={handleCancelForm}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:h-10 sm:w-10"
                   aria-label="關閉表單"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6">
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+                <div className="grid gap-4 md:gap-6 md:grid-cols-2">
+                  <div className="space-y-4 sm:space-y-5">
                     <label className="space-y-2">
                       <span className="text-sm font-medium text-[var(--text)]">作品標題 *</span>
                       <Input
@@ -532,7 +532,7 @@ export default function ArtistPortfolio() {
                         <span className="text-sm font-medium text-[var(--text)]">標籤</span>
                         <span className="text-xs text-[var(--muted)]">已選 {formData.tags.length} 項</span>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto py-2">
                         {AVAILABLE_TAGS.map((tag) => (
                           <Chip
                             key={tag}
@@ -548,20 +548,20 @@ export default function ArtistPortfolio() {
 
                   <div className="space-y-4">
                     <span className="text-sm font-medium text-[var(--text)]">{editingItem ? "更換圖片" : "上傳圖片 *"}</span>
-                    <label className="flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-[var(--line)] bg-[#0F1216] px-6 py-10 text-center transition hover:border-[var(--accent)]/40">
+                    <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line)] bg-[#0F1216] px-4 py-8 text-center transition hover:border-[var(--accent)]/40 sm:gap-4 sm:px-6 sm:py-10">
                       <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                       {formData.image ? (
                         <>
-                          <ImageIcon className="h-12 w-12 text-[var(--muted)]" />
+                          <ImageIcon className="h-10 w-10 text-[var(--muted)] sm:h-12 sm:w-12" />
                           <div className="space-y-1 text-sm">
-                            <p className="text-[var(--text)]">{formData.image.name}</p>
+                            <p className="text-[var(--text)] break-words px-2">{formData.image.name}</p>
                             <p className="text-[var(--muted)]/70">檔案大小 {(formData.image.size / 1024 / 1024).toFixed(2)} MB</p>
                           </div>
                         </>
                       ) : (
                         <>
-                          <Camera className="h-12 w-12 text-[var(--muted)]" />
-                          <p className="text-sm text-[var(--muted)]">點擊選擇圖片或拖放到這裡</p>
+                          <Camera className="h-10 w-10 text-[var(--muted)] sm:h-12 sm:w-12" />
+                          <p className="text-sm text-[var(--muted)] px-2">點擊選擇圖片或拖放到這裡</p>
                           <p className="text-xs text-[var(--muted)]/70">支援 JPG、PNG，最大 5MB</p>
                         </>
                       )}
@@ -569,7 +569,7 @@ export default function ArtistPortfolio() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={handleCancelForm}
@@ -591,12 +591,12 @@ export default function ArtistPortfolio() {
           )}
 
           {error && !loading ? (
-            <section className="rounded-2xl border border-red-500/40 bg-red-500/10 px-6 py-12 text-center text-red-200">
-              <p className="text-lg font-semibold">{error}</p>
+            <section className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-8 text-center text-red-200 sm:px-6 sm:py-12">
+              <p className="text-base font-semibold sm:text-lg">{error}</p>
               <button
                 type="button"
                 onClick={fetchPortfolio}
-                className="mt-4 inline-flex items-center justify-center rounded-xl border border-red-300/40 px-5 py-2 text-sm font-medium text-red-100 transition hover:border-red-200"
+                className="mt-4 inline-flex items-center justify-center rounded-xl border border-red-300/40 px-4 py-2 text-sm font-medium text-red-100 transition hover:border-red-200 sm:px-5"
               >
                 重新載入
               </button>
@@ -606,20 +606,20 @@ export default function ArtistPortfolio() {
           {!error && (
             <div className="space-y-4">
               {selectedIds.size > 0 && (
-                <div className="hidden items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-5 py-3 text-sm text-[var(--muted)] shadow-[0_8px_24px_rgba(0,0,0,.35)] sm:flex">
+                <div className="hidden items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)] shadow-[0_8px_24px_rgba(0,0,0,.35)] sm:flex sm:px-5">
                   <span className="text-[var(--text)]">已選 {selectedIds.size} 件作品</span>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <button
                       type="button"
                       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+                      className="rounded-xl border border-[var(--line)] px-3 py-2 text-xs text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:px-4 sm:text-sm"
                     >
                       回到頂部
                     </button>
                     <button
                       type="button"
                       onClick={handleBulkDeleteRequest}
-                      className="rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-black shadow-md transition hover:brightness-110"
+                      className="rounded-xl bg-[var(--brand)] px-3 py-2 text-xs font-semibold text-black shadow-md transition hover:brightness-110 sm:px-4 sm:text-sm"
                     >
                       批次刪除
                     </button>
@@ -628,7 +628,7 @@ export default function ArtistPortfolio() {
               )}
 
               {loading ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {Array.from({ length: 8 }).map((_, index) => (
                     <WorkCardSkeleton key={index} />
                   ))}
@@ -636,7 +636,7 @@ export default function ArtistPortfolio() {
               ) : filteredItems.length === 0 ? (
                 <EmptyState onCreate={() => setShowUploadForm(true)} />
               ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredItems.map((item) => (
                     <WorkCard
                       key={item.id}
@@ -673,20 +673,20 @@ export default function ArtistPortfolio() {
       />
 
       <Dialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <DialogContent className="max-w-md border border-[var(--line)] bg-[var(--panel)] text-[var(--text)]">
+        <DialogContent className="max-w-md border border-[var(--line)] bg-[var(--panel)] text-[var(--text)] mx-4">
           <DialogHeader>
-            <DialogTitle>確認刪除</DialogTitle>
-            <DialogDescription className="text-[var(--muted)]">
+            <DialogTitle className="text-lg sm:text-xl">確認刪除</DialogTitle>
+            <DialogDescription className="text-[var(--muted)] text-sm">
               為了避免誤刪，請輸入作品標題的前三個字母以確認。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {pendingDelete?.type === "single" ? (
-              <p className="text-sm text-[var(--muted)]">
+              <p className="text-sm text-[var(--muted)] break-words">
                 {`作品：「${pendingDelete.item.title}」將被刪除。`}
               </p>
             ) : (
-              <p className="text-sm text-[var(--muted)]">
+              <p className="text-sm text-[var(--muted)] break-words">
                 {`將刪除 ${pendingDelete?.ids.length ?? 0} 件作品，請輸入第一筆作品「${pendingDelete?.referenceTitle ?? ""}」的前三個字母。`}
               </p>
             )}
@@ -696,16 +696,16 @@ export default function ArtistPortfolio() {
                 setDeleteInput(event.target.value);
                 setDeleteError(null);
               }}
-              className="h-11 rounded-xl border border-[var(--line)] bg-[#0F1216] text-sm text-[var(--text)] focus-visible:ring-[var(--accent)]"
+              className="h-10 rounded-xl border border-[var(--line)] bg-[#0F1216] text-sm text-[var(--text)] focus-visible:ring-[var(--accent)] sm:h-11"
               placeholder={pendingDelete ? pendingDelete.type === "single" ? pendingDelete.item.title.slice(0, 3) : pendingDelete.referenceTitle.slice(0, 3) : ""}
             />
             {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-col sm:flex-row">
             <button
               type="button"
               onClick={() => setPendingDelete(null)}
-              className="h-11 rounded-xl border border-[var(--line)] px-4 text-sm font-medium text-[var(--muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+              className="h-10 w-full rounded-xl border border-[var(--line)] px-4 text-sm font-medium text-[var(--muted)] transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:h-11 sm:w-auto"
             >
               取消
             </button>
@@ -713,7 +713,7 @@ export default function ArtistPortfolio() {
               type="button"
               onClick={confirmDelete}
               disabled={deleting}
-              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-red-500 px-4 text-sm font-semibold text-white shadow-md transition hover:brightness-110 disabled:opacity-60"
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 text-sm font-semibold text-white shadow-md transition hover:brightness-110 disabled:opacity-60 sm:h-11 sm:w-auto"
             >
               {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
               確認刪除
