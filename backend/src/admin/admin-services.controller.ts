@@ -148,12 +148,16 @@ export class AdminServicesController {
               if (existsSync(metaPath)) {
                 const raw = fs.readFileSync(metaPath, 'utf-8');
                 const meta = JSON.parse(raw);
-                const o = meta.originalName || meta.displayName;
-                const d = meta.displayName || meta.originalName;
-                originalName = o ? normalizeFilename(o) : undefined;
-                displayName = d ? normalizeFilename(d) : undefined;
+                // metadata 中保存的應該已經是正確的 UTF-8 字符串，不需要再 normalize
+                originalName = meta.originalName || meta.displayName || undefined;
+                displayName = meta.displayName || meta.originalName || undefined;
+              } else {
+                // 如果沒有 metadata，嘗試從檔名推測（去除系統生成的前綴）
+                // 但這種情況應該很少，因為上傳時會創建 metadata
               }
-            } catch {}
+            } catch (metaError) {
+              console.warn(`⚠️ 讀取 metadata 失敗 (${file}):`, metaError);
+            }
 
             images.push({
               filename: file,
@@ -273,8 +277,15 @@ export class AdminServicesController {
           // 寫入中繼資料檔 (保存原始檔名)
           try {
             const metaPath = join(process.cwd(), 'uploads', 'services', category, `${file.filename}.meta.json`);
-            const originalName = normalizeFilename(file.originalname);
-            fs.writeFileSync(metaPath, JSON.stringify({ originalName, displayName: originalName }, null, 2));
+            // 確保原始檔名正確處理（支援中文）
+            const originalName = normalizeFilename(file.originalname || file.filename);
+            const metadata = { 
+              originalName, 
+              displayName: originalName,
+              uploadedAt: new Date().toISOString()
+            };
+            fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2), 'utf8');
+            console.log('💾 已保存 metadata:', { filename: file.filename, originalName });
           } catch (metaError) {
             console.warn('⚠️ 寫入中繼資料失敗:', metaError);
             // 不影響上傳，繼續處理

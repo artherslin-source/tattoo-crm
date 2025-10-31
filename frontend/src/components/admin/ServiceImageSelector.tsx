@@ -73,10 +73,33 @@ export function ServiceImageSelector({
         params.append("category", category);
       }
       
-      const response = await getJsonWithAuth(`/api/admin/services/images?${params.toString()}`) as ServiceImagesResponse;
-      setImages(response.images || []);
+      // 直接使用後端 URL，不通過 Next.js rewrite
+      const backendUrl = getApiBase();
+      const apiUrl = `${backendUrl}/admin/services/images?${params.toString()}`;
+      
+      console.log('📥 載入圖片列表:', { category, apiUrl });
+      
+      const token = localStorage.getItem("accessToken");
+      const response = await fetch(apiUrl, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json() as ServiceImagesResponse;
+      console.log('✅ 圖片列表載入成功:', { 
+        count: data.images?.length || 0,
+        categories: data.categories,
+        total: data.total 
+      });
+      
+      setImages(data.images || []);
     } catch (error) {
-      console.error("載入圖片失敗:", error);
+      console.error("❌ 載入圖片失敗:", error);
     } finally {
       setLoading(false);
     }
@@ -178,8 +201,16 @@ export function ServiceImageSelector({
       }
       setUploadProgress(100);
 
-      // 重新載入圖片列表
-      await loadImages(selectedCategory);
+      // 重新載入圖片列表 - 使用上傳的分類，或者顯示所有（如果當前選擇的是 "all"）
+      // 確保能顯示剛剛上傳的圖片
+      if (selectedCategory === 'all' || selectedCategory === uploadCategory) {
+        // 如果當前選擇的是 "all" 或與上傳分類相同，直接刷新
+        await loadImages(selectedCategory);
+      } else {
+        // 如果當前選擇的分類與上傳分類不同，先切換到上傳的分類
+        setSelectedCategory(uploadCategory);
+        await loadImages(uploadCategory);
+      }
       
       // 清空上傳文件
       setUploadFiles([]);
