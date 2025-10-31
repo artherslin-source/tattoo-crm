@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   deleteJsonWithAuth,
@@ -85,7 +85,7 @@ const getStatusLabel = (status?: string) => {
   }
 };
 
-export default function ArtistPortfolio() {
+function ArtistPortfolioContent() {
   const searchParams = useSearchParams();
   const artistId = searchParams.get("artistId");
   const isAdminView = !!artistId; // 如果是管理員查看模式（有 artistId 參數）
@@ -736,5 +736,20 @@ export default function ArtistPortfolio() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function ArtistPortfolio() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen w-full overflow-x-hidden bg-[var(--bg)] text-[var(--text)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-[var(--brand)]"></div>
+          <p className="mt-4 text-sm text-[var(--muted)]">載入中...</p>
+        </div>
+      </div>
+    }>
+      <ArtistPortfolioContent />
+    </Suspense>
   );
 }
