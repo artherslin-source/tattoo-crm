@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -98,6 +98,32 @@ export class AdminArtistsController {
       branchId,
       speciality: input.speciality,
       portfolioUrl: input.portfolioUrl,
+    });
+  }
+
+  @Get(':id/portfolio')
+  async getArtistPortfolio(@Param('id') id: string, @Req() req: any) {
+    // 驗證該刺青師是否存在
+    const artist = await this.prisma.artist.findUnique({
+      where: { id },
+      select: { id: true, branchId: true }
+    });
+
+    if (!artist) {
+      throw new NotFoundException('刺青師不存在');
+    }
+
+    // 如果是分店經理，驗證是否為同分店
+    if (req.user?.role === 'BRANCH_MANAGER' && req.user?.branchId !== artist.branchId) {
+      throw new ForbiddenException('無權限查看此刺青師的作品');
+    }
+
+    // 獲取作品列表
+    return this.prisma.portfolioItem.findMany({
+      where: { artistId: id },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 

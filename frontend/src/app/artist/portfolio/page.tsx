@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   deleteJsonWithAuth,
   getApiBase,
@@ -85,6 +86,10 @@ const getStatusLabel = (status?: string) => {
 };
 
 export default function ArtistPortfolio() {
+  const searchParams = useSearchParams();
+  const artistId = searchParams.get("artistId");
+  const isAdminView = !!artistId; // 如果是管理員查看模式（有 artistId 參數）
+
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +118,7 @@ export default function ArtistPortfolio() {
 
   useEffect(() => {
     fetchPortfolio();
-  }, []);
+  }, [artistId]);
 
   useEffect(() => {
     const handler = window.setTimeout(() => setDebouncedSearch(searchInput), 300);
@@ -135,7 +140,11 @@ export default function ArtistPortfolio() {
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth<PortfolioItem[]>("/artist/portfolio");
+      // 如果有 artistId 參數，使用管理員 API 獲取指定刺青師的作品
+      const endpoint = artistId 
+        ? `/admin/artists/${artistId}/portfolio`
+        : "/artist/portfolio";
+      const data = await getJsonWithAuth<PortfolioItem[]>(endpoint);
       const apiBase = getApiBase();
       const normalized = data.map((item) => ({
         ...item,
@@ -456,7 +465,10 @@ export default function ArtistPortfolio() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
-      <TopBar onCreate={() => setShowUploadForm(true)} onImportExport={handleImportExport} />
+      <TopBar 
+        onCreate={isAdminView ? undefined : () => setShowUploadForm(true)} 
+        onImportExport={isAdminView ? undefined : handleImportExport} 
+      />
 
       {toast && (
         <div className="fixed right-3 top-20 z-50 max-w-xs rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-sm shadow-[0_8px_24px_rgba(0,0,0,.45)] sm:right-4 sm:top-24 sm:px-4 sm:py-3">
@@ -481,11 +493,11 @@ export default function ArtistPortfolio() {
               setIsDrawerOpen(true);
             }}
             activeFiltersCount={activeFiltersCount}
-            isMultiSelect={isChipMultiSelect}
-            onToggleSelectionMode={() => setIsChipMultiSelect((prev) => !prev)}
+            isMultiSelect={isAdminView ? false : isChipMultiSelect}
+            onToggleSelectionMode={isAdminView ? undefined : () => setIsChipMultiSelect((prev) => !prev)}
           />
 
-          {showUploadForm && (
+          {showUploadForm && !isAdminView && (
             <section className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_24px_rgba(0,0,0,.35)]">
               <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-4 sm:px-6 sm:py-5">
                 <div>
@@ -605,7 +617,7 @@ export default function ArtistPortfolio() {
 
           {!error && (
             <div className="space-y-4">
-              {selectedIds.size > 0 && (
+              {selectedIds.size > 0 && !isAdminView && (
                 <div className="hidden items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)] shadow-[0_8px_24px_rgba(0,0,0,.35)] sm:flex sm:px-5">
                   <span className="text-[var(--text)]">已選 {selectedIds.size} 件作品</span>
                   <div className="flex items-center gap-2 sm:gap-3">
@@ -634,18 +646,18 @@ export default function ArtistPortfolio() {
                   ))}
                 </div>
               ) : filteredItems.length === 0 ? (
-                <EmptyState onCreate={() => setShowUploadForm(true)} />
+                <EmptyState onCreate={isAdminView ? undefined : () => setShowUploadForm(true)} />
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredItems.map((item) => (
                     <WorkCard
                       key={item.id}
                       item={item}
-                      selectable
+                      selectable={!isAdminView}
                       selected={selectedIds.has(item.id)}
-                      onSelectToggle={(checked) => handleSelectToggle(item.id, checked)}
-                      onEdit={() => handleEdit(item)}
-                      onDelete={() => handleDeleteRequest(item)}
+                      onSelectToggle={isAdminView ? undefined : (checked) => handleSelectToggle(item.id, checked)}
+                      onEdit={isAdminView ? undefined : () => handleEdit(item)}
+                      onDelete={isAdminView ? undefined : () => handleDeleteRequest(item)}
                       onCopyLink={() => handleCopyLink(item)}
                     />
                   ))}
@@ -656,11 +668,13 @@ export default function ArtistPortfolio() {
         </div>
       </main>
 
-      <FloatingActions
-        selectedCount={selectedIds.size}
-        onBulkDelete={handleBulkDeleteRequest}
-        onScrollTop={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      />
+      {!isAdminView && (
+        <FloatingActions
+          selectedCount={selectedIds.size}
+          onBulkDelete={handleBulkDeleteRequest}
+          onScrollTop={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        />
+      )}
 
       <FilterDrawer
         open={isDrawerOpen}

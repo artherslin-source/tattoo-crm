@@ -13,7 +13,7 @@ type ToolbarProps = {
   onMoreFilters: () => void;
   activeFiltersCount?: number;
   isMultiSelect: boolean;
-  onToggleSelectionMode: () => void;
+  onToggleSelectionMode?: () => void;
 };
 
 export function Toolbar({
@@ -50,18 +50,20 @@ export function Toolbar({
           )}
         </div>
         <div className="flex items-center justify-between gap-2 sm:w-auto">
-          <button
-            type="button"
-            onClick={onToggleSelectionMode}
-            className={cn(
-              "h-11 rounded-xl border border-[var(--line)] px-4 text-sm font-medium text-[var(--muted)] transition",
-              isMultiSelect
-                ? "border-[var(--brand)]/60 bg-[#1A1405] text-[var(--text)]"
-                : "hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
-            )}
-          >
-            {isMultiSelect ? "多選" : "單選"}
-          </button>
+          {onToggleSelectionMode && (
+            <button
+              type="button"
+              onClick={onToggleSelectionMode}
+              className={cn(
+                "h-11 rounded-xl border border-[var(--line)] px-4 text-sm font-medium text-[var(--muted)] transition",
+                isMultiSelect
+                  ? "border-[var(--brand)]/60 bg-[#1A1405] text-[var(--text)]"
+                  : "hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+              )}
+            >
+              {isMultiSelect ? "多選" : "單選"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onMoreFilters}
