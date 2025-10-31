@@ -154,7 +154,7 @@ export function WorkCardSkeleton() {
   );
 }
 
-export function EmptyState({ onCreate }: { onCreate: () => void }) {
+export function EmptyState({ onCreate }: { onCreate?: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-12 text-center shadow-[0_8px_24px_rgba(0,0,0,.35)] sm:px-6 sm:py-16">
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#1A1D23] text-2xl sm:mb-6 sm:h-20 sm:w-20 sm:text-3xl">🎨</div>
@@ -163,13 +163,15 @@ export function EmptyState({ onCreate }: { onCreate: () => void }) {
         建立您的第一個作品集，展示獨特的刺青風格。也可以先了解如何建立分類，讓作品呈現更有層次。
       </p>
       <div className="mt-6 flex w-full flex-col gap-3 sm:mt-8 sm:w-auto sm:flex-row">
-        <button
-          type="button"
-          onClick={onCreate}
-          className="w-full rounded-xl bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-black shadow-md transition hover:brightness-110 sm:w-auto"
-        >
-          新增作品
-        </button>
+        {onCreate && (
+          <button
+            type="button"
+            onClick={onCreate}
+            className="w-full rounded-xl bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-black shadow-md transition hover:brightness-110 sm:w-auto"
+          >
+            新增作品
+          </button>
+        )}
         <a
           href="#"
           className="w-full rounded-xl border border-[var(--line)] px-6 py-3 text-sm font-medium text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:w-auto"
