@@ -32,9 +32,12 @@ export function ServiceCard({ item, variant = "vertical" }: ServiceCardProps) {
             sizes="(min-width: 1024px) 320px, (min-width: 640px) 240px, 224px"
             className="object-cover"
             priority={false}
+            unoptimized
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">待補圖片</div>
+          <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
+            待補圖片
+          </div>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">

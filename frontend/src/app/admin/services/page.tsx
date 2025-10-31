@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError, getImageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon } from "lucide-react";
@@ -374,12 +374,13 @@ export default function AdminServicesPage() {
                 {formData.imageUrl && (
                   <div className="mt-2">
                     <div className="text-xs text-gray-500 mb-1">預覽：</div>
-                    <div className="w-20 h-20 border rounded overflow-hidden">
+                    <div className="w-20 h-20 border rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
                       <img
-                        src={formData.imageUrl}
+                        src={getImageUrl(formData.imageUrl)}
                         alt="預覽"
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          console.error('❌ 編輯表單圖片預覽載入失敗:', getImageUrl(formData.imageUrl));
                           e.currentTarget.style.display = 'none';
                         }}
                       />
@@ -471,10 +472,11 @@ export default function AdminServicesPage() {
                             title="點擊查看大圖"
                           >
                             <img
-                              src={service.imageUrl}
+                              src={getImageUrl(service.imageUrl)}
                               alt={service.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
+                                console.error('❌ 圖片載入失敗:', getImageUrl(service.imageUrl));
                                 e.currentTarget.style.display = 'none';
                                 const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
                                 if (nextElement) {
@@ -559,10 +561,11 @@ export default function AdminServicesPage() {
             </div>
             <div className="flex justify-center">
               <img
-                src={previewImage}
+                src={getImageUrl(previewImage)}
                 alt="預覽圖片"
                 className="max-w-full max-h-[70vh] object-contain rounded-lg"
                 onError={(e) => {
+                  console.error('❌ 預覽圖片載入失敗:', getImageUrl(previewImage));
                   e.currentTarget.src = '/images/placeholder-image.png';
                 }}
               />

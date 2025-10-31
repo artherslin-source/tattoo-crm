@@ -178,6 +178,35 @@ export function getApiBase() {
   return getApiBaseUrl();
 }
 
+/**
+ * 將圖片相對路徑轉換為完整的後端 URL
+ * 支援 `/uploads/...` 格式的相對路徑
+ * 在 SSR 和客戶端都能正常工作
+ */
+export function getImageUrl(imagePath: string | null | undefined): string {
+  if (!imagePath) {
+    return '';
+  }
+  
+  // 如果已經是完整的 URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // 在 SSR 環境中，使用環境變數或默認值
+  if (typeof window === 'undefined') {
+    // SSR 環境
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://tattoo-crm-production-413f.up.railway.app';
+    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+    return `${backendUrl}/${cleanPath}`;
+  }
+  
+  // 客戶端環境
+  const backendUrl = getApiBaseUrl();
+  const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+  return `${backendUrl}/${cleanPath}`;
+}
+
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
   try {
     const backendUrl = await detectBackendUrl();

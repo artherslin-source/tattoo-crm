@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { postJSON, getAccessToken, getApiBase } from "@/lib/api";
+import { postJSON, getAccessToken, getApiBase, getImageUrl } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { smartApiCall } from "@/lib/api-fallback";
 import type { Branch as BranchType } from "@/types/branch";
@@ -288,7 +288,7 @@ export default function HomePage() {
       grouped.get(key)?.items.push({
         id: service.id,
         title: service.name,
-        thumb: service.imageUrl || CATEGORY_IMAGES[key] || CATEGORY_IMAGES.Other,
+        thumb: service.imageUrl ? getImageUrl(service.imageUrl) : (CATEGORY_IMAGES[key] || CATEGORY_IMAGES.Other),
         tag: label,
         price: service.price,
         durationMin: service.durationMin,

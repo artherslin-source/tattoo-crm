@@ -14,6 +14,18 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'tattoo-crm-production-413f.up.railway.app',
+        port: '',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'tattoo-crm-production.up.railway.app',
+        port: '',
+        pathname: '/uploads/**',
+      },
     ],
   },
   async rewrites() {
@@ -27,9 +39,10 @@ const nextConfig = {
     
     // 生產環境：重寫到 Railway 後端服務
     console.log('Using production rewrite rules');
+    const backendUrl = 'https://tattoo-crm-production-413f.up.railway.app';
     return [
-      { source: '/api/:path*', destination: 'https://tattoo-crm-production.up.railway.app/:path*' },
-      { source: '/uploads/:path*', destination: 'https://tattoo-crm-production.up.railway.app/uploads/:path*' },
+      { source: '/api/:path*', destination: `${backendUrl}/:path*` },
+      { source: '/uploads/:path*', destination: `${backendUrl}/uploads/:path*` },
     ];
   },
 };

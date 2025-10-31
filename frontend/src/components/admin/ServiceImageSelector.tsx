@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Image as ImageIcon, Check, Trash2 } from "lucide-react";
-import { getJsonWithAuth, deleteJsonWithAuth, getApiBase } from "@/lib/api";
+import { getJsonWithAuth, deleteJsonWithAuth, getApiBase, getImageUrl } from "@/lib/api";
 import Image from "next/image";
 
 interface ServiceImage {
@@ -420,11 +420,15 @@ export function ServiceImageSelector({
                     {/* 圖片 */}
                     <div className="aspect-square relative bg-gray-100 dark:bg-gray-800">
                       <Image
-                        src={image.url}
-                        alt={image.filename}
+                        src={getImageUrl(image.url)}
+                        alt={image.displayName || image.originalName || image.filename}
                         fill
                         className="object-cover"
                         sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                        unoptimized
+                        onError={(e) => {
+                          console.error('❌ ServiceImageSelector 圖片載入失敗:', getImageUrl(image.url));
+                        }}
                       />
                       
                       {/* 選中標記 */}
