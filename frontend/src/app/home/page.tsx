@@ -285,10 +285,15 @@ export default function HomePage() {
         });
       }
 
+      const imageUrl = service.imageUrl ? getImageUrl(service.imageUrl) : null;
+      const thumb = imageUrl && imageUrl.trim() !== '' 
+        ? imageUrl 
+        : (CATEGORY_IMAGES[key] || CATEGORY_IMAGES.Other);
+      
       grouped.get(key)?.items.push({
         id: service.id,
         title: service.name,
-        thumb: service.imageUrl ? getImageUrl(service.imageUrl) : (CATEGORY_IMAGES[key] || CATEGORY_IMAGES.Other),
+        thumb,
         tag: label,
         price: service.price,
         durationMin: service.durationMin,

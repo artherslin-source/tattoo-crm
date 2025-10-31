@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface ServiceCardProps {
@@ -16,6 +19,9 @@ export interface ServiceCardProps {
 }
 
 export function ServiceCard({ item, variant = "vertical" }: ServiceCardProps) {
+  const [imageError, setImageError] = useState(false);
+  const hasImage = item.thumb && item.thumb.trim() !== '' && !imageError;
+
   const content = (
     <article
       className={cn(
@@ -23,20 +29,26 @@ export function ServiceCard({ item, variant = "vertical" }: ServiceCardProps) {
         variant === "compact" ? "min-h-[240px]" : ""
       )}
     >
-      <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-neutral-800 via-neutral-900 to-black">
-        {item.thumb ? (
+      <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-neutral-800 via-neutral-900 to-black overflow-hidden">
+        {hasImage ? (
           <Image
-            src={item.thumb}
+            src={item.thumb!}
             alt={item.title}
             fill
             sizes="(min-width: 1024px) 320px, (min-width: 640px) 240px, 224px"
             className="object-cover"
             priority={false}
             unoptimized
+            onError={() => {
+              setImageError(true);
+            }}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
-            待補圖片
+            <div className="text-center">
+              <div className="mb-2 text-2xl">🎨</div>
+              <div>待補圖片</div>
+            </div>
           </div>
         )}
       </div>

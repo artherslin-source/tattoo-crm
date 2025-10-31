@@ -184,7 +184,7 @@ export function getApiBase() {
  * 在 SSR 和客戶端都能正常工作
  */
 export function getImageUrl(imagePath: string | null | undefined): string {
-  if (!imagePath) {
+  if (!imagePath || imagePath.trim() === '') {
     return '';
   }
   
@@ -197,14 +197,14 @@ export function getImageUrl(imagePath: string | null | undefined): string {
   if (typeof window === 'undefined') {
     // SSR 環境
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://tattoo-crm-production-413f.up.railway.app';
-    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-    return `${backendUrl}/${cleanPath}`;
+    const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `${backendUrl}${cleanPath}`;
   }
   
   // 客戶端環境
   const backendUrl = getApiBaseUrl();
-  const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-  return `${backendUrl}/${cleanPath}`;
+  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  return `${backendUrl}${cleanPath}`;
 }
 
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
