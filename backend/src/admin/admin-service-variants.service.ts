@@ -154,7 +154,7 @@ export class AdminServiceVariantsService {
   /**
    * 初始化默認規格（用於快速設置）
    */
-  async initializeDefaultVariants(serviceId: string) {
+  async initializeDefaultVariants(serviceId: string, template: 'basic' | 'standard' | 'advanced' | 'full' = 'standard') {
     // 驗證服務存在
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
@@ -171,56 +171,89 @@ export class AdminServiceVariantsService {
 
     // 創建默認尺寸規格
     const sizeVariants = [
-      { name: '5x5cm', priceModifier: 0, durationModifier: 0, sortOrder: 1 },
-      { name: '10x10cm', priceModifier: 1000, durationModifier: 30, sortOrder: 2 },
-      { name: '15x15cm', priceModifier: 2000, durationModifier: 60, sortOrder: 3 },
-      { name: '20x20cm', priceModifier: 3000, durationModifier: 90, sortOrder: 4 },
+      { name: '5x5cm', code: 'XS', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: true, description: '適合小型圖案' },
+      { name: '10x10cm', code: 'S', priceModifier: 1000, durationModifier: 30, sortOrder: 2, isRequired: true, description: '常見尺寸' },
+      { name: '15x15cm', code: 'M', priceModifier: 2000, durationModifier: 60, sortOrder: 3, isRequired: true, description: '中型圖案' },
+      { name: '20x20cm', code: 'L', priceModifier: 3000, durationModifier: 90, sortOrder: 4, isRequired: true, description: '大型圖案' },
+      { name: '30x30cm', code: 'XL', priceModifier: 5000, durationModifier: 150, sortOrder: 5, isRequired: true, description: '超大型圖案' },
     ];
 
     // 創建默認顏色規格
     const colorVariants = [
-      { name: '割線A', code: 'A', priceModifier: 0, durationModifier: 0, sortOrder: 1 },
-      { name: '黑白B', code: 'B', priceModifier: 500, durationModifier: 15, sortOrder: 2 },
-      { name: '半彩C', code: 'C', priceModifier: 1000, durationModifier: 30, sortOrder: 3 },
-      { name: '全彩D', code: 'D', priceModifier: 1500, durationModifier: 45, sortOrder: 4 },
+      { name: '割線', code: 'A', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: true, description: '純黑色線條' },
+      { name: '黑白', code: 'B', priceModifier: 500, durationModifier: 15, sortOrder: 2, isRequired: true, description: '黑白陰影' },
+      { name: '半彩', code: 'C', priceModifier: 1000, durationModifier: 30, sortOrder: 3, isRequired: true, description: '部分上色' },
+      { name: '全彩', code: 'D', priceModifier: 1500, durationModifier: 45, sortOrder: 4, isRequired: true, description: '全彩上色' },
     ];
 
     // 創建默認部位規格
     const positionVariants = [
-      { name: '部位1', priceModifier: 0, durationModifier: 0, sortOrder: 1 },
-      { name: '部位2', priceModifier: 500, durationModifier: 15, sortOrder: 2 },
+      { name: '手臂外側', code: 'P1', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: false, description: '手臂外側面' },
+      { name: '手臂內側', code: 'P2', priceModifier: 200, durationModifier: 10, sortOrder: 2, isRequired: false, description: '手臂內側面' },
+      { name: '小腿', code: 'P3', priceModifier: 0, durationModifier: 0, sortOrder: 3, isRequired: false, description: '小腿部位' },
+      { name: '大腿', code: 'P4', priceModifier: 500, durationModifier: 15, sortOrder: 4, isRequired: false, description: '大腿部位' },
+      { name: '背部', code: 'P5', priceModifier: 1000, durationModifier: 30, sortOrder: 5, isRequired: false, description: '背部區域' },
+      { name: '胸部', code: 'P6', priceModifier: 800, durationModifier: 20, sortOrder: 6, isRequired: false, description: '胸部區域' },
     ];
 
+    // 創建風格規格（進階）
+    const styleVariants = [
+      { name: '傳統', code: 'S1', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: false, description: '經典傳統刺青風格' },
+      { name: '寫實', code: 'S2', priceModifier: 1500, durationModifier: 60, sortOrder: 2, isRequired: false, description: '超寫實風格' },
+      { name: '圖騰', code: 'S3', priceModifier: 500, durationModifier: 20, sortOrder: 3, isRequired: false, description: '部落圖騰' },
+      { name: '日式', code: 'S4', priceModifier: 1000, durationModifier: 40, sortOrder: 4, isRequired: false, description: '日本傳統' },
+      { name: '極簡', code: 'S5', priceModifier: 800, durationModifier: 30, sortOrder: 5, isRequired: false, description: '極簡線條' },
+    ];
+
+    // 創建複雜度規格（進階）
+    const complexityVariants = [
+      { name: '簡單', code: 'C1', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: false, description: '簡單線條' },
+      { name: '中等', code: 'C2', priceModifier: 1000, durationModifier: 30, sortOrder: 2, isRequired: false, description: '中等複雜度' },
+      { name: '複雜', code: 'C3', priceModifier: 2500, durationModifier: 60, sortOrder: 3, isRequired: false, description: '高複雜度' },
+    ];
+
+    const variantsToCreate: any[] = [];
+
+    // 根據模板選擇要創建的規格
+    if (template === 'basic') {
+      // 基礎模板：只有尺寸和顏色
+      variantsToCreate.push(
+        ...sizeVariants.slice(0, 3).map((v) => ({ serviceId, type: 'size', ...v })),
+        ...colorVariants.slice(0, 2).map((v) => ({ serviceId, type: 'color', ...v })),
+      );
+    } else if (template === 'standard') {
+      // 標準模板：尺寸、顏色、部位
+      variantsToCreate.push(
+        ...sizeVariants.map((v) => ({ serviceId, type: 'size', ...v })),
+        ...colorVariants.map((v) => ({ serviceId, type: 'color', ...v })),
+        ...positionVariants.map((v) => ({ serviceId, type: 'position', ...v })),
+      );
+    } else if (template === 'advanced') {
+      // 進階模板：尺寸、顏色、部位、風格、複雜度
+      variantsToCreate.push(
+        ...sizeVariants.map((v) => ({ serviceId, type: 'size', ...v })),
+        ...colorVariants.map((v) => ({ serviceId, type: 'color', ...v })),
+        ...positionVariants.map((v) => ({ serviceId, type: 'position', ...v })),
+        ...styleVariants.map((v) => ({ serviceId, type: 'style', ...v })),
+        ...complexityVariants.map((v) => ({ serviceId, type: 'complexity', ...v })),
+      );
+    } else if (template === 'full') {
+      // 完整模板：所有規格
+      variantsToCreate.push(
+        ...sizeVariants.map((v) => ({ serviceId, type: 'size', ...v })),
+        ...colorVariants.map((v) => ({ serviceId, type: 'color', ...v })),
+        ...positionVariants.map((v) => ({ serviceId, type: 'position', ...v })),
+        ...styleVariants.map((v) => ({ serviceId, type: 'style', ...v })),
+        ...complexityVariants.map((v) => ({ serviceId, type: 'complexity', ...v })),
+      );
+    }
+
     // 批量創建
-    await Promise.all([
-      ...sizeVariants.map((v) =>
-        this.prisma.serviceVariant.create({
-          data: {
-            serviceId,
-            type: 'size',
-            ...v,
-          },
-        }),
+    await Promise.all(
+      variantsToCreate.map((v) =>
+        this.prisma.serviceVariant.create({ data: v }),
       ),
-      ...colorVariants.map((v) =>
-        this.prisma.serviceVariant.create({
-          data: {
-            serviceId,
-            type: 'color',
-            ...v,
-          },
-        }),
-      ),
-      ...positionVariants.map((v) =>
-        this.prisma.serviceVariant.create({
-          data: {
-            serviceId,
-            type: 'position',
-            ...v,
-          },
-        }),
-      ),
-    ]);
+    );
 
     // 更新服務的 hasVariants 標記
     await this.prisma.service.update({
@@ -228,7 +261,11 @@ export class AdminServiceVariantsService {
       data: { hasVariants: true },
     });
 
-    return { success: true, message: '默認規格已創建' };
+    return { 
+      success: true, 
+      message: `已使用 ${template} 模板創建 ${variantsToCreate.length} 個規格`,
+      count: variantsToCreate.length,
+    };
   }
 }
 

@@ -68,10 +68,18 @@ export class AdminServiceVariantsController {
 
   /**
    * 初始化服務的默認規格
+   * @param serviceId 服務 ID
+   * @param body.template 模板類型: basic | standard | advanced | full
    */
   @Post('initialize/:serviceId')
-  async initializeDefaultVariants(@Param('serviceId') serviceId: string) {
-    return this.variantsService.initializeDefaultVariants(serviceId);
+  async initializeDefaultVariants(
+    @Param('serviceId') serviceId: string,
+    @Body() body?: { template?: 'basic' | 'standard' | 'advanced' | 'full' },
+  ) {
+    return this.variantsService.initializeDefaultVariants(
+      serviceId,
+      body?.template || 'standard',
+    );
   }
 }
 
