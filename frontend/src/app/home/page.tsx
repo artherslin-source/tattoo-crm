@@ -9,6 +9,7 @@ import { HorizontalScroller } from "@/components/home/HorizontalScroller";
 import { ServiceCard } from "@/components/home/ServiceCard";
 import { StickyCTA } from "@/components/home/StickyCTA";
 import { PortfolioDialog } from "@/components/home/PortfolioDialog";
+import { VariantSelector } from "@/components/service/VariantSelector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,8 @@ import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { smartApiCall } from "@/lib/api-fallback";
 import type { Branch as BranchType } from "@/types/branch";
 import { debugApiUrls, findWorkingApiUrl } from "@/lib/api-debug";
-import { CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
+import { addToCart, getCart } from "@/lib/cart-api";
+import { CheckCircle, AlertTriangle, ArrowRight, ShoppingCart as ShoppingCartIcon } from "lucide-react";
 
 interface Service {
   id: string;
@@ -31,6 +33,7 @@ interface Service {
   description?: string;
   category?: string | null;
   imageUrl?: string | null;
+  hasVariants?: boolean;
 }
 
 interface Artist {
@@ -177,6 +180,11 @@ export default function HomePage() {
   const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
+  
+  // 購物車狀態
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [variantSelectorOpen, setVariantSelectorOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -188,6 +196,40 @@ export default function HomePage() {
 
   const scrollToBookingForm = () => {
     document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // 處理點擊加入購物車
+  const handleAddToCartClick = (serviceId: string) => {
+    const service = services.find((s) => s.id === serviceId);
+    if (service) {
+      setSelectedService(service);
+      setVariantSelectorOpen(true);
+    }
+  };
+
+  // 處理加入購物車
+  const handleAddToCart = async (selectedVariants: any, notes: string) => {
+    if (!selectedService) return;
+
+    try {
+      const cart = await addToCart({
+        serviceId: selectedService.id,
+        selectedVariants,
+        notes,
+      });
+
+      setCartItemCount(cart.items?.length || 0);
+      setMessage({ type: "success", text: "✅ 已加入購物車！" });
+      
+      // 3秒後清除訊息
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error("加入購物車失敗:", error);
+      setMessage({ 
+        type: "error", 
+        text: error instanceof Error ? error.message : "加入購物車失敗" 
+      });
+    }
   };
 
   useEffect(() => {
@@ -242,6 +284,20 @@ export default function HomePage() {
     };
 
     fetchData();
+  }, []);
+
+  // 獲取購物車數量
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const cart = await getCart();
+        setCartItemCount(cart.items?.length || 0);
+      } catch (error) {
+        console.error("獲取購物車失敗:", error);
+      }
+    };
+
+    fetchCartCount();
   }, []);
 
   // 過濾重複的朱川進，只保留第一個（通常是東港店）
@@ -362,6 +418,22 @@ export default function HomePage() {
     <div className="relative min-h-screen bg-[#0D0D0D] text-neutral-100 pb-24 sm:pb-16">
       <Hero loggedIn={loggedIn} />
 
+      {/* 購物車浮動按鈕 */}
+      {cartItemCount > 0 && (
+        <div className="fixed top-20 right-6 z-40">
+          <Button
+            onClick={() => window.location.href = '/cart'}
+            className="relative rounded-full bg-yellow-500 hover:bg-yellow-600 text-black h-14 w-14 shadow-xl"
+            size="icon"
+          >
+            <ShoppingCartIcon className="h-6 w-6" />
+            <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white p-0 flex items-center justify-center text-xs">
+              {cartItemCount}
+            </Badge>
+          </Button>
+        </div>
+      )}
+
       {/* 桌機版固定浮動側邊欄 */}
       <aside className="hidden lg:fixed lg:left-6 lg:top-32 lg:z-30 lg:block lg:w-48 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-black/40 lg:p-4 lg:backdrop-blur-lg lg:shadow-lg">
         <nav aria-label="快速導覽" className="space-y-3">
@@ -420,7 +492,12 @@ export default function HomePage() {
                         <h3 className="mb-3 text-xl font-semibold text-white">{category.title}</h3>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           {category.items.map((item) => (
-                            <ServiceCard key={item.id} item={item} variant="compact" />
+                            <ServiceCard 
+                              key={item.id} 
+                              item={item} 
+                              variant="compact" 
+                              onAddToCart={handleAddToCartClick}
+                            />
                           ))}
                         </div>
                       </div>
@@ -430,7 +507,11 @@ export default function HomePage() {
                         <h3 className="mb-6 text-2xl font-semibold text-white">{category.title}</h3>
                         <div className="grid grid-cols-3 gap-6 xl:grid-cols-4">
                           {category.items.map((item) => (
-                            <ServiceCard key={item.id} item={item} />
+                            <ServiceCard 
+                              key={item.id} 
+                              item={item} 
+                              onAddToCart={handleAddToCartClick}
+                            />
                           ))}
                         </div>
                       </div>
@@ -658,6 +739,18 @@ export default function HomePage() {
           setSelectedArtist(null);
         }}
       />
+
+      {/* 規格選擇器 */}
+      {variantSelectorOpen && selectedService && (
+        <VariantSelector
+          service={selectedService}
+          onClose={() => {
+            setVariantSelectorOpen(false);
+            setSelectedService(null);
+          }}
+          onAddToCart={handleAddToCart}
+        />
+      )}
 
       <footer className="border-t border-white/10 bg-black py-10 text-center text-sm text-neutral-400">
         <div className="mx-auto max-w-6xl px-6">

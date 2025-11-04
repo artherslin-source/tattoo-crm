@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export interface ServiceCardProps {
   item: {
@@ -14,13 +16,25 @@ export interface ServiceCardProps {
     href?: string;
     price?: number;
     durationMin?: number;
+    description?: string;
+    imageUrl?: string;
+    hasVariants?: boolean;
   };
   variant?: "vertical" | "compact";
+  onAddToCart?: (serviceId: string) => void;
 }
 
-export function ServiceCard({ item, variant = "vertical" }: ServiceCardProps) {
+export function ServiceCard({ item, variant = "vertical", onAddToCart }: ServiceCardProps) {
   const [imageError, setImageError] = useState(false);
   const hasImage = item.thumb && item.thumb.trim() !== '' && !imageError;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onAddToCart) {
+      onAddToCart(item.id);
+    }
+  };
 
   const content = (
     <article
@@ -62,13 +76,31 @@ export function ServiceCard({ item, variant = "vertical" }: ServiceCardProps) {
           )}
         </div>
         {item.price != null && (
-          <p className="text-base font-medium text-yellow-300">NT$ {item.price.toLocaleString()}</p>
+          <p className="text-base font-medium text-yellow-300">
+            {item.hasVariants ? (
+              <span className="text-sm">依規格計價</span>
+            ) : (
+              `NT$ ${item.price.toLocaleString()}`
+            )}
+          </p>
         )}
         {item.durationMin != null && (
           <p className="text-sm text-neutral-300">耗時約 {item.durationMin} 分鐘</p>
         )}
-        <div className="mt-auto pt-2 text-sm text-neutral-300">
-          預約前可先拍照與設計師討論細節。
+        <div className="mt-auto pt-2 space-y-2">
+          <p className="text-sm text-neutral-300">
+            預約前可先拍照與設計師討論細節。
+          </p>
+          {onAddToCart && (
+            <Button
+              onClick={handleAddToCart}
+              className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+              size="sm"
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              加入購物車
+            </Button>
+          )}
         </div>
       </div>
     </article>
