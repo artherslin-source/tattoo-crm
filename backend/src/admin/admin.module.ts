@@ -14,6 +14,8 @@ import { AdminAnalyticsUnifiedService } from './admin-analytics-unified.service'
 import { AdminCacheController } from './admin-cache.controller';
 import { AdminCleanupController } from './admin-cleanup.controller';
 import { DiagnosticsController } from './diagnostics.controller';
+import { AdminServiceVariantsController } from './admin-service-variants.controller';
+import { AdminServiceVariantsService } from './admin-service-variants.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { OrdersModule } from '../orders/orders.module';
 import { ServicesModule } from '../services/services.module';
@@ -31,7 +33,8 @@ import { BranchesModule } from '../branches/branches.module';
     AdminAnalyticsController,
     AdminCacheController,
     AdminCleanupController,
-    DiagnosticsController
+    DiagnosticsController,
+    AdminServiceVariantsController,
   ],
   providers: [
     AdminAppointmentsService,
@@ -39,6 +42,7 @@ import { BranchesModule } from '../branches/branches.module';
     AdminMembersService,
     AdminAnalyticsOptimizedService,
     AdminAnalyticsUnifiedService,
+    AdminServiceVariantsService,
   ],
 })
 export class AdminModule {}

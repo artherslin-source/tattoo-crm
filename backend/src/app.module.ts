@@ -18,6 +18,7 @@ import { BranchModule } from './branch/branch.module';
 import { ArtistModule } from './artist/artist.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { HealthModule } from './health/health.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { HealthModule } from './health/health.module';
     BranchModule,
     ContactsModule,
     HealthModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],

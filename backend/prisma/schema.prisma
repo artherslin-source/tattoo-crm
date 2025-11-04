@@ -118,37 +118,44 @@ model Service {
   durationMin  Int
   imageUrl     String?
   price        Int
+  hasVariants  Boolean          @default(false)  // 是否有規格選項
   appointments Appointment[]
   history      ServiceHistory[]
   completedServices CompletedService[]
+  variants     ServiceVariant[]
+  cartItems    CartItem[]
 }
 
 model Appointment {
-  id        String            @id @default(cuid())
-  branchId  String
-  artistId  String?
-  serviceId String?
-  contactId String?
-  startAt   DateTime
-  endAt     DateTime
-  status    AppointmentStatus @default(PENDING)
-  notes     String?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  userId    String
-  orderId   String?           @unique
-  artist    User?             @relation("ArtistAppointments", fields: [artistId], references: [id])
-  branch    Branch            @relation(fields: [branchId], references: [id])
-  service   Service?          @relation(fields: [serviceId], references: [id])
-  user      User              @relation(fields: [userId], references: [id])
-  contact   Contact?          @relation(fields: [contactId], references: [id])
-  order     Order?
+  id           String            @id @default(cuid())
+  branchId     String
+  artistId     String?
+  serviceId    String?
+  contactId    String?
+  startAt      DateTime
+  endAt        DateTime
+  status       AppointmentStatus @default(PENDING)
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  userId       String
+  orderId      String?           @unique
+  cartId       String?           // 關聯購物車
+  cartSnapshot Json?             // 購物車快照
+  artist       User?             @relation("ArtistAppointments", fields: [artistId], references: [id])
+  branch       Branch            @relation(fields: [branchId], references: [id])
+  service      Service?          @relation(fields: [serviceId], references: [id])
+  user         User              @relation(fields: [userId], references: [id])
+  contact      Contact?          @relation(fields: [contactId], references: [id])
+  order        Order?
   completedService CompletedService?
+  cart         Cart?             @relation(fields: [cartId], references: [id])
   
   @@index([branchId, createdAt, status])
   @@index([status, startAt])
   @@index([artistId, status])
   @@index([serviceId, createdAt])
+  @@index([cartId])
 }
 
 model Order {
@@ -165,6 +172,7 @@ model Order {
   paidAt        DateTime?
   notes         String?
   isInstallment Boolean       @default(false) // 是否為分期付款
+  cartSnapshot  Json?         // 購物車快照（保存規格資訊）
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @default(now()) @updatedAt
   installments  Installment[]
@@ -346,4 +354,71 @@ model Contact {
   // Relations
   branch       Branch         @relation(fields: [branchId], references: [id])
   appointments Appointment[]
+}
+
+// 服務規格模型
+model ServiceVariant {
+  id               String   @id @default(cuid())
+  serviceId        String
+  type             String   // "size" / "color" / "position"
+  name             String   // "5x5cm" / "割線A" / "部位1"
+  code             String?  // "A" / "B" / "C" / "D" for color
+  priceModifier    Int      @default(0)  // 價格調整（正數加價，負數減價）
+  durationModifier Int      @default(0)  // 時長調整（分鐘）
+  sortOrder        Int      @default(0)  // 顯示順序
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  service          Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  @@index([serviceId, type])
+  @@index([serviceId, isActive])
+}
+
+// 購物車模型
+model Cart {
+  id           String        @id @default(cuid())
+  userId       String?       // 已登入用戶
+  sessionId    String?       // 訪客用 session ID
+  status       String        @default("active") // active / checked_out / expired
+  expiresAt    DateTime      // 過期時間（7天）
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  items        CartItem[]
+  appointments Appointment[]
+  
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status, expiresAt])
+}
+
+// 購物車項目模型
+model CartItem {
+  id                String   @id @default(cuid())
+  cartId            String
+  serviceId         String
+  
+  // 選擇的規格（JSON 格式）
+  // { size: "10x10cm", color: "割線A", position: "部位1" }
+  selectedVariants  Json
+  
+  // 計算後的價格和時長
+  basePrice         Int      // 服務基礎價
+  finalPrice        Int      // 最終價格（基礎價 + 規格調整）
+  estimatedDuration Int      // 預估時長（分鐘）
+  
+  // 用戶備註
+  notes             String?
+  referenceImages   String[] // 參考圖片 URLs
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  cart              Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  service           Service  @relation(fields: [serviceId], references: [id])
+  
+  @@index([cartId])
+  @@index([serviceId])
 }
