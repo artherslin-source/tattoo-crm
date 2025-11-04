@@ -426,6 +426,7 @@ export class CartService {
 
   /**
    * 計算價格和時長（根據選擇的規格）
+   * 新價格體系：尺寸×顏色組合定價
    */
   private calculatePriceAndDuration(
     basePrice: number,
@@ -433,32 +434,44 @@ export class CartService {
     variants: any[],
     selectedVariants: any,
   ): { finalPrice: number; estimatedDuration: number } {
-    let finalPrice = basePrice;
+    let finalPrice = 0;
     let estimatedDuration = baseDuration;
 
-    // 計算尺寸調整
+    // 1. 計算尺寸價格（尺寸的priceModifier已經是黑白的完整價格）
+    let sizePrice = 0;
+    let sizeDuration = 0;
     if (selectedVariants.size) {
       const sizeVariant = variants.find(
         (v) => v.type === 'size' && v.name === selectedVariants.size,
       );
       if (sizeVariant) {
-        finalPrice += sizeVariant.priceModifier;
-        estimatedDuration += sizeVariant.durationModifier;
+        sizePrice = sizeVariant.priceModifier;
+        sizeDuration = sizeVariant.durationModifier;
       }
     }
 
-    // 計算顏色調整
+    // 2. 計算顏色加價（彩色通常+1000，但16-17cm例外）
+    let colorPrice = 0;
+    let colorDuration = 0;
     if (selectedVariants.color) {
       const colorVariant = variants.find(
-        (v) => v.type === 'color' && (v.name === selectedVariants.color || v.code === selectedVariants.color.slice(-1)),
+        (v) => v.type === 'color' && v.name === selectedVariants.color,
       );
       if (colorVariant) {
-        finalPrice += colorVariant.priceModifier;
-        estimatedDuration += colorVariant.durationModifier;
+        // 特殊情況：16-17cm + 彩色 = 14000（不加價）
+        if (selectedVariants.size === '16-17cm' && selectedVariants.color === '彩色') {
+          colorPrice = 0; // 16-17cm彩色不加價
+        } else {
+          colorPrice = colorVariant.priceModifier;
+        }
+        colorDuration = colorVariant.durationModifier;
       }
     }
 
-    // 計算部位調整
+    finalPrice = sizePrice + colorPrice;
+    estimatedDuration += sizeDuration + colorDuration;
+
+    // 3. 計算部位調整
     if (selectedVariants.position) {
       const positionVariant = variants.find(
         (v) => v.type === 'position' && v.name === selectedVariants.position,
@@ -468,6 +481,35 @@ export class CartService {
         estimatedDuration += positionVariant.durationModifier;
       }
     }
+
+    // 4. 計算設計費（如果有自訂價格）
+    if (selectedVariants.design_fee !== undefined) {
+      const designFeeVariant = variants.find(
+        (v) => v.type === 'design_fee',
+      );
+      if (designFeeVariant) {
+        // 如果有自訂價格，使用自訂價格；否則使用variant的priceModifier
+        const designFeePrice = typeof selectedVariants.design_fee === 'number' 
+          ? selectedVariants.design_fee 
+          : designFeeVariant.priceModifier;
+        finalPrice += designFeePrice;
+        estimatedDuration += designFeeVariant.durationModifier;
+      }
+    }
+
+    // 5. 計算其他規格（風格、複雜度等）
+    ['style', 'complexity', 'technique', 'custom'].forEach((type) => {
+      const selectedValue = selectedVariants[type];
+      if (selectedValue) {
+        const variant = variants.find(
+          (v) => v.type === type && v.name === selectedValue,
+        );
+        if (variant) {
+          finalPrice += variant.priceModifier;
+          estimatedDuration += variant.durationModifier;
+        }
+      }
+    });
 
     return { finalPrice, estimatedDuration };
   }

@@ -169,28 +169,26 @@ export class AdminServiceVariantsService {
       where: { serviceId },
     });
 
-    // 創建默認尺寸規格（1cm 遞增）
+    // 創建默認尺寸規格（基礎價格為黑白價格）
     const sizeVariants = [
-      { name: '5-6cm', code: 'S1', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: true, description: '5-6cm 尺寸' },
-      { name: '6-7cm', code: 'S2', priceModifier: 200, durationModifier: 5, sortOrder: 2, isRequired: true, description: '6-7cm 尺寸' },
-      { name: '7-8cm', code: 'S3', priceModifier: 400, durationModifier: 10, sortOrder: 3, isRequired: true, description: '7-8cm 尺寸' },
-      { name: '8-9cm', code: 'S4', priceModifier: 600, durationModifier: 15, sortOrder: 4, isRequired: true, description: '8-9cm 尺寸' },
-      { name: '9-10cm', code: 'S5', priceModifier: 800, durationModifier: 20, sortOrder: 5, isRequired: true, description: '9-10cm 尺寸' },
-      { name: '10-11cm', code: 'S6', priceModifier: 1000, durationModifier: 25, sortOrder: 6, isRequired: true, description: '10-11cm 尺寸' },
-      { name: '11-12cm', code: 'S7', priceModifier: 1200, durationModifier: 30, sortOrder: 7, isRequired: true, description: '11-12cm 尺寸' },
-      { name: '12-13cm', code: 'S8', priceModifier: 1400, durationModifier: 35, sortOrder: 8, isRequired: true, description: '12-13cm 尺寸' },
-      { name: '13-14cm', code: 'S9', priceModifier: 1600, durationModifier: 40, sortOrder: 9, isRequired: true, description: '13-14cm 尺寸' },
-      { name: '14-15cm', code: 'S10', priceModifier: 1800, durationModifier: 45, sortOrder: 10, isRequired: true, description: '14-15cm 尺寸' },
-      { name: '15-16cm', code: 'S11', priceModifier: 2000, durationModifier: 50, sortOrder: 11, isRequired: true, description: '15-16cm 尺寸' },
-      { name: '16-17cm', code: 'S12', priceModifier: 2200, durationModifier: 55, sortOrder: 12, isRequired: true, description: '16-17cm 尺寸' },
+      { name: '5-6cm', code: 'S1', priceModifier: 2000, durationModifier: 30, sortOrder: 1, isRequired: true, description: '5-6cm（黑白2000/彩色3000）' },
+      { name: '6-7cm', code: 'S2', priceModifier: 3000, durationModifier: 40, sortOrder: 2, isRequired: true, description: '6-7cm（黑白3000/彩色4000）' },
+      { name: '7-8cm', code: 'S3', priceModifier: 4000, durationModifier: 50, sortOrder: 3, isRequired: true, description: '7-8cm（黑白4000/彩色5000）' },
+      { name: '8-9cm', code: 'S4', priceModifier: 5000, durationModifier: 60, sortOrder: 4, isRequired: true, description: '8-9cm（黑白5000/彩色6000）' },
+      { name: '9-10cm', code: 'S5', priceModifier: 6000, durationModifier: 70, sortOrder: 5, isRequired: true, description: '9-10cm（黑白6000/彩色7000）' },
+      { name: '10-11cm', code: 'S6', priceModifier: 7000, durationModifier: 80, sortOrder: 6, isRequired: true, description: '10-11cm（黑白7000/彩色8000）' },
+      { name: '11-12cm', code: 'S7', priceModifier: 8000, durationModifier: 90, sortOrder: 7, isRequired: true, description: '11-12cm（黑白8000/彩色9000）' },
+      { name: '12-13cm', code: 'S8', priceModifier: 9000, durationModifier: 100, sortOrder: 8, isRequired: true, description: '12-13cm（黑白9000/彩色10000）' },
+      { name: '13-14cm', code: 'S9', priceModifier: 10000, durationModifier: 110, sortOrder: 9, isRequired: true, description: '13-14cm（黑白10000/彩色11000）' },
+      { name: '14-15cm', code: 'S10', priceModifier: 11000, durationModifier: 120, sortOrder: 10, isRequired: true, description: '14-15cm（黑白11000/彩色12000）' },
+      { name: '15-16cm', code: 'S11', priceModifier: 12000, durationModifier: 130, sortOrder: 11, isRequired: true, description: '15-16cm（黑白12000/彩色13000）' },
+      { name: '16-17cm', code: 'S12', priceModifier: 14000, durationModifier: 140, sortOrder: 12, isRequired: true, description: '16-17cm（黑白14000/彩色14000）' },
     ];
 
-    // 創建默認顏色規格
+    // 創建默認顏色規格（黑白=0，彩色=+1000，16-17cm例外為0）
     const colorVariants = [
-      { name: '割線', code: 'A', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: true, description: '純黑色線條' },
-      { name: '黑白', code: 'B', priceModifier: 500, durationModifier: 15, sortOrder: 2, isRequired: true, description: '黑白陰影' },
-      { name: '半彩', code: 'C', priceModifier: 1000, durationModifier: 30, sortOrder: 3, isRequired: true, description: '部分上色' },
-      { name: '全彩', code: 'D', priceModifier: 1500, durationModifier: 45, sortOrder: 4, isRequired: true, description: '全彩上色' },
+      { name: '黑白', code: 'BW', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: true, description: '黑白陰影' },
+      { name: '彩色', code: 'COLOR', priceModifier: 1000, durationModifier: 30, sortOrder: 2, isRequired: true, description: '彩色上色（大部分尺寸+1000）' },
     ];
 
     // 創建默認部位規格
@@ -219,6 +217,20 @@ export class AdminServiceVariantsService {
       { name: '複雜', code: 'C3', priceModifier: 2500, durationModifier: 60, sortOrder: 3, isRequired: false, description: '高複雜度' },
     ];
 
+    // 創建設計費規格（需要後台輸入價格）
+    const designFeeVariants = [
+      { 
+        name: '設計費', 
+        code: 'DESIGN', 
+        priceModifier: 0, 
+        durationModifier: 60, 
+        sortOrder: 1, 
+        isRequired: false, 
+        description: '另外估價（需管理後台輸入）',
+        metadata: { isCustomPrice: true, displayText: '另外估價' }
+      },
+    ];
+
     const variantsToCreate: any[] = [];
 
     // 根據模板選擇要創建的規格
@@ -229,20 +241,22 @@ export class AdminServiceVariantsService {
         ...colorVariants.slice(0, 2).map((v) => ({ serviceId, type: 'color', ...v })),
       );
     } else if (template === 'standard') {
-      // 標準模板：尺寸、顏色、部位
+      // 標準模板：尺寸、顏色、部位、設計費
       variantsToCreate.push(
         ...sizeVariants.map((v) => ({ serviceId, type: 'size', ...v })),
         ...colorVariants.map((v) => ({ serviceId, type: 'color', ...v })),
         ...positionVariants.map((v) => ({ serviceId, type: 'position', ...v })),
+        ...designFeeVariants.map((v) => ({ serviceId, type: 'design_fee', ...v })),
       );
     } else if (template === 'advanced') {
-      // 進階模板：尺寸、顏色、部位、風格、複雜度
+      // 進階模板：尺寸、顏色、部位、風格、複雜度、設計費
       variantsToCreate.push(
         ...sizeVariants.map((v) => ({ serviceId, type: 'size', ...v })),
         ...colorVariants.map((v) => ({ serviceId, type: 'color', ...v })),
         ...positionVariants.map((v) => ({ serviceId, type: 'position', ...v })),
         ...styleVariants.map((v) => ({ serviceId, type: 'style', ...v })),
         ...complexityVariants.map((v) => ({ serviceId, type: 'complexity', ...v })),
+        ...designFeeVariants.map((v) => ({ serviceId, type: 'design_fee', ...v })),
       );
     } else if (template === 'full') {
       // 完整模板：所有規格
@@ -252,6 +266,7 @@ export class AdminServiceVariantsService {
         ...positionVariants.map((v) => ({ serviceId, type: 'position', ...v })),
         ...styleVariants.map((v) => ({ serviceId, type: 'style', ...v })),
         ...complexityVariants.map((v) => ({ serviceId, type: 'complexity', ...v })),
+        ...designFeeVariants.map((v) => ({ serviceId, type: 'design_fee', ...v })),
       );
     }
 
