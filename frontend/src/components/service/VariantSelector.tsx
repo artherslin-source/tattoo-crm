@@ -307,13 +307,13 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                       ${
                         selectedSize === variant.name
                           ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 ring-offset-1"
-                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                          : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-800 hover:text-gray-900"
                       }
                     `}
                   >
-                    <div className="font-semibold">{variant.name}</div>
+                    <div className="font-bold text-base">{variant.name}</div>
                     {variant.description && (
-                      <div className="mt-0.5 text-xs text-gray-500 truncate">
+                      <div className="mt-0.5 text-xs text-gray-600 truncate font-medium">
                         {variant.description.split("（")[0]}
                       </div>
                     )}
@@ -342,13 +342,13 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                       ${
                         selectedColor === variant.name
                           ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 ring-offset-1"
-                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                          : "border-gray-400 hover:border-gray-500 hover:bg-gray-50 text-gray-900 hover:text-black"
                       }
                     `}
                   >
-                    <div className="text-lg font-bold">{variant.name}</div>
+                    <div className="text-xl font-bold">{variant.name}</div>
                     {variant.description && (
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-gray-700 font-medium">
                         {variant.description}
                       </div>
                     )}
@@ -381,13 +381,13 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                       ${
                         selectedPosition === variant.name
                           ? "border-blue-600 bg-blue-50 text-blue-700"
-                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                          : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-800 hover:text-gray-900"
                       }
                     `}
                   >
-                    <div>{variant.name}</div>
+                    <div className="font-semibold">{variant.name}</div>
                     {variant.priceModifier > 0 && (
-                      <div className="mt-0.5 text-xs text-gray-500">
+                      <div className="mt-0.5 text-xs text-gray-700 font-medium">
                         +{variant.priceModifier}元
                       </div>
                     )}

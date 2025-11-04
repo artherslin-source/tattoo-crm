@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError, getImageUrl, getApiBase } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon, Package, CheckCircle, XCircle } from "lucide-react";
+import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon, Package, CheckCircle, XCircle, Sliders } from "lucide-react";
 import { ServiceImageSelector } from "@/components/admin/ServiceImageSelector";
+import { VariantManager } from "@/components/admin/VariantManager";
 import { Badge } from "@/components/ui/badge";
 
 interface Service {
@@ -33,6 +34,7 @@ export default function AdminServicesPage() {
   const [showImageSelector, setShowImageSelector] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [initializingVariant, setInitializingVariant] = useState<string | null>(null);
+  const [managingVariantService, setManagingVariantService] = useState<{ id: string; name: string } | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -569,7 +571,17 @@ export default function AdminServicesPage() {
                           <Edit className="h-3 w-3" />
                           <span>編輯</span>
                         </Button>
-                        {!service.hasVariants && (
+                        {service.hasVariants ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setManagingVariantService({ id: service.id, name: service.name })}
+                            className="flex items-center space-x-1 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                          >
+                            <Sliders className="h-3 w-3" />
+                            <span>管理規格</span>
+                          </Button>
+                        ) : (
                           <Button
                             variant="outline"
                             size="sm"
@@ -655,6 +667,16 @@ export default function AdminServicesPage() {
         }}
         currentImageUrl={formData.imageUrl}
       />
+
+      {/* 規格管理器 */}
+      {managingVariantService && (
+        <VariantManager
+          serviceId={managingVariantService.id}
+          serviceName={managingVariantService.name}
+          onClose={() => setManagingVariantService(null)}
+          onUpdate={fetchServices}
+        />
+      )}
     </div>
   );
 }
