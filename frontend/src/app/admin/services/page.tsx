@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError, getImageUrl } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError, getImageUrl, getApiBase } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon, Package, CheckCircle, XCircle } from "lucide-react";
 import { ServiceImageSelector } from "@/components/admin/ServiceImageSelector";
+import { Badge } from "@/components/ui/badge";
 
 interface Service {
   id: string;
@@ -17,6 +18,7 @@ interface Service {
   currency: string;
   category: string | null;
   imageUrl: string | null;
+  hasVariants: boolean;
   isActive: boolean;
   createdAt: string;
 }
@@ -30,6 +32,7 @@ export default function AdminServicesPage() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [showImageSelector, setShowImageSelector] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [initializingVariant, setInitializingVariant] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -160,6 +163,39 @@ export default function AdminServicesPage() {
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "刪除服務失敗");
+    }
+  };
+
+  // 初始化服務規格
+  const handleInitializeVariants = async (serviceId: string) => {
+    if (!confirm('確定要初始化此服務的規格嗎？\n\n將會創建：\n- 12個尺寸選項（5-6cm 到 16-17cm）\n- 2種顏色（黑白、彩色）\n- 6個部位選項\n- 1個設計費選項')) {
+      return;
+    }
+
+    setInitializingVariant(serviceId);
+    try {
+      const response = await fetch(`${getApiBase()}/admin/service-variants/initialize/${serviceId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAccessToken()}`,
+        },
+        body: JSON.stringify({ template: 'standard' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('初始化規格失敗');
+      }
+
+      const result = await response.json();
+      alert(`✅ 成功！已創建 ${result.count} 個規格`);
+      
+      // 重新獲取服務列表
+      await fetchServices();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '初始化規格失敗');
+    } finally {
+      setInitializingVariant(null);
     }
   };
 
@@ -433,6 +469,7 @@ export default function AdminServicesPage() {
                   <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">價格</th>
                   <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">時長</th>
                   <th className="text-center py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">圖片</th>
+                  <th className="text-center py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">規格</th>
                   <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">狀態</th>
                   <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">操作</th>
                 </tr>
@@ -499,6 +536,19 @@ export default function AdminServicesPage() {
                         </div>
                       )}
                     </td>
+                    <td className="py-3 px-4 text-center">
+                      {service.hasVariants ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          已設定
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          未設定
+                        </Badge>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         service.isActive 
@@ -509,7 +559,7 @@ export default function AdminServicesPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex space-x-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -519,6 +569,27 @@ export default function AdminServicesPage() {
                           <Edit className="h-3 w-3" />
                           <span>編輯</span>
                         </Button>
+                        {!service.hasVariants && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleInitializeVariants(service.id)}
+                            disabled={initializingVariant === service.id}
+                            className="flex items-center space-x-1 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                          >
+                            {initializingVariant === service.id ? (
+                              <>
+                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                                <span>處理中...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Package className="h-3 w-3" />
+                                <span>設定規格</span>
+                              </>
+                            )}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
