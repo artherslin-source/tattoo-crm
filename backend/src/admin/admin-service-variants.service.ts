@@ -169,13 +169,20 @@ export class AdminServiceVariantsService {
       where: { serviceId },
     });
 
-    // 創建默認尺寸規格
+    // 創建默認尺寸規格（1cm 遞增）
     const sizeVariants = [
-      { name: '5x5cm', code: 'XS', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: true, description: '適合小型圖案' },
-      { name: '10x10cm', code: 'S', priceModifier: 1000, durationModifier: 30, sortOrder: 2, isRequired: true, description: '常見尺寸' },
-      { name: '15x15cm', code: 'M', priceModifier: 2000, durationModifier: 60, sortOrder: 3, isRequired: true, description: '中型圖案' },
-      { name: '20x20cm', code: 'L', priceModifier: 3000, durationModifier: 90, sortOrder: 4, isRequired: true, description: '大型圖案' },
-      { name: '30x30cm', code: 'XL', priceModifier: 5000, durationModifier: 150, sortOrder: 5, isRequired: true, description: '超大型圖案' },
+      { name: '5-6cm', code: 'S1', priceModifier: 0, durationModifier: 0, sortOrder: 1, isRequired: true, description: '5-6cm 尺寸' },
+      { name: '6-7cm', code: 'S2', priceModifier: 200, durationModifier: 5, sortOrder: 2, isRequired: true, description: '6-7cm 尺寸' },
+      { name: '7-8cm', code: 'S3', priceModifier: 400, durationModifier: 10, sortOrder: 3, isRequired: true, description: '7-8cm 尺寸' },
+      { name: '8-9cm', code: 'S4', priceModifier: 600, durationModifier: 15, sortOrder: 4, isRequired: true, description: '8-9cm 尺寸' },
+      { name: '9-10cm', code: 'S5', priceModifier: 800, durationModifier: 20, sortOrder: 5, isRequired: true, description: '9-10cm 尺寸' },
+      { name: '10-11cm', code: 'S6', priceModifier: 1000, durationModifier: 25, sortOrder: 6, isRequired: true, description: '10-11cm 尺寸' },
+      { name: '11-12cm', code: 'S7', priceModifier: 1200, durationModifier: 30, sortOrder: 7, isRequired: true, description: '11-12cm 尺寸' },
+      { name: '12-13cm', code: 'S8', priceModifier: 1400, durationModifier: 35, sortOrder: 8, isRequired: true, description: '12-13cm 尺寸' },
+      { name: '13-14cm', code: 'S9', priceModifier: 1600, durationModifier: 40, sortOrder: 9, isRequired: true, description: '13-14cm 尺寸' },
+      { name: '14-15cm', code: 'S10', priceModifier: 1800, durationModifier: 45, sortOrder: 10, isRequired: true, description: '14-15cm 尺寸' },
+      { name: '15-16cm', code: 'S11', priceModifier: 2000, durationModifier: 50, sortOrder: 11, isRequired: true, description: '15-16cm 尺寸' },
+      { name: '16-17cm', code: 'S12', priceModifier: 2200, durationModifier: 55, sortOrder: 12, isRequired: true, description: '16-17cm 尺寸' },
     ];
 
     // 創建默認顏色規格
@@ -216,9 +223,9 @@ export class AdminServiceVariantsService {
 
     // 根據模板選擇要創建的規格
     if (template === 'basic') {
-      // 基礎模板：只有尺寸和顏色
+      // 基礎模板：只有前6個尺寸（5-11cm）和前2種顏色
       variantsToCreate.push(
-        ...sizeVariants.slice(0, 3).map((v) => ({ serviceId, type: 'size', ...v })),
+        ...sizeVariants.slice(0, 6).map((v) => ({ serviceId, type: 'size', ...v })),
         ...colorVariants.slice(0, 2).map((v) => ({ serviceId, type: 'color', ...v })),
       );
     } else if (template === 'standard') {
