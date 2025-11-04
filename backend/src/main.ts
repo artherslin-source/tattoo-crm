@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import session = require('express-session');
 
 async function bootstrap() {
   // 修復 BigInt 序列化問題
@@ -15,6 +16,21 @@ async function bootstrap() {
   
   // 註冊全局異常過濾器（處理 Multer 錯誤等）
   app.useGlobalFilters(new HttpExceptionFilter());
+  
+  // 配置 Session（用於訪客購物車）
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'tattoo-crm-session-secret-key-2025',
+      resave: false,
+      saveUninitialized: true,
+      cookie: {
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      },
+    }),
+  );
   
   // 確保uploads目錄存在
   const uploadsPath = join(process.cwd(), 'uploads');
