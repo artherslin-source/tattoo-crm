@@ -16,7 +16,6 @@ interface ServiceVariant {
   code?: string;
   description?: string;
   priceModifier: number;
-  durationModifier: number;
   sortOrder: number;
   isRequired: boolean;
   metadata?: {
@@ -171,34 +170,6 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
 
     return price;
   }, [selectedSize, selectedColor, selectedPosition, designFee, variants]);
-
-  // 計算預估時長
-  const calculatedDuration = useMemo(() => {
-    let duration = service.durationMin || 60;
-
-    if (selectedSize && variants.size) {
-      const sizeVariant = variants.size.find((v) => v.name === selectedSize);
-      if (sizeVariant) {
-        duration += sizeVariant.durationModifier;
-      }
-    }
-
-    if (selectedColor && variants.color) {
-      const colorVariant = variants.color.find((v) => v.name === selectedColor);
-      if (colorVariant) {
-        duration += colorVariant.durationModifier;
-      }
-    }
-
-    if (selectedPosition && variants.position) {
-      const positionVariant = variants.position.find((v) => v.name === selectedPosition);
-      if (positionVariant) {
-        duration += positionVariant.durationModifier;
-      }
-    }
-
-    return duration;
-  }, [selectedSize, selectedColor, selectedPosition, variants, service.durationMin]);
 
   // 處理加入購物車
   const handleAddToCart = async () => {
@@ -476,12 +447,9 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                     NT$ {calculatedPrice.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm text-gray-600">預估時長</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    約 {calculatedDuration} 分鐘
-                  </span>
-                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  * 實際價格可能依實際狀況調整
+                </p>
               </div>
             </div>
           </div>

@@ -21,9 +21,6 @@ export class CreateServiceVariantDto {
   @IsInt()
   priceModifier: number;
 
-  @IsInt()
-  durationModifier: number;
-
   @IsOptional()
   @IsInt()
   sortOrder?: number;
@@ -57,10 +54,6 @@ export class UpdateServiceVariantDto {
   @IsOptional()
   @IsInt()
   priceModifier?: number;
-
-  @IsOptional()
-  @IsInt()
-  durationModifier?: number;
 
   @IsOptional()
   @IsInt()

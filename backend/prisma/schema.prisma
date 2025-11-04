@@ -365,7 +365,6 @@ model ServiceVariant {
   code             String?  // "A" / "B" / "C" / "D" for color
   description      String?  // 規格詳細說明（例如："適合小型圖案"）
   priceModifier    Int      @default(0)  // 價格調整（正數加價，負數減價）
-  durationModifier Int      @default(0)  // 時長調整（分鐘）
   sortOrder        Int      @default(0)  // 顯示順序
   isActive         Boolean  @default(true)  // 是否啟用（可針對商品隱藏）
   isRequired       Boolean  @default(false) // 是否為必選項

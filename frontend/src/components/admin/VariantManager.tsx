@@ -60,7 +60,6 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
   const [editingVariant, setEditingVariant] = useState<ServiceVariant | null>(null);
   const [editForm, setEditForm] = useState({
     priceModifier: 0,
-    durationModifier: 0,
   });
 
   useEffect(() => {
@@ -115,7 +114,6 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     setEditingVariant(variant);
     setEditForm({
       priceModifier: variant.priceModifier,
-      durationModifier: variant.durationModifier,
     });
   };
 
@@ -215,35 +213,26 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
 
                   {editingVariant?.id === variant.id ? (
                     // 編輯模式
-                    <div className="grid grid-cols-2 gap-3 mt-3">
-                      <div>
-                        <Label className="text-xs text-gray-600">價格調整（元）</Label>
-                        <Input
-                          type="number"
-                          value={editForm.priceModifier}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, priceModifier: Number(e.target.value) })
-                          }
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-gray-600">時長調整（分鐘）</Label>
-                        <Input
-                          type="number"
-                          value={editForm.durationModifier}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, durationModifier: Number(e.target.value) })
-                          }
-                          className="mt-1"
-                        />
-                      </div>
+                    <div className="mt-3">
+                      <Label className="text-xs text-gray-600">價格調整（元）</Label>
+                      <Input
+                        type="number"
+                        value={editForm.priceModifier}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, priceModifier: Number(e.target.value) })
+                        }
+                        className="mt-1 w-full"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {variant.type === 'size' ? '尺寸的價格是完整價格（包含黑白）' : 
+                         variant.type === 'color' && variant.name === '彩色' ? '彩色通常加價 1000 元' : 
+                         '0 表示不加價'}
+                      </p>
                     </div>
                   ) : (
                     // 顯示模式
-                    <div className="flex gap-4 text-sm text-gray-600">
+                    <div className="text-sm text-gray-600">
                       <span>價格：{variant.priceModifier > 0 ? `+${variant.priceModifier}` : variant.priceModifier}元</span>
-                      <span>時長：{variant.durationModifier > 0 ? `+${variant.durationModifier}` : variant.durationModifier}分</span>
                     </div>
                   )}
 
@@ -277,26 +266,32 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                     <>
                       <Button
                         size="sm"
+                        variant="outline"
                         onClick={() => toggleActive(variant.id, variant.isActive)}
                         disabled={updating === variant.id}
                         className={
-                          variant.isActive
-                            ? "bg-green-100 text-green-700 border-green-300 hover:bg-green-200"
-                            : "bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200"
+                          updating === variant.id
+                            ? "border-gray-300 bg-gray-50"
+                            : variant.isActive
+                            ? "bg-green-100 text-green-700 border-green-400 hover:bg-green-200 font-semibold"
+                            : "bg-gray-200 text-gray-600 border-gray-400 hover:bg-gray-300 font-semibold"
                         }
-                        title={variant.isActive ? "點擊停用" : "點擊啟用"}
+                        title={variant.isActive ? "點擊停用此規格" : "點擊啟用此規格"}
                       >
                         {updating === variant.id ? (
-                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
+                          <>
+                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-1"></div>
+                            <span className="text-xs">更新中...</span>
+                          </>
                         ) : variant.isActive ? (
                           <>
                             <ToggleRight className="h-4 w-4 mr-1" />
-                            <span className="text-xs font-semibold">啟用</span>
+                            <span className="text-xs">啟用</span>
                           </>
                         ) : (
                           <>
                             <ToggleLeft className="h-4 w-4 mr-1" />
-                            <span className="text-xs font-semibold">停用</span>
+                            <span className="text-xs">停用</span>
                           </>
                         )}
                       </Button>
@@ -371,10 +366,10 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h4 className="font-semibold text-blue-900 mb-2">💡 規格管理說明</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• 切換開關可以啟用/停用規格（停用後顧客將看不到此選項）</li>
-              <li>• 點擊「編輯」可以修改價格和時長</li>
-              <li>• 價格調整：尺寸的價格是完整價格（已包含黑白），彩色通常 +1000 元</li>
-              <li>• 刪除規格後無法復原，請謹慎操作</li>
+              <li>• <strong>啟用/停用：</strong>點擊綠色「啟用」或灰色「停用」按鈕切換狀態</li>
+              <li>• <strong>編輯價格：</strong>點擊「編輯」可以修改價格調整</li>
+              <li>• <strong>價格規則：</strong>尺寸價格是完整價格（已包含黑白），彩色通常 +1000 元</li>
+              <li>• <strong>刪除規格：</strong>刪除後無法復原，請謹慎操作</li>
             </ul>
           </div>
 

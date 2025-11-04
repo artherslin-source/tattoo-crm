@@ -425,7 +425,7 @@ export class CartService {
   }
 
   /**
-   * 計算價格和時長（根據選擇的規格）
+   * 計算價格（根據選擇的規格）
    * 新價格體系：尺寸×顏色組合定價
    */
   private calculatePriceAndDuration(
@@ -435,24 +435,21 @@ export class CartService {
     selectedVariants: any,
   ): { finalPrice: number; estimatedDuration: number } {
     let finalPrice = 0;
-    let estimatedDuration = baseDuration;
+    const estimatedDuration = 60; // 固定預設值 (不再計算時長)
 
     // 1. 計算尺寸價格（尺寸的priceModifier已經是黑白的完整價格）
     let sizePrice = 0;
-    let sizeDuration = 0;
     if (selectedVariants.size) {
       const sizeVariant = variants.find(
         (v) => v.type === 'size' && v.name === selectedVariants.size,
       );
       if (sizeVariant) {
         sizePrice = sizeVariant.priceModifier;
-        sizeDuration = sizeVariant.durationModifier;
       }
     }
 
     // 2. 計算顏色加價（彩色通常+1000，但16-17cm例外）
     let colorPrice = 0;
-    let colorDuration = 0;
     if (selectedVariants.color) {
       const colorVariant = variants.find(
         (v) => v.type === 'color' && v.name === selectedVariants.color,
@@ -464,12 +461,10 @@ export class CartService {
         } else {
           colorPrice = colorVariant.priceModifier;
         }
-        colorDuration = colorVariant.durationModifier;
       }
     }
 
     finalPrice = sizePrice + colorPrice;
-    estimatedDuration += sizeDuration + colorDuration;
 
     // 3. 計算部位調整
     if (selectedVariants.position) {
@@ -478,7 +473,6 @@ export class CartService {
       );
       if (positionVariant) {
         finalPrice += positionVariant.priceModifier;
-        estimatedDuration += positionVariant.durationModifier;
       }
     }
 
@@ -493,7 +487,6 @@ export class CartService {
           ? selectedVariants.design_fee 
           : designFeeVariant.priceModifier;
         finalPrice += designFeePrice;
-        estimatedDuration += designFeeVariant.durationModifier;
       }
     }
 
@@ -506,7 +499,6 @@ export class CartService {
         );
         if (variant) {
           finalPrice += variant.priceModifier;
-          estimatedDuration += variant.durationModifier;
         }
       }
     });
