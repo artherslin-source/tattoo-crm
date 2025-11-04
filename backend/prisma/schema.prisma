@@ -17,7 +17,7 @@ model User {
   gender          String?
   stylePreferences String?
   role            String?
-  personId        String?  // 多帳號對應同一真人（跨分店排程互斥）
+  // personId        String?  // 多帳號對應同一真人（跨分店排程互斥）
   branchId        String?
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
@@ -43,7 +43,7 @@ model User {
   @@index([branchId, role, isActive])
   @@index([role, createdAt])
   @@index([email])
-  @@index([personId])
+  // @@index([personId])
 }
 
 model Member {

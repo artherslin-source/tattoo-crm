@@ -172,13 +172,8 @@ export class AdminAppointmentsService {
         endAt: input.endAt
       });
 
-      // 取得該刺青師使用者的 personId
-      const artistUser = await this.prisma.user.findUnique({ where: { id: input.artistId }, select: { personId: true } });
-      let artistIdsToCheck: string[] = [input.artistId];
-      if (artistUser?.personId) {
-        const samePersonUsers = await this.prisma.user.findMany({ where: { personId: artistUser.personId }, select: { id: true } });
-        artistIdsToCheck = samePersonUsers.map(u => u.id);
-      }
+      // 暫時跳過跨分店排程檢查（personId 欄位未啟用）
+      const artistIdsToCheck: string[] = [input.artistId];
 
       const conflicts = await this.prisma.appointment.findMany({
         where: {

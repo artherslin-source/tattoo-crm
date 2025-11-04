@@ -26,14 +26,9 @@ export class AppointmentsService {
       }
     }
 
-    // 檢查同一真人 (personId) 在相同時段的衝突（跨分店）
+    // 暫時跳過跨分店排程檢查（personId 欄位未啟用）
     if (input.artistId) {
-      const artistUser = await this.prisma.user.findUnique({ where: { id: input.artistId }, select: { personId: true } });
-      let artistIdsToCheck: string[] = [input.artistId];
-      if (artistUser?.personId) {
-        const samePersonUsers = await this.prisma.user.findMany({ where: { personId: artistUser.personId }, select: { id: true } });
-        artistIdsToCheck = samePersonUsers.map(u => u.id);
-      }
+      const artistIdsToCheck: string[] = [input.artistId];
 
       const conflict = await this.prisma.appointment.findFirst({
         where: {
