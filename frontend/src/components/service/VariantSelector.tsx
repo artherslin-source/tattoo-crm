@@ -79,7 +79,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
         const url = `${getApiBase()}/services/${service.id}/variants`;
         console.log(`[VariantSelector] API URL: ${url}`);
         
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          cache: 'no-store', // 強制不使用緩存
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
         console.log(`[VariantSelector] 響應狀態: ${response.status}`);
         
         if (response.ok) {

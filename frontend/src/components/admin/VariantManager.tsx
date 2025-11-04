@@ -201,6 +201,16 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                     {variant.isRequired && (
                       <Badge className="bg-red-100 text-red-700 text-xs">必選</Badge>
                     )}
+                    {/* 狀態顯示 */}
+                    <Badge
+                      className={
+                        variant.isActive
+                          ? "bg-green-100 text-green-700 border border-green-300 text-xs"
+                          : "bg-gray-200 text-gray-600 border border-gray-400 text-xs"
+                      }
+                    >
+                      {variant.isActive ? "✓ 啟用中" : "✗ 已停用"}
+                    </Badge>
                   </div>
 
                   {editingVariant?.id === variant.id ? (
@@ -267,17 +277,27 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                     <>
                       <Button
                         size="sm"
-                        variant="outline"
                         onClick={() => toggleActive(variant.id, variant.isActive)}
                         disabled={updating === variant.id}
-                        className={variant.isActive ? "text-gray-600" : "text-green-600"}
+                        className={
+                          variant.isActive
+                            ? "bg-green-100 text-green-700 border-green-300 hover:bg-green-200"
+                            : "bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200"
+                        }
+                        title={variant.isActive ? "點擊停用" : "點擊啟用"}
                       >
                         {updating === variant.id ? (
                           <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
                         ) : variant.isActive ? (
-                          <ToggleRight className="h-4 w-4" />
+                          <>
+                            <ToggleRight className="h-4 w-4 mr-1" />
+                            <span className="text-xs font-semibold">啟用</span>
+                          </>
                         ) : (
-                          <ToggleLeft className="h-4 w-4" />
+                          <>
+                            <ToggleLeft className="h-4 w-4 mr-1" />
+                            <span className="text-xs font-semibold">停用</span>
+                          </>
                         )}
                       </Button>
                       <Button
