@@ -36,17 +36,27 @@ interface GroupedVariants {
 interface Service {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
   durationMin: number;
-  imageUrl?: string;
-  category?: string;
+  imageUrl?: string | null;
+  category?: string | null;
+  hasVariants?: boolean;
+}
+
+interface SelectedVariants {
+  size: string;
+  color: string;
+  position?: string;
+  design_fee?: number;
+  style?: string;
+  complexity?: string;
 }
 
 interface VariantSelectorProps {
   service: Service;
   onClose: () => void;
-  onAddToCart: (selectedVariants: any, notes: string) => Promise<void>;
+  onAddToCart: (selectedVariants: SelectedVariants, notes: string) => Promise<void>;
   isAdmin?: boolean; // 是否為管理後台模式
 }
 
@@ -165,7 +175,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
 
     setAdding(true);
     try {
-      const selectedVariants: any = {
+      const selectedVariants: SelectedVariants = {
         size: selectedSize,
         color: selectedColor,
       };

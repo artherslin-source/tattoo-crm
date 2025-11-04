@@ -23,12 +23,34 @@ import {
   CalendarDays
 } from "lucide-react";
 
+interface CartSnapshotItem {
+  serviceId: string;
+  serviceName: string;
+  selectedVariants: {
+    size: string;
+    color: string;
+    position?: string;
+    design_fee?: number;
+  };
+  basePrice: number;
+  finalPrice: number;
+  estimatedDuration: number;
+  notes?: string;
+}
+
+interface CartSnapshot {
+  items: CartSnapshotItem[];
+  totalPrice: number;
+  totalDuration: number;
+}
+
 interface Appointment {
   id: string;
   startAt: string;
   endAt: string;
   status: string;
   notes?: string;
+  cartSnapshot?: CartSnapshot;
   user: {
     id: string;
     name: string;
@@ -415,6 +437,84 @@ export default function ArtistAppointments() {
                         <p className="text-sm text-text-muted-light bg-gray-50 p-4 rounded-lg">
                           {appointment.notes}
                         </p>
+                      </div>
+                    )}
+
+                    {/* 購物車詳情 */}
+                    {appointment.cartSnapshot && appointment.cartSnapshot.items && appointment.cartSnapshot.items.length > 0 && (
+                      <div className="mb-6">
+                        <h4 className="font-medium text-text-primary-light mb-3 flex items-center gap-2">
+                          <span className="text-blue-600">🛒</span>
+                          購物車項目
+                          <Badge variant="outline" className="ml-2">
+                            {appointment.cartSnapshot.items.length} 項
+                          </Badge>
+                        </h4>
+                        <div className="space-y-3">
+                          {appointment.cartSnapshot.items.map((item, index) => (
+                            <div key={index} className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                              <div className="flex justify-between items-start mb-2">
+                                <h5 className="font-semibold text-gray-900">{item.serviceName}</h5>
+                                <span className="text-lg font-bold text-blue-600">
+                                  NT$ {item.finalPrice.toLocaleString()}
+                                </span>
+                              </div>
+                              
+                              {/* 規格顯示 */}
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  尺寸：{item.selectedVariants.size}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  顏色：{item.selectedVariants.color}
+                                </Badge>
+                                {item.selectedVariants.position && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    部位：{item.selectedVariants.position}
+                                  </Badge>
+                                )}
+                                {item.selectedVariants.design_fee && item.selectedVariants.design_fee > 0 && (
+                                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
+                                    設計費：NT$ {item.selectedVariants.design_fee.toLocaleString()}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* 項目備註 */}
+                              {item.notes && (
+                                <p className="text-xs text-gray-600 mt-2">
+                                  備註：{item.notes}
+                                </p>
+                              )}
+
+                              {/* 時長 */}
+                              <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                                <Clock className="h-3 w-3" />
+                                預估 {item.estimatedDuration} 分鐘
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* 總計 */}
+                          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-4 rounded-lg text-white">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="text-sm opacity-90">購物車總計</div>
+                                <div className="text-xs opacity-75 mt-0.5">
+                                  共 {appointment.cartSnapshot.items.length} 個項目
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold">
+                                  NT$ {appointment.cartSnapshot.totalPrice.toLocaleString()}
+                                </div>
+                                <div className="text-xs opacity-75 mt-0.5">
+                                  約 {appointment.cartSnapshot.totalDuration} 分鐘
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

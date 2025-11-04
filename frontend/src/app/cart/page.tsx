@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Trash2, Edit, ShoppingCart, ArrowRight, Package } from "lucide-react";
+import { Trash2, ShoppingCart, ArrowRight, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getCart, removeCartItem, type Cart, type CartItem } from "@/lib/cart-api";
+import { getCart, removeCartItem, type Cart } from "@/lib/cart-api";
 import { getImageUrl } from "@/lib/api";
 
 export default function CartPage() {
@@ -201,10 +201,10 @@ export default function CartPage() {
                       <div className="flex flex-col gap-2">
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => handleRemove(item.id)}
                           disabled={removing === item.id}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-10 w-10 p-0"
                         >
                           {removing === item.id ? (
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>

@@ -208,7 +208,17 @@ export default function HomePage() {
   };
 
   // 處理加入購物車
-  const handleAddToCart = async (selectedVariants: any, notes: string) => {
+  const handleAddToCart = async (
+    selectedVariants: {
+      size: string;
+      color: string;
+      position?: string;
+      design_fee?: number;
+      style?: string;
+      complexity?: string;
+    },
+    notes: string
+  ) => {
     if (!selectedService) return;
 
     try {
@@ -423,8 +433,7 @@ export default function HomePage() {
         <div className="fixed top-20 right-6 z-40">
           <Button
             onClick={() => window.location.href = '/cart'}
-            className="relative rounded-full bg-yellow-500 hover:bg-yellow-600 text-black h-14 w-14 shadow-xl"
-            size="icon"
+            className="relative rounded-full bg-yellow-500 hover:bg-yellow-600 text-black h-14 w-14 shadow-xl p-0"
           >
             <ShoppingCartIcon className="h-6 w-6" />
             <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white p-0 flex items-center justify-center text-xs">
