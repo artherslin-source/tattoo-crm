@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getApiBase } from "@/lib/api";
 
 interface ServiceVariant {
   id: string;
@@ -74,21 +75,49 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
   useEffect(() => {
     const fetchVariants = async () => {
       try {
-        const response = await fetch(`/api/admin/service-variants/service/${service.id}`);
+        console.log(`[VariantSelector] 獲取服務規格: ${service.id}`);
+        const url = `${getApiBase()}/admin/service-variants/service/${service.id}`;
+        console.log(`[VariantSelector] API URL: ${url}`);
+        
+        const response = await fetch(url);
+        console.log(`[VariantSelector] 響應狀態: ${response.status}`);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log(`[VariantSelector] 獲取的規格數據:`, data);
+          
+          // 檢查數據結構
+          if (!data || typeof data !== 'object') {
+            console.error('[VariantSelector] 規格數據格式錯誤:', data);
+            alert('規格數據格式錯誤，請確認服務已初始化規格');
+            setLoading(false);
+            return;
+          }
+          
           setVariants(data);
           
           // 自動選擇第一個必選項
           if (data.size && data.size.length > 0) {
             setSelectedSize(data.size[0].name);
+            console.log(`[VariantSelector] 自動選擇尺寸: ${data.size[0].name}`);
+          } else {
+            console.warn('[VariantSelector] 沒有尺寸選項');
           }
+          
           if (data.color && data.color.length > 0) {
             setSelectedColor(data.color[0].name);
+            console.log(`[VariantSelector] 自動選擇顏色: ${data.color[0].name}`);
+          } else {
+            console.warn('[VariantSelector] 沒有顏色選項');
           }
+        } else {
+          const errorText = await response.text();
+          console.error(`[VariantSelector] API 錯誤: ${response.status} - ${errorText}`);
+          alert(`此服務尚未設定規格，請聯繫管理員初始化規格`);
         }
       } catch (error) {
-        console.error("獲取規格失敗:", error);
+        console.error("[VariantSelector] 獲取規格失敗:", error);
+        alert('獲取規格失敗，請稍後再試');
       } finally {
         setLoading(false);
       }
@@ -231,6 +260,34 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* 調試信息 */}
+          {(!variants.size || variants.size.length === 0) && (!variants.color || variants.color.length === 0) && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+              <div className="text-yellow-800 font-semibold mb-2">
+                ⚠️ 此服務尚未設定規格
+              </div>
+              <p className="text-sm text-yellow-700 mb-4">
+                請聯繫管理員為此服務初始化規格，或者選擇其他服務。
+              </p>
+              <div className="text-xs text-gray-600 bg-white p-3 rounded border">
+                <div className="font-mono text-left">
+                  <div>服務 ID: {service.id}</div>
+                  <div>服務名稱: {service.name}</div>
+                  <div>hasVariants: {service.hasVariants ? '是' : '否'}</div>
+                  <div className="mt-2">
+                    已獲取規格：
+                    <div className="ml-4">
+                      尺寸: {variants.size?.length || 0} 個
+                    </div>
+                    <div className="ml-4">
+                      顏色: {variants.color?.length || 0} 個
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 尺寸選擇 */}
           {variants.size && variants.size.length > 0 && (
             <div>
