@@ -76,7 +76,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     const fetchVariants = async () => {
       try {
         console.log(`[VariantSelector] 獲取服務規格: ${service.id}`);
-        const url = `${getApiBase()}/admin/service-variants/service/${service.id}`;
+        const url = `${getApiBase()}/services/${service.id}/variants`;
         console.log(`[VariantSelector] API URL: ${url}`);
         
         const response = await fetch(url);

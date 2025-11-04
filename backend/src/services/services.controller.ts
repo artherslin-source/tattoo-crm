@@ -1,71 +1,48 @@
-import { Body, Controller, Get, Post, Put, Delete, Param, Query, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { z } from 'zod';
-import { ServicesService } from './services.service';
-
-const CreateServiceSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().min(1),
-  price: z.number().int().positive(),
-  currency: z.string().default('TWD'),
-  durationMin: z.number().int().positive(),
-  category: z.string().optional(),
-  imageUrl: z.string().url().optional(),
-  isActive: z.boolean().default(true),
-});
-
-const UpdateServiceSchema = CreateServiceSchema.partial();
-
-const BatchUpdateSchema = z.object({
-  serviceIds: z.array(z.string()),
-  updates: z.object({
-    isActive: z.boolean().optional(),
-    category: z.string().optional(),
-  }),
-});
+import { Controller, Get, Param } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly services: ServicesService) {}
+  constructor(private prisma: PrismaService) {}
 
   @Get()
-  async findAll(
-    @Query('category') category?: string,
-    @Query('active') active?: string,
-    @Query('sortBy') sortBy?: 'name' | 'price' | 'createdAt',
-    @Query('sortOrder') sortOrder?: 'asc' | 'desc'
-  ) {
-    // 暫時簡化，只返回所有服務
-    return this.services.findAll({});
+  async getAllServices() {
+    return this.prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
-  @UseGuards(AuthGuard('jwt'))
-  @Post()
-  async create(@Body() body: unknown) {
-    const input = CreateServiceSchema.parse(body);
-    return this.services.create(input);
+  @Get(':id')
+  async getService(@Param('id') id: string) {
+    return this.prisma.service.findUnique({
+      where: { id },
+    });
   }
 
-  @UseGuards(AuthGuard('jwt'))
-  @Put(':id')
-  async update(@Param('id') id: string, @Body() body: unknown) {
-    const input = UpdateServiceSchema.parse(body);
-    return this.services.update(id, input);
-  }
+  /**
+   * 獲取服務的規格（公開API，顧客端使用）
+   */
+  @Get(':id/variants')
+  async getServiceVariants(@Param('id') id: string) {
+    const variants = await this.prisma.serviceVariant.findMany({
+      where: { 
+        serviceId: id,
+        isActive: true  // 只返回啟用的規格
+      },
+      orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }],
+    });
 
-  @UseGuards(AuthGuard('jwt'))
-  @Delete(':id')
-  async delete(@Param('id') id: string) {
-    return this.services.delete(id);
-  }
+    // 分組返回（包含所有規格類型）
+    const grouped = {
+      size: variants.filter((v) => v.type === 'size'),
+      color: variants.filter((v) => v.type === 'color'),
+      position: variants.filter((v) => v.type === 'position'),
+      design_fee: variants.filter((v) => v.type === 'design_fee'),
+      style: variants.filter((v) => v.type === 'style'),
+      complexity: variants.filter((v) => v.type === 'complexity'),
+    };
 
-  @UseGuards(AuthGuard('jwt'))
-  @Post('batch-update')
-  async batchUpdate(@Body() body: unknown) {
-    const input = BatchUpdateSchema.parse(body);
-    return this.services.batchUpdate(input.serviceIds, input.updates);
+    return grouped;
   }
 }
-
-
-
