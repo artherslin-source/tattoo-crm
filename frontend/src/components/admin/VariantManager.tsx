@@ -87,23 +87,38 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
 
   // 切換啟用/停用
   const toggleActive = async (variantId: string, currentActive: boolean) => {
+    console.log(`[VariantManager] 切換規格: ${variantId}, 當前狀態: ${currentActive}, 目標狀態: ${!currentActive}`);
     setUpdating(variantId);
     try {
-      const response = await fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+      const url = `${getApiBase()}/admin/service-variants/${variantId}`;
+      const newStatus = !currentActive;
+      console.log(`[VariantManager] API URL: ${url}`);
+      console.log(`[VariantManager] 發送數據:`, { isActive: newStatus });
+      
+      const response = await fetch(url, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${getAccessToken()}`,
         },
-        body: JSON.stringify({ isActive: !currentActive }),
+        body: JSON.stringify({ isActive: newStatus }),
       });
 
+      console.log(`[VariantManager] 響應狀態: ${response.status}`);
+
       if (response.ok) {
+        const data = await response.json();
+        console.log(`[VariantManager] 更新成功:`, data);
         await fetchVariants();
         onUpdate();
+      } else {
+        const errorData = await response.text();
+        console.error(`[VariantManager] 更新失敗:`, errorData);
+        alert(`更新失敗: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      alert("更新失敗，請重試");
+      console.error("[VariantManager] 切換規格時發生錯誤:", error);
+      alert("更新失敗，請重試。請檢查網路連接或查看控制台錯誤。");
     } finally {
       setUpdating(null);
     }
@@ -286,12 +301,12 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                         ) : variant.isActive ? (
                           <>
                             <ToggleRight className="h-4 w-4 mr-1" />
-                            <span className="text-xs">啟用</span>
+                            <span className="text-xs font-bold">已啟用</span>
                           </>
                         ) : (
                           <>
                             <ToggleLeft className="h-4 w-4 mr-1" />
-                            <span className="text-xs">停用</span>
+                            <span className="text-xs font-bold">已停用</span>
                           </>
                         )}
                       </Button>
@@ -366,7 +381,12 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h4 className="font-semibold text-blue-900 mb-2">💡 規格管理說明</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>啟用/停用：</strong>點擊綠色「啟用」或灰色「停用」按鈕切換狀態</li>
+              <li>• <strong>啟用/停用：</strong>
+                <ul className="ml-4 mt-1 space-y-0.5">
+                  <li>- 綠色「已啟用」按鈕：規格已啟用，**點擊後會停用**（顧客將看不到此選項）</li>
+                  <li>- 灰色「已停用」按鈕：規格已停用，**點擊後會啟用**（顧客將看到此選項）</li>
+                </ul>
+              </li>
               <li>• <strong>編輯價格：</strong>點擊「編輯」可以修改價格調整</li>
               <li>• <strong>價格規則：</strong>尺寸價格是完整價格（已包含黑白），彩色通常 +1000 元</li>
               <li>• <strong>刪除規格：</strong>刪除後無法復原，請謹慎操作</li>
