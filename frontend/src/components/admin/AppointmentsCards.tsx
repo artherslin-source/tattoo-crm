@@ -44,9 +44,13 @@ interface Appointment {
       serviceId: string;
       serviceName: string;
       selectedVariants: Record<string, unknown>;
+      basePrice: number;
       finalPrice: number;
+      estimatedDuration: number;
+      notes?: string;
     }>;
     totalPrice: number;
+    totalDuration: number;
   };
 }
 
