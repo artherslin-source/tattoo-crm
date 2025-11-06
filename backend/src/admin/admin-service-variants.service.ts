@@ -84,8 +84,9 @@ export class AdminServiceVariantsService {
    * 獲取服務的所有規格
    */
   async getServiceVariants(serviceId: string) {
+    // 管理端：返回所有規格（包括停用的），以便管理員可以重新啟用
     const variants = await this.prisma.serviceVariant.findMany({
-      where: { serviceId, isActive: true }, // 只返回啟用的規格
+      where: { serviceId }, // 移除 isActive 過濾，返回所有規格
       orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }],
     });
 

@@ -15,7 +15,6 @@ interface ServiceVariant {
   code?: string;
   description?: string;
   priceModifier: number;
-  durationModifier: number;
   sortOrder: number;
   isActive: boolean;
   isRequired: boolean;
@@ -188,14 +187,23 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
   const renderVariantGroup = (type: keyof GroupedVariants, variantList: ServiceVariant[]) => {
     if (variantList.length === 0) return null;
 
+    // 分離啟用和停用的規格
+    const activeVariants = variantList.filter((v) => v.isActive);
+    const inactiveVariants = variantList.filter((v) => !v.isActive);
+
     return (
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
           {VARIANT_TYPE_LABELS[type]}
-          <Badge variant="outline">{variantList.length} 個</Badge>
+          <Badge variant="outline">
+            {variantList.length} 個（{activeVariants.length} 啟用，{inactiveVariants.length} 停用）
+          </Badge>
         </h3>
-        <div className="space-y-2">
-          {variantList.map((variant) => (
+        
+        {/* 啟用的規格 */}
+        {activeVariants.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {activeVariants.map((variant) => (
             <div
               key={variant.id}
               className={`border rounded-lg p-4 ${
@@ -332,7 +340,145 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
+
+        {/* 停用的規格 */}
+        {inactiveVariants.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-3 px-2">
+              <div className="h-px bg-gray-300 flex-1"></div>
+              <span className="text-xs text-gray-500 font-medium">已停用的規格（可點擊重新啟用）</span>
+              <div className="h-px bg-gray-300 flex-1"></div>
+            </div>
+            <div className="space-y-2">
+              {inactiveVariants.map((variant) => (
+                <div
+                  key={variant.id}
+                  className={`border border-gray-300 rounded-lg p-4 bg-gray-50 ${
+                    editingVariant?.id === variant.id ? "ring-2 ring-blue-500" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-semibold text-gray-600">{variant.name}</span>
+                        {variant.code && (
+                          <Badge variant="secondary" className="text-xs bg-gray-200 text-gray-600">
+                            {variant.code}
+                          </Badge>
+                        )}
+                        {variant.isRequired && (
+                          <Badge className="bg-red-100 text-red-700 text-xs">必選</Badge>
+                        )}
+                        {/* 狀態顯示 */}
+                        <Badge className="bg-gray-300 text-gray-700 border border-gray-400 text-xs">
+                          ✗ 已停用
+                        </Badge>
+                      </div>
+
+                      {editingVariant?.id === variant.id ? (
+                        // 編輯模式
+                        <div className="mt-3">
+                          <Label className="text-xs text-gray-600">價格調整（元）</Label>
+                          <Input
+                            type="number"
+                            value={editForm.priceModifier}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, priceModifier: Number(e.target.value) })
+                            }
+                            className="mt-1 w-full"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {variant.type === 'size' ? '尺寸的價格是完整價格（包含黑白）' : 
+                             variant.type === 'color' && variant.name === '彩色' ? '彩色通常加價 1000 元' : 
+                             '0 表示不加價'}
+                          </p>
+                        </div>
+                      ) : (
+                        // 顯示模式
+                        <div className="text-sm text-gray-500">
+                          <span>價格：{variant.priceModifier > 0 ? `+${variant.priceModifier}` : variant.priceModifier}元</span>
+                        </div>
+                      )}
+
+                      {variant.description && (
+                        <p className="text-xs text-gray-400 mt-1">{variant.description}</p>
+                      )}
+                    </div>
+
+                    {/* 操作按鈕 */}
+                    <div className="flex gap-2 ml-4">
+                      {editingVariant?.id === variant.id ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={saveEdit}
+                            disabled={updating === variant.id}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            保存
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingVariant(null)}
+                          >
+                            取消
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleActive(variant.id, variant.isActive)}
+                            disabled={updating === variant.id}
+                            className={
+                              updating === variant.id
+                                ? "border-gray-300 bg-gray-50"
+                                : "bg-gray-200 text-gray-600 border-gray-400 hover:bg-gray-300 font-semibold"
+                            }
+                            title="點擊啟用此規格"
+                          >
+                            {updating === variant.id ? (
+                              <>
+                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-1"></div>
+                                <span className="text-xs">更新中...</span>
+                              </>
+                            ) : (
+                              <>
+                                <ToggleLeft className="h-4 w-4 mr-1" />
+                                <span className="text-xs font-bold">已停用</span>
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => startEdit(variant)}
+                          >
+                            編輯
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteVariant(variant.id, variant.name)}
+                            disabled={updating === variant.id}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -381,6 +527,13 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h4 className="font-semibold text-blue-900 mb-2">💡 規格管理說明</h4>
             <ul className="text-sm text-blue-800 space-y-1">
+              <li>• <strong>規格顯示：</strong>
+                <ul className="ml-4 mt-1 space-y-0.5">
+                  <li>- <strong>啟用的規格</strong>：顯示在上方（白色背景），顧客在前端可以看到</li>
+                  <li>- <strong>停用的規格</strong>：顯示在下方灰色區域（灰色背景），顧客在前端看不到</li>
+                  <li>- 停用的規格可以隨時重新啟用，點擊灰色「已停用」按鈕即可</li>
+                </ul>
+              </li>
               <li>• <strong>啟用/停用：</strong>
                 <ul className="ml-4 mt-1 space-y-0.5">
                   <li>- 綠色「已啟用」按鈕：規格已啟用，**點擊後會停用**（顧客將看不到此選項）</li>
