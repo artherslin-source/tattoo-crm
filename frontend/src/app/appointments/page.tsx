@@ -208,21 +208,24 @@ export default function AppointmentsPage() {
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h4 className="font-semibold text-sm text-gray-900 mb-3">服務項目：</h4>
                       <div className="space-y-2">
-                        {appointment.cartSnapshot.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-sm">
-                            <div>
-                              <span className="font-medium">{item.serviceName}</span>
-                              {item.selectedVariants.color && (
-                                <span className="text-gray-600 ml-2">
-                                  ({String(item.selectedVariants.color)})
-                                </span>
-                              )}
+                        {appointment.cartSnapshot.items.map((item, idx) => {
+                          const color = item.selectedVariants.color as string | undefined;
+                          return (
+                            <div key={idx} className="flex justify-between items-center text-sm">
+                              <div>
+                                <span className="font-medium">{item.serviceName}</span>
+                                {color && (
+                                  <span className="text-gray-600 ml-2">
+                                    ({color})
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-semibold text-blue-600">
+                                NT$ {item.finalPrice.toLocaleString()}
+                              </span>
                             </div>
-                            <span className="font-semibold text-blue-600">
-                              NT$ {item.finalPrice.toLocaleString()}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                       <div className="border-t mt-3 pt-3 flex justify-between items-center">
                         <span className="font-semibold text-gray-900">總計</span>

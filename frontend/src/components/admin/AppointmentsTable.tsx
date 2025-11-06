@@ -234,14 +234,17 @@ export default function AppointmentsTable({
                           購物車 ({appointment.cartSnapshot.items.length} 項)
                         </div>
                         <div className="text-xs text-text-muted-light dark:text-text-muted-dark space-y-0.5">
-                          {appointment.cartSnapshot.items.slice(0, 2).map((item, idx) => (
-                            <div key={idx}>
-                              {item.serviceName}
-                              {item.selectedVariants.color && (
-                                <span className="text-blue-600 ml-1">({String(item.selectedVariants.color)})</span>
-                              )}
-                            </div>
-                          ))}
+                          {appointment.cartSnapshot.items.slice(0, 2).map((item, idx) => {
+                            const color = item.selectedVariants.color as string | undefined;
+                            return (
+                              <div key={idx}>
+                                {item.serviceName}
+                                {color && (
+                                  <span className="text-blue-600 ml-1">({color})</span>
+                                )}
+                              </div>
+                            );
+                          })}
                           {appointment.cartSnapshot.items.length > 2 && (
                             <div className="text-gray-500">+ {appointment.cartSnapshot.items.length - 2} 項...</div>
                           )}

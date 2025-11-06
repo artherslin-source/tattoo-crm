@@ -465,12 +465,15 @@ export default function AppointmentsCards({
                           <span className="font-medium text-blue-400">購物車 ({appointment.cartSnapshot.items.length} 項)</span>
                         </div>
                         <div className="col-span-2 bg-gray-800 rounded p-2 text-xs">
-                          {appointment.cartSnapshot.items.map((item, idx) => (
-                            <div key={idx} className="flex justify-between py-1">
-                              <span>{item.serviceName} {item.selectedVariants.color && `(${String(item.selectedVariants.color)})`}</span>
-                              <span className="font-semibold text-blue-400">{formatCurrency(item.finalPrice)}</span>
-                            </div>
-                          ))}
+                          {appointment.cartSnapshot.items.map((item, idx) => {
+                            const color = item.selectedVariants.color as string | undefined;
+                            return (
+                              <div key={idx} className="flex justify-between py-1">
+                                <span>{item.serviceName} {color && `(${color})`}</span>
+                                <span className="font-semibold text-blue-400">{formatCurrency(item.finalPrice)}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                         <div className="flex justify-between font-semibold">
                           <span>總價格:</span>
