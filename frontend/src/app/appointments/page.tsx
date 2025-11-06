@@ -78,7 +78,7 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       try {
         const data = await getJsonWithAuth('/appointments/my');
-        setAppointments(data || []);
+        setAppointments((data as Appointment[]) || []);
       } catch (err) {
         console.error('獲取預約失敗:', err);
         setError('無法載入預約資訊');
