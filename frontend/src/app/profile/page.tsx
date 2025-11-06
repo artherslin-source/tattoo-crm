@@ -19,6 +19,12 @@ interface User {
   photoUrl?: string;
   role: string;
   createdAt: string;
+  member?: {
+    membershipLevel: string;
+    totalSpent: number;
+    balance: number;
+  };
+  lastLogin?: string;
 }
 
 interface Member {
@@ -76,25 +82,27 @@ export default function ProfilePage() {
       });
 
       // 從 /users/me 的返回數據中直接獲取 member 信息
-      if ((userData as any).member) {
-        const memberInfo = {
-          userId: (userData as User).id,
-          membershipLevel: (userData as any).member.membershipLevel || 'BRONZE',
-          totalSpent: (userData as any).member.totalSpent || 0,
-          balance: (userData as any).member.balance || 0,
-          lastLoginAt: (userData as any).lastLogin,
+      const user = userData as User;
+      if (user.member) {
+        const memberInfo: Member = {
+          userId: user.id,
+          membershipLevel: user.member.membershipLevel || 'BRONZE',
+          totalSpent: user.member.totalSpent || 0,
+          balance: user.member.balance || 0,
+          lastLoginAt: user.lastLogin,
         };
         console.log("✅ 會員資料:", memberInfo);
-        setMember(memberInfo as Member);
+        setMember(memberInfo);
       } else {
         console.warn("⚠️ 用戶資料中沒有 member 信息，使用默認值");
         // 使用默認會員資料
-        setMember({
-          userId: (userData as User).id,
+        const defaultMember: Member = {
+          userId: user.id,
           membershipLevel: 'BRONZE',
           totalSpent: 0,
           balance: 0,
-        } as Member);
+        };
+        setMember(defaultMember);
       }
     } catch (error) {
       console.error("❌ 獲取個人資料失敗:", error);
