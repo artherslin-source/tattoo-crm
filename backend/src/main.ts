@@ -14,6 +14,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
+  // 信任反向代理（Railway 使用代理）
+  if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1); // Trust first proxy
+  }
+  
   // 註冊全局異常過濾器（處理 Multer 錯誤等）
   app.useGlobalFilters(new HttpExceptionFilter());
   
