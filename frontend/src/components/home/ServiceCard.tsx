@@ -75,18 +75,9 @@ export function ServiceCard({ item, variant = "vertical", onAddToCart }: Service
             </span>
           )}
         </div>
-        {item.price != null && (
-          <p className="text-base font-medium text-yellow-300">
-            {item.hasVariants ? (
-              <span className="text-sm">依規格計價</span>
-            ) : (
-              `NT$ ${item.price.toLocaleString()}`
-            )}
-          </p>
-        )}
-        {item.durationMin != null && (
-          <p className="text-sm text-neutral-300">耗時約 {item.durationMin} 分鐘</p>
-        )}
+        <p className="text-sm text-neutral-300">
+          割線/黑白/半彩/全彩
+        </p>
         <div className="mt-auto pt-2 space-y-2">
           <p className="text-sm text-neutral-300">
             預約前可先拍照與設計師討論細節。

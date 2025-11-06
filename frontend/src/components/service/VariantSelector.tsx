@@ -173,15 +173,16 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
 
   // 處理加入購物車
   const handleAddToCart = async () => {
-    if (!selectedSize || !selectedColor) {
-      alert("請選擇尺寸和顏色");
+    // 只要求至少選擇顏色（尺寸已停用，變為可選）
+    if (!selectedColor) {
+      alert("請至少選擇顏色");
       return;
     }
 
     setAdding(true);
     try {
       const selectedVariants: SelectedVariants = {
-        size: selectedSize,
+        size: selectedSize || "",
         color: selectedColor,
       };
 
@@ -268,9 +269,9 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           {variants.size && variants.size.length > 0 && (
             <div>
               <Label className="mb-3 flex items-center text-base font-semibold text-gray-900">
-                尺寸 <span className="ml-1 text-red-500">*</span>
+                尺寸
                 <Badge variant="outline" className="ml-2 text-xs">
-                  必選
+                  可選
                 </Badge>
               </Label>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -303,9 +304,9 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           {variants.color && variants.color.length > 0 && (
             <div>
               <Label className="mb-3 flex items-center text-base font-semibold text-gray-900">
-                顏色 <span className="ml-1 text-red-500">*</span>
-                <Badge variant="outline" className="ml-2 text-xs">
-                  必選
+                顏色
+                <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  建議選擇
                 </Badge>
               </Label>
               <div className="grid grid-cols-2 gap-3">
@@ -418,24 +419,28 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           {/* 價格預覽 */}
           <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 p-6 border border-blue-100">
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">尺寸</span>
-                <span className="font-semibold">{selectedSize || "-"}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">顏色</span>
-                <span className="font-semibold">{selectedColor || "-"}</span>
-              </div>
+              {selectedSize && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-600 font-medium">尺寸</span>
+                  <span className="font-semibold text-blue-700">{selectedSize}</span>
+                </div>
+              )}
+              {selectedColor && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-600 font-medium">顏色</span>
+                  <span className="font-semibold text-blue-700">{selectedColor}</span>
+                </div>
+              )}
               {selectedPosition && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">部位</span>
-                  <span className="font-semibold">{selectedPosition}</span>
+                  <span className="text-blue-600 font-medium">部位</span>
+                  <span className="font-semibold text-blue-700">{selectedPosition}</span>
                 </div>
               )}
               {designFee > 0 && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">設計費</span>
-                  <span className="font-semibold">+{designFee.toLocaleString()}元</span>
+                  <span className="text-blue-600 font-medium">設計費</span>
+                  <span className="font-semibold text-blue-700">+{designFee.toLocaleString()}元</span>
                 </div>
               )}
               <div className="border-t border-blue-200 pt-3 mt-3">
@@ -460,7 +465,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           <Button
             variant="outline"
             onClick={onClose}
-            className="flex-1"
+            className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
             disabled={adding}
           >
             取消
@@ -468,7 +473,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           <Button
             onClick={handleAddToCart}
             className="flex-1 bg-blue-600 hover:bg-blue-700"
-            disabled={adding || !selectedSize || !selectedColor}
+            disabled={adding || !selectedColor}
           >
             {adding ? (
               <>
