@@ -21,6 +21,11 @@ interface ServiceVariant {
   metadata?: {
     isCustomPrice?: boolean;
     displayText?: string;
+    blackWhitePrice?: number;
+    colorPrice?: number;
+    priceDiff?: number;
+    useSizeMetadata?: boolean;
+    note?: string;
   };
 }
 
@@ -140,7 +145,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       if (sizeVariant) {
         // 檢查 metadata 是否有組合定價
         if (sizeVariant.metadata && typeof sizeVariant.metadata === 'object') {
-          const metadata = sizeVariant.metadata as any;
+          const metadata = sizeVariant.metadata;
           
           // 如果選擇了彩色且有 colorPrice，使用組合定價
           if (selectedColor === '彩色' && metadata.colorPrice) {
