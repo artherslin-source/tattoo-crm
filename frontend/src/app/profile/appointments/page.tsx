@@ -69,10 +69,13 @@ export default function ProfileAppointmentsPage() {
 
   const fetchAppointments = async () => {
     try {
+      console.log("📅 開始獲取我的預約記錄...");
       const data = await getJsonWithAuth("/appointments/my");
+      console.log("✅ 預約記錄獲取成功:", data);
+      console.log("📊 預約數量:", Array.isArray(data) ? data.length : 0);
       setAppointments((data as Appointment[]) || []);
     } catch (error) {
-      console.error("獲取預約失敗:", error);
+      console.error("❌ 獲取預約失敗:", error);
     } finally {
       setLoading(false);
     }

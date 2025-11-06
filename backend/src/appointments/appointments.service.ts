@@ -73,7 +73,7 @@ export class AppointmentsService {
       where: { userId }, 
       orderBy: { startAt: 'desc' },
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, role: true } },
         artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
@@ -86,8 +86,8 @@ export class AppointmentsService {
             paymentType: true 
           } 
         },
+        cartSnapshot: true, // ✅ 包含 cartSnapshot（購物車結帳創建的預約會有此欄位）
       },
-      // ✅ 包含 cartSnapshot（購物車結帳創建的預約會有此欄位）
     });
   }
 
