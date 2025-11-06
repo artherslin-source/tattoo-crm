@@ -71,11 +71,11 @@ export class CartService {
       throw new NotFoundException('服務不存在或已停用');
     }
 
-    // 驗證規格選項
+    // 驗證規格選項（顏色為必選，尺寸已停用改為可選）
     const { size, color, position } = dto.selectedVariants;
     
-    if (!size || !color) {
-      throw new BadRequestException('尺寸和顏色為必選項');
+    if (!color) {
+      throw new BadRequestException('請至少選擇顏色');
     }
 
     // 計算價格和時長
