@@ -39,6 +39,15 @@ interface Appointment {
     status: string;
     paymentType: string;
   };
+  cartSnapshot?: {
+    items: Array<{
+      serviceId: string;
+      serviceName: string;
+      selectedVariants: any;
+      finalPrice: number;
+    }>;
+    totalPrice: number;
+  };
 }
 
 interface AppointmentsCardsProps {
@@ -182,7 +191,13 @@ export default function AppointmentsCards({
                   </div>
                   <div className="text-sm text-on-dark-subtle">
                     <div>{appointment.user?.name || '未設定'} ({appointment.user?.email || 'N/A'})</div>
-                    <div>{appointment.service?.name || '未設定'} - {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}</div>
+                    {appointment.cartSnapshot && appointment.cartSnapshot.items.length > 0 ? (
+                      <div className="text-blue-400">
+                        購物車 ({appointment.cartSnapshot.items.length} 項) - {formatCurrency(appointment.cartSnapshot.totalPrice)}
+                      </div>
+                    ) : (
+                      <div>{appointment.service?.name || '未設定'} - {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}</div>
+                    )}
                   </div>
                 </div>
 
@@ -439,18 +454,41 @@ export default function AppointmentsCards({
                       <span>刺青師:</span>
                       <span className="font-medium">{appointment.artist?.name || '未分配'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>服務項目:</span>
-                      <span className="font-medium">{appointment.service?.name || '未設定'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>服務價格:</span>
-                      <span className="font-medium">{appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>服務時長:</span>
-                      <span className="font-medium">{appointment.service?.durationMin || 'N/A'} 分鐘</span>
-                    </div>
+                    {appointment.cartSnapshot && appointment.cartSnapshot.items.length > 0 ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span>服務項目:</span>
+                          <span className="font-medium text-blue-400">購物車 ({appointment.cartSnapshot.items.length} 項)</span>
+                        </div>
+                        <div className="col-span-2 bg-gray-800 rounded p-2 text-xs">
+                          {appointment.cartSnapshot.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between py-1">
+                              <span>{item.serviceName} {item.selectedVariants?.color && `(${item.selectedVariants.color})`}</span>
+                              <span className="font-semibold text-blue-400">{formatCurrency(item.finalPrice)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between font-semibold">
+                          <span>總價格:</span>
+                          <span className="text-blue-400">{formatCurrency(appointment.cartSnapshot.totalPrice)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span>服務項目:</span>
+                          <span className="font-medium">{appointment.service?.name || '未設定'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>服務價格:</span>
+                          <span className="font-medium">{appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>服務時長:</span>
+                          <span className="font-medium">{appointment.service?.durationMin || 'N/A'} 分鐘</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
                       <span>結束時間:</span>
                       <span className="font-medium">{formatDate(appointment.endAt)}</span>

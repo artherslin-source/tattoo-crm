@@ -49,6 +49,20 @@ interface Appointment {
     status: string;
     paymentType: string;
   };
+  // ✅ 購物車快照（從購物車結帳創建的預約會有此欄位）
+  cartSnapshot?: {
+    items: Array<{
+      serviceId: string;
+      serviceName: string;
+      selectedVariants: any;
+      basePrice: number;
+      finalPrice: number;
+      estimatedDuration: number;
+      notes?: string;
+    }>;
+    totalPrice: number;
+    totalDuration: number;
+  };
 }
 
 export default function AdminAppointmentsPage() {

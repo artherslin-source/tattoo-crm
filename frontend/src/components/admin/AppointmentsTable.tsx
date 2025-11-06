@@ -39,6 +39,16 @@ interface Appointment {
     status: string;
     paymentType: string;
   };
+  // ✅ 購物車快照
+  cartSnapshot?: {
+    items: Array<{
+      serviceId: string;
+      serviceName: string;
+      selectedVariants: any;
+      finalPrice: number;
+    }>;
+    totalPrice: number;
+  };
 }
 
 interface AppointmentsTableProps {
@@ -214,12 +224,38 @@ export default function AppointmentsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3" data-label="服務項目">
-                    <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-                      {appointment.service?.name || '未設定'}
-                    </div>
-                    <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                      {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}
-                    </div>
+                    {appointment.cartSnapshot && appointment.cartSnapshot.items.length > 0 ? (
+                      <div className="text-sm">
+                        <div className="font-medium text-blue-600 mb-1">
+                          購物車 ({appointment.cartSnapshot.items.length} 項)
+                        </div>
+                        <div className="text-xs text-text-muted-light dark:text-text-muted-dark space-y-0.5">
+                          {appointment.cartSnapshot.items.slice(0, 2).map((item, idx) => (
+                            <div key={idx}>
+                              {item.serviceName}
+                              {item.selectedVariants?.color && (
+                                <span className="text-blue-600 ml-1">({item.selectedVariants.color})</span>
+                              )}
+                            </div>
+                          ))}
+                          {appointment.cartSnapshot.items.length > 2 && (
+                            <div className="text-gray-500">+ {appointment.cartSnapshot.items.length - 2} 項...</div>
+                          )}
+                        </div>
+                        <div className="text-xs text-blue-700 font-semibold mt-1">
+                          {formatCurrency(appointment.cartSnapshot.totalPrice)}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                          {appointment.service?.name || '未設定'}
+                        </div>
+                        <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                          {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}
+                        </div>
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3" data-label="狀態">
                     <Badge className={`text-xs ${getStatusBadgeClass(appointment.status)}`}>

@@ -77,7 +77,17 @@ export class AppointmentsService {
         artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
+        order: { 
+          select: { 
+            id: true, 
+            totalAmount: true, 
+            finalAmount: true, 
+            status: true, 
+            paymentType: true 
+          } 
+        },
       },
+      // ✅ 包含 cartSnapshot（購物車結帳創建的預約會有此欄位）
     });
   }
 
@@ -132,7 +142,17 @@ export class AppointmentsService {
         artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
+        order: { 
+          select: { 
+            id: true, 
+            totalAmount: true, 
+            finalAmount: true, 
+            status: true, 
+            paymentType: true 
+          } 
+        },
       },
+      // ✅ 包含 cartSnapshot（購物車結帳創建的預約會有此欄位）
     });
   }
 

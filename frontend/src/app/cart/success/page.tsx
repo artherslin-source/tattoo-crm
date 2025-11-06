@@ -1,17 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle, Calendar, Home } from "lucide-react";
+import { CheckCircle, Calendar, Home, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Suspense } from "react";
+import { getAccessToken } from "@/lib/api";
 
 function SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const appointmentId = searchParams.get("appointmentId");
   const orderId = searchParams.get("orderId");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    setIsLoggedIn(!!token);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -82,13 +89,25 @@ function SuccessContent() {
                 <Home className="mr-2 h-4 w-4" />
                 返回首頁
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/appointments")}
-                className="w-full"
-              >
-                查看我的預約
-              </Button>
+              {isLoggedIn ? (
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/appointments")}
+                  className="w-full"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  查看我的預約
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/login?redirect=/appointments&appointmentId=${appointmentId}`)}
+                  className="w-full"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  登入查看預約
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
