@@ -86,7 +86,7 @@ export class AppointmentsService {
             paymentType: true 
           } 
         },
-        cartSnapshot: true, // ✅ 包含 cartSnapshot（購物車結帳創建的預約會有此欄位）
+        // cartSnapshot 是 JSON 字段，會自動包含在結果中，不需要在 include 中指定
       },
     });
   }
