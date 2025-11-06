@@ -63,7 +63,13 @@ export class OrdersController {
 
   @Get('my')
   async myOrders(@Req() req: any) {
-    return this.orders.myOrders(req.user.userId);
+    console.log('🔐 /orders/my called by user:', req.user);
+    
+    if (!req.user || !req.user.id) {
+      throw new Error('用戶認證失敗：缺少用戶 ID');
+    }
+    
+    return this.orders.myOrders(req.user.id);
   }
 
   @Get('list')

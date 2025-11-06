@@ -149,7 +149,7 @@ export class AppointmentsController {
             userId = tempUser.id;
           }
         } else {
-          userId = req.user.userId;
+          userId = req.user.id;
         }
       } else if (input.name && input.email) {
         // 沒有 contactId 但有客戶資訊，自動創建 contact
@@ -188,7 +188,7 @@ export class AppointmentsController {
         }
       } else {
         // 沒有客戶資訊，使用管理員的 userId（用於內部預約）
-        userId = req.user.userId;
+        userId = req.user.id;
       }
       
       return this.appointments.create({
@@ -210,7 +210,17 @@ export class AppointmentsController {
   @UseGuards(AuthGuard('jwt'))
   @Get('my')
   async my(@Req() req: any) {
-    return this.appointments.myAppointments(req.user.userId);
+    console.log('🔐 /appointments/my called by user:', req.user);
+    
+    if (!req.user || !req.user.id) {
+      throw new Error('用戶認證失敗：缺少用戶 ID');
+    }
+    
+    console.log('📋 查詢用戶預約，userId:', req.user.id);
+    const appointments = await this.appointments.myAppointments(req.user.id);
+    console.log('✅ 返回預約數量:', appointments.length);
+    
+    return appointments;
   }
 
   // 管理員專用：查詢所有預約（必須放在 @Get(':id') 之前）

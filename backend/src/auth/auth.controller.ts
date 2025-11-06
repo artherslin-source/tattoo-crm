@@ -73,8 +73,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('change-password')
   async changePassword(@Req() req: any, @Body() body: unknown) {
+    console.log('🔐 /auth/change-password called by user:', req.user);
+    
+    if (!req.user || !req.user.id) {
+      throw new Error('用戶認證失敗：缺少用戶 ID');
+    }
+    
     const input = ChangePasswordSchema.parse(body);
-    return this.authService.changePassword(req.user.userId, input.oldPassword, input.newPassword);
+    return this.authService.changePassword(req.user.id, input.oldPassword, input.newPassword);
   }
 }
 
