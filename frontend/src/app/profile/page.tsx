@@ -2,174 +2,288 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getApiBase, clearTokens } from "@/lib/api";
+import { getJsonWithAuth, getAccessToken, patchJsonWithAuth } from "@/lib/api";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Edit, Save, X, CheckCircle, AlertCircle } from "lucide-react";
 
-type Me = {
+interface User {
   id: string;
-  email: string;
   name: string;
-  phone?: string | null;
-  role?: string;
-  branchId?: string | null;
-  createdAt?: string; // registeredAt source (if backend provides)
-  lastLogin?: string | null;
-  isActive?: boolean; // status source (if backend provides)
-  status?: string; // alternative status name if backend provides
-  avatar?: string | null;
-  member?: {
-    totalSpent: number;
-    balance: number;
-    membershipLevel?: string;
-  } | null;
-};
+  email: string;
+  phone?: string;
+  photoUrl?: string;
+  role: string;
+  createdAt: string;
+}
+
+interface Member {
+  userId: string;
+  membershipLevel: string;
+  totalSpent: number;
+  balance: number;
+  lastLoginAt?: string;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [me, setMe] = useState<Me | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+  });
 
   useEffect(() => {
     const token = getAccessToken();
     if (!token) {
-      router.replace("/login");
+      router.push("/login?redirect=/profile");
       return;
     }
 
-    async function fetchMe() {
-      try {
-        const res = await fetch(`${getApiBase()}/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          throw new Error(`Failed: ${res.status}`);
-        }
-        const data = (await res.json()) as Me;
-        setMe(data);
-      } catch (e) {
-        setError("取得使用者資訊失敗");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchMe();
+    fetchProfile();
   }, [router]);
+
+  const fetchProfile = async () => {
+    try {
+      const userData = await getJsonWithAuth("/users/me");
+      setUser(userData as User);
+      setFormData({
+        name: (userData as User).name || "",
+        phone: (userData as User).phone || "",
+      });
+
+      // 獲取會員資料
+      try {
+        const memberData = await getJsonWithAuth(`/members/${(userData as User).id}`);
+        setMember(memberData as Member);
+      } catch (err) {
+        console.error("獲取會員資料失敗:", err);
+      }
+    } catch (error) {
+      console.error("獲取個人資料失敗:", error);
+      router.push("/login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      await patchJsonWithAuth(`/users/${user.id}`, formData);
+      setMessage({ type: "success", text: "✅ 個人資料已更新" });
+      setEditing(false);
+      await fetchProfile();
+
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error("更新失敗:", error);
+      setMessage({ type: "error", text: "❌ 更新失敗，請重試" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        phone: user.phone || "",
+      });
+    }
+    setEditing(false);
+    setMessage(null);
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-text-muted-light">載入中...</div>
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-600">{error}</div>
-      </div>
-    );
+  if (!user || !member) {
+    return null;
   }
-
-  if (!me) return null;
-
-  function handleLogout() {
-    clearTokens();
-    router.push("/login");
-  }
-
-  const registeredAt = me.createdAt ? new Date(me.createdAt).toLocaleString() : "N/A";
-  const lastLogin = me.lastLogin ? new Date(me.lastLogin).toLocaleString() : "N/A";
-  const role = me.role || "N/A";
-  const status = typeof me.status === "string" ? me.status : (me.isActive === true ? "Active" : me.isActive === false ? "Inactive" : "Unknown");
-  
-  // 格式化金額
-  const formatCurrency = (amount: number | undefined) => {
-    if (amount === undefined || amount === null) return "NT$ 0";
-    return `NT$ ${amount.toLocaleString()}`;
-  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-6">
-      <h1 className="text-4xl font-bold mb-8 text-center">個人資料</h1>
-      <div className="w-full max-w-2xl bg-white dark:bg-neutral-900 rounded-2xl shadow-lg p-8">
-        <div className="flex items-center gap-4 mb-6">
-          {me.avatar ? (
-            <img src={me.avatar} alt="avatar" className="w-20 h-20 rounded-full object-cover border" />
+    <div className="space-y-6">
+      {/* 個人資料頭部 */}
+      <ProfileHeader user={user} member={member} />
+
+      {/* 訊息提示 */}
+      {message && (
+        <div
+          className={cn(
+            "flex items-center gap-2 p-4 rounded-lg border",
+            message.type === "success"
+              ? "bg-green-50 border-green-200 text-green-800"
+              : "bg-red-50 border-red-200 text-red-800"
+          )}
+        >
+          {message.type === "success" ? (
+            <CheckCircle className="h-5 w-5" />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-neutral-800 flex items-center justify-center text-xl font-semibold text-text-muted-light">
-              {me.name?.[0]?.toUpperCase() || "U"}
+            <AlertCircle className="h-5 w-5" />
+          )}
+          <span>{message.text}</span>
+        </div>
+      )}
+
+      {/* 基本資料卡片 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>基本資料</CardTitle>
+            {!editing ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                編輯
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={saving}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  取消
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? "儲存中..." : "儲存"}
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 姓名 */}
+          <div>
+            <Label>姓名</Label>
+            {editing ? (
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="請輸入姓名"
+              />
+            ) : (
+              <div className="text-gray-900 font-medium mt-1">{user.name}</div>
+            )}
+          </div>
+
+          {/* 電子郵件 */}
+          <div>
+            <Label>電子郵件</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="text-gray-900">{user.email}</div>
+              <Badge variant="outline" className="text-xs">
+                已驗證
+              </Badge>
+            </div>
+          </div>
+
+          {/* 手機號碼 */}
+          <div>
+            <Label>手機號碼</Label>
+            {editing ? (
+              <Input
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="請輸入手機號碼"
+              />
+            ) : (
+              <div className="text-gray-900 mt-1">{user.phone || "未設定"}</div>
+            )}
+          </div>
+
+          {/* 會員編號 */}
+          <div>
+            <Label>會員編號</Label>
+            <div className="text-gray-900 font-mono mt-1">
+              {user.id.slice(0, 12).toUpperCase()}
+            </div>
+          </div>
+
+          {/* 註冊日期 */}
+          <div>
+            <Label>註冊日期</Label>
+            <div className="text-gray-900 mt-1">
+              {new Date(user.createdAt).toLocaleDateString("zh-TW", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </div>
+          </div>
+
+          {/* 最後登入 */}
+          {member.lastLoginAt && (
+            <div>
+              <Label>最後登入時間</Label>
+              <div className="text-gray-900 mt-1">
+                {new Date(member.lastLoginAt).toLocaleString("zh-TW")}
+              </div>
             </div>
           )}
-          <div>
-            <div className="text-2xl font-semibold">{me.name}</div>
-            <div className="text-text-muted-light dark:text-text-secondary-dark">{me.email}</div>
-          </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">註冊日期</div>
-            <div className="font-medium">{registeredAt}</div>
-          </div>
-          <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">最後登入</div>
-            <div className="font-medium">{lastLogin}</div>
-          </div>
-          <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">角色</div>
-            <div className="font-medium">{role}</div>
-          </div>
-          <div className="rounded-lg border border-gray-200 dark:border-neutral-800 p-4">
-            <div className="text-xs uppercase tracking-wide text-text-muted-light mb-1">狀態</div>
-            <div className="font-medium">{status}</div>
-          </div>
-        </div>
-
-        {/* 財務資訊區塊 */}
-        {me.member && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4 text-text-primary-light dark:text-text-primary-dark">財務資訊</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-4 bg-blue-50 dark:bg-blue-900/20">
-                <div className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">累計消費金額</div>
-                <div className="font-bold text-blue-900 dark:text-blue-100 text-lg">{formatCurrency(me.member.totalSpent)}</div>
-              </div>
-              <div className="rounded-lg border border-orange-200 dark:border-orange-800 p-4 bg-orange-50 dark:bg-orange-900/20">
-                <div className="text-xs uppercase tracking-wide text-orange-600 dark:text-orange-400 mb-1">會員等級</div>
-                <div className="font-bold text-orange-900 dark:text-orange-100 text-lg">{me.member.membershipLevel || '未設定'}</div>
-              </div>
-              <div className="rounded-lg border border-purple-200 dark:border-purple-800 p-4 bg-purple-50 dark:bg-purple-900/20">
-                <div className="text-xs uppercase tracking-wide text-purple-600 dark:text-purple-400 mb-1">儲值餘額</div>
-                <div className="font-bold text-purple-900 dark:text-purple-100 text-lg">{formatCurrency(me.member.balance)}</div>
-              </div>
+      {/* 會員統計 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">會員級別</div>
+            <div className="text-2xl font-bold text-gray-900">{membership.label}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">累計消費</div>
+            <div className="text-2xl font-bold text-blue-600">
+              NT$ {member.totalSpent.toLocaleString()}
             </div>
-          </div>
-        )}
-
-        <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => router.push("/profile/edit")}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 text-text-primary-light dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-text-primary-dark font-medium py-2.5 rounded-lg shadow-sm transition-colors"
-          >
-            編輯個人資料
-          </button>
-          <button
-            onClick={() => router.push("/profile/change-password")}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 text-text-primary-light dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-text-primary-dark font-medium py-2.5 rounded-lg shadow-sm transition-colors"
-          >
-            修改密碼
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 rounded-lg shadow-sm transition-colors"
-          >
-            登出
-          </button>
-        </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">帳戶餘額</div>
+            <div className="text-2xl font-bold text-green-600">
+              NT$ {member.balance.toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
 
-
+function cn(...classes: (string | undefined | false)[]) {
+  return classes.filter(Boolean).join(" ");
+}
