@@ -29,6 +29,15 @@ interface Member {
   lastLoginAt?: string;
 }
 
+const membershipLabels: Record<string, { label: string; color: string }> = {
+  BRONZE: { label: "一般會員", color: "bg-amber-100 text-amber-800" },
+  SILVER: { label: "銀卡會員", color: "bg-gray-100 text-gray-800" },
+  GOLD: { label: "金卡會員", color: "bg-yellow-100 text-yellow-800" },
+  PLATINUM: { label: "白金會員", color: "bg-purple-100 text-purple-800" },
+  VIP: { label: "VIP 會員", color: "bg-blue-100 text-blue-800" },
+  FLAGSHIP: { label: "旗艦會員", color: "bg-red-100 text-red-800" },
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -42,6 +51,8 @@ export default function ProfilePage() {
     name: "",
     phone: "",
   });
+
+  const membership = member ? (membershipLabels[member.membershipLevel] || membershipLabels.BRONZE) : membershipLabels.BRONZE;
 
   useEffect(() => {
     const token = getAccessToken();
