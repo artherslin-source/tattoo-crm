@@ -134,24 +134,54 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
   const calculatedPrice = useMemo(() => {
     let price = 0;
 
-    // 尺寸價格（已包含黑白價格）
+    // 新邏輯：支援尺寸×顏色組合定價
     if (selectedSize && variants.size) {
       const sizeVariant = variants.size.find((v) => v.name === selectedSize);
       if (sizeVariant) {
-        price += sizeVariant.priceModifier;
+        // 檢查 metadata 是否有組合定價
+        if (sizeVariant.metadata && typeof sizeVariant.metadata === 'object') {
+          const metadata = sizeVariant.metadata as any;
+          
+          // 如果選擇了彩色且有 colorPrice，使用組合定價
+          if (selectedColor === '彩色' && metadata.colorPrice) {
+            price = metadata.colorPrice;
+            console.log(`💰 使用組合定價 [${selectedSize} + 彩色]: NT$ ${price}`);
+          }
+          // 如果選擇了黑白且有 blackWhitePrice，使用組合定價
+          else if (selectedColor === '黑白' && metadata.blackWhitePrice) {
+            price = metadata.blackWhitePrice;
+            console.log(`💰 使用組合定價 [${selectedSize} + 黑白]: NT$ ${price}`);
+          }
+          // 否則使用傳統 priceModifier（向後兼容）
+          else {
+            price = sizeVariant.priceModifier;
+            
+            // 傳統顏色加價邏輯
+            if (selectedColor && variants.color) {
+              const colorVariant = variants.color.find((v) => v.name === selectedColor);
+              if (colorVariant) {
+                price += colorVariant.priceModifier;
+              }
+            }
+          }
+        } else {
+          // 沒有 metadata，使用傳統計算方式
+          price = sizeVariant.priceModifier;
+          
+          // 顏色加價
+          if (selectedColor && variants.color) {
+            const colorVariant = variants.color.find((v) => v.name === selectedColor);
+            if (colorVariant) {
+              price += colorVariant.priceModifier;
+            }
+          }
+        }
       }
-    }
-
-    // 顏色加價（彩色通常+1000，但16-17cm例外）
-    if (selectedColor && variants.color) {
+    } else if (selectedColor && variants.color && !selectedSize) {
+      // 只選擇顏色的情況（部分服務可能不需要選尺寸）
       const colorVariant = variants.color.find((v) => v.name === selectedColor);
       if (colorVariant) {
-        // 特殊情況：16-17cm + 彩色 不加價
-        if (selectedSize === "16-17cm" && selectedColor === "彩色") {
-          // 不加價
-        } else {
-          price += colorVariant.priceModifier;
-        }
+        price += colorVariant.priceModifier;
       }
     }
 

@@ -77,8 +77,8 @@ export default function AdminServicesPage() {
     setFormData({
       name: '',
       description: '',
-      price: '',
-      durationMin: '',
+      price: '0',  // 保留但設為 0（由規格管理）
+      durationMin: '60',  // 保留但設為默認值（由規格管理）
       currency: 'TWD',
       category: '',
       imageUrl: '',
@@ -92,9 +92,15 @@ export default function AdminServicesPage() {
     e.preventDefault();
     try {
       const newService = await postJsonWithAuth('/admin/services', {
-        ...formData,
-        price: parseInt(formData.price),
-        durationMin: parseInt(formData.durationMin)
+        name: formData.name,
+        description: formData.description,
+        price: 0,  // 默認值，實際價格由規格管理
+        durationMin: 60,  // 默認值，實際時長由規格管理
+        currency: 'TWD',
+        category: formData.category,
+        imageUrl: formData.imageUrl,
+        isActive: formData.isActive,
+        hasVariants: true  // 新服務默認啟用規格功能
       }) as Service;
       setServices([...services, newService]);
       resetForm();
@@ -110,8 +116,8 @@ export default function AdminServicesPage() {
     setFormData({
       name: service.name,
       description: service.description || '',
-      price: service.price.toString(),
-      durationMin: service.durationMin.toString(),
+      price: '0',  // 不使用，由規格管理
+      durationMin: '60',  // 不使用，由規格管理
       currency: service.currency,
       category: service.category || '',
       imageUrl: service.imageUrl || '',
@@ -138,9 +144,12 @@ export default function AdminServicesPage() {
 
     try {
       const updatedService = await putJsonWithAuth(`/admin/services/${editingService.id}`, {
-        ...formData,
-        price: parseInt(formData.price),
-        durationMin: parseInt(formData.durationMin)
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        imageUrl: formData.imageUrl,
+        isActive: formData.isActive,
+        // 不更新 price, durationMin, currency（由規格管理）
       }) as Service;
       setServices(services.map(service => 
         service.id === editingService.id ? updatedService : service
@@ -343,46 +352,17 @@ export default function AdminServicesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
-                    價格 (NT$) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
-                    時長 (分鐘) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.durationMin}
-                    onChange={(e) => setFormData({ ...formData, durationMin: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
-                    幣別
-                  </label>
-                  <select
-                    value={formData.currency}
-                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
-                  >
-                    <option value="TWD">TWD</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                  </select>
+              {/* 價格、時長、幣別由規格管理，不在此編輯 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Package className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-blue-900 mb-1">價格由規格管理</h4>
+                    <p className="text-sm text-blue-700">
+                      此服務的價格、時長和幣別由「規格管理」功能設定。
+                      請點擊服務列表中的「規格」按鈕進行設置。
+                    </p>
+                  </div>
                 </div>
               </div>
 
