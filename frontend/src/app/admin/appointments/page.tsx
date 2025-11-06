@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import type { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, Plus, ShoppingCart } from "lucide-react";
@@ -54,7 +54,7 @@ interface Appointment {
     items: Array<{
       serviceId: string;
       serviceName: string;
-      selectedVariants: any;
+      selectedVariants: Record<string, unknown>;
       basePrice: number;
       finalPrice: number;
       estimatedDuration: number;

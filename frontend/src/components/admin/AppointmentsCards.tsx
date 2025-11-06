@@ -43,7 +43,7 @@ interface Appointment {
     items: Array<{
       serviceId: string;
       serviceName: string;
-      selectedVariants: any;
+      selectedVariants: Record<string, unknown>;
       finalPrice: number;
     }>;
     totalPrice: number;
@@ -463,7 +463,7 @@ export default function AppointmentsCards({
                         <div className="col-span-2 bg-gray-800 rounded p-2 text-xs">
                           {appointment.cartSnapshot.items.map((item, idx) => (
                             <div key={idx} className="flex justify-between py-1">
-                              <span>{item.serviceName} {item.selectedVariants?.color && `(${item.selectedVariants.color})`}</span>
+                              <span>{item.serviceName} {item.selectedVariants.color && `(${String(item.selectedVariants.color)})`}</span>
                               <span className="font-semibold text-blue-400">{formatCurrency(item.finalPrice)}</span>
                             </div>
                           ))}

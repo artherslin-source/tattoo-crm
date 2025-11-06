@@ -44,7 +44,7 @@ interface Appointment {
     items: Array<{
       serviceId: string;
       serviceName: string;
-      selectedVariants: any;
+      selectedVariants: Record<string, unknown>;
       finalPrice: number;
     }>;
     totalPrice: number;
@@ -233,8 +233,8 @@ export default function AppointmentsTable({
                           {appointment.cartSnapshot.items.slice(0, 2).map((item, idx) => (
                             <div key={idx}>
                               {item.serviceName}
-                              {item.selectedVariants?.color && (
-                                <span className="text-blue-600 ml-1">({item.selectedVariants.color})</span>
+                              {item.selectedVariants.color && (
+                                <span className="text-blue-600 ml-1">({String(item.selectedVariants.color)})</span>
                               )}
                             </div>
                           ))}

@@ -6,7 +6,7 @@ import { getJsonWithAuth, getAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, User, Home, Package } from "lucide-react";
+import { Calendar, MapPin, User, Home, Package } from "lucide-react";
 
 interface Appointment {
   id: string;
@@ -33,7 +33,7 @@ interface Appointment {
     items: Array<{
       serviceId: string;
       serviceName: string;
-      selectedVariants: any;
+      selectedVariants: Record<string, unknown>;
       finalPrice: number;
     }>;
     totalPrice: number;
@@ -208,9 +208,9 @@ export default function AppointmentsPage() {
                           <div key={idx} className="flex justify-between items-center text-sm">
                             <div>
                               <span className="font-medium">{item.serviceName}</span>
-                              {item.selectedVariants?.color && (
+                              {item.selectedVariants.color && (
                                 <span className="text-gray-600 ml-2">
-                                  ({item.selectedVariants.color})
+                                  ({String(item.selectedVariants.color)})
                                 </span>
                               )}
                             </div>
