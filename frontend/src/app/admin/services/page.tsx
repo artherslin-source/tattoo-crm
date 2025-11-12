@@ -62,16 +62,21 @@ export default function AdminServicesPage() {
   const [initializingVariant, setInitializingVariant] = useState<string | null>(null);
   const [managingVariantService, setManagingVariantService] = useState<{ id: string; name: string } | null>(null);
 
-  const defaultFormValues = {
-    name: "",
-    description: "",
-    price: "0",
-    durationMin: "60",
-    currency: "TWD",
-    category: "",
-    imageUrl: "",
-    isActive: true,
-  };
+const DEFAULT_DESCRIPTION = "尚未設定";
+const DEFAULT_PRICE = "1"; // 必須 > 0，只作佔位值
+const DEFAULT_DURATION = "60";
+const DEFAULT_CURRENCY = "TWD";
+
+const defaultFormValues = {
+  name: "",
+  description: DEFAULT_DESCRIPTION,
+  price: DEFAULT_PRICE,
+  durationMin: DEFAULT_DURATION,
+  currency: DEFAULT_CURRENCY,
+  category: "",
+  imageUrl: "",
+  isActive: false,
+};
 
   // Form state
   const [formData, setFormData] = useState(defaultFormValues);
@@ -212,10 +217,13 @@ export default function AdminServicesPage() {
     try {
       const newService = (await postJsonWithAuth("/admin/services", {
         name: formData.name,
-        description: formData.description,
-        price: 0, // 默認值，實際價格由規格管理
-        durationMin: 60, // 默認值，實際時長由規格管理
-        currency: "TWD",
+        description: formData.description?.trim() || DEFAULT_DESCRIPTION,
+        price: Number(formData.price) > 0 ? Number(formData.price) : Number(DEFAULT_PRICE),
+        durationMin:
+          Number(formData.durationMin) > 0
+            ? Number(formData.durationMin)
+            : Number(DEFAULT_DURATION),
+        currency: formData.currency || DEFAULT_CURRENCY,
         category: formData.category,
         imageUrl: formData.imageUrl,
         isActive: formData.isActive,
@@ -235,8 +243,12 @@ export default function AdminServicesPage() {
     setFormData({
       ...defaultFormValues,
       name: service.name,
-      description: service.description || "",
-      currency: service.currency,
+      description: service.description?.trim()
+        ? service.description
+        : DEFAULT_DESCRIPTION,
+      price: String(service.price ?? DEFAULT_PRICE),
+      durationMin: String(service.durationMin ?? DEFAULT_DURATION),
+      currency: service.currency || DEFAULT_CURRENCY,
       category: service.category || "",
       imageUrl: service.imageUrl || "",
       isActive: service.isActive,
@@ -269,7 +281,9 @@ export default function AdminServicesPage() {
         `/admin/services/${editingService.id}`,
         {
           name: formData.name,
-          description: formData.description,
+          description: formData.description?.trim()
+            ? formData.description
+            : DEFAULT_DESCRIPTION,
           category: formData.category,
           imageUrl: formData.imageUrl,
           isActive: formData.isActive,
