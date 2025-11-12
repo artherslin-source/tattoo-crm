@@ -609,8 +609,6 @@ export default function AdminServicesPage() {
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">服務名稱</th>
                   <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">分類</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">價格</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">時長</th>
                   <th className="text-center py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">圖片</th>
                   <th className="text-center py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">規格</th>
                   <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">狀態</th>
@@ -644,16 +642,6 @@ export default function AdminServicesPage() {
                     </td>
                     <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                       {service?.category || (isPlaceholder ? "—" : "未分類")}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                        {service
-                          ? `${service.currency} ${service.price.toLocaleString()}`
-                          : "—"}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
-                      {service ? `${service.durationMin} 分鐘` : "—"}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {service?.imageUrl ? (
