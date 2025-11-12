@@ -85,8 +85,6 @@ const CATEGORY_IMAGES: Record<string, string> = {
   Other: "/images/categories/other.svg",
 };
 
-const CATEGORY_ORDER = ["Arm", "Leg", "Back", "Torso", "Other"] as const;
-
 const FALLBACK_CATEGORIES: Category[] = [
   {
     id: "category-arm",
@@ -164,11 +162,36 @@ const FALLBACK_CATEGORIES: Category[] = [
   },
 ];
 
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/gi, "-")
-    .replace(/^-+|-+$/g, "");
+const SERVICE_DISPLAY_ORDER = [
+  "半胛圖",
+  "排胛圖",
+  "大腿表面",
+  "大腿全包",
+  "小腿表面",
+  "小腿全包",
+  "前手臂",
+  "上手臂",
+  "大小腿包全肢",
+  "上下手臂全肢",
+  "單胸到包全手",
+  "大背後圖",
+  "背後左或右圖",
+  "大背到大腿圖",
+  "雙胸到腹肚圖",
+  "雙前胸口圖",
+  "單胸圖",
+  "腹肚圖",
+  "單胸腹肚圖",
+  "圖騰小圖案",
+] as const;
+
+const SERVICE_ORDER_MAP: Record<string, number> = SERVICE_DISPLAY_ORDER.reduce(
+  (acc, title, index) => {
+    acc[title] = index;
+    return acc;
+  },
+  {} as Record<string, number>
+);
 
 export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -331,51 +354,52 @@ export default function HomePage() {
     return filtered;
   }, [artists]);
 
-  const categories: Category[] = useMemo(() => {
+  const serviceItems: ServiceItem[] = useMemo(() => {
+    const sortItems = (items: ServiceItem[]) => {
+      return [...items].sort((a, b) => {
+        const orderA = SERVICE_ORDER_MAP[a.title] ?? Number.MAX_SAFE_INTEGER;
+        const orderB = SERVICE_ORDER_MAP[b.title] ?? Number.MAX_SAFE_INTEGER;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return a.title.localeCompare(b.title, "zh-Hant");
+      });
+    };
+
     if (!services.length) {
-      return FALLBACK_CATEGORIES;
+      const fallbackItems = FALLBACK_CATEGORIES.flatMap((category) => category.items);
+      return sortItems(fallbackItems);
     }
 
-    const grouped = new Map<string, Category>();
-
-    services.forEach((service) => {
-      const key = service.category && CATEGORY_LABELS[service.category] ? service.category : "Other";
-      const label = CATEGORY_LABELS[key];
-      const id = `category-${slugify(label)}`;
-
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          id,
-          title: label,
-          items: [],
-        });
-      }
-
+    const items = services.map((service) => {
       const imageUrl = service.imageUrl ? getImageUrl(service.imageUrl) : null;
-      const thumb = imageUrl && imageUrl.trim() !== '' 
-        ? imageUrl 
-        : (CATEGORY_IMAGES[key] || CATEGORY_IMAGES.Other);
-      
-      grouped.get(key)?.items.push({
+      const fallbackThumb =
+        service.category && service.category in CATEGORY_IMAGES
+          ? CATEGORY_IMAGES[service.category as keyof typeof CATEGORY_IMAGES]
+          : CATEGORY_IMAGES.Other;
+      const thumb = imageUrl && imageUrl.trim() !== "" ? imageUrl : fallbackThumb;
+
+      return {
         id: service.id,
         title: service.name,
         thumb,
-        tag: label,
         price: service.price,
         durationMin: service.durationMin,
         href: `/booking?serviceId=${service.id}`,
-      });
+      };
     });
 
-    return Array.from(grouped.entries())
-      .sort((a, b) => CATEGORY_ORDER.indexOf(a[0] as typeof CATEGORY_ORDER[number]) - CATEGORY_ORDER.indexOf(b[0] as typeof CATEGORY_ORDER[number]))
-      .map(([, category]) => ({
-        ...category,
-        items: category.items.sort((a, b) => a.title.localeCompare(b.title, "zh-Hant")),
-      }));
+    return sortItems(items);
   }, [services]);
 
-  const quickNavItems = useMemo(() => categories.map((category) => ({ id: category.id, title: category.title })), [categories]);
+  const quickNavItems = useMemo(
+    () => [
+      { id: "services", title: "服務項目" },
+      { id: "artists", title: "刺青師團隊" },
+      { id: "booking-form", title: "預約諮詢" },
+    ],
+    []
+  );
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -493,40 +517,24 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {categories.map((category, index) => (
-                  <div key={category.id} className="space-y-4">
-                    <div id={category.id} className="scroll-mt-24">
-                      {/* 手機/平板：瀑布式（直向下滑），手機1欄、平板2欄 */}
-                      <div className="block lg:hidden">
-                        <h3 className="mb-3 text-xl font-semibold text-white">{category.title}</h3>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          {category.items.map((item) => (
-                            <ServiceCard 
-                              key={item.id} 
-                              item={item} 
-                              variant="compact" 
-                              onAddToCart={handleAddToCartClick}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 桌機版：分類標題 + 網格布局 */}
-                      <div className="hidden lg:block">
-                        <h3 className="mb-6 text-2xl font-semibold text-white">{category.title}</h3>
-                        <div className="grid grid-cols-3 gap-6 xl:grid-cols-4">
-                          {category.items.map((item) => (
-                            <ServiceCard 
-                              key={item.id} 
-                              item={item} 
-                              onAddToCart={handleAddToCartClick}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                <div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {serviceItems.map((item) => (
+                      <ServiceCard
+                        key={item.id}
+                        item={item}
+                        variant="compact"
+                        onAddToCart={handleAddToCartClick}
+                      />
+                    ))}
                   </div>
-                ))}
+
+                  {!serviceItems.length && (
+                    <div className="mt-6 rounded-2xl border border-dashed border-white/10 p-6 text-center text-neutral-300">
+                      目前暫無服務項目，敬請期待。
+                    </div>
+                  )}
+                </div>
 
                 <div className="mt-6 flex items-center justify-center lg:hidden">
                   <Button size="lg" className="w-full max-w-sm bg-yellow-400 text-black hover:bg-yellow-300" onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}>
