@@ -67,14 +67,7 @@ export function ServiceCard({ item, variant = "vertical", onAddToCart }: Service
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <h4 className="text-lg font-semibold text-white">{item.title}</h4>
-          {item.tag && (
-            <span className="rounded-full border border-white/20 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-300">
-              {item.tag}
-            </span>
-          )}
-        </div>
+        <h4 className="text-lg font-semibold text-white">{item.title}</h4>
         <p className="text-sm text-neutral-300">
           割線/黑白/半彩/全彩
         </p>
