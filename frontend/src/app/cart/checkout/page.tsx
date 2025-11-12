@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, User, Phone, Mail, MapPin, Clock } from "lucide-react";
+import { Calendar, User, Phone, Mail, MapPin, Clock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,15 +19,24 @@ interface Branch {
   phone?: string;
 }
 
+interface Artist {
+  id: string;
+  displayName: string;
+  branchId: string;
+  speciality?: string;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<Cart | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     branchId: "",
+    artistId: "",
     preferredDate: "",
     preferredTimeSlot: "10:00",
     customerName: "",
@@ -39,13 +48,26 @@ export default function CheckoutPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [cartData, branchesData] = await Promise.all([
+        const [cartData, branchesData, artistsData] = await Promise.all([
           getCart(),
           fetch(`${getApiBase()}/branches/public`).then((res) => res.json()),
+          fetch(`${getApiBase()}/artists`).then((res) => res.json()),
         ]);
 
         setCart(cartData);
-        setBranches(branchesData);
+        setBranches(Array.isArray(branchesData) ? branchesData : []);
+        setArtists(
+          Array.isArray(artistsData)
+            ? artistsData
+                .filter((artist: Artist) => artist && artist.branchId)
+                .map((artist: Artist) => ({
+                  id: artist.id,
+                  displayName: artist.displayName,
+                  branchId: artist.branchId,
+                  speciality: artist.speciality,
+                }))
+            : []
+        );
 
         // 如果購物車是空的，返回首頁
         if (!cartData || cartData.items.length === 0) {
@@ -62,6 +84,43 @@ export default function CheckoutPage() {
     fetchData();
   }, [router]);
 
+  const artistsByBranch = useMemo(() => {
+    const map = new Map<string, Artist[]>();
+    artists.forEach((artist) => {
+      if (!artist.branchId) {
+        return;
+      }
+      if (!map.has(artist.branchId)) {
+        map.set(artist.branchId, []);
+      }
+      map.get(artist.branchId)?.push(artist);
+    });
+
+    map.forEach((list, key) => {
+      map.set(
+        key,
+        [...list].sort((a, b) =>
+          a.displayName.localeCompare(b.displayName, "zh-Hant")
+        )
+      );
+    });
+
+    return map;
+  }, [artists]);
+
+  const availableArtists = useMemo(() => {
+    if (!formData.branchId) return [];
+    return artistsByBranch.get(formData.branchId) ?? [];
+  }, [artistsByBranch, formData.branchId]);
+
+  const handleBranchChange = (branchId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      branchId,
+      artistId: "",
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -70,10 +129,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (availableArtists.length > 0 && !formData.artistId) {
+      alert("請選擇刺青師");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await checkout({
         branchId: formData.branchId,
+        artistId: formData.artistId || undefined,
         preferredDate: formData.preferredDate,
         preferredTimeSlot: formData.preferredTimeSlot,
         customerName: formData.customerName,
@@ -136,9 +201,7 @@ export default function CheckoutPage() {
                     </Label>
                     <Select
                       value={formData.branchId}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, branchId: value })
-                      }
+                      onValueChange={handleBranchChange}
                     >
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="請選擇分店" />
@@ -151,6 +214,49 @@ export default function CheckoutPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* 選擇刺青師 */}
+                  <div>
+                    <Label className="flex items-center gap-1">
+                      <Sparkles className="h-4 w-4" />
+                      指定刺青師
+                      {availableArtists.length > 0 && (
+                        <span className="text-red-500">*</span>
+                      )}
+                    </Label>
+                    <Select
+                      value={formData.artistId}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({ ...prev, artistId: value }))
+                      }
+                      disabled={!formData.branchId || availableArtists.length === 0}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue
+                          placeholder={
+                            !formData.branchId
+                              ? "請先選擇分店"
+                              : availableArtists.length
+                              ? "請選擇刺青師"
+                              : "此分店暫無刺青師"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableArtists.map((artist) => (
+                          <SelectItem key={artist.id} value={artist.id}>
+                            {artist.displayName}
+                            {artist.speciality ? `｜${artist.speciality}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.branchId && availableArtists.length === 0 && (
+                      <p className="mt-2 text-sm text-gray-500">
+                        此分店暫無刺青師，客服將於預約後協助安排。
+                      </p>
+                    )}
                   </div>
 
                   {/* 預約日期和時間 */}
