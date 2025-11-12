@@ -66,6 +66,7 @@ type ServiceItem = {
   tag?: string;
   price?: number;
   durationMin?: number;
+  isPlaceholder?: boolean;
 };
 
 export default function HomePage() {
@@ -241,44 +242,52 @@ export default function HomePage() {
 
   const serviceItems: ServiceItem[] = useMemo(() => {
     if (!services.length) {
-      return SERVICE_FALLBACK_ITEMS.map((item, index) => ({
-        id: item.id ?? `fallback-${index}`,
-        title: item.title,
-        thumb: item.thumb,
+      return SERVICE_DISPLAY_ORDER.map((name, index) => ({
+        id: `fallback-${index}`,
+        title: name,
+        thumb: serviceFallbackThumbMap[name] ?? DEFAULT_SERVICE_THUMB,
+        tag: "即將推出",
+        isPlaceholder: true,
       }));
     }
 
-    const filteredServices = services.filter((service) =>
-      SERVICE_ORDER_SET.has(service.name)
-    );
-    const serviceMap = new Map<string, Service>(
-      filteredServices.map((service) => [service.name, service])
-    );
+    const serviceMap = new Map<string, Service>();
 
-    const items: ServiceItem[] = [];
+    services
+      .filter((service) => SERVICE_ORDER_SET.has(service.name))
+      .forEach((service) => {
+        if (!serviceMap.has(service.name)) {
+          serviceMap.set(service.name, service);
+        }
+      });
 
-    SERVICE_DISPLAY_ORDER.forEach((name) => {
+    return SERVICE_DISPLAY_ORDER.map((name, index) => {
       const service = serviceMap.get(name);
+      const imageUrl = service?.imageUrl ? getImageUrl(service.imageUrl) : null;
+      const fallbackThumb =
+        serviceFallbackThumbMap[name] ?? DEFAULT_SERVICE_THUMB;
+      const thumb =
+        imageUrl && imageUrl.trim() !== "" ? imageUrl : fallbackThumb;
+
       if (!service) {
-        return;
+        return {
+          id: `placeholder-${index}`,
+          title: name,
+          thumb,
+          tag: "即將推出",
+          isPlaceholder: true,
+        };
       }
 
-      const imageUrl = service.imageUrl ? getImageUrl(service.imageUrl) : null;
-      const fallbackThumb =
-        serviceFallbackThumbMap[service.name] ?? DEFAULT_SERVICE_THUMB;
-      const thumb = imageUrl && imageUrl.trim() !== "" ? imageUrl : fallbackThumb;
-
-      items.push({
+      return {
         id: service.id,
         title: service.name,
         thumb,
         price: service.price,
         durationMin: service.durationMin,
         href: `/booking?serviceId=${service.id}`,
-      });
+      };
     });
-
-    return items;
   }, [services, serviceFallbackThumbMap]);
 
   const quickNavItems = useMemo(

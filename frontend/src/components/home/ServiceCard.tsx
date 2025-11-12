@@ -19,6 +19,7 @@ export interface ServiceCardProps {
     description?: string;
     imageUrl?: string;
     hasVariants?: boolean;
+    isPlaceholder?: boolean;
   };
   variant?: "vertical" | "compact";
   onAddToCart?: (serviceId: string) => void;
@@ -28,6 +29,8 @@ export function ServiceCard({ item, variant = "vertical", onAddToCart }: Service
   const [imageError, setImageError] = useState(false);
   const hasImage = item.thumb && item.thumb.trim() !== '' && !imageError;
 
+  const isPlaceholder = item.isPlaceholder;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -36,10 +39,19 @@ export function ServiceCard({ item, variant = "vertical", onAddToCart }: Service
     }
   };
 
+  const description = item.description
+    ? item.description
+    : isPlaceholder
+    ? "此服務尚未建立，敬請期待。"
+    : "預約前可先拍照與設計師討論細節。";
+
   const content = (
     <article
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition hover:border-yellow-400/60 hover:bg-white/10",
+        "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition",
+        isPlaceholder
+          ? "opacity-80 hover:opacity-100 hover:border-white/20"
+          : "hover:border-yellow-400/60 hover:bg-white/10",
         variant === "compact" ? "min-h-[240px]" : ""
       )}
     >
@@ -67,15 +79,20 @@ export function ServiceCard({ item, variant = "vertical", onAddToCart }: Service
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h4 className="text-lg font-semibold text-white">{item.title}</h4>
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-lg font-semibold text-white">{item.title}</h4>
+          {item.tag && (
+            <span className="rounded-full border border-white/20 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-300">
+              {item.tag}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-neutral-300">
-          割線/黑白/半彩/全彩
+          {isPlaceholder ? "尚未開放預約" : "割線/黑白/半彩/全彩"}
         </p>
         <div className="mt-auto pt-2 space-y-2">
-          <p className="text-sm text-neutral-300">
-            預約前可先拍照與設計師討論細節。
-          </p>
-          {onAddToCart && (
+          <p className="text-sm text-neutral-300">{description}</p>
+          {onAddToCart && !isPlaceholder && (
             <Button
               onClick={handleAddToCart}
               className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError, getImageUrl, getApiBase } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,19 @@ interface Service {
 
 const ALLOWED_SERVICE_NAME_SET = new Set<string>(SERVICE_DISPLAY_ORDER);
 
-const sortServicesByDisplayOrder = (list: Service[]) =>
-  list
-    .filter((service) => ALLOWED_SERVICE_NAME_SET.has(service.name))
+const sortServicesByDisplayOrder = (list: Service[]) => {
+  const seen = new Set<string>();
+  return list
+    .filter((service) => {
+      if (!ALLOWED_SERVICE_NAME_SET.has(service.name)) {
+        return false;
+      }
+      if (seen.has(service.name)) {
+        return false;
+      }
+      seen.add(service.name);
+      return true;
+    })
     .sort((a, b) => {
       const orderA = SERVICE_ORDER_MAP[a.name] ?? Number.MAX_SAFE_INTEGER;
       const orderB = SERVICE_ORDER_MAP[b.name] ?? Number.MAX_SAFE_INTEGER;
@@ -38,6 +48,7 @@ const sortServicesByDisplayOrder = (list: Service[]) =>
       }
       return a.name.localeCompare(b.name, "zh-Hant");
     });
+};
 
 export default function AdminServicesPage() {
   const router = useRouter();
@@ -51,17 +62,19 @@ export default function AdminServicesPage() {
   const [initializingVariant, setInitializingVariant] = useState<string | null>(null);
   const [managingVariantService, setManagingVariantService] = useState<{ id: string; name: string } | null>(null);
 
+  const defaultFormValues = {
+    name: "",
+    description: "",
+    price: "0",
+    durationMin: "60",
+    currency: "TWD",
+    category: "",
+    imageUrl: "",
+    isActive: true,
+  };
+
   // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    durationMin: '',
-    currency: 'TWD',
-    category: '',
-    imageUrl: '',
-    isActive: true
-  });
+  const [formData, setFormData] = useState(defaultFormValues);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -103,7 +116,58 @@ export default function AdminServicesPage() {
         }
       }
 
-      const orderedServices = sortServicesByDisplayOrder(data);
+      let allowedServices = data.filter((service) =>
+        ALLOWED_SERVICE_NAME_SET.has(service.name)
+      );
+
+      allowedServices.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+
+      const duplicates: Service[] = [];
+      const seenNames = new Set<string>();
+      allowedServices.forEach((service) => {
+        if (seenNames.has(service.name)) {
+          duplicates.push(service);
+        } else {
+          seenNames.add(service.name);
+        }
+      });
+
+      if (duplicates.length) {
+        const duplicateDeletionResults = await Promise.allSettled(
+          duplicates.map((service) =>
+            deleteJsonWithAuth(`/admin/services/${service.id}`)
+          )
+        );
+
+        const failedDuplicate = duplicateDeletionResults.filter(
+          (result) => result.status === "rejected"
+        );
+
+        if (failedDuplicate.length) {
+          console.error("刪除重複服務失敗:", failedDuplicate.length);
+          setError((prev) =>
+            prev
+              ? `${prev}；部分重複服務無法刪除，請稍後再試或通知系統管理員`
+              : "部分重複服務無法刪除，請稍後再試或通知系統管理員"
+          );
+        }
+
+        const deletedDuplicateIds = new Set<string>();
+        duplicateDeletionResults.forEach((result, index) => {
+          if (result.status === "fulfilled") {
+            deletedDuplicateIds.add(duplicates[index].id);
+          }
+        });
+
+        allowedServices = allowedServices.filter(
+          (service) => !deletedDuplicateIds.has(service.id)
+        );
+      }
+
+      const orderedServices = sortServicesByDisplayOrder(allowedServices);
       setServices(orderedServices);
     } catch (err) {
       const apiErr = err as ApiError;
@@ -113,17 +177,21 @@ export default function AdminServicesPage() {
     }
   };
 
+  const scrollFormIntoView = () => {
+    setTimeout(() => {
+      const editForm = document.getElementById("edit-service-form");
+      if (editForm) {
+        editForm.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+          inline: "nearest",
+        });
+      }
+    }, 100);
+  };
+
   const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      price: '0',  // 保留但設為 0（由規格管理）
-      durationMin: '60',  // 保留但設為默認值（由規格管理）
-      currency: 'TWD',
-      category: '',
-      imageUrl: '',
-      isActive: true
-    });
+    setFormData(defaultFormValues);
     setEditingService(null);
     setShowCreateForm(false);
   };
@@ -133,6 +201,11 @@ export default function AdminServicesPage() {
 
     if (!ALLOWED_SERVICE_NAME_SET.has(formData.name)) {
       setError("服務名稱必須符合指定清單，請確認後再新增。");
+      return;
+    }
+
+    if (services.some((service) => service.name === formData.name)) {
+      setError("此服務名稱已存在，請直接編輯既有項目。");
       return;
     }
 
@@ -160,28 +233,18 @@ export default function AdminServicesPage() {
   const handleEditService = (service: Service) => {
     setEditingService(service);
     setFormData({
+      ...defaultFormValues,
       name: service.name,
-      description: service.description || '',
-      price: '0',  // 不使用，由規格管理
-      durationMin: '60',  // 不使用，由規格管理
+      description: service.description || "",
       currency: service.currency,
-      category: service.category || '',
-      imageUrl: service.imageUrl || '',
-      isActive: service.isActive
+      category: service.category || "",
+      imageUrl: service.imageUrl || "",
+      isActive: service.isActive,
     });
     setShowCreateForm(true);
     
     // 自動滾動到編輯表單
-    setTimeout(() => {
-      const editForm = document.getElementById('edit-service-form');
-      if (editForm) {
-        editForm.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start',
-          inline: 'nearest'
-        });
-      }
-    }, 100);
+    scrollFormIntoView();
   };
 
   const handleUpdateService = async (e: React.FormEvent) => {
@@ -190,6 +253,14 @@ export default function AdminServicesPage() {
 
     if (!ALLOWED_SERVICE_NAME_SET.has(formData.name)) {
       setError("服務名稱必須符合指定清單，請勿修改為未授權的名稱。");
+      return;
+    }
+
+    if (
+      formData.name !== editingService.name &&
+      services.some((service) => service.name === formData.name)
+    ) {
+      setError("已有相同名稱的服務，請改用其他名稱。");
       return;
     }
 
@@ -235,6 +306,36 @@ export default function AdminServicesPage() {
       const apiErr = err as ApiError;
       setError(apiErr.message || "刪除服務失敗");
     }
+  };
+
+  const servicesByName = useMemo(() => {
+    const map = new Map<string, Service>();
+    services.forEach((service) => {
+      if (!map.has(service.name)) {
+        map.set(service.name, service);
+      }
+    });
+    return map;
+  }, [services]);
+
+  const displayServiceRows = useMemo(
+    () =>
+      SERVICE_DISPLAY_ORDER.map((name) => ({
+        name,
+        service: servicesByName.get(name) ?? null,
+      })),
+    [servicesByName]
+  );
+
+  const handleQuickCreate = (name: string) => {
+    setEditingService(null);
+    setFormData({
+      ...defaultFormValues,
+      name,
+    });
+    setError(null);
+    setShowCreateForm(true);
+    scrollFormIntoView();
   };
 
   // 初始化服務規格
@@ -517,33 +618,45 @@ export default function AdminServicesPage() {
                 </tr>
               </thead>
               <tbody>
-                {services.map((service) => (
-                  <tr key={service.id} className="border-b border-gray-100 dark:border-gray-700">
+                {displayServiceRows.map(({ name, service }) => {
+                  const isPlaceholder = !service;
+                  return (
+                    <tr
+                      key={name}
+                      className="border-b border-gray-100 dark:border-gray-700"
+                    >
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                          {service.name}
+                          {name}
                         </div>
-                        {service.description && (
+                        {service?.description && (
                           <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
                             {service.description}
+                          </div>
+                        )}
+                        {isPlaceholder && (
+                          <div className="text-xs text-red-400 dark:text-red-300 mt-1">
+                            尚未建立此服務項目
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
-                      {service.category || '未分類'}
+                      {service?.category || (isPlaceholder ? "—" : "未分類")}
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                        {service.currency} {service.price.toLocaleString()}
+                        {service
+                          ? `${service.currency} ${service.price.toLocaleString()}`
+                          : "—"}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
-                      {service.durationMin} 分鐘
+                      {service ? `${service.durationMin} 分鐘` : "—"}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {service.imageUrl ? (
+                      {service?.imageUrl ? (
                         <div className="flex flex-col items-center space-y-1">
                           <div 
                             className="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
@@ -579,7 +692,7 @@ export default function AdminServicesPage() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {service.hasVariants ? (
+                      {service?.hasVariants ? (
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           已設定
@@ -593,75 +706,99 @@ export default function AdminServicesPage() {
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        service.isActive 
+                        service?.isActive 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-600' 
                           : 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark'
                       }`}>
-                        {service.isActive ? '啟用' : '停用'}
+                        {service
+                          ? service.isActive
+                            ? "啟用"
+                            : "停用"
+                          : "未建立"}
                       </span>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditService(service)}
-                          className="flex items-center space-x-1 action-btn-edit"
-                        >
-                          <Edit className="h-3 w-3" />
-                          <span>編輯</span>
-                        </Button>
-                        {service.hasVariants ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setManagingVariantService({ id: service.id, name: service.name })}
-                            className="flex items-center space-x-1 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
-                          >
-                            <Sliders className="h-3 w-3" />
-                            <span>管理規格</span>
-                          </Button>
+                        {service ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditService(service)}
+                              className="flex items-center space-x-1 action-btn-edit"
+                            >
+                              <Edit className="h-3 w-3" />
+                              <span>編輯</span>
+                            </Button>
+                            {service.hasVariants ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setManagingVariantService({
+                                    id: service.id,
+                                    name: service.name,
+                                  })
+                                }
+                                className="flex items-center space-x-1 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                              >
+                                <Sliders className="h-3 w-3" />
+                                <span>管理規格</span>
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleInitializeVariants(service.id)}
+                                disabled={initializingVariant === service.id}
+                                className="flex items-center space-x-1 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                              >
+                                {initializingVariant === service.id ? (
+                                  <>
+                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                                    <span>處理中...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Package className="h-3 w-3" />
+                                    <span>設定規格</span>
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteService(service.id)}
+                              className="flex items-center space-x-1 action-btn-delete"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span>刪除</span>
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleInitializeVariants(service.id)}
-                            disabled={initializingVariant === service.id}
+                            onClick={() => handleQuickCreate(name)}
                             className="flex items-center space-x-1 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                           >
-                            {initializingVariant === service.id ? (
-                              <>
-                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
-                                <span>處理中...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Package className="h-3 w-3" />
-                                <span>設定規格</span>
-                              </>
-                            )}
+                            <Plus className="h-3 w-3" />
+                            <span>快速新增</span>
                           </Button>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteService(service.id)}
-                          className="flex items-center space-x-1 action-btn-delete"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>刪除</span>
-                        </Button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           
-          {services.length === 0 && (
+          {displayServiceRows.every((row) => !row.service) && (
             <div className="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
-              目前沒有服務項目
+              目前尚未建立任何服務項目，請使用「快速新增」或「新增服務」。
             </div>
           )}
         </CardContent>
