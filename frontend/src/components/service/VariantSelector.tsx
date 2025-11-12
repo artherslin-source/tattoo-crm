@@ -29,6 +29,12 @@ interface ServiceVariant {
   };
 }
 
+const COLOR_VARIANT_SUBTITLES: Record<string, string> = {
+  黑白: "全黑白漸層",
+  半彩: "背景黑白 / 主圖彩色",
+  彩色: "全彩色漸層",
+};
+
 interface GroupedVariants {
   size?: ServiceVariant[];
   color?: ServiceVariant[];
@@ -359,11 +365,16 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                     `}
                   >
                     <div className="text-xl font-bold">{variant.name}</div>
-                    {variant.description && (
+                    {(() => {
+                      const subtitle =
+                        COLOR_VARIANT_SUBTITLES[variant.name] ?? variant.description ?? "";
+                      if (!subtitle) return null;
+                      return (
                       <div className="mt-1 text-xs text-gray-700 font-medium">
-                        {variant.description}
+                        {subtitle}
                       </div>
-                    )}
+                      );
+                    })()}
                   </button>
                 ))}
               </div>

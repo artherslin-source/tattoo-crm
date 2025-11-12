@@ -30,15 +30,14 @@ interface PortfolioDialogProps {
 
 // 假的作品集數據（目前使用色塊暫時替代）
 const MOCK_PORTFOLIO_COLORS = [
-  { id: 1, gradient: "from-purple-500 to-pink-500", title: "幾何圖騰" },
-  { id: 2, gradient: "from-blue-500 to-cyan-500", title: "海洋主題" },
-  { id: 3, gradient: "from-green-500 to-emerald-500", title: "自然元素" },
-  { id: 4, gradient: "from-orange-500 to-red-500", title: "火焰圖案" },
-  { id: 5, gradient: "from-indigo-500 to-purple-500", title: "星空系列" },
-  { id: 6, gradient: "from-yellow-500 to-orange-500", title: "太陽光芒" },
-  { id: 7, gradient: "from-pink-500 to-rose-500", title: "花卉設計" },
-  { id: 8, gradient: "from-teal-500 to-green-500", title: "水墨風格" },
-  { id: 9, gradient: "from-violet-500 to-indigo-500", title: "銀河漸層" },
+  { id: 1, gradient: "from-amber-600 via-orange-600 to-red-600", title: "舊傳統" },
+  { id: 2, gradient: "from-rose-500 via-pink-500 to-purple-500", title: "新傳統" },
+  { id: 3, gradient: "from-slate-600 via-gray-700 to-slate-900", title: "歐美圖" },
+  { id: 4, gradient: "from-neutral-700 via-gray-800 to-black", title: "寫實風格" },
+  { id: 5, gradient: "from-teal-600 via-emerald-500 to-lime-500", title: "水墨風格" },
+  { id: 6, gradient: "from-sky-400 via-indigo-400 to-purple-500", title: "小圖案" },
+  { id: 7, gradient: "from-amber-300 via-yellow-400 to-amber-500", title: "文字刺青" },
+  { id: 8, gradient: "from-indigo-500 via-violet-500 to-fuchsia-500", title: "畫作欣賞" },
 ];
 
 export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps) {
