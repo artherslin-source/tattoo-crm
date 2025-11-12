@@ -23,6 +23,11 @@ import { smartApiCall } from "@/lib/api-fallback";
 import type { Branch as BranchType } from "@/types/branch";
 import { debugApiUrls, findWorkingApiUrl } from "@/lib/api-debug";
 import { addToCart, getCart } from "@/lib/cart-api";
+import {
+  SERVICE_DISPLAY_ORDER,
+  SERVICE_FALLBACK_ITEMS,
+  SERVICE_ORDER_SET,
+} from "@/constants/service-order";
 import { CheckCircle, AlertTriangle, ArrowRight, ShoppingCart as ShoppingCartIcon } from "lucide-react";
 
 interface Service {
@@ -62,136 +67,6 @@ type ServiceItem = {
   price?: number;
   durationMin?: number;
 };
-
-type Category = {
-  id: string;
-  title: string;
-  items: ServiceItem[];
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  Arm: "手臂圖騰",
-  Leg: "腿部藝術",
-  Back: "背部大片",
-  Torso: "軀幹設計",
-  Other: "客製化設計",
-};
-
-const CATEGORY_IMAGES: Record<string, string> = {
-  Arm: "/images/categories/arm.svg",
-  Leg: "/images/categories/leg.svg",
-  Back: "/images/categories/back.svg",
-  Torso: "/images/categories/torso.svg",
-  Other: "/images/categories/other.svg",
-};
-
-const FALLBACK_CATEGORIES: Category[] = [
-  {
-    id: "category-arm",
-    title: CATEGORY_LABELS.Arm,
-    items: [
-      {
-        id: "arm-1",
-        title: "上下手臂全肢",
-        thumb: "https://placehold.co/640x400?text=Tattoo+Arm",
-        tag: CATEGORY_LABELS.Arm,
-        price: 45000,
-        durationMin: 480,
-      },
-      {
-        id: "arm-2",
-        title: "上手臂",
-        thumb: "https://placehold.co/640x400?text=Upper+Arm",
-        tag: CATEGORY_LABELS.Arm,
-        price: 28000,
-        durationMin: 300,
-      },
-      {
-        id: "arm-3",
-        title: "前手臂",
-        thumb: "https://placehold.co/640x400?text=Forearm",
-        tag: CATEGORY_LABELS.Arm,
-        price: 18000,
-        durationMin: 200,
-      },
-    ],
-  },
-  {
-    id: "category-leg",
-    title: CATEGORY_LABELS.Leg,
-    items: [
-      {
-        id: "leg-1",
-        title: "大腿包覆",
-        thumb: CATEGORY_IMAGES.Leg,
-        tag: CATEGORY_LABELS.Leg,
-        price: 32000,
-        durationMin: 360,
-      },
-      {
-        id: "leg-2",
-        title: "小腿黑灰",
-        thumb: CATEGORY_IMAGES.Leg,
-        tag: CATEGORY_LABELS.Leg,
-        price: 21000,
-        durationMin: 260,
-      },
-    ],
-  },
-  {
-    id: "category-other",
-    title: CATEGORY_LABELS.Other,
-    items: [
-      {
-        id: "other-1",
-        title: "極細線條客製",
-        thumb: CATEGORY_IMAGES.Other,
-        tag: CATEGORY_LABELS.Other,
-        price: 8500,
-        durationMin: 120,
-      },
-      {
-        id: "other-2",
-        title: "文字設計",
-        thumb: CATEGORY_IMAGES.Other,
-        tag: CATEGORY_LABELS.Other,
-        price: 6000,
-        durationMin: 90,
-      },
-    ],
-  },
-];
-
-const SERVICE_DISPLAY_ORDER = [
-  "半胛圖",
-  "排胛圖",
-  "大腿表面",
-  "大腿全包",
-  "小腿表面",
-  "小腿全包",
-  "前手臂",
-  "上手臂",
-  "大小腿包全肢",
-  "上下手臂全肢",
-  "單胸到包全手",
-  "大背後圖",
-  "背後左或右圖",
-  "大背到大腿圖",
-  "雙胸到腹肚圖",
-  "雙前胸口圖",
-  "單胸圖",
-  "腹肚圖",
-  "單胸腹肚圖",
-  "圖騰小圖案",
-] as const;
-
-const SERVICE_ORDER_MAP: Record<string, number> = SERVICE_DISPLAY_ORDER.reduce(
-  (acc, title, index) => {
-    acc[title] = index;
-    return acc;
-  },
-  {} as Record<string, number>
-);
 
 export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -354,43 +229,57 @@ export default function HomePage() {
     return filtered;
   }, [artists]);
 
-  const serviceItems: ServiceItem[] = useMemo(() => {
-    const sortItems = (items: ServiceItem[]) => {
-      return [...items].sort((a, b) => {
-        const orderA = SERVICE_ORDER_MAP[a.title] ?? Number.MAX_SAFE_INTEGER;
-        const orderB = SERVICE_ORDER_MAP[b.title] ?? Number.MAX_SAFE_INTEGER;
-        if (orderA !== orderB) {
-          return orderA - orderB;
-        }
-        return a.title.localeCompare(b.title, "zh-Hant");
-      });
-    };
+  const DEFAULT_SERVICE_THUMB = "https://placehold.co/640x400?text=Tattoo";
 
+  const serviceFallbackThumbMap = useMemo(
+    () =>
+      Object.fromEntries(
+        SERVICE_FALLBACK_ITEMS.map((item) => [item.title, item.thumb])
+      ) as Record<string, string>,
+    []
+  );
+
+  const serviceItems: ServiceItem[] = useMemo(() => {
     if (!services.length) {
-      const fallbackItems = FALLBACK_CATEGORIES.flatMap((category) => category.items);
-      return sortItems(fallbackItems);
+      return SERVICE_FALLBACK_ITEMS.map((item, index) => ({
+        id: item.id ?? `fallback-${index}`,
+        title: item.title,
+        thumb: item.thumb,
+      }));
     }
 
-    const items = services.map((service) => {
+    const filteredServices = services.filter((service) =>
+      SERVICE_ORDER_SET.has(service.name)
+    );
+    const serviceMap = new Map<string, Service>(
+      filteredServices.map((service) => [service.name, service])
+    );
+
+    const items: ServiceItem[] = [];
+
+    SERVICE_DISPLAY_ORDER.forEach((name) => {
+      const service = serviceMap.get(name);
+      if (!service) {
+        return;
+      }
+
       const imageUrl = service.imageUrl ? getImageUrl(service.imageUrl) : null;
       const fallbackThumb =
-        service.category && service.category in CATEGORY_IMAGES
-          ? CATEGORY_IMAGES[service.category as keyof typeof CATEGORY_IMAGES]
-          : CATEGORY_IMAGES.Other;
+        serviceFallbackThumbMap[service.name] ?? DEFAULT_SERVICE_THUMB;
       const thumb = imageUrl && imageUrl.trim() !== "" ? imageUrl : fallbackThumb;
 
-      return {
+      items.push({
         id: service.id,
         title: service.name,
         thumb,
         price: service.price,
         durationMin: service.durationMin,
         href: `/booking?serviceId=${service.id}`,
-      };
+      });
     });
 
-    return sortItems(items);
-  }, [services]);
+    return items;
+  }, [services, serviceFallbackThumbMap]);
 
   const quickNavItems = useMemo(
     () => [

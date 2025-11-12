@@ -9,6 +9,7 @@ import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon, Package, C
 import { ServiceImageSelector } from "@/components/admin/ServiceImageSelector";
 import { VariantManager } from "@/components/admin/VariantManager";
 import { Badge } from "@/components/ui/badge";
+import { SERVICE_DISPLAY_ORDER, SERVICE_ORDER_MAP } from "@/constants/service-order";
 
 interface Service {
   id: string;
@@ -23,6 +24,20 @@ interface Service {
   isActive: boolean;
   createdAt: string;
 }
+
+const ALLOWED_SERVICE_NAME_SET = new Set<string>(SERVICE_DISPLAY_ORDER);
+
+const sortServicesByDisplayOrder = (list: Service[]) =>
+  list
+    .filter((service) => ALLOWED_SERVICE_NAME_SET.has(service.name))
+    .sort((a, b) => {
+      const orderA = SERVICE_ORDER_MAP[a.name] ?? Number.MAX_SAFE_INTEGER;
+      const orderB = SERVICE_ORDER_MAP[b.name] ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return a.name.localeCompare(b.name, "zh-Hant");
+    });
 
 export default function AdminServicesPage() {
   const router = useRouter();
@@ -63,8 +78,33 @@ export default function AdminServicesPage() {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const data = await getJsonWithAuth<Service[]>('/admin/services');
-      setServices(data);
+      const data = await getJsonWithAuth<Service[]>("/admin/services");
+
+      const disallowedServices = data.filter(
+        (service) => !ALLOWED_SERVICE_NAME_SET.has(service.name)
+      );
+
+      if (disallowedServices.length) {
+        const deletionResults = await Promise.allSettled(
+          disallowedServices.map((service) =>
+            deleteJsonWithAuth(`/admin/services/${service.id}`)
+          )
+        );
+
+        const failed = deletionResults.filter(
+          (result) => result.status === "rejected"
+        );
+
+        if (failed.length) {
+          console.error("刪除未在允許清單的服務失敗:", failed.length);
+          setError(
+            "部分不在允許清單內的服務無法刪除，請稍後重試或聯繫系統管理員"
+          );
+        }
+      }
+
+      const orderedServices = sortServicesByDisplayOrder(data);
+      setServices(orderedServices);
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "載入服務資料失敗");
@@ -90,19 +130,25 @@ export default function AdminServicesPage() {
 
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!ALLOWED_SERVICE_NAME_SET.has(formData.name)) {
+      setError("服務名稱必須符合指定清單，請確認後再新增。");
+      return;
+    }
+
     try {
-      const newService = await postJsonWithAuth('/admin/services', {
+      const newService = (await postJsonWithAuth("/admin/services", {
         name: formData.name,
         description: formData.description,
-        price: 0,  // 默認值，實際價格由規格管理
-        durationMin: 60,  // 默認值，實際時長由規格管理
-        currency: 'TWD',
+        price: 0, // 默認值，實際價格由規格管理
+        durationMin: 60, // 默認值，實際時長由規格管理
+        currency: "TWD",
         category: formData.category,
         imageUrl: formData.imageUrl,
         isActive: formData.isActive,
-        hasVariants: true  // 新服務默認啟用規格功能
-      }) as Service;
-      setServices([...services, newService]);
+        hasVariants: true, // 新服務默認啟用規格功能
+      })) as Service;
+      setServices((prev) => sortServicesByDisplayOrder([...prev, newService]));
       resetForm();
       setError(null);
     } catch (err) {
@@ -142,18 +188,30 @@ export default function AdminServicesPage() {
     e.preventDefault();
     if (!editingService) return;
 
+    if (!ALLOWED_SERVICE_NAME_SET.has(formData.name)) {
+      setError("服務名稱必須符合指定清單，請勿修改為未授權的名稱。");
+      return;
+    }
+
     try {
-      const updatedService = await putJsonWithAuth(`/admin/services/${editingService.id}`, {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        imageUrl: formData.imageUrl,
-        isActive: formData.isActive,
-        // 不更新 price, durationMin, currency（由規格管理）
-      }) as Service;
-      setServices(services.map(service => 
-        service.id === editingService.id ? updatedService : service
-      ));
+      const updatedService = (await putJsonWithAuth(
+        `/admin/services/${editingService.id}`,
+        {
+          name: formData.name,
+          description: formData.description,
+          category: formData.category,
+          imageUrl: formData.imageUrl,
+          isActive: formData.isActive,
+          // 不更新 price, durationMin, currency（由規格管理）
+        }
+      )) as Service;
+      setServices((prev) =>
+        sortServicesByDisplayOrder(
+          prev.map((service) =>
+            service.id === editingService.id ? updatedService : service
+          )
+        )
+      );
       resetForm();
       setError(null);
     } catch (err) {
@@ -169,7 +227,9 @@ export default function AdminServicesPage() {
 
     try {
       await deleteJsonWithAuth(`/admin/services/${serviceId}`);
-      setServices(services.filter(service => service.id !== serviceId));
+      setServices((prev) =>
+        sortServicesByDisplayOrder(prev.filter((service) => service.id !== serviceId))
+      );
       setError(null);
     } catch (err) {
       const apiErr = err as ApiError;
