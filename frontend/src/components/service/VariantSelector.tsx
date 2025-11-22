@@ -39,6 +39,7 @@ interface GroupedVariants {
   size?: ServiceVariant[];
   color?: ServiceVariant[];
   position?: ServiceVariant[];
+  side?: ServiceVariant[];
   design_fee?: ServiceVariant[];
   style?: ServiceVariant[];
   complexity?: ServiceVariant[];
@@ -59,6 +60,7 @@ interface SelectedVariants {
   size: string;
   color: string;
   position?: string;
+  side?: string;
   design_fee?: number;
   style?: string;
   complexity?: string;
@@ -77,6 +79,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedPosition, setSelectedPosition] = useState<string>("");
+  const [selectedSide, setSelectedSide] = useState<string>("");
   const [designFee, setDesignFee] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
   const [adding, setAdding] = useState(false);
@@ -204,13 +207,21 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       }
     }
 
+    // 左右半邊加價
+    if (selectedSide && variants.side) {
+      const sideVariant = variants.side.find((v) => v.name === selectedSide);
+      if (sideVariant) {
+        price += sideVariant.priceModifier;
+      }
+    }
+
     // 設計費
     if (designFee > 0) {
       price += designFee;
     }
 
     return price;
-  }, [selectedSize, selectedColor, selectedPosition, designFee, variants]);
+  }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, variants]);
 
   // 處理加入購物車
   const handleAddToCart = async () => {
@@ -229,6 +240,10 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
 
       if (selectedPosition) {
         selectedVariants.position = selectedPosition;
+      }
+
+      if (selectedSide) {
+        selectedVariants.side = selectedSide;
       }
 
       if (designFee > 0) {
@@ -366,8 +381,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                   >
                     <div className="text-xl font-bold">{variant.name}</div>
                     {(() => {
-                      const subtitle =
-                        COLOR_VARIANT_SUBTITLES[variant.name] ?? variant.description ?? "";
+                      const subtitle = COLOR_VARIANT_SUBTITLES[variant.name];
                       if (!subtitle) return null;
                       return (
                       <div className="mt-1 text-xs text-gray-700 font-medium">
@@ -411,6 +425,45 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                     <div className="font-semibold">{variant.name}</div>
                     {variant.priceModifier > 0 && (
                       <div className="mt-0.5 text-xs text-gray-700 font-medium">
+                        +{variant.priceModifier}元
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 左右半邊選擇 */}
+          {variants.side && variants.side.length > 0 && (
+            <div>
+              <Label className="mb-3 flex items-center text-base font-semibold text-gray-900">
+                左右半邊
+                <Badge variant="outline" className="ml-2 text-xs">
+                  可選
+                </Badge>
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {variants.side.map((variant) => (
+                  <button
+                    key={variant.id}
+                    onClick={() =>
+                      setSelectedSide(
+                        selectedSide === variant.name ? "" : variant.name
+                      )
+                    }
+                    className={`
+                      rounded-lg border-2 px-6 py-4 text-sm font-medium transition-all
+                      ${
+                        selectedSide === variant.name
+                          ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600 ring-offset-1"
+                          : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-800 hover:text-gray-900"
+                      }
+                    `}
+                  >
+                    <div className="font-semibold text-base">{variant.name}</div>
+                    {variant.priceModifier > 0 && (
+                      <div className="mt-1 text-xs text-gray-700 font-medium">
                         +{variant.priceModifier}元
                       </div>
                     )}
@@ -481,6 +534,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-blue-600 font-medium">部位</span>
                   <span className="font-semibold text-blue-700">{selectedPosition}</span>
+                </div>
+              )}
+              {selectedSide && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-600 font-medium">左右半邊</span>
+                  <span className="font-semibold text-blue-700">{selectedSide}</span>
                 </div>
               )}
               {designFee > 0 && (

@@ -11,6 +11,7 @@ export interface CartItem {
     size: string;
     color: string;
     position?: string;
+    side?: string;
     design_fee?: number;
     style?: string;
     complexity?: string;
@@ -61,6 +62,7 @@ export async function addToCart(data: {
     size: string;
     color: string;
     position?: string;
+    side?: string;
     design_fee?: number;
     style?: string;
     complexity?: string;
@@ -93,6 +95,7 @@ export async function updateCartItem(
       size?: string;
       color?: string;
       position?: string;
+      side?: string;
       design_fee?: number;
     };
     notes?: string;

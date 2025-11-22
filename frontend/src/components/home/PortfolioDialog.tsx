@@ -80,7 +80,13 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
                 {artist.speciality}
               </p>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
-                {(artist.styles || []).map((style) => (
+                {(artist.styles || [])
+                  .filter((style) => {
+                    // 過濾掉英文標籤
+                    const englishTags = ['Traditional', 'Nature', 'Minimalist', 'Japanese', 'Geometric'];
+                    return !englishTags.includes(style);
+                  })
+                  .map((style) => (
                   <Badge key={style} variant="secondary" className="text-[10px] sm:text-xs px-2 py-0.5">
                     {style}
                   </Badge>

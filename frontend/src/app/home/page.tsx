@@ -112,6 +112,7 @@ export default function HomePage() {
       size: string;
       color: string;
       position?: string;
+      side?: string;
       design_fee?: number;
       style?: string;
       complexity?: string;
@@ -474,7 +475,13 @@ export default function HomePage() {
                       <CardContent className="space-y-4 text-sm text-neutral-200">
                         <p>{artist.bio}</p>
                         <div className="flex flex-wrap gap-2">
-                          {(artist.styles || []).map((style) => (
+                          {(artist.styles || [])
+                            .filter((style) => {
+                              // 過濾掉英文標籤
+                              const englishTags = ['Traditional', 'Nature', 'Minimalist', 'Japanese', 'Geometric'];
+                              return !englishTags.includes(style);
+                            })
+                            .map((style) => (
                             <Badge key={style} variant="secondary" className="bg-white/10 text-white">
                               {style}
                             </Badge>
