@@ -1,10 +1,14 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Req, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AdminArtistsService } from './admin-artists.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BranchesService } from '../branches/branches.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { existsSync, mkdirSync } from 'fs';
+import { extname, join } from 'path';
 import { z } from 'zod';
 
 const CreateArtistSchema = z.object({
@@ -154,5 +158,90 @@ export class AdminArtistsController {
   @Delete(':id')
   async delete(@Param('id') id: string) {
     return this.adminArtistsService.delete(id);
+  }
+
+  // 上傳刺青師照片（允許管理員和刺青師自己上傳）
+  @Post('upload-photo')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('BOSS', 'BRANCH_MANAGER', 'ARTIST')
+  @UseInterceptors(FileInterceptor('photo', {
+    storage: diskStorage({
+      destination: (req, file, callback) => {
+        try {
+          const uploadPath = join(process.cwd(), 'uploads', 'artists');
+          
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          callback(null, uploadPath);
+        } catch (error) {
+          console.error('❌ 創建上傳目錄失敗:', error);
+          callback(new Error('無法創建上傳目錄'), '');
+        }
+      },
+      filename: (req, file, callback) => {
+        try {
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substring(2, 8);
+          const ext = extname(file.originalname || '');
+          const filename = `artist-${timestamp}-${randomString}${ext}`;
+          callback(null, filename);
+        } catch (error) {
+          console.error('❌ 生成檔名失敗:', error);
+          callback(new Error('無法生成檔名'), '');
+        }
+      },
+    }),
+    fileFilter: (req, file, callback) => {
+      try {
+        if (!file || !file.originalname) {
+          return callback(new Error('文件資訊不完整'), false);
+        }
+        
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          return callback(new Error('只允許上傳圖片文件 (JPG, JPEG, PNG, GIF, WebP)'), false);
+        }
+        callback(null, true);
+      } catch (error) {
+        console.error('❌ 文件過濾失敗:', error);
+        callback(new Error('文件驗證失敗'), false);
+      }
+    },
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB
+    },
+  }))
+  async uploadPhoto(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any
+  ) {
+    try {
+      if (!file) {
+        throw new BadRequestException('沒有選擇要上傳的圖片文件');
+      }
+
+      const imageUrl = `/uploads/artists/${file.filename}`;
+      
+      console.log('✅ 刺青師照片上傳成功:', {
+        filename: file.filename,
+        url: imageUrl,
+        size: file.size
+      });
+      
+      return {
+        success: true,
+        message: '照片上傳成功',
+        url: imageUrl,
+        filename: file.filename,
+      };
+    } catch (error) {
+      console.error('❌ 照片上傳錯誤:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error.message || '照片上傳失敗，請檢查文件格式和大小（最大 10MB）'
+      );
+    }
   }
 }

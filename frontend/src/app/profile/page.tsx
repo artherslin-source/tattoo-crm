@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getJsonWithAuth, getAccessToken, patchJsonWithAuth, getApiBase } from "@/lib/api";
+import { ArtistPhotoUpload } from "@/components/admin/ArtistPhotoUpload";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -315,33 +316,12 @@ export default function ProfilePage() {
               <div>
                 <Label>我的照片</Label>
                 {editing ? (
-                  <>
-                    <Input
-                      value={formData.photoUrl}
-                      onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
-                      placeholder="/uploads/artists/photo.jpg 或完整圖片URL"
-                      className="mt-1"
+                  <div className="mt-1">
+                    <ArtistPhotoUpload
+                      currentPhotoUrl={formData.photoUrl}
+                      onPhotoUploaded={(photoUrl) => setFormData({ ...formData, photoUrl })}
                     />
-                    {formData.photoUrl && (
-                      <div className="mt-2">
-                        <div className="text-xs text-gray-500 mb-1">預覽：</div>
-                        <div className="w-32 h-32 border rounded overflow-hidden bg-gray-100">
-                          <img
-                            src={formData.photoUrl.startsWith('http') ? formData.photoUrl : `${getApiBase()}${formData.photoUrl}`}
-                            alt="照片預覽"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              console.error('❌ 照片預覽載入失敗:', formData.photoUrl);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <p className="mt-1 text-xs text-gray-500">
-                      照片會顯示在前端首頁的刺青師卡片中
-                    </p>
-                  </>
+                  </div>
                 ) : (
                   <div className="mt-1">
                     {user.artist?.photoUrl ? (
