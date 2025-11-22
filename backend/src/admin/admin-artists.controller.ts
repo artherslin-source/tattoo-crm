@@ -103,6 +103,7 @@ export class AdminArtistsController {
       branchId,
       speciality: input.speciality,
       portfolioUrl: input.portfolioUrl,
+      photoUrl: input.photoUrl,
     });
   }
 
