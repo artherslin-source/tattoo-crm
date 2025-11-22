@@ -72,7 +72,7 @@ export class CartService {
     }
 
     // 驗證規格選項（顏色為必選，尺寸已停用改為可選）
-    const { size, color, position } = dto.selectedVariants;
+    const { size, color, position, side } = dto.selectedVariants;
     
     if (!color) {
       throw new BadRequestException('請至少選擇顏色');
@@ -493,7 +493,17 @@ export class CartService {
       }
     }
 
-    // 4. 計算設計費（如果有自訂價格）
+    // 4. 計算左右半邊調整
+    if (selectedVariants.side) {
+      const sideVariant = variants.find(
+        (v) => v.type === 'side' && v.name === selectedVariants.side,
+      );
+      if (sideVariant) {
+        finalPrice += sideVariant.priceModifier;
+      }
+    }
+
+    // 5. 計算設計費（如果有自訂價格）
     if (selectedVariants.design_fee !== undefined) {
       const designFeeVariant = variants.find(
         (v) => v.type === 'design_fee',

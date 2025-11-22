@@ -9,6 +9,7 @@ export class AddToCartDto {
     size: string;
     color: string;
     position?: string;
+    side?: string;
     design_fee?: number; // 設計費（自訂價格）
     style?: string;
     complexity?: string;
@@ -31,6 +32,7 @@ export class UpdateCartItemDto {
     size?: string;
     color?: string;
     position?: string;
+    side?: string;
     design_fee?: number; // 設計費（自訂價格）
     style?: string;
     complexity?: string;
@@ -70,6 +72,7 @@ export class CartItemResponseDto {
     size: string;
     color: string;
     position?: string;
+    side?: string;
   };
   basePrice: number;
   finalPrice: number;
