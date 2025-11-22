@@ -33,6 +33,7 @@ const COLOR_VARIANT_SUBTITLES: Record<string, string> = {
   黑白: "全黑白漸層",
   半彩: "背景黑白 / 主圖彩色",
   彩色: "全彩色漸層",
+  全彩: "全彩色漸層",
 };
 
 interface GroupedVariants {
