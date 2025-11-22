@@ -64,6 +64,7 @@ export class AdminArtistsService {
     email: string;
     password: string;
     branchId?: string;
+    bio?: string;
     speciality?: string;
     portfolioUrl?: string;
   }) {
@@ -87,6 +88,7 @@ export class AdminArtistsService {
           userId: user.id,
           branchId: data.branchId,
           displayName: data.name,
+          bio: data.bio,
           speciality: data.speciality,
           portfolioUrl: data.portfolioUrl,
         },
@@ -101,6 +103,7 @@ export class AdminArtistsService {
     name?: string;
     email?: string;
     branchId?: string;
+    bio?: string;
     speciality?: string;
     portfolioUrl?: string;
     active?: boolean;
@@ -130,10 +133,11 @@ export class AdminArtistsService {
       }
 
       // 更新 Artist
-      console.log('🔄 Updating artist with data:', { speciality: data.speciality, portfolioUrl: data.portfolioUrl, active: data.active, name: data.name, branchId: data.branchId });
+      console.log('🔄 Updating artist with data:', { bio: data.bio, speciality: data.speciality, portfolioUrl: data.portfolioUrl, active: data.active, name: data.name, branchId: data.branchId });
       const updatedArtist = await tx.artist.update({
         where: { id },
         data: {
+          ...(data.bio !== undefined && { bio: data.bio }),
           ...(data.speciality && { speciality: data.speciality }),
           ...(data.portfolioUrl && { portfolioUrl: data.portfolioUrl }),
           ...(data.active !== undefined && { active: data.active }),

@@ -31,6 +31,7 @@ import {
 
 interface Artist {
   id: string;
+  bio?: string;
   speciality?: string;
   portfolioUrl?: string;
   active: boolean;
@@ -73,6 +74,7 @@ export default function BranchArtistsPage() {
     email: "",
     password: "",
     branchId: "",
+    bio: "",
     speciality: "",
     portfolioUrl: "",
     active: true,
@@ -119,6 +121,7 @@ export default function BranchArtistsPage() {
       email: "",
       password: "",
       branchId: userBranchId || "",
+      bio: "",
       speciality: "",
       portfolioUrl: "",
       active: true,
@@ -147,6 +150,7 @@ export default function BranchArtistsPage() {
       email: artist.user.email,
       password: "",
       branchId: artist.branch?.id || userBranchId || "",
+      bio: artist.bio || "",
       speciality: artist.speciality || "",
       portfolioUrl: artist.portfolioUrl || "",
       active: artist.active,
@@ -317,6 +321,24 @@ export default function BranchArtistsPage() {
                       />
                     </div>
                   )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                      刺青師介紹
+                    </label>
+                    <textarea
+                      value={formData.bio}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bio: e.target.value })
+                      }
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
+                      placeholder="請輸入刺青師的個人介紹、經歷、風格特色等..."
+                    />
+                    <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                      這段介紹會顯示在前端首頁的刺青師卡片和作品集對話框中
+                    </p>
+                  </div>
 
                   <div>
                     <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
