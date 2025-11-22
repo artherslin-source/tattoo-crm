@@ -142,8 +142,8 @@ export class AdminArtistsService {
         data: {
           ...(data.bio !== undefined && { bio: data.bio }),
           ...(data.speciality && { speciality: data.speciality }),
-          ...(data.portfolioUrl && { portfolioUrl: data.portfolioUrl }),
-          ...(data.photoUrl !== undefined && { photoUrl: data.photoUrl }),
+          ...(data.portfolioUrl !== undefined && { portfolioUrl: data.portfolioUrl || null }),
+          ...(data.photoUrl !== undefined && { photoUrl: data.photoUrl || null }),
           ...(data.active !== undefined && { active: data.active }),
           ...(data.name && { displayName: data.name }),
           ...(data.branchId !== undefined && { branchId: data.branchId }),
