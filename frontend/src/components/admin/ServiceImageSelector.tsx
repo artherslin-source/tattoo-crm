@@ -471,6 +471,32 @@ export function ServiceImageSelector({
           </div>
         </div>
 
+        {/* 選中圖片預覽 */}
+        {tempSelectedImage && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center gap-4">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                已選擇的圖片：
+              </div>
+              <div className="flex-1">
+                <div className="relative w-32 h-32 border rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <Image
+                    src={getImageUrl(tempSelectedImage)}
+                    alt="選中圖片預覽"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                    onError={(e) => {
+                      console.error('❌ 預覽圖片載入失敗:', getImageUrl(tempSelectedImage));
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 底部按鈕 */}
         <div className="flex justify-between items-center pt-4 border-t">
           <div className="text-sm text-gray-500">

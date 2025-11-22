@@ -795,7 +795,8 @@ const defaultFormValues = {
         isOpen={showImageSelector}
         onClose={() => setShowImageSelector(false)}
         onSelect={(imageUrl) => {
-          setFormData({ ...formData, imageUrl });
+          console.log('📸 服務圖片選擇回調，更新 formData.imageUrl:', imageUrl);
+          setFormData(prev => ({ ...prev, imageUrl }));
           setShowImageSelector(false);
         }}
         currentImageUrl={formData.imageUrl}
