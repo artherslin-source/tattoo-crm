@@ -133,7 +133,7 @@ export default function ProfilePage() {
 
     try {
       // 使用 /users/me 端點更新個人資料
-      const updateData: { name?: string; phone?: string; bio?: string; photoUrl?: string } = {};
+      const updateData: { name?: string; phone?: string | null; bio?: string; photoUrl?: string } = {};
       if (formData.name !== user.name) updateData.name = formData.name;
       if (formData.phone !== (user.phone || "")) updateData.phone = formData.phone || null;
       // 只有刺青師才能更新 bio 和 photoUrl
