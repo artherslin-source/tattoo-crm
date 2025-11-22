@@ -19,7 +19,20 @@ export function ArtistPhotoUpload({
 }: ArtistPhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 當 currentPhotoUrl prop 更新時，同步更新 uploadedUrl（如果不同）
+  useEffect(() => {
+    if (currentPhotoUrl && currentPhotoUrl !== uploadedUrl) {
+      // 如果新的 currentPhotoUrl 與 uploadedUrl 不同，更新它
+      // 這確保當父組件更新時，我們也能看到新值
+      setUploadedUrl(currentPhotoUrl);
+    } else if (!currentPhotoUrl) {
+      // 如果 currentPhotoUrl 被清空，也清空 uploadedUrl
+      setUploadedUrl(null);
+    }
+  }, [currentPhotoUrl]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -105,9 +118,12 @@ export function ArtistPhotoUpload({
       console.log('✅ 照片上傳成功:', data);
 
       if (data.url) {
-        onPhotoUploaded(data.url);
+        // 立即更新本地狀態，優先顯示新上傳的照片
+        setUploadedUrl(data.url);
         // 清除預覽，因為已經上傳成功
         setPreview(null);
+        // 通知父組件更新
+        onPhotoUploaded(data.url);
         // 重置文件輸入
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -125,14 +141,16 @@ export function ArtistPhotoUpload({
   };
 
   const handleRemove = () => {
-    onPhotoUploaded('');
+    setUploadedUrl(null);
     setPreview(null);
+    onPhotoUploaded('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const displayUrl = preview || currentPhotoUrl;
+  // 優先顯示：預覽 > 新上傳的URL > 原有的URL
+  const displayUrl = preview || uploadedUrl || currentPhotoUrl;
   const imageUrl = displayUrl 
     ? (displayUrl.startsWith('http') ? displayUrl : `${getApiBase()}${displayUrl}`)
     : null;
