@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getJsonWithAuth, getAccessToken, patchJsonWithAuth } from "@/lib/api";
+import { getJsonWithAuth, getAccessToken, patchJsonWithAuth, getApiBase } from "@/lib/api";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,7 @@ export default function ProfilePage() {
     name: "",
     phone: "",
     bio: "",
+    photoUrl: "",
   });
 
   const membership = member ? (membershipLabels[member.membershipLevel] || membershipLabels.BRONZE) : membershipLabels.BRONZE;
@@ -91,6 +92,7 @@ export default function ProfilePage() {
         name: user.name || "",
         phone: user.phone || "",
         bio: user.artist?.bio || "",
+        photoUrl: user.artist?.photoUrl || "",
       });
 
       // 從 /users/me 的返回數據中直接獲取 member 信息
@@ -132,12 +134,17 @@ export default function ProfilePage() {
 
     try {
       // 使用 /users/me 端點更新個人資料
-      const updateData: { name?: string; phone?: string; bio?: string } = {};
+      const updateData: { name?: string; phone?: string; bio?: string; photoUrl?: string } = {};
       if (formData.name !== user.name) updateData.name = formData.name;
       if (formData.phone !== (user.phone || "")) updateData.phone = formData.phone || null;
-      // 只有刺青師才能更新 bio
-      if (user.role === 'ARTIST' && formData.bio !== (user.artist?.bio || "")) {
-        updateData.bio = formData.bio;
+      // 只有刺青師才能更新 bio 和 photoUrl
+      if (user.role === 'ARTIST') {
+        if (formData.bio !== (user.artist?.bio || "")) {
+          updateData.bio = formData.bio;
+        }
+        if (formData.photoUrl !== (user.artist?.photoUrl || "")) {
+          updateData.photoUrl = formData.photoUrl;
+        }
       }
 
       await patchJsonWithAuth(`/users/me`, updateData);
@@ -160,6 +167,7 @@ export default function ProfilePage() {
         name: user.name || "",
         phone: user.phone || "",
         bio: user.artist?.bio || "",
+        photoUrl: user.artist?.photoUrl || "",
       });
     }
     setEditing(false);
@@ -282,27 +290,80 @@ export default function ProfilePage() {
 
           {/* 刺青師介紹（僅刺青師可見） */}
           {user.role === 'ARTIST' && (
-            <div>
-              <Label>我的介紹</Label>
-              {editing ? (
-                <>
-                  <Textarea
-                    value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    placeholder="請輸入您的個人介紹、經歷、風格特色等..."
-                    rows={4}
-                    className="mt-1"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    這段介紹會顯示在前端首頁的刺青師卡片和作品集對話框中
-                  </p>
-                </>
-              ) : (
-                <div className="text-gray-900 mt-1 whitespace-pre-wrap">
-                  {user.artist?.bio || "尚未填寫介紹"}
-                </div>
-              )}
-            </div>
+            <>
+              <div>
+                <Label>我的介紹</Label>
+                {editing ? (
+                  <>
+                    <Textarea
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      placeholder="請輸入您的個人介紹、經歷、風格特色等..."
+                      rows={4}
+                      className="mt-1"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      這段介紹會顯示在前端首頁的刺青師卡片和作品集對話框中
+                    </p>
+                  </>
+                ) : (
+                  <div className="text-gray-900 mt-1 whitespace-pre-wrap">
+                    {user.artist?.bio || "尚未填寫介紹"}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label>我的照片</Label>
+                {editing ? (
+                  <>
+                    <Input
+                      value={formData.photoUrl}
+                      onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
+                      placeholder="/uploads/artists/photo.jpg 或完整圖片URL"
+                      className="mt-1"
+                    />
+                    {formData.photoUrl && (
+                      <div className="mt-2">
+                        <div className="text-xs text-gray-500 mb-1">預覽：</div>
+                        <div className="w-32 h-32 border rounded overflow-hidden bg-gray-100">
+                          <img
+                            src={formData.photoUrl.startsWith('http') ? formData.photoUrl : `${getApiBase()}${formData.photoUrl}`}
+                            alt="照片預覽"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error('❌ 照片預覽載入失敗:', formData.photoUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      照片會顯示在前端首頁的刺青師卡片中
+                    </p>
+                  </>
+                ) : (
+                  <div className="mt-1">
+                    {user.artist?.photoUrl ? (
+                      <div className="w-32 h-32 border rounded overflow-hidden bg-gray-100">
+                        <img
+                          src={user.artist.photoUrl.startsWith('http') ? user.artist.photoUrl : `${getApiBase()}${user.artist.photoUrl}`}
+                          alt="我的照片"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error('❌ 照片載入失敗:', user.artist?.photoUrl);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-gray-500">尚未上傳照片</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {/* 會員編號 */}

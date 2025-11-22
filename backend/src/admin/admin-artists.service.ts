@@ -67,6 +67,7 @@ export class AdminArtistsService {
     bio?: string;
     speciality?: string;
     portfolioUrl?: string;
+    photoUrl?: string;
   }) {
     const hashedPassword = await bcrypt.hash(data.password, 12);
     
@@ -91,6 +92,7 @@ export class AdminArtistsService {
           bio: data.bio,
           speciality: data.speciality,
           portfolioUrl: data.portfolioUrl,
+          photoUrl: data.photoUrl,
         },
         include: { user: true },
       });
@@ -106,6 +108,7 @@ export class AdminArtistsService {
     bio?: string;
     speciality?: string;
     portfolioUrl?: string;
+    photoUrl?: string;
     active?: boolean;
   }) {
     console.log('🔧 AdminArtistsService.update called with:', { id, data });
@@ -133,13 +136,14 @@ export class AdminArtistsService {
       }
 
       // 更新 Artist
-      console.log('🔄 Updating artist with data:', { bio: data.bio, speciality: data.speciality, portfolioUrl: data.portfolioUrl, active: data.active, name: data.name, branchId: data.branchId });
+      console.log('🔄 Updating artist with data:', { bio: data.bio, speciality: data.speciality, portfolioUrl: data.portfolioUrl, photoUrl: data.photoUrl, active: data.active, name: data.name, branchId: data.branchId });
       const updatedArtist = await tx.artist.update({
         where: { id },
         data: {
           ...(data.bio !== undefined && { bio: data.bio }),
           ...(data.speciality && { speciality: data.speciality }),
           ...(data.portfolioUrl && { portfolioUrl: data.portfolioUrl }),
+          ...(data.photoUrl !== undefined && { photoUrl: data.photoUrl }),
           ...(data.active !== undefined && { active: data.active }),
           ...(data.name && { displayName: data.name }),
           ...(data.branchId !== undefined && { branchId: data.branchId }),

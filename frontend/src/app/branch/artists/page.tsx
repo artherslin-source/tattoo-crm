@@ -11,6 +11,7 @@ import {
   postJsonWithAuth,
   patchJsonWithAuth,
   ApiError,
+  getApiBase,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ interface Artist {
   bio?: string;
   speciality?: string;
   portfolioUrl?: string;
+  photoUrl?: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +79,7 @@ export default function BranchArtistsPage() {
     bio: "",
     speciality: "",
     portfolioUrl: "",
+    photoUrl: "",
     active: true,
   });
 
@@ -124,6 +127,7 @@ export default function BranchArtistsPage() {
       bio: "",
       speciality: "",
       portfolioUrl: "",
+      photoUrl: "",
       active: true,
     });
     setShowCreateForm(false);
@@ -153,6 +157,7 @@ export default function BranchArtistsPage() {
       bio: artist.bio || "",
       speciality: artist.speciality || "",
       portfolioUrl: artist.portfolioUrl || "",
+      photoUrl: artist.photoUrl || "",
       active: artist.active,
     });
     setShowCreateForm(true);
@@ -337,6 +342,42 @@ export default function BranchArtistsPage() {
                     />
                     <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                       這段介紹會顯示在前端首頁的刺青師卡片和作品集對話框中
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                      刺青師照片
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={formData.photoUrl}
+                        onChange={(e) =>
+                          setFormData({ ...formData, photoUrl: e.target.value })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
+                        placeholder="/uploads/artists/photo.jpg 或完整圖片URL"
+                      />
+                    </div>
+                    {formData.photoUrl && (
+                      <div className="mt-2">
+                        <div className="text-xs text-gray-500 mb-1">預覽：</div>
+                        <div className="w-32 h-32 border rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+                          <img
+                            src={formData.photoUrl.startsWith('http') ? formData.photoUrl : `${getApiBase()}${formData.photoUrl}`}
+                            alt="照片預覽"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error('❌ 照片預覽載入失敗:', formData.photoUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <p className="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                      照片會顯示在前端首頁的刺青師卡片中
                     </p>
                   </div>
 

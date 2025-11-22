@@ -10,6 +10,7 @@ interface UpdateUserDto {
   phone?: string;
   avatarUrl?: string;
   bio?: string; // 刺青師介紹
+  photoUrl?: string; // 刺青師照片
 }
 
 interface GetUsersQuery {

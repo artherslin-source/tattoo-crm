@@ -6,6 +6,7 @@ interface UpdateUserDto {
   phone?: string;
   avatarUrl?: string;
   bio?: string; // 刺青師介紹
+  photoUrl?: string; // 刺青師照片
 }
 
 interface GetUsersQuery {
@@ -157,26 +158,32 @@ export class UsersService {
       },
     });
 
-    // 如果用戶是刺青師且有 bio 更新，同時更新 Artist 表的 bio
-    if (updateUserDto.bio !== undefined && updatedUser.role === 'ARTIST' && updatedUser.artist) {
-      await this.prisma.artist.update({
-        where: { id: updatedUser.artist.id },
-        data: { bio: updateUserDto.bio },
-      });
-      // 重新獲取更新後的 artist 信息
-      const artist = await this.prisma.artist.findUnique({
-        where: { id: updatedUser.artist.id },
-        select: {
-          id: true,
-          bio: true,
-          speciality: true,
-          portfolioUrl: true,
-          photoUrl: true,
-          displayName: true,
+    // 如果用戶是刺青師且有 bio 或 photoUrl 更新，同時更新 Artist 表
+    if (updatedUser.role === 'ARTIST' && updatedUser.artist) {
+      const artistUpdateData: any = {};
+      if (updateUserDto.bio !== undefined) artistUpdateData.bio = updateUserDto.bio;
+      if (updateUserDto.photoUrl !== undefined) artistUpdateData.photoUrl = updateUserDto.photoUrl;
+      
+      if (Object.keys(artistUpdateData).length > 0) {
+        await this.prisma.artist.update({
+          where: { id: updatedUser.artist.id },
+          data: artistUpdateData,
+        });
+        // 重新獲取更新後的 artist 信息
+        const artist = await this.prisma.artist.findUnique({
+          where: { id: updatedUser.artist.id },
+          select: {
+            id: true,
+            bio: true,
+            speciality: true,
+            portfolioUrl: true,
+            photoUrl: true,
+            displayName: true,
+          }
+        });
+        if (artist) {
+          updatedUser.artist = artist;
         }
-      });
-      if (artist) {
-        updatedUser.artist = artist;
       }
     }
 
