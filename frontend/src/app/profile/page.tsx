@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Save, X, CheckCircle, AlertCircle } from "lucide-react";
 
@@ -23,6 +24,14 @@ interface User {
     membershipLevel: string;
     totalSpent: number;
     balance: number;
+  };
+  artist?: {
+    id: string;
+    bio?: string;
+    speciality?: string;
+    portfolioUrl?: string;
+    photoUrl?: string;
+    displayName?: string;
   };
   lastLogin?: string;
 }
@@ -56,6 +65,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    bio: "",
   });
 
   const membership = member ? (membershipLabels[member.membershipLevel] || membershipLabels.BRONZE) : membershipLabels.BRONZE;
@@ -76,9 +86,11 @@ export default function ProfilePage() {
       console.log("✅ 獲取用戶資料成功:", userData);
       
       setUser(userData as User);
+      const user = userData as User;
       setFormData({
-        name: (userData as User).name || "",
-        phone: (userData as User).phone || "",
+        name: user.name || "",
+        phone: user.phone || "",
+        bio: user.artist?.bio || "",
       });
 
       // 從 /users/me 的返回數據中直接獲取 member 信息
@@ -119,7 +131,16 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      await patchJsonWithAuth(`/users/${user.id}`, formData);
+      // 使用 /users/me 端點更新個人資料
+      const updateData: { name?: string; phone?: string; bio?: string } = {};
+      if (formData.name !== user.name) updateData.name = formData.name;
+      if (formData.phone !== (user.phone || "")) updateData.phone = formData.phone || null;
+      // 只有刺青師才能更新 bio
+      if (user.role === 'ARTIST' && formData.bio !== (user.artist?.bio || "")) {
+        updateData.bio = formData.bio;
+      }
+
+      await patchJsonWithAuth(`/users/me`, updateData);
       setMessage({ type: "success", text: "✅ 個人資料已更新" });
       setEditing(false);
       await fetchProfile();
@@ -138,6 +159,7 @@ export default function ProfilePage() {
       setFormData({
         name: user.name || "",
         phone: user.phone || "",
+        bio: user.artist?.bio || "",
       });
     }
     setEditing(false);
@@ -257,6 +279,31 @@ export default function ProfilePage() {
               <div className="text-gray-900 mt-1">{user.phone || "未設定"}</div>
             )}
           </div>
+
+          {/* 刺青師介紹（僅刺青師可見） */}
+          {user.role === 'ARTIST' && (
+            <div>
+              <Label>我的介紹</Label>
+              {editing ? (
+                <>
+                  <Textarea
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    placeholder="請輸入您的個人介紹、經歷、風格特色等..."
+                    rows={4}
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    這段介紹會顯示在前端首頁的刺青師卡片和作品集對話框中
+                  </p>
+                </>
+              ) : (
+                <div className="text-gray-900 mt-1 whitespace-pre-wrap">
+                  {user.artist?.bio || "尚未填寫介紹"}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 會員編號 */}
           <div>

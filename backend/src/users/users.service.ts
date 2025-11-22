@@ -5,6 +5,7 @@ interface UpdateUserDto {
   name?: string;
   phone?: string;
   avatarUrl?: string;
+  bio?: string; // 刺青師介紹
 }
 
 interface GetUsersQuery {
@@ -40,6 +41,16 @@ export class UsersService {
             totalSpent: true,
             balance: true,
             membershipLevel: true,
+          }
+        },
+        artist: {
+          select: {
+            id: true,
+            bio: true,
+            speciality: true,
+            portfolioUrl: true,
+            photoUrl: true,
+            displayName: true,
           }
         },
         createdAt: true,
@@ -133,8 +144,41 @@ export class UsersService {
         createdAt: true,
         lastLogin: true,
         status: true,
+        artist: {
+          select: {
+            id: true,
+            bio: true,
+            speciality: true,
+            portfolioUrl: true,
+            photoUrl: true,
+            displayName: true,
+          }
+        },
       },
     });
+
+    // 如果用戶是刺青師且有 bio 更新，同時更新 Artist 表的 bio
+    if (updateUserDto.bio !== undefined && updatedUser.role === 'ARTIST' && updatedUser.artist) {
+      await this.prisma.artist.update({
+        where: { id: updatedUser.artist.id },
+        data: { bio: updateUserDto.bio },
+      });
+      // 重新獲取更新後的 artist 信息
+      const artist = await this.prisma.artist.findUnique({
+        where: { id: updatedUser.artist.id },
+        select: {
+          id: true,
+          bio: true,
+          speciality: true,
+          portfolioUrl: true,
+          photoUrl: true,
+          displayName: true,
+        }
+      });
+      if (artist) {
+        updatedUser.artist = artist;
+      }
+    }
 
     return updatedUser;
   }

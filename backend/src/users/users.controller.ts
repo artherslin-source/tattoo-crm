@@ -9,6 +9,7 @@ interface UpdateUserDto {
   name?: string;
   phone?: string;
   avatarUrl?: string;
+  bio?: string; // 刺青師介紹
 }
 
 interface GetUsersQuery {
