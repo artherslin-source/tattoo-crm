@@ -146,9 +146,22 @@ export default function AdminArtistsPage() {
       console.log('🔧 發送更新請求:', formData);
       const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData) as Artist;
       console.log('✅ 收到更新回應:', updatedArtist);
+      
+      // 更新列表中的刺青師資料
       setArtists(artists.map(artist => 
         artist.id === editingArtist.id ? updatedArtist : artist
       ));
+      
+      // 如果還在編輯同一個刺青師，更新編輯中的資料
+      if (editingArtist.id === updatedArtist.id) {
+        setEditingArtist(updatedArtist);
+        // 更新表單資料，確保照片URL是最新的
+        setFormData(prev => ({
+          ...prev,
+          photoUrl: updatedArtist.photoUrl || prev.photoUrl,
+        }));
+      }
+      
       resetForm();
       setError(null);
     } catch (err) {

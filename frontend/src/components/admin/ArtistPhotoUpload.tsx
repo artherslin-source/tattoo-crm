@@ -23,7 +23,13 @@ export function ArtistPhotoUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 當 currentPhotoUrl prop 更新時，同步更新 uploadedUrl（如果不同）
+  // 但只在沒有預覽和沒有本地上傳的URL時才更新，避免覆蓋用戶剛上傳的照片
   useEffect(() => {
+    // 如果有預覽或本地上傳的URL，不更新（用戶正在操作）
+    if (preview || uploadedUrl) {
+      return;
+    }
+    
     if (currentPhotoUrl && currentPhotoUrl !== uploadedUrl) {
       // 如果新的 currentPhotoUrl 與 uploadedUrl 不同，更新它
       // 這確保當父組件更新時，我們也能看到新值
@@ -32,7 +38,7 @@ export function ArtistPhotoUpload({
       // 如果 currentPhotoUrl 被清空，也清空 uploadedUrl
       setUploadedUrl(null);
     }
-  }, [currentPhotoUrl]);
+  }, [currentPhotoUrl, preview, uploadedUrl]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -151,8 +157,12 @@ export function ArtistPhotoUpload({
 
   // 優先顯示：預覽 > 新上傳的URL > 原有的URL
   const displayUrl = preview || uploadedUrl || currentPhotoUrl;
+  
+  // 構建圖片URL：如果是 base64 data URL 或完整 HTTP URL，直接使用；否則拼接後端URL
   const imageUrl = displayUrl 
-    ? (displayUrl.startsWith('http') ? displayUrl : `${getApiBase()}${displayUrl}`)
+    ? (displayUrl.startsWith('http') || displayUrl.startsWith('data:') 
+        ? displayUrl 
+        : `${getApiBase()}${displayUrl}`)
     : null;
 
   return (
