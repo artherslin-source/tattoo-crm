@@ -143,8 +143,14 @@ export default function AdminArtistsPage() {
     if (!editingArtist) return;
 
     try {
-      console.log('🔧 發送更新請求:', formData);
-      const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, formData) as Artist;
+      // 確保 photoUrl 被包含在請求中
+      const updatePayload = {
+        ...formData,
+        photoUrl: formData.photoUrl || undefined, // 確保空字符串不會被發送
+      };
+      console.log('🔧 發送更新請求:', updatePayload);
+      console.log('🔍 formData.photoUrl:', formData.photoUrl);
+      const updatedArtist = await patchJsonWithAuth(`/admin/artists/${editingArtist.id}`, updatePayload) as Artist;
       console.log('✅ 收到更新回應:', updatedArtist);
       
       // 更新列表中的刺青師資料
