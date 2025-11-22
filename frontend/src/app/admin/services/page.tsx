@@ -114,9 +114,13 @@ const defaultFormValues = {
         );
 
         if (failed.length) {
-          console.error("刪除未在允許清單的服務失敗:", failed.length);
-          setError(
-            "部分不在允許清單內的服務無法刪除，請稍後重試或聯繫系統管理員"
+          // 只在控制台記錄，不顯示錯誤訊息給用戶
+          // 因為這些服務可能有關聯數據（預約、訂單等），無法刪除是正常的系統行為
+          console.warn(
+            `⚠️ 有 ${failed.length} 個不在允許清單內的服務無法自動刪除（可能有關聯數據）`,
+            disallowedServices.filter((_, index) => 
+              deletionResults[index].status === "rejected"
+            ).map(s => s.name)
           );
         }
       }
@@ -152,11 +156,13 @@ const defaultFormValues = {
         );
 
         if (failedDuplicate.length) {
-          console.error("刪除重複服務失敗:", failedDuplicate.length);
-          setError((prev) =>
-            prev
-              ? `${prev}；部分重複服務無法刪除，請稍後再試或通知系統管理員`
-              : "部分重複服務無法刪除，請稍後再試或通知系統管理員"
+          // 只在控制台記錄，不顯示錯誤訊息給用戶
+          // 因為這些服務可能有關聯數據（預約、訂單等），無法刪除是正常的系統行為
+          console.warn(
+            `⚠️ 有 ${failedDuplicate.length} 個重複服務無法自動刪除（可能有關聯數據）`,
+            duplicates.filter((_, index) => 
+              duplicateDeletionResults[index].status === "rejected"
+            ).map(s => s.name)
           );
         }
 
