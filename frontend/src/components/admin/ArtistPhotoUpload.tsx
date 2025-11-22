@@ -204,16 +204,31 @@ export function ArtistPhotoUpload({
 
       {imageUrl && (
         <div className="relative w-32 h-32 border rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
-          <Image
-            src={imageUrl}
-            alt="刺青師照片"
-            fill
-            className="object-cover"
-            onError={(e) => {
-              console.error('❌ 照片載入失敗:', imageUrl);
-              e.currentTarget.style.display = 'none';
-            }}
-          />
+          {preview ? (
+            // 如果是預覽（base64），使用普通 img 標籤
+            <img
+              src={imageUrl}
+              alt="刺青師照片預覽"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                console.error('❌ 照片預覽載入失敗:', imageUrl);
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            // 如果是 URL，使用 Next.js Image 組件
+            <Image
+              src={imageUrl}
+              alt="刺青師照片"
+              fill
+              className="object-cover"
+              unoptimized={imageUrl.startsWith('data:')}
+              onError={(e) => {
+                console.error('❌ 照片載入失敗:', imageUrl);
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          )}
         </div>
       )}
 
