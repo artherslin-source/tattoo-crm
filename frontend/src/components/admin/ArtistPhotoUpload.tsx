@@ -149,20 +149,16 @@ export function ArtistPhotoUpload({
           className="hidden"
           id="artist-photo-upload"
         />
-        <label htmlFor="artist-photo-upload">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled || uploading}
-            className="cursor-pointer"
-            asChild
-          >
-            <span>
-              <Upload className="h-4 w-4 mr-2" />
-              {uploading ? '上傳中...' : '選擇照片'}
-            </span>
-          </Button>
-        </label>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled || uploading}
+          className="cursor-pointer"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          {uploading ? '上傳中...' : '選擇照片'}
+        </Button>
         {displayUrl && (
           <Button
             type="button"
