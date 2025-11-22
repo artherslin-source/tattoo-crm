@@ -96,7 +96,6 @@ export default function ProfilePage() {
       });
 
       // 從 /users/me 的返回數據中直接獲取 member 信息
-      const user = userData as User;
       if (user.member) {
         const memberInfo: Member = {
           userId: user.id,
