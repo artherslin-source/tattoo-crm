@@ -17,6 +17,7 @@ const CreateArtistSchema = z.object({
   branchId: z.string().optional(),
   speciality: z.string().optional(),
   portfolioUrl: z.string().optional(),
+  photoUrl: z.string().optional(),
   active: z.boolean().optional(),
 });
 
@@ -146,8 +147,10 @@ export class AdminArtistsController {
       name: input.name,
       email: input.email,
       branchId: input.branchId,
+      bio: input.bio,
       speciality: input.speciality,
       portfolioUrl: input.portfolioUrl,
+      photoUrl: input.photoUrl,
       active: input.active,
     });
     
