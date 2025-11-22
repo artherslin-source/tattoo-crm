@@ -136,7 +136,6 @@ function checkExistingSideVariants(token, serviceId) {
 function createSideVariants(token, serviceId) {
   return new Promise((resolve, reject) => {
     const variants = SIDE_VARIANTS.map(side => ({
-      serviceId: serviceId,
       type: 'side',
       name: side.name,
       code: side.code,
@@ -152,7 +151,7 @@ function createSideVariants(token, serviceId) {
 
     const options = {
       hostname: API_BASE,
-      path: '/admin/service-variants/batch',
+      path: `/admin/service-variants/batch/${serviceId}`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
