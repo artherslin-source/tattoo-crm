@@ -98,85 +98,33 @@ const defaultFormValues = {
       setLoading(true);
       const data = await getJsonWithAuth<Service[]>("/admin/services");
 
-      const disallowedServices = data.filter(
-        (service) => !ALLOWED_SERVICE_NAME_SET.has(service.name)
-      );
-
-      if (disallowedServices.length) {
-        const deletionResults = await Promise.allSettled(
-          disallowedServices.map((service) =>
-            deleteJsonWithAuth(`/admin/services/${service.id}`)
-          )
-        );
-
-        const failed = deletionResults.filter(
-          (result) => result.status === "rejected"
-        );
-
-        if (failed.length) {
-          // 只在控制台記錄，不顯示錯誤訊息給用戶
-          // 因為這些服務可能有關聯數據（預約、訂單等），無法刪除是正常的系統行為
-          console.warn(
-            `⚠️ 有 ${failed.length} 個不在允許清單內的服務無法自動刪除（可能有關聯數據）`,
-            disallowedServices.filter((_, index) => 
-              deletionResults[index].status === "rejected"
-            ).map(s => s.name)
-          );
-        }
-      }
-
+      // 只過濾和排序，不自動刪除
+      // 讓用戶手動管理哪些服務需要刪除
       let allowedServices = data.filter((service) =>
         ALLOWED_SERVICE_NAME_SET.has(service.name)
       );
 
+      // 處理重複服務：只保留最早創建的，其他標記為重複但不自動刪除
+      const servicesByName = new Map<string, Service>();
+      allowedServices.forEach((service) => {
+        const existing = servicesByName.get(service.name);
+        if (!existing) {
+          servicesByName.set(service.name, service);
+        } else {
+          // 保留創建時間較早的
+          const existingTime = new Date(existing.createdAt).getTime();
+          const currentTime = new Date(service.createdAt).getTime();
+          if (currentTime < existingTime) {
+            servicesByName.set(service.name, service);
+          }
+        }
+      });
+
+      allowedServices = Array.from(servicesByName.values());
       allowedServices.sort(
         (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
-
-      const duplicates: Service[] = [];
-      const seenNames = new Set<string>();
-      allowedServices.forEach((service) => {
-        if (seenNames.has(service.name)) {
-          duplicates.push(service);
-        } else {
-          seenNames.add(service.name);
-        }
-      });
-
-      if (duplicates.length) {
-        const duplicateDeletionResults = await Promise.allSettled(
-          duplicates.map((service) =>
-            deleteJsonWithAuth(`/admin/services/${service.id}`)
-          )
-        );
-
-        const failedDuplicate = duplicateDeletionResults.filter(
-          (result) => result.status === "rejected"
-        );
-
-        if (failedDuplicate.length) {
-          // 只在控制台記錄，不顯示錯誤訊息給用戶
-          // 因為這些服務可能有關聯數據（預約、訂單等），無法刪除是正常的系統行為
-          console.warn(
-            `⚠️ 有 ${failedDuplicate.length} 個重複服務無法自動刪除（可能有關聯數據）`,
-            duplicates.filter((_, index) => 
-              duplicateDeletionResults[index].status === "rejected"
-            ).map(s => s.name)
-          );
-        }
-
-        const deletedDuplicateIds = new Set<string>();
-        duplicateDeletionResults.forEach((result, index) => {
-          if (result.status === "fulfilled") {
-            deletedDuplicateIds.add(duplicates[index].id);
-          }
-        });
-
-        allowedServices = allowedServices.filter(
-          (service) => !deletedDuplicateIds.has(service.id)
-        );
-      }
 
       const orderedServices = sortServicesByDisplayOrder(allowedServices);
       setServices(orderedServices);
