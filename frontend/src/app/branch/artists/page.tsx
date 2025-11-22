@@ -352,7 +352,10 @@ export default function BranchArtistsPage() {
                     </label>
                     <ArtistPhotoUpload
                       currentPhotoUrl={formData.photoUrl}
-                      onPhotoUploaded={(photoUrl) => setFormData({ ...formData, photoUrl })}
+                      onPhotoUploaded={(photoUrl) => {
+                        console.log('📸 照片上傳回調，更新 formData.photoUrl:', photoUrl);
+                        setFormData(prev => ({ ...prev, photoUrl }));
+                      }}
                     />
                     <p className="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">
                       照片會顯示在前端首頁的刺青師卡片中

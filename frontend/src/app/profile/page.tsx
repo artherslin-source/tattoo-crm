@@ -319,7 +319,10 @@ export default function ProfilePage() {
                   <div className="mt-1">
                     <ArtistPhotoUpload
                       currentPhotoUrl={formData.photoUrl}
-                      onPhotoUploaded={(photoUrl) => setFormData({ ...formData, photoUrl })}
+                      onPhotoUploaded={(photoUrl) => {
+                        console.log('📸 照片上傳回調，更新 formData.photoUrl:', photoUrl);
+                        setFormData(prev => ({ ...prev, photoUrl }));
+                      }}
                     />
                   </div>
                 ) : (
