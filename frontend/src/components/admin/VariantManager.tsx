@@ -735,7 +735,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                 <SelectTrigger id="variant-type" className="mt-1">
                   <SelectValue placeholder="請選擇規格類型" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100]">
                   {Object.keys(VARIANT_TYPE_LABELS).map((type) => (
                     <SelectItem key={type} value={type}>
                       {VARIANT_TYPE_LABELS[type]}
@@ -755,7 +755,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                   <SelectTrigger id="variant-template" className="mt-1">
                     <SelectValue placeholder="請選擇具體規格" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[300]" position="popper">
                     {PREDEFINED_VARIANTS[selectedVariantType]?.map((variant) => {
                       // 檢查是否已經存在
                       const existingVariants = variants[selectedVariantType as keyof GroupedVariants] || [];
