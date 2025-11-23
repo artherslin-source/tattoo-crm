@@ -445,9 +445,33 @@ export class CartService {
       console.log(`🔍 [後端價格計算] 選擇的顏色: ${selectedVariants.color}`, colorVariant);
       
       if (colorVariant) {
-        // 檢查是否有metadata中的sizePrices（用於圖騰小圖案等特殊定價）
+        // 檢查是否有metadata中的colorPriceDiff（用於圖騰小圖案等特殊定價：彩色=黑白+1000）
         const metadata = colorVariant.metadata as any;
-        if (metadata?.sizePrices && selectedVariants.size) {
+        if (metadata?.colorPriceDiff !== undefined && selectedVariants.size) {
+          // 獲取尺寸的價格（黑白價格）
+          const sizeVariant = variants.find(
+            (v) => v.type === 'size' && v.name === selectedVariants.size,
+          );
+          
+          if (sizeVariant) {
+            const blackWhitePrice = sizeVariant.priceModifier;
+            const excludeSizes = metadata.excludeSizes || [];
+            
+            // 檢查是否在排除列表中（如Z尺寸）
+            if (excludeSizes.includes(selectedVariants.size)) {
+              // 使用特殊的彩色價格（如Z彩色=1000）
+              finalPrice = metadata.zColorPrice || 1000;
+              console.log(`💰 使用排除尺寸的特殊彩色價格 [${selectedVariants.size} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
+            } else {
+              // 彩色價格 = 黑白價格 + 差價
+              finalPrice = blackWhitePrice + metadata.colorPriceDiff;
+              console.log(`💰 使用尺寸+顏色差價 [${selectedVariants.size} 黑白=NT$ ${blackWhitePrice} + ${selectedVariants.color}差價=NT$ ${metadata.colorPriceDiff}]: NT$ ${finalPrice}`);
+            }
+          } else {
+            console.warn(`⚠️ 找不到尺寸「${selectedVariants.size}」`);
+          }
+        } else if (metadata?.sizePrices && selectedVariants.size) {
+          // 向後兼容：使用metadata中的sizePrices（舊邏輯）
           const sizePrice = metadata.sizePrices[selectedVariants.size];
           if (sizePrice !== undefined) {
             finalPrice = sizePrice;

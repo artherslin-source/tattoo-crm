@@ -27,6 +27,9 @@ interface ServiceVariant {
     useSizeMetadata?: boolean;
     note?: string;
     sizePrices?: Record<string, number>;
+    colorPriceDiff?: number;
+    excludeSizes?: string[];
+    zColorPrice?: number;
   };
 }
 
@@ -165,9 +168,37 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       console.log(`🔍 [價格計算] 選擇的顏色: ${selectedColor}`, colorVariant);
       
       if (colorVariant) {
-        // 檢查是否有metadata中的sizePrices（用於圖騰小圖案等特殊定價）
-        const metadata = colorVariant.metadata as { sizePrices?: Record<string, number> } | null | undefined;
-        if (metadata?.sizePrices && selectedSize) {
+        // 檢查是否有metadata中的colorPriceDiff（用於圖騰小圖案等特殊定價：彩色=黑白+1000）
+        const metadata = colorVariant.metadata as { 
+          sizePrices?: Record<string, number>;
+          colorPriceDiff?: number;
+          excludeSizes?: string[];
+          zColorPrice?: number;
+        } | null | undefined;
+        
+        if (metadata?.colorPriceDiff !== undefined && selectedSize) {
+          // 獲取尺寸的價格（黑白價格）
+          const sizeVariant = variants.size?.find((v) => v.name === selectedSize);
+          
+          if (sizeVariant) {
+            const blackWhitePrice = sizeVariant.priceModifier;
+            const excludeSizes = metadata.excludeSizes || [];
+            
+            // 檢查是否在排除列表中（如Z尺寸）
+            if (excludeSizes.includes(selectedSize)) {
+              // 使用特殊的彩色價格（如Z彩色=1000）
+              price = metadata.zColorPrice || 1000;
+              console.log(`💰 使用排除尺寸的特殊彩色價格 [${selectedSize} + ${selectedColor}]: NT$ ${price}`);
+            } else {
+              // 彩色價格 = 黑白價格 + 差價
+              price = blackWhitePrice + metadata.colorPriceDiff;
+              console.log(`💰 使用尺寸+顏色差價 [${selectedSize} 黑白=NT$ ${blackWhitePrice} + ${selectedColor}差價=NT$ ${metadata.colorPriceDiff}]: NT$ ${price}`);
+            }
+          } else {
+            console.warn(`⚠️ 找不到尺寸「${selectedSize}」`);
+          }
+        } else if (metadata?.sizePrices && selectedSize) {
+          // 向後兼容：使用metadata中的sizePrices（舊邏輯）
           const sizePrice = metadata.sizePrices[selectedSize];
           if (sizePrice !== undefined) {
             price = sizePrice;
