@@ -125,7 +125,7 @@ export default function LoginPage() {
 
       {/* 玻璃卡片 */}
       <div className="auth-card" role="dialog" aria-labelledby="authTitle">
-        <div className="auth-logo login-logo">🌀 雕川紋身 CRM</div>
+        <div className="auth-logo login-logo">🌀 彫川紋身 CRM</div>
         <h2 id="authTitle" className="auth-subtitle">登入管理後台</h2>
 
         {error && (
