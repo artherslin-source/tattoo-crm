@@ -25,7 +25,7 @@ export default function Sidebar({ open, onClose }: Props) {
     return (
       <aside className="sidebar">
         <div>
-          <h1 className="brand-logo">雕川紋身 CRM</h1>
+          <h1 className="brand-logo">彫川紋身 CRM</h1>
           <nav>
             <Link href="/admin/dashboard" prefetch={true}>📊 儀表板</Link>
             <Link href="/admin/analytics" prefetch={true}>📈 統計報表</Link>
