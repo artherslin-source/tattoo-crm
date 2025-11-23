@@ -114,13 +114,16 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           
           // 特別檢查圖騰小圖案的彩色變體 metadata
           if (service.name === '圖騰小圖案' && data.color) {
-            const colorVariant = data.color.find((v: ServiceVariant) => v.name === '彩色');
+            // 優先查找 "彩色-圖騰"（專屬變體），如果沒有則查找 "彩色"（向後兼容）
+            const colorVariant = data.color.find((v: ServiceVariant) => v.name === '彩色-圖騰') || 
+                                 data.color.find((v: ServiceVariant) => v.name === '彩色');
             if (colorVariant) {
               console.log(`🔍 [VariantSelector] 圖騰小圖案-彩色變體:`, {
                 id: colorVariant.id,
                 name: colorVariant.name,
                 metadata: colorVariant.metadata,
-                metadataType: typeof colorVariant.metadata
+                metadataType: typeof colorVariant.metadata,
+                allColorVariants: data.color.map((v: ServiceVariant) => ({ id: v.id, name: v.name }))
               });
               if (colorVariant.metadata && typeof colorVariant.metadata === 'object') {
                 console.log(`🔍 [VariantSelector] metadata 的所有鍵:`, Object.keys(colorVariant.metadata));
@@ -129,10 +132,14 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                 if (!colorVariant.metadata.colorPriceDiff) {
                   console.error('❌ [VariantSelector] 錯誤！metadata 中沒有 colorPriceDiff！');
                   console.error('❌ [VariantSelector] 這可能是 API 返回了錯誤的數據！');
+                  console.error('❌ [VariantSelector] 請檢查是否使用了正確的專屬變體（彩色-圖騰）！');
+                } else {
+                  console.log('✅ [VariantSelector] 圖騰小圖案-彩色變體的 metadata 正確！');
                 }
               }
             } else {
               console.error('❌ [VariantSelector] 找不到彩色變體！');
+              console.error('❌ [VariantSelector] 所有顏色變體:', data.color.map((v: ServiceVariant) => ({ id: v.id, name: v.name })));
             }
           }
           
@@ -294,7 +301,28 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     const effectiveHasColorPriceDiff = hasColorPriceDiff;
     
     if (selectedColor && variants.color && selectedSize) {
-      const selectedColorVariant = variants.color.find((v) => v.name === selectedColor);
+      // 對於圖騰小圖案，需要考慮專屬變體名稱
+      // 如果 selectedColor 是 "彩色" 或 "黑白"，也要查找 "彩色-圖騰" 或 "黑白-圖騰"
+      let selectedColorVariant = variants.color.find((v) => v.name === selectedColor);
+      
+      if (isTotemService && !selectedColorVariant) {
+        // 如果找不到，嘗試查找專屬變體名稱
+        if (selectedColor === '彩色') {
+          selectedColorVariant = variants.color.find((v) => v.name === '彩色-圖騰');
+        } else if (selectedColor === '黑白') {
+          selectedColorVariant = variants.color.find((v) => v.name === '黑白-圖騰');
+        }
+      }
+      
+      // 如果還是找不到，嘗試反向查找（專屬變體名稱 -> 通用名稱）
+      if (!selectedColorVariant && isTotemService) {
+        if (selectedColor === '彩色-圖騰') {
+          selectedColorVariant = variants.color.find((v) => v.name === '彩色-圖騰');
+        } else if (selectedColor === '黑白-圖騰') {
+          selectedColorVariant = variants.color.find((v) => v.name === '黑白-圖騰');
+        }
+      }
+      
       console.log(`🔍 [價格計算] 選擇的顏色: ${selectedColor}`, selectedColorVariant);
       console.log(`🔍 [價格計算] 選擇的尺寸: ${selectedSize}`);
       console.log(`🔍 [價格計算] 初始 hasColorPriceDiff: ${hasColorPriceDiff}`);
@@ -324,7 +352,13 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
               hasColorPriceDiffInMetadata: colorMetadata.colorPriceDiff !== undefined
             });
             // 支持專屬變體名稱（"彩色-圖騰"、"黑白-圖騰"）和通用名稱（"彩色"、"黑白"）
-            if (selectedColor === '彩色' || selectedColor === '彩色-圖騰') {
+            // 對於圖騰小圖案，selectedColor 可能是 "彩色-圖騰"，需要同時檢查兩種格式
+            const isColorSelected = selectedColor === '彩色' || selectedColor === '彩色-圖騰' || 
+                                   (isTotemService && selectedColorVariant?.name === '彩色-圖騰');
+            const isBlackWhiteSelected = selectedColor === '黑白' || selectedColor === '黑白-圖騰' || 
+                                        (isTotemService && selectedColorVariant?.name === '黑白-圖騰');
+            
+            if (isColorSelected) {
               const excludeSizes = colorMetadata.excludeSizes || [];
               
               // 檢查是否在排除列表中（如Z尺寸）
@@ -338,7 +372,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                 price = blackWhitePrice + colorPriceDiff;
                 console.log(`💰 使用尺寸+顏色差價 [${selectedSize} 黑白=NT$ ${blackWhitePrice} + 彩色差價=NT$ ${colorPriceDiff}]: NT$ ${price}`);
               }
-            } else if (selectedColor === '黑白' || selectedColor === '黑白-圖騰') {
+            } else if (isBlackWhiteSelected) {
               // 黑白價格 = 尺寸價格
               price = blackWhitePrice;
               console.log(`💰 使用尺寸價格（黑白） [${selectedSize}]: NT$ ${price}`);
