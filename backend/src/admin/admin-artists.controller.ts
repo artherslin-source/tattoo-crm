@@ -15,6 +15,7 @@ const CreateArtistSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   branchId: z.string().optional(),
+  bio: z.string().optional(),
   speciality: z.string().optional(),
   portfolioUrl: z.string().optional(),
   photoUrl: z.string().optional(),
@@ -101,6 +102,7 @@ export class AdminArtistsController {
       email: input.email,
       password: 'temp_password_12345678', // 臨時密碼，需要後續修改
       branchId,
+      bio: input.bio,
       speciality: input.speciality,
       portfolioUrl: input.portfolioUrl,
       photoUrl: input.photoUrl,
