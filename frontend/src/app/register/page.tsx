@@ -6,7 +6,7 @@ import { postJSON, saveTokens, getJsonWithAuth, ApiError } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export default function RegisterPage() {
     try {
       const resp = await postJSON(
         "/auth/register", 
-        { email, password, name }
+        { phone, password, name }
       );
       
       if (!resp.ok) {
@@ -111,13 +111,16 @@ export default function RegisterPage() {
             aria-label="姓名"
           />
           <input
-            type="email"
-            placeholder="Email"
+            type="tel"
+            placeholder="手機號碼"
             className="auth-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
             required
-            aria-label="Email"
+            minLength={10}
+            maxLength={15}
+            pattern="[0-9]+"
+            aria-label="手機號碼"
           />
           <input
             type="password"

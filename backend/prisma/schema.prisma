@@ -9,10 +9,10 @@ datasource db {
 
 model User {
   id              String   @id @default(cuid())
-  email           String   @unique
+  email           String?  // 改為可選
   hashedPassword  String
   name            String?
-  phone           String?
+  phone           String?  @unique // 改為唯一
   birthday        DateTime?
   gender          String?
   stylePreferences String?

@@ -6,7 +6,7 @@ import { postJSON, saveTokens, getJsonWithAuth, ApiError, checkBackendHealth } f
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function LoginPage() {
       
       const resp = await postJSON(
         "/auth/login",
-        { email, password }
+        { phone, password }
       );
       
       if (!resp.ok) {
@@ -136,13 +136,16 @@ export default function LoginPage() {
 
         <form onSubmit={onSubmit}>
           <input
-            type="email"
-            placeholder="Email"
+            type="tel"
+            placeholder="手機號碼"
             className="auth-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
             required
-            aria-label="Email"
+            minLength={10}
+            maxLength={15}
+            pattern="[0-9]+"
+            aria-label="手機號碼"
           />
           <input
             type="password"

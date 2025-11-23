@@ -4,14 +4,14 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 interface RegisterDto {
-  email: string;
+  phone: string;
   password: string;
   name: string;
-  phone?: string;
+  email?: string;
 }
 
 interface LoginDto {
-  email: string;
+  phone: string;
   password: string;
 }
 
@@ -23,36 +23,36 @@ export class AuthService {
   ) {}
 
   async register(input: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
-    if (existing) throw new BadRequestException('Email already registered');
+    const existing = await this.prisma.user.findUnique({ where: { phone: input.phone } });
+    if (existing) throw new BadRequestException('手機號碼已被註冊');
     const hashedPassword = await bcrypt.hash(input.password, 12);
     const user = await this.prisma.user.create({
       data: {
-        email: input.email,
+        phone: input.phone,
+        email: input.email ?? null,
         hashedPassword,
         name: input.name,
-        phone: input.phone ?? null,
       },
     });
-    return this.issueTokens(user.id, user.email, user.role || 'USER');
+    return this.issueTokens(user.id, user.phone || user.email || '', user.role || 'USER');
   }
 
   async login(input: LoginDto) {
-    console.log(`🔐 嘗試登入: ${input.email}`);
+    console.log(`🔐 嘗試登入: ${input.phone}`);
     
     try {
       // 查找用戶
       const user = await this.prisma.user.findUnique({ 
-        where: { email: input.email },
+        where: { phone: input.phone },
         include: { branch: true }
       });
       
       if (!user) {
-        console.log(`❌ 用戶不存在: ${input.email}`);
+        console.log(`❌ 用戶不存在: ${input.phone}`);
         throw new UnauthorizedException('User not found');
       }
       
-      console.log(`✅ 找到用戶: ${user.email}, ID: ${user.id}`);
+      console.log(`✅ 找到用戶: ${user.phone}, ID: ${user.id}`);
       
       // 驗證密碼
       let passwordValid = false;
@@ -64,11 +64,11 @@ export class AuthService {
       }
       
       if (!passwordValid) {
-        console.log(`❌ 密碼錯誤: ${input.email}`);
+        console.log(`❌ 密碼錯誤: ${input.phone}`);
         throw new UnauthorizedException('Invalid credentials');
       }
       
-      console.log(`✅ 密碼驗證成功: ${input.email}`);
+      console.log(`✅ 密碼驗證成功: ${input.phone}`);
       
       // 更新最後登入時間
       try {
@@ -76,7 +76,7 @@ export class AuthService {
           where: { id: user.id },
           data: { lastLogin: new Date() },
         });
-        console.log(`✅ 更新最後登入時間: ${user.email}`);
+        console.log(`✅ 更新最後登入時間: ${user.phone}`);
       } catch (updateError) {
         console.error('⚠️ 更新最後登入時間失敗:', updateError);
         // 不影響登入流程，繼續執行
@@ -84,8 +84,8 @@ export class AuthService {
       
       // 簽發 JWT tokens
       try {
-        const tokens = await this.issueTokens(user.id, user.email, user.role || 'USER', user.branchId || undefined);
-        console.log(`✅ 登入成功: ${user.email}`);
+        const tokens = await this.issueTokens(user.id, user.phone || user.email || '', user.role || 'USER', user.branchId || undefined);
+        console.log(`✅ 登入成功: ${user.phone}`);
         return tokens;
       } catch (jwtError) {
         console.error('❌ JWT 簽發失敗:', jwtError);

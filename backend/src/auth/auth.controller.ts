@@ -4,14 +4,14 @@ import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 
 const RegisterSchema = z.object({
-  email: z.string().email(),
+  phone: z.string().min(10).regex(/^[0-9]+$/, '手機號碼只能包含數字'),
   password: z.string().min(8),
   name: z.string().min(1),
-  phone: z.string().optional(),
+  email: z.string().email().optional(),
 });
 
 const LoginSchema = z.object({
-  email: z.string().email(),
+  phone: z.string().min(10).regex(/^[0-9]+$/, '手機號碼只能包含數字'),
   password: z.string().min(8),
 });
 
@@ -34,7 +34,7 @@ export class AuthController {
   @Post('login')
   async login(@Body() body: unknown) {
     try {
-      console.log('📥 收到登入請求:', { email: (body as any)?.email });
+      console.log('📥 收到登入請求:', { phone: (body as any)?.phone });
       
       // 驗證輸入格式
       let input;
