@@ -164,9 +164,27 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       console.log(`🔍 [價格計算] 選擇的顏色: ${selectedColor}`, colorVariant);
       
       if (colorVariant) {
-        // 如果顏色規格的 priceModifier >= 1000，視為固定價格（完整價格）
-        // 否則視為加價（向後兼容）
-        if (colorVariant.priceModifier >= 1000) {
+        // 檢查是否有metadata中的sizePrices（用於圖騰小圖案等特殊定價）
+        const metadata = colorVariant.metadata as any;
+        if (metadata?.sizePrices && selectedSize) {
+          const sizePrice = metadata.sizePrices[selectedSize];
+          if (sizePrice !== undefined) {
+            price = sizePrice;
+            console.log(`💰 使用metadata中的尺寸+顏色價格 [${selectedSize} + ${selectedColor}]: NT$ ${price}`);
+          } else {
+            // 如果metadata中沒有該尺寸的價格，回退到其他邏輯
+            console.warn(`⚠️ metadata中沒有尺寸「${selectedSize}」的價格，使用其他邏輯`);
+            if (colorVariant.priceModifier >= 1000) {
+              price = colorVariant.priceModifier;
+            } else if (selectedSize && variants.size) {
+              const sizeVariant = variants.size.find((v) => v.name === selectedSize);
+              if (sizeVariant) {
+                price = sizeVariant.priceModifier;
+              }
+            }
+          }
+        } else if (colorVariant.priceModifier >= 1000) {
+          // 如果顏色規格的 priceModifier >= 1000，視為固定價格（完整價格）
           price = colorVariant.priceModifier;
           console.log(`💰 使用顏色固定價格 [${selectedColor}]: NT$ ${price}`);
         } else if (colorVariant.priceModifier > 0) {
