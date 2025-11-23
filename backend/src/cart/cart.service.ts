@@ -383,11 +383,41 @@ export class CartService {
       }
     }
 
+    // 處理 artistId：Appointment.artistId 需要的是 User.id，不是 Artist.id
+    // 如果傳入的是 Artist.id，需要轉換為對應的 User.id
+    let actualArtistId: string | undefined = dto.artistId;
+    if (dto.artistId) {
+      // 先檢查是否為 User.id（直接查詢 User 表）
+      const userAsArtist = await this.prisma.user.findUnique({
+        where: { id: dto.artistId },
+        select: { id: true, role: true },
+      });
+      
+      if (userAsArtist && userAsArtist.role === 'ARTIST') {
+        // 已經是 User.id，直接使用
+        actualArtistId = dto.artistId;
+      } else {
+        // 可能是 Artist.id，需要轉換為 User.id
+        const artist = await this.prisma.artist.findUnique({
+          where: { id: dto.artistId },
+          select: { userId: true },
+        });
+        
+        if (artist) {
+          actualArtistId = artist.userId;
+        } else {
+          // 如果都找不到，可能是無效的 ID，設為 undefined（允許預約沒有指定藝術家）
+          console.warn(`⚠️ 無法找到藝術家 ID: ${dto.artistId}`);
+          actualArtistId = undefined;
+        }
+      }
+    }
+
     // 創建預約
     const appointment = await this.prisma.appointment.create({
       data: {
         branchId: dto.branchId,
-        artistId: dto.artistId,
+        artistId: actualArtistId,
         userId: actualUserId,
         startAt,
         endAt,
