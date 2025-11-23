@@ -165,18 +165,34 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     // 檢查是否有特殊定價邏輯（圖騰小圖案：彩色=黑白+1000）
     // 需要檢查彩色的metadata，因為只有彩色有colorPriceDiff
     const colorVariant = variants.color?.find((v) => v.name === '彩色');
-    const colorMetadata = colorVariant?.metadata as { 
+    
+    // 確保 metadata 是對象（Prisma 的 Json 類型可能返回字符串）
+    let colorMetadata: { 
       sizePrices?: Record<string, number>;
       colorPriceDiff?: number;
       excludeSizes?: string[];
       zColorPrice?: number;
-    } | null | undefined;
+    } | null | undefined = null;
+    
+    if (colorVariant?.metadata) {
+      if (typeof colorVariant.metadata === 'string') {
+        try {
+          colorMetadata = JSON.parse(colorVariant.metadata);
+        } catch (e) {
+          console.warn('⚠️ 無法解析 metadata 字符串:', e);
+          colorMetadata = null;
+        }
+      } else if (typeof colorVariant.metadata === 'object') {
+        colorMetadata = colorVariant.metadata as any;
+      }
+    }
     
     const hasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
     
     // 調試信息
     console.log(`🔍 [價格計算] 檢查 colorPriceDiff 邏輯:`, {
       hasColorVariant: !!colorVariant,
+      rawMetadata: colorVariant?.metadata,
       colorMetadata,
       hasColorPriceDiff,
       selectedColor,
@@ -198,7 +214,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           console.log(`🔍 [價格計算] 尺寸價格（黑白）: NT$ ${blackWhitePrice}`);
           
           // 如果有colorPriceDiff邏輯（圖騰小圖案）
-          if (hasColorPriceDiff) {
+          if (hasColorPriceDiff && colorMetadata) {
             if (selectedColor === '彩色') {
               const excludeSizes = colorMetadata.excludeSizes || [];
               
