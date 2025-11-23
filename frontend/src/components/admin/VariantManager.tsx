@@ -715,7 +715,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
 
       {/* 新增規格對話框 */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md z-[200]">
           <DialogHeader>
             <DialogTitle>新增規格</DialogTitle>
             <DialogDescription>
