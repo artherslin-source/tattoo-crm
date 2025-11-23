@@ -426,11 +426,27 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
               }
             }
           }
+        } else if (!selectedSize) {
+          // 沒有尺寸選擇（如大腿全包），使用顏色變體的價格
+          if (selectedColorVariant.priceModifier >= 1000) {
+            // 固定價格
+            price = selectedColorVariant.priceModifier;
+            console.log(`💰 使用顏色固定價格（無尺寸） [${selectedColor}]: NT$ ${price}`);
+          } else if (selectedColorVariant.priceModifier > 0) {
+            // 加價
+            price = selectedColorVariant.priceModifier;
+            console.log(`💰 使用顏色加價（無尺寸） [${selectedColor}]: NT$ ${price}`);
+          } else {
+            // priceModifier 為 0，價格為 0
+            price = 0;
+            console.log(`💰 顏色價格為 0 [${selectedColor}]: NT$ ${price}`);
+          }
         } else {
           console.warn(`⚠️ 找不到尺寸「${selectedSize}」`);
         }
       } else {
         console.warn(`⚠️ 找不到顏色規格: ${selectedColor}`);
+        console.warn(`⚠️ 所有顏色變體:`, variants.color?.map(v => ({ id: v.id, name: v.name })));
       }
     } else if (selectedSize && variants.size) {
       // 如果只選擇了尺寸，使用尺寸價格
