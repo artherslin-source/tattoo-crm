@@ -73,9 +73,10 @@ const PREDEFINED_VARIANTS: Record<string, Array<{
     { name: '16-17cm', code: 'S12', priceModifier: 14000, sortOrder: 12, isRequired: true, description: '16-17cm（黑白14000/彩色14000）' },
   ],
   color: [
-    { name: '黑白', code: 'BW', priceModifier: 0, sortOrder: 1, isRequired: true, description: '黑白陰影' },
-    { name: '彩色', code: 'COLOR', priceModifier: 1000, sortOrder: 2, isRequired: true, description: '彩色上色（大部分尺寸+1000）' },
-    { name: '全彩', code: 'FULL_COLOR', priceModifier: 1000, sortOrder: 3, isRequired: false, description: '全彩色漸層' },
+    { name: '割線', code: 'LINE', priceModifier: 0, sortOrder: 1, isRequired: true, description: '割線（基礎價格）' },
+    { name: '黑白', code: 'BW', priceModifier: 0, sortOrder: 2, isRequired: true, description: '黑白陰影' },
+    { name: '半彩', code: 'HALF', priceModifier: 0, sortOrder: 3, isRequired: false, description: '背景黑白/主圖彩色' },
+    { name: '全彩', code: 'FULL', priceModifier: 0, sortOrder: 4, isRequired: false, description: '全彩色漸層' },
   ],
   position: [
     { name: '手臂外側', code: 'P1', priceModifier: 0, sortOrder: 1, isRequired: false, description: '手臂外側面' },
