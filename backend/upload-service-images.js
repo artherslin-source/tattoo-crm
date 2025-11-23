@@ -14,7 +14,7 @@ const SERVICE_CATEGORY_MAP = {
   '上手臂': 'arm',
   '前手臂': 'arm',
   '半胛圖': 'arm',
-  '排胛圖': 'back',
+  '排胛圖': 'other',
   '大小腿包全肢': 'leg',
   '大背到大腿圖': 'back',
   '大背後圖': 'back',
@@ -77,8 +77,7 @@ async function uploadServiceImages() {
     
     // 名稱映射（圖片檔名 -> 資料庫服務名稱）
     const nameMapping = {
-      '排胛圖': '排肚圖',  // 圖片檔名是"排胛圖.png"，但資料庫服務名稱是"排肚圖"
-      // 注意：半胛圖.png 直接對應資料庫中的"半胛圖"，不需要映射
+      // 注意：半胛圖.png 和 排胛圖.png 都直接對應資料庫中的服務名稱，不需要映射
     };
     
     // 4. 處理每張圖片
