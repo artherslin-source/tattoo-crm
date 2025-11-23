@@ -43,64 +43,85 @@ async function bootstrap() {
   const portfolioPath = join(uploadsPath, 'portfolio');
   
   // 在 Railway 上，volume 掛載會覆蓋 uploads 目錄，需要從 git 中的文件複製
-  // 嘗試多個可能的路徑（因為 Railway 的工作目錄可能不同）
+  // Railway 的工作目錄是 backend/，所以 git 中的文件在 uploads/ 目錄下
+  // 但編譯後的代碼在 dist/ 目錄，所以需要從不同路徑查找
   const possibleGitPaths = [
-    join(process.cwd(), 'uploads'),           // 如果工作目錄是 backend/
-    join(process.cwd(), 'backend', 'uploads'), // 如果工作目錄是項目根目錄
-    join(__dirname, '..', 'uploads'),          // 從編譯後的 dist 目錄向上查找
+    join(process.cwd(), 'uploads'),                    // 如果工作目錄是 backend/
+    join(process.cwd(), 'backend', 'uploads'),         // 如果工作目錄是項目根目錄
+    join(__dirname, '..', 'uploads'),                  // 從編譯後的 dist 目錄向上查找
+    join(__dirname, '..', '..', 'backend', 'uploads'), // 從 dist 向上兩層到 backend
   ];
   
   let gitUploadsPath: string | null = null;
-  for (const path of possibleGitPaths) {
-    if (existsSync(path)) {
-      gitUploadsPath = path;
-      console.log(`📁 Found git uploads at: ${path}`);
+  for (const testPath of possibleGitPaths) {
+    if (existsSync(testPath)) {
+      gitUploadsPath = testPath;
+      console.log(`📁 Found git uploads at: ${testPath}`);
       break;
     }
   }
   
-  // 在生產環境中，嘗試從 git 複製圖片文件到 volume
-  if (process.env.NODE_ENV === 'production' && gitUploadsPath) {
+  // 在生產環境中，強制複製所有圖片文件到 volume（確保圖片可用）
+  if (process.env.NODE_ENV === 'production') {
     const fs = require('fs');
     let copiedCount = 0;
     let skippedCount = 0;
+    let errorCount = 0;
     
     const copyRecursiveSync = (src: string, dest: string) => {
+      if (!existsSync(src)) {
+        console.log(`⚠️  Source path does not exist: ${src}`);
+        return;
+      }
+      
       if (!existsSync(dest)) {
         mkdirSync(dest, { recursive: true });
+        console.log(`📁 Created directory: ${dest}`);
       }
-      const entries = fs.readdirSync(src, { withFileTypes: true });
-      for (const entry of entries) {
-        const srcPath = join(src, entry.name);
-        const destPath = join(dest, entry.name);
-        if (entry.isDirectory()) {
-          copyRecursiveSync(srcPath, destPath);
-        } else {
-          // 只複製不存在的文件，避免覆蓋已上傳的文件
-          if (!existsSync(destPath)) {
-            fs.copyFileSync(srcPath, destPath);
-            copiedCount++;
-            if (copiedCount <= 5) { // 只顯示前5個，避免日誌過長
-              console.log(`📋 Copied: ${entry.name}`);
-            }
+      
+      try {
+        const entries = fs.readdirSync(src, { withFileTypes: true });
+        for (const entry of entries) {
+          const srcPath = join(src, entry.name);
+          const destPath = join(dest, entry.name);
+          
+          if (entry.isDirectory()) {
+            copyRecursiveSync(srcPath, destPath);
           } else {
-            skippedCount++;
+            try {
+              // 在生產環境中，強制覆蓋以確保圖片是最新的
+              fs.copyFileSync(srcPath, destPath);
+              copiedCount++;
+              if (copiedCount <= 10) { // 顯示前10個
+                console.log(`📋 Copied: ${entry.name}`);
+              }
+            } catch (copyError) {
+              errorCount++;
+              console.error(`❌ Failed to copy ${entry.name}:`, copyError);
+            }
           }
         }
+      } catch (readError) {
+        console.error(`❌ Failed to read directory ${src}:`, readError);
       }
     };
     
-    // 複製服務圖片
-    const gitServicesPath = join(gitUploadsPath, 'services');
-    if (existsSync(gitServicesPath)) {
-      console.log(`🔄 Copying service images from ${gitServicesPath} to ${servicesPath}...`);
-      copyRecursiveSync(gitServicesPath, servicesPath);
-      console.log(`✅ Copied ${copiedCount} files, skipped ${skippedCount} existing files`);
+    if (gitUploadsPath) {
+      // 複製服務圖片
+      const gitServicesPath = join(gitUploadsPath, 'services');
+      if (existsSync(gitServicesPath)) {
+        console.log(`🔄 Copying service images from ${gitServicesPath} to ${servicesPath}...`);
+        copyRecursiveSync(gitServicesPath, servicesPath);
+        console.log(`✅ Image copy completed: ${copiedCount} copied, ${skippedCount} skipped, ${errorCount} errors`);
+      } else {
+        console.log(`⚠️  Git services path not found: ${gitServicesPath}`);
+      }
     } else {
-      console.log(`⚠️  Git services path not found: ${gitServicesPath}`);
+      console.log(`⚠️  Production mode but git uploads path not found.`);
+      console.log(`   Tried paths: ${possibleGitPaths.join(', ')}`);
+      console.log(`   Current working directory: ${process.cwd()}`);
+      console.log(`   __dirname: ${__dirname}`);
     }
-  } else if (process.env.NODE_ENV === 'production') {
-    console.log(`⚠️  Production mode but git uploads path not found. Tried: ${possibleGitPaths.join(', ')}`);
   }
   
   if (!existsSync(uploadsPath)) {
