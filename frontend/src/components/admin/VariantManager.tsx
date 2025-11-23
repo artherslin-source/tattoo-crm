@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Save, Trash2, ToggleLeft, ToggleRight, Plus } from "lucide-react";
+import { X, Save, Trash2, ToggleLeft, ToggleRight, Plus, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -126,6 +126,8 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
   const [selectedVariantType, setSelectedVariantType] = useState<string>("");
   const [selectedVariantTemplate, setSelectedVariantTemplate] = useState<string>("");
   const [adding, setAdding] = useState(false);
+  const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(new Set());
+  const [batchOperating, setBatchOperating] = useState(false);
 
   useEffect(() => {
     fetchVariants();
@@ -250,6 +252,168 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     }
   };
 
+  // 批次選擇相關函數
+  const toggleVariantSelection = (variantId: string) => {
+    setSelectedVariantIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(variantId)) {
+        newSet.delete(variantId);
+      } else {
+        newSet.add(variantId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = (variantList: ServiceVariant[]) => {
+    const allSelected = variantList.every((v) => selectedVariantIds.has(v.id));
+    if (allSelected) {
+      // 取消全選
+      setSelectedVariantIds((prev) => {
+        const newSet = new Set(prev);
+        variantList.forEach((v) => newSet.delete(v.id));
+        return newSet;
+      });
+    } else {
+      // 全選
+      setSelectedVariantIds((prev) => {
+        const newSet = new Set(prev);
+        variantList.forEach((v) => newSet.add(v.id));
+        return newSet;
+      });
+    }
+  };
+
+  // 批次啟用
+  const batchEnable = async () => {
+    if (selectedVariantIds.size === 0) {
+      alert("請先選擇要啟用的規格");
+      return;
+    }
+
+    if (!confirm(`確定要啟用 ${selectedVariantIds.size} 個規格嗎？`)) {
+      return;
+    }
+
+    setBatchOperating(true);
+    try {
+      const promises = Array.from(selectedVariantIds).map((variantId) =>
+        fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getAccessToken()}`,
+          },
+          body: JSON.stringify({ isActive: true }),
+        })
+      );
+
+      const results = await Promise.allSettled(promises);
+      const successCount = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
+      const failCount = results.length - successCount;
+
+      if (failCount > 0) {
+        alert(`成功啟用 ${successCount} 個規格，${failCount} 個失敗`);
+      } else {
+        alert(`成功啟用 ${successCount} 個規格`);
+      }
+
+      await fetchVariants();
+      setSelectedVariantIds(new Set());
+      onUpdate();
+    } catch (error) {
+      alert("批次啟用失敗，請重試");
+    } finally {
+      setBatchOperating(false);
+    }
+  };
+
+  // 批次停用
+  const batchDisable = async () => {
+    if (selectedVariantIds.size === 0) {
+      alert("請先選擇要停用的規格");
+      return;
+    }
+
+    if (!confirm(`確定要停用 ${selectedVariantIds.size} 個規格嗎？`)) {
+      return;
+    }
+
+    setBatchOperating(true);
+    try {
+      const promises = Array.from(selectedVariantIds).map((variantId) =>
+        fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getAccessToken()}`,
+          },
+          body: JSON.stringify({ isActive: false }),
+        })
+      );
+
+      const results = await Promise.allSettled(promises);
+      const successCount = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
+      const failCount = results.length - successCount;
+
+      if (failCount > 0) {
+        alert(`成功停用 ${successCount} 個規格，${failCount} 個失敗`);
+      } else {
+        alert(`成功停用 ${successCount} 個規格`);
+      }
+
+      await fetchVariants();
+      setSelectedVariantIds(new Set());
+      onUpdate();
+    } catch (error) {
+      alert("批次停用失敗，請重試");
+    } finally {
+      setBatchOperating(false);
+    }
+  };
+
+  // 批次刪除
+  const batchDelete = async () => {
+    if (selectedVariantIds.size === 0) {
+      alert("請先選擇要刪除的規格");
+      return;
+    }
+
+    if (!confirm(`確定要刪除 ${selectedVariantIds.size} 個規格嗎？\n\n注意：刪除後無法復原，顧客將無法再選擇這些規格。`)) {
+      return;
+    }
+
+    setBatchOperating(true);
+    try {
+      const promises = Array.from(selectedVariantIds).map((variantId) =>
+        fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${getAccessToken()}`,
+          },
+        })
+      );
+
+      const results = await Promise.allSettled(promises);
+      const successCount = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
+      const failCount = results.length - successCount;
+
+      if (failCount > 0) {
+        alert(`成功刪除 ${successCount} 個規格，${failCount} 個失敗`);
+      } else {
+        alert(`成功刪除 ${successCount} 個規格`);
+      }
+
+      await fetchVariants();
+      setSelectedVariantIds(new Set());
+      onUpdate();
+    } catch (error) {
+      alert("批次刪除失敗，請重試");
+    } finally {
+      setBatchOperating(false);
+    }
+  };
+
   // 新增規格
   const handleAddVariant = async () => {
     if (!selectedVariantType || !selectedVariantTemplate) {
@@ -320,15 +484,33 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     // 分離啟用和停用的規格
     const activeVariants = variantList.filter((v) => v.isActive);
     const inactiveVariants = variantList.filter((v) => !v.isActive);
+    const allSelected = variantList.length > 0 && variantList.every((v) => selectedVariantIds.has(v.id));
+    const someSelected = variantList.some((v) => selectedVariantIds.has(v.id));
 
     return (
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          {VARIANT_TYPE_LABELS[type]}
-          <Badge variant="outline">
-            {variantList.length} 個（{activeVariants.length} 啟用，{inactiveVariants.length} 停用）
-          </Badge>
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            {VARIANT_TYPE_LABELS[type]}
+            <Badge variant="outline">
+              {variantList.length} 個（{activeVariants.length} 啟用，{inactiveVariants.length} 停用）
+            </Badge>
+          </h3>
+          {variantList.length > 0 && (
+            <button
+              onClick={() => toggleSelectAll(variantList)}
+              className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+              title={allSelected ? "取消全選" : "全選"}
+            >
+              {allSelected ? (
+                <CheckSquare className="h-4 w-4" />
+              ) : (
+                <Square className="h-4 w-4" />
+              )}
+              <span>{allSelected ? "取消全選" : "全選"}</span>
+            </button>
+          )}
+        </div>
         
         {/* 啟用的規格 */}
         {activeVariants.length > 0 && (
@@ -338,12 +520,21 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
               key={variant.id}
               className={`border rounded-lg p-4 ${
                 variant.isActive ? "bg-white" : "bg-gray-50"
-              } ${editingVariant?.id === variant.id ? "ring-2 ring-blue-500" : ""}`}
+              } ${editingVariant?.id === variant.id ? "ring-2 ring-blue-500" : ""} ${
+                selectedVariantIds.has(variant.id) ? "ring-2 ring-blue-400 bg-blue-50" : ""
+              }`}
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-semibold text-gray-900">{variant.name}</span>
+                <div className="flex items-start gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedVariantIds.has(variant.id)}
+                    onChange={() => toggleVariantSelection(variant.id)}
+                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-gray-900">{variant.name}</span>
                     {variant.code && (
                       <Badge variant="secondary" className="text-xs">
                         {variant.code}
@@ -675,6 +866,53 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
               <li>• <strong>刪除規格：</strong>刪除後無法復原，請謹慎操作</li>
             </ul>
           </div>
+
+          {/* 批次操作工具欄 */}
+          {selectedVariantIds.size > 0 && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-blue-900">
+                    已選擇 {selectedVariantIds.size} 個規格
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedVariantIds(new Set())}
+                    className="text-xs"
+                  >
+                    取消選擇
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={batchEnable}
+                    disabled={batchOperating}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {batchOperating ? "處理中..." : "批量啟用"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={batchDisable}
+                    disabled={batchOperating}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                  >
+                    {batchOperating ? "處理中..." : "批量停用"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={batchDelete}
+                    disabled={batchOperating}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {batchOperating ? "處理中..." : "批量刪除"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 新增規格按鈕 */}
           <div className="mb-6 flex justify-end">
