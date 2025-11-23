@@ -489,53 +489,56 @@ export class CartService {
             // 沒有colorPriceDiff邏輯，使用原有邏輯
             const metadata = colorVariant.metadata as any;
             if (metadata?.sizePrices && selectedVariants.size) {
-          // 向後兼容：使用metadata中的sizePrices（舊邏輯）
-          const sizePrice = metadata.sizePrices[selectedVariants.size];
-          if (sizePrice !== undefined) {
-            finalPrice = sizePrice;
-            console.log(`💰 使用metadata中的尺寸+顏色價格 [${selectedVariants.size} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
-          } else {
-            // 如果metadata中沒有該尺寸的價格，回退到其他邏輯
-            console.warn(`⚠️ metadata中沒有尺寸「${selectedVariants.size}」的價格，使用其他邏輯`);
-            if (colorVariant.priceModifier >= 1000) {
+              // 向後兼容：使用metadata中的sizePrices（舊邏輯）
+              const sizePrice = metadata.sizePrices[selectedVariants.size];
+              if (sizePrice !== undefined) {
+                finalPrice = sizePrice;
+                console.log(`💰 使用metadata中的尺寸+顏色價格 [${selectedVariants.size} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
+              } else {
+                // 如果metadata中沒有該尺寸的價格，回退到其他邏輯
+                console.warn(`⚠️ metadata中沒有尺寸「${selectedVariants.size}」的價格，使用其他邏輯`);
+                if (colorVariant.priceModifier >= 1000) {
+                  finalPrice = colorVariant.priceModifier;
+                } else if (selectedVariants.size) {
+                  const sizeVariant = variants.find(
+                    (v) => v.type === 'size' && v.name === selectedVariants.size,
+                  );
+                  if (sizeVariant) {
+                    finalPrice = sizeVariant.priceModifier;
+                  }
+                }
+              }
+            } else if (colorVariant.priceModifier >= 1000) {
+              // 如果顏色規格的 priceModifier >= 1000，視為固定價格（完整價格）
               finalPrice = colorVariant.priceModifier;
-            } else if (selectedVariants.size) {
-              const sizeVariant = variants.find(
-                (v) => v.type === 'size' && v.name === selectedVariants.size,
-              );
+              console.log(`💰 使用顏色固定價格 [${selectedVariants.color}]: NT$ ${finalPrice}`);
+            } else if (colorVariant.priceModifier > 0) {
+              // 向後兼容：使用尺寸 + 顏色加價
+              let sizePrice = 0;
+              const sizeVariant = selectedVariants.size 
+                ? variants.find((v) => v.type === 'size' && v.name === selectedVariants.size)
+                : null;
+              
               if (sizeVariant) {
-                finalPrice = sizeVariant.priceModifier;
+                sizePrice = sizeVariant.priceModifier;
+              }
+              finalPrice = sizePrice + colorVariant.priceModifier;
+              console.log(`💰 使用尺寸+顏色加價 [${selectedVariants.size || '無尺寸'} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
+            } else {
+              // priceModifier 為 0 或負數，使用尺寸價格（黑白）
+              if (selectedVariants.size) {
+                const sizeVariant = variants.find(
+                  (v) => v.type === 'size' && v.name === selectedVariants.size,
+                );
+                if (sizeVariant) {
+                  finalPrice = sizeVariant.priceModifier;
+                  console.log(`💰 使用尺寸價格 [${selectedVariants.size}]: NT$ ${finalPrice}`);
+                }
               }
             }
           }
-        } else if (colorVariant.priceModifier >= 1000) {
-          // 如果顏色規格的 priceModifier >= 1000，視為固定價格（完整價格）
-          finalPrice = colorVariant.priceModifier;
-          console.log(`💰 使用顏色固定價格 [${selectedVariants.color}]: NT$ ${finalPrice}`);
-        } else if (colorVariant.priceModifier > 0) {
-          // 向後兼容：使用尺寸 + 顏色加價
-          let sizePrice = 0;
-          const sizeVariant = selectedVariants.size 
-            ? variants.find((v) => v.type === 'size' && v.name === selectedVariants.size)
-            : null;
-          
-          if (sizeVariant) {
-            sizePrice = sizeVariant.priceModifier;
-          }
-          finalPrice = sizePrice + colorVariant.priceModifier;
-          console.log(`💰 使用尺寸+顏色加價 [${selectedVariants.size || '無尺寸'} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
         } else {
-          // priceModifier 為 0 或負數，可能是數據未更新
-          console.warn(`⚠️ 顏色「${selectedVariants.color}」的 priceModifier 為 ${colorVariant.priceModifier}，可能數據未更新`);
-          // 如果沒有尺寸，價格為 0
-          if (selectedVariants.size) {
-            const sizeVariant = variants.find(
-              (v) => v.type === 'size' && v.name === selectedVariants.size,
-            );
-            if (sizeVariant) {
-              finalPrice = sizeVariant.priceModifier;
-            }
-          }
+          console.warn(`⚠️ 找不到尺寸「${selectedVariants.size}」`);
         }
       } else {
         console.warn(`⚠️ 找不到顏色規格: ${selectedVariants.color}`);
