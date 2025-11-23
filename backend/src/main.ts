@@ -113,6 +113,19 @@ async function bootstrap() {
         console.log(`🔄 Copying service images from ${gitServicesPath} to ${servicesPath}...`);
         copyRecursiveSync(gitServicesPath, servicesPath);
         console.log(`✅ Image copy completed: ${copiedCount} copied, ${skippedCount} skipped, ${errorCount} errors`);
+        
+        // 驗證複製結果：檢查每個分類目錄中的圖片數量
+        const categories = ['arm', 'leg', 'back', 'other'];
+        let totalImages = 0;
+        for (const category of categories) {
+          const categoryPath = join(servicesPath, category);
+          if (existsSync(categoryPath)) {
+            const images = fs.readdirSync(categoryPath).filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f));
+            totalImages += images.length;
+            console.log(`   ${category}: ${images.length} 張圖片`);
+          }
+        }
+        console.log(`   📊 總共: ${totalImages} 張圖片`);
       } else {
         console.log(`⚠️  Git services path not found: ${gitServicesPath}`);
       }
@@ -166,53 +179,114 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
   
-  // 在生產環境中，確保所有服務項目的圖片文件都存在
+  // 在生產環境中，確保所有服務項目的圖片文件都存在並正確匹配
   if (process.env.NODE_ENV === 'production' && gitUploadsPath) {
     try {
       const { PrismaClient } = require('@prisma/client');
       const prisma = new PrismaClient();
       
-      const services = await prisma.service.findMany({
-        where: { isActive: true },
-        select: { id: true, name: true, imageUrl: true },
-      });
+      // 建立圖片映射：服務名稱 -> 圖片URL
+      const imageMap = new Map<string, string>();
+      const gitServicesPath = join(gitUploadsPath, 'services');
+      const categories = ['arm', 'leg', 'back', 'other'];
       
-      let fixedCount = 0;
-      for (const service of services) {
-        if (service.imageUrl) {
-          const imagePath = join(process.cwd(), service.imageUrl);
-          if (!existsSync(imagePath)) {
-            // 嘗試從 git 複製
-            const fileName = service.imageUrl.split('/').pop()!;
-            const category = service.imageUrl.split('/')[3];
-            const gitImagePath = join(gitUploadsPath, 'services', category, fileName);
+      for (const category of categories) {
+        const categoryPath = join(gitServicesPath, category);
+        if (existsSync(categoryPath)) {
+          const files = fs.readdirSync(categoryPath).filter(f => 
+            /\.(jpg|jpeg|png|gif|webp)$/i.test(f)
+          );
+          
+          for (const file of files) {
+            // 讀取 metadata 獲取原始檔名
+            const metaPath = join(categoryPath, `${file}.meta.json`);
+            let serviceName = file;
             
-            if (existsSync(gitImagePath)) {
-              const destCategoryPath = join(servicesPath, category);
-              if (!existsSync(destCategoryPath)) {
-                mkdirSync(destCategoryPath, { recursive: true });
+            if (existsSync(metaPath)) {
+              try {
+                const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                serviceName = (meta.originalName || meta.displayName || file).replace(/\.[^/.]+$/, '');
+              } catch (e) {
+                // 忽略 metadata 讀取錯誤
               }
-              const destImagePath = join(destCategoryPath, fileName);
-              const fs = require('fs');
-              fs.copyFileSync(gitImagePath, destImagePath);
-              
-              // 複製 metadata
-              const gitMetaPath = `${gitImagePath}.meta.json`;
-              if (existsSync(gitMetaPath)) {
-                fs.copyFileSync(gitMetaPath, `${destImagePath}.meta.json`);
-              }
-              
-              fixedCount++;
-              if (fixedCount <= 5) {
-                console.log(`✅ 修復「${service.name}」的圖片: ${service.imageUrl}`);
-              }
+            } else {
+              // 如果沒有 metadata，從檔名推測（去除時間戳和隨機字串）
+              serviceName = file.replace(/^service-\d+-[^-]+-/, '').replace(/\.[^/.]+$/, '');
+            }
+            
+            const imageUrl = `/uploads/services/${category}/${file}`;
+            // 如果已經有這個服務名稱的圖片，保留最新的（檔名時間戳較大）
+            if (!imageMap.has(serviceName) || file > imageMap.get(serviceName)!.split('/').pop()!) {
+              imageMap.set(serviceName, imageUrl);
             }
           }
         }
       }
       
-      if (fixedCount > 0) {
-        console.log(`✅ 修復了 ${fixedCount} 個服務項目的圖片文件`);
+      console.log(`📸 建立圖片映射: ${imageMap.size} 張圖片`);
+      
+      // 獲取所有服務項目並匹配圖片
+      const services = await prisma.service.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, imageUrl: true },
+      });
+      
+      let updatedCount = 0;
+      let fixedCount = 0;
+      
+      for (const service of services) {
+        const matchedImageUrl = imageMap.get(service.name);
+        
+        if (matchedImageUrl) {
+          // 檢查圖片文件是否存在
+          const imagePath = join(process.cwd(), matchedImageUrl);
+          const currentImagePath = service.imageUrl ? join(process.cwd(), service.imageUrl) : null;
+          
+          // 如果圖片URL不同，或者當前圖片文件不存在，則更新
+          if (service.imageUrl !== matchedImageUrl || (currentImagePath && !existsSync(currentImagePath))) {
+            // 確保圖片文件存在
+            if (!existsSync(imagePath)) {
+              // 從 git 複製
+              const fileName = matchedImageUrl.split('/').pop()!;
+              const category = matchedImageUrl.split('/')[3];
+              const gitImagePath = join(gitServicesPath, category, fileName);
+              
+              if (existsSync(gitImagePath)) {
+                const destCategoryPath = join(servicesPath, category);
+                if (!existsSync(destCategoryPath)) {
+                  mkdirSync(destCategoryPath, { recursive: true });
+                }
+                const destImagePath = join(destCategoryPath, fileName);
+                fs.copyFileSync(gitImagePath, destImagePath);
+                
+                // 複製 metadata
+                const gitMetaPath = `${gitImagePath}.meta.json`;
+                if (existsSync(gitMetaPath)) {
+                  fs.copyFileSync(gitMetaPath, `${destImagePath}.meta.json`);
+                }
+                
+                fixedCount++;
+              }
+            }
+            
+            // 更新資料庫
+            await prisma.service.update({
+              where: { id: service.id },
+              data: { imageUrl: matchedImageUrl },
+            });
+            
+            updatedCount++;
+            if (updatedCount <= 5) {
+              console.log(`✅ 更新「${service.name}」的圖片: ${matchedImageUrl}`);
+            }
+          }
+        }
+      }
+      
+      if (updatedCount > 0 || fixedCount > 0) {
+        console.log(`✅ 更新了 ${updatedCount} 個服務項目的圖片URL，修復了 ${fixedCount} 個圖片文件`);
+      } else {
+        console.log('✅ 所有服務項目的圖片都已正確設置');
       }
       
       await prisma.$disconnect();
