@@ -152,13 +152,15 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     // 優先使用顏色規格的固定價格（根據價格表，顏色價格是完整價格）
     if (selectedColor && variants.color) {
       const colorVariant = variants.color.find((v) => v.name === selectedColor);
+      console.log(`🔍 [價格計算] 選擇的顏色: ${selectedColor}`, colorVariant);
+      
       if (colorVariant) {
-        // 如果顏色規格的 priceModifier > 1000，視為固定價格（完整價格）
+        // 如果顏色規格的 priceModifier >= 1000，視為固定價格（完整價格）
         // 否則視為加價（向後兼容）
-        if (colorVariant.priceModifier > 1000) {
+        if (colorVariant.priceModifier >= 1000) {
           price = colorVariant.priceModifier;
           console.log(`💰 使用顏色固定價格 [${selectedColor}]: NT$ ${price}`);
-        } else {
+        } else if (colorVariant.priceModifier > 0) {
           // 向後兼容：使用尺寸 + 顏色加價
           if (selectedSize && variants.size) {
             const sizeVariant = variants.size.find((v) => v.name === selectedSize);
@@ -168,7 +170,19 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           }
           price += colorVariant.priceModifier;
           console.log(`💰 使用尺寸+顏色加價 [${selectedSize || '無尺寸'} + ${selectedColor}]: NT$ ${price}`);
+        } else {
+          // priceModifier 為 0 或負數，可能是數據未更新
+          console.warn(`⚠️ 顏色「${selectedColor}」的 priceModifier 為 ${colorVariant.priceModifier}，可能數據未更新`);
+          // 如果沒有尺寸，價格為 0
+          if (selectedSize && variants.size) {
+            const sizeVariant = variants.size.find((v) => v.name === selectedSize);
+            if (sizeVariant) {
+              price = sizeVariant.priceModifier;
+            }
+          }
         }
+      } else {
+        console.warn(`⚠️ 找不到顏色規格: ${selectedColor}`);
       }
     } else if (selectedSize && variants.size) {
       // 如果只選擇了尺寸，使用尺寸價格
@@ -177,6 +191,8 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
         price = sizeVariant.priceModifier;
       }
     }
+    
+    console.log(`💰 [價格計算] 最終價格: NT$ ${price}`);
 
     // 部位加價
     if (selectedPosition && variants.position) {
