@@ -266,10 +266,13 @@ async function bootstrap() {
                 }
                 
                 fixedCount++;
+                console.log(`📸 複製圖片文件: ${fileName} -> ${destImagePath}`);
+              } else {
+                console.warn(`⚠️  Git圖片文件不存在: ${gitImagePath}`);
               }
             }
             
-            // 更新資料庫
+            // 更新資料庫（即使圖片文件已存在，也確保URL正確）
             await prisma.service.update({
               where: { id: service.id },
               data: { imageUrl: matchedImageUrl },
@@ -278,6 +281,31 @@ async function bootstrap() {
             updatedCount++;
             if (updatedCount <= 5) {
               console.log(`✅ 更新「${service.name}」的圖片: ${matchedImageUrl}`);
+            }
+          } else {
+            // 即使URL匹配，也確保圖片文件存在
+            if (!existsSync(imagePath)) {
+              const fileName = matchedImageUrl.split('/').pop()!;
+              const category = matchedImageUrl.split('/')[3];
+              const gitImagePath = join(gitServicesPath, category, fileName);
+              
+              if (existsSync(gitImagePath)) {
+                const destCategoryPath = join(servicesPath, category);
+                if (!existsSync(destCategoryPath)) {
+                  mkdirSync(destCategoryPath, { recursive: true });
+                }
+                const destImagePath = join(destCategoryPath, fileName);
+                copyFileSync(gitImagePath, destImagePath);
+                
+                // 複製 metadata
+                const gitMetaPath = `${gitImagePath}.meta.json`;
+                if (existsSync(gitMetaPath)) {
+                  copyFileSync(gitMetaPath, `${destImagePath}.meta.json`);
+                }
+                
+                fixedCount++;
+                console.log(`📸 修復圖片文件: ${fileName} -> ${destImagePath}`);
+              }
             }
           }
         }
