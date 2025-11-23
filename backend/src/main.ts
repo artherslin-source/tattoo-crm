@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, copyFileSync } from 'fs';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import session = require('express-session');
 
@@ -193,7 +193,7 @@ async function bootstrap() {
       for (const category of categories) {
         const categoryPath = join(gitServicesPath, category);
         if (existsSync(categoryPath)) {
-          const files = fs.readdirSync(categoryPath).filter(f => 
+          const files = readdirSync(categoryPath).filter(f => 
             /\.(jpg|jpeg|png|gif|webp)$/i.test(f)
           );
           
@@ -204,7 +204,7 @@ async function bootstrap() {
             
             if (existsSync(metaPath)) {
               try {
-                const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
                 serviceName = (meta.originalName || meta.displayName || file).replace(/\.[^/.]+$/, '');
               } catch (e) {
                 // 忽略 metadata 讀取錯誤
@@ -257,12 +257,12 @@ async function bootstrap() {
                   mkdirSync(destCategoryPath, { recursive: true });
                 }
                 const destImagePath = join(destCategoryPath, fileName);
-                fs.copyFileSync(gitImagePath, destImagePath);
+                copyFileSync(gitImagePath, destImagePath);
                 
                 // 複製 metadata
                 const gitMetaPath = `${gitImagePath}.meta.json`;
                 if (existsSync(gitMetaPath)) {
-                  fs.copyFileSync(gitMetaPath, `${destImagePath}.meta.json`);
+                  copyFileSync(gitMetaPath, `${destImagePath}.meta.json`);
                 }
                 
                 fixedCount++;
