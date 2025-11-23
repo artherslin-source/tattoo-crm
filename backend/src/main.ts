@@ -43,9 +43,22 @@ async function bootstrap() {
   const portfolioPath = join(uploadsPath, 'portfolio');
   
   // 在 Railway 上，volume 掛載會覆蓋 uploads 目錄，需要從 git 中的文件複製
-  // Railway 的工作目錄是 backend/，所以 git 中的文件在 uploads/ 目錄下
-  const gitUploadsPath = join(process.cwd(), 'uploads');
-  if (process.env.NODE_ENV === 'production' && existsSync(gitUploadsPath)) {
+  // 嘗試多個可能的路徑（因為 Railway 的工作目錄可能不同）
+  const possibleGitPaths = [
+    join(process.cwd(), 'uploads'),           // 如果工作目錄是 backend/
+    join(process.cwd(), 'backend', 'uploads'), // 如果工作目錄是項目根目錄
+  ];
+  
+  let gitUploadsPath: string | null = null;
+  for (const path of possibleGitPaths) {
+    if (existsSync(path)) {
+      gitUploadsPath = path;
+      console.log(`📁 Found git uploads at: ${path}`);
+      break;
+    }
+  }
+  
+  if (process.env.NODE_ENV === 'production' && gitUploadsPath) {
     const fs = require('fs');
     const copyRecursiveSync = (src: string, dest: string) => {
       if (!existsSync(dest)) {
