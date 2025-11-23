@@ -166,6 +166,62 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
   
+  // 在生產環境中，確保所有服務項目的圖片文件都存在
+  if (process.env.NODE_ENV === 'production' && gitUploadsPath) {
+    try {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      const services = await prisma.service.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, imageUrl: true },
+      });
+      
+      let fixedCount = 0;
+      for (const service of services) {
+        if (service.imageUrl) {
+          const imagePath = join(process.cwd(), service.imageUrl);
+          if (!existsSync(imagePath)) {
+            // 嘗試從 git 複製
+            const fileName = service.imageUrl.split('/').pop()!;
+            const category = service.imageUrl.split('/')[3];
+            const gitImagePath = join(gitUploadsPath, 'services', category, fileName);
+            
+            if (existsSync(gitImagePath)) {
+              const destCategoryPath = join(servicesPath, category);
+              if (!existsSync(destCategoryPath)) {
+                mkdirSync(destCategoryPath, { recursive: true });
+              }
+              const destImagePath = join(destCategoryPath, fileName);
+              const fs = require('fs');
+              fs.copyFileSync(gitImagePath, destImagePath);
+              
+              // 複製 metadata
+              const gitMetaPath = `${gitImagePath}.meta.json`;
+              if (existsSync(gitMetaPath)) {
+                fs.copyFileSync(gitMetaPath, `${destImagePath}.meta.json`);
+              }
+              
+              fixedCount++;
+              if (fixedCount <= 5) {
+                console.log(`✅ 修復「${service.name}」的圖片: ${service.imageUrl}`);
+              }
+            }
+          }
+        }
+      }
+      
+      if (fixedCount > 0) {
+        console.log(`✅ 修復了 ${fixedCount} 個服務項目的圖片文件`);
+      }
+      
+      await prisma.$disconnect();
+    } catch (error) {
+      console.error('⚠️  確保服務項目圖片失敗:', error);
+      // 不阻止服務啟動
+    }
+  }
+
   const port = process.env.PORT || 4000;
   await app.listen(port, '0.0.0.0'); // 監聽所有網路介面
   console.log(`🚀 Server is running on port ${port}`);
