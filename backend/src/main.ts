@@ -42,6 +42,39 @@ async function bootstrap() {
   const servicesPath = join(uploadsPath, 'services');
   const portfolioPath = join(uploadsPath, 'portfolio');
   
+  // 在 Railway 上，volume 掛載會覆蓋 uploads 目錄，需要從 git 中的文件複製
+  // Railway 的工作目錄是 backend/，所以 git 中的文件在 uploads/ 目錄下
+  const gitUploadsPath = join(process.cwd(), 'uploads');
+  if (process.env.NODE_ENV === 'production' && existsSync(gitUploadsPath)) {
+    const fs = require('fs');
+    const copyRecursiveSync = (src: string, dest: string) => {
+      if (!existsSync(dest)) {
+        mkdirSync(dest, { recursive: true });
+      }
+      const entries = fs.readdirSync(src, { withFileTypes: true });
+      for (const entry of entries) {
+        const srcPath = join(src, entry.name);
+        const destPath = join(dest, entry.name);
+        if (entry.isDirectory()) {
+          copyRecursiveSync(srcPath, destPath);
+        } else {
+          // 只複製不存在的文件，避免覆蓋已上傳的文件
+          if (!existsSync(destPath)) {
+            fs.copyFileSync(srcPath, destPath);
+            console.log(`📋 Copied: ${entry.name}`);
+          }
+        }
+      }
+    };
+    
+    // 複製服務圖片
+    const gitServicesPath = join(gitUploadsPath, 'services');
+    if (existsSync(gitServicesPath)) {
+      copyRecursiveSync(gitServicesPath, servicesPath);
+      console.log('✅ Copied service images from git to volume');
+    }
+  }
+  
   if (!existsSync(uploadsPath)) {
     mkdirSync(uploadsPath, { recursive: true });
     console.log('📁 Created uploads directory');
