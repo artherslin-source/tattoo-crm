@@ -232,17 +232,22 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       }
     }
     
-    // 重新檢查 hasColorPriceDiff
+    // 重新檢查 hasColorPriceDiff（在重新解析後）
     const finalHasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
     if (isTotemService && finalHasColorPriceDiff) {
       console.log('✅ [價格計算] 圖騰小圖案已確認有 colorPriceDiff 邏輯');
     }
     
+    // 使用最終的 hasColorPriceDiff（重新解析後的）
+    const effectiveHasColorPriceDiff = finalHasColorPriceDiff || hasColorPriceDiff;
+    
     if (selectedColor && variants.color && selectedSize) {
       const selectedColorVariant = variants.color.find((v) => v.name === selectedColor);
       console.log(`🔍 [價格計算] 選擇的顏色: ${selectedColor}`, selectedColorVariant);
       console.log(`🔍 [價格計算] 選擇的尺寸: ${selectedSize}`);
-      console.log(`🔍 [價格計算] 是否有colorPriceDiff: ${hasColorPriceDiff}`);
+      console.log(`🔍 [價格計算] 初始 hasColorPriceDiff: ${hasColorPriceDiff}`);
+      console.log(`🔍 [價格計算] 最終 hasColorPriceDiff: ${effectiveHasColorPriceDiff}`);
+      console.log(`🔍 [價格計算] colorMetadata:`, colorMetadata);
       console.log(`🔍 [價格計算] 所有尺寸變體:`, variants.size?.map(v => ({ name: v.name, priceModifier: v.priceModifier })));
       
       if (selectedColorVariant) {
@@ -255,7 +260,8 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           console.log(`🔍 [價格計算] 尺寸價格（黑白）: NT$ ${blackWhitePrice}`);
           
           // 如果有colorPriceDiff邏輯（圖騰小圖案）
-          const shouldUseColorPriceDiff = (colorMetadata?.colorPriceDiff !== undefined) && colorMetadata;
+          // 使用 effectiveHasColorPriceDiff 而不是 hasColorPriceDiff
+          const shouldUseColorPriceDiff = effectiveHasColorPriceDiff && colorMetadata;
           if (shouldUseColorPriceDiff && colorMetadata) {
             console.log(`✅ [價格計算] 使用 colorPriceDiff 邏輯`, { colorPriceDiff: colorMetadata.colorPriceDiff });
             if (selectedColor === '彩色') {
