@@ -437,51 +437,43 @@ export class CartService {
     let finalPrice = 0;
     const estimatedDuration = 60; // 固定預設值 (不再計算時長)
 
-    // 1. 尺寸與顏色組合定價（新邏輯：支援尺寸metadata中的價格）
-    let sizePrice = 0;
-    const sizeVariant = selectedVariants.size 
-      ? variants.find((v) => v.type === 'size' && v.name === selectedVariants.size)
-      : null;
-    
-    if (sizeVariant) {
-      // 檢查尺寸規格的 metadata 中是否有組合定價
-      if (sizeVariant.metadata && typeof sizeVariant.metadata === 'object') {
-        const metadata = sizeVariant.metadata;
-        
-        // 如果有 metadata.colorPrice 且選擇了彩色，使用組合定價
-        if (selectedVariants.color === '彩色' && metadata.colorPrice) {
-          sizePrice = metadata.colorPrice;
-          console.log(`💰 使用組合定價 [${selectedVariants.size} + 彩色]: NT$ ${sizePrice}`);
-        }
-        // 如果選擇黑白或metadata有blackWhitePrice
-        else if (selectedVariants.color === '黑白' && metadata.blackWhitePrice) {
-          sizePrice = metadata.blackWhitePrice;
-          console.log(`💰 使用組合定價 [${selectedVariants.size} + 黑白]: NT$ ${sizePrice}`);
-        }
-        // 否則使用 priceModifier（向後兼容）
-        else {
-          sizePrice = sizeVariant.priceModifier;
-        }
-      } else {
-        // 沒有 metadata，使用傳統 priceModifier
-        sizePrice = sizeVariant.priceModifier;
-      }
-    }
-
-    // 2. 顏色加價（僅當沒有使用組合定價時才應用）
-    let colorPrice = 0;
-    const usingCombinedPricing = sizeVariant?.metadata?.colorPrice || sizeVariant?.metadata?.blackWhitePrice;
-    
-    if (!usingCombinedPricing && selectedVariants.color) {
+    // 1. 優先使用顏色規格的固定價格（根據價格表，顏色價格是完整價格）
+    if (selectedVariants.color) {
       const colorVariant = variants.find(
         (v) => v.type === 'color' && v.name === selectedVariants.color,
       );
       if (colorVariant) {
-        colorPrice = colorVariant.priceModifier;
+        // 如果顏色規格的 priceModifier > 1000，視為固定價格（完整價格）
+        // 否則視為加價（向後兼容）
+        if (colorVariant.priceModifier > 1000) {
+          finalPrice = colorVariant.priceModifier;
+          console.log(`💰 使用顏色固定價格 [${selectedVariants.color}]: NT$ ${finalPrice}`);
+        } else {
+          // 向後兼容：使用尺寸 + 顏色加價
+          let sizePrice = 0;
+          const sizeVariant = selectedVariants.size 
+            ? variants.find((v) => v.type === 'size' && v.name === selectedVariants.size)
+            : null;
+          
+          if (sizeVariant) {
+            sizePrice = sizeVariant.priceModifier;
+          }
+          finalPrice = sizePrice + colorVariant.priceModifier;
+          console.log(`💰 使用尺寸+顏色加價 [${selectedVariants.size || '無尺寸'} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
+        }
       }
+    } else if (selectedVariants.size) {
+      // 如果只選擇了尺寸，使用尺寸價格
+      const sizeVariant = variants.find(
+        (v) => v.type === 'size' && v.name === selectedVariants.size,
+      );
+      if (sizeVariant) {
+        finalPrice = sizeVariant.priceModifier;
+      }
+    } else {
+      // 如果都沒有選擇，使用基礎價格
+      finalPrice = basePrice;
     }
-
-    finalPrice = sizePrice + colorPrice;
 
     // 3. 計算部位調整
     if (selectedVariants.position) {
