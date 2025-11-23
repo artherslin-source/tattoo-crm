@@ -174,6 +174,15 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     
     const hasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
     
+    // 調試信息
+    console.log(`🔍 [價格計算] 檢查 colorPriceDiff 邏輯:`, {
+      hasColorVariant: !!colorVariant,
+      colorMetadata,
+      hasColorPriceDiff,
+      selectedColor,
+      selectedSize
+    });
+    
     if (selectedColor && variants.color && selectedSize) {
       const selectedColorVariant = variants.color.find((v) => v.name === selectedColor);
       console.log(`🔍 [價格計算] 選擇的顏色: ${selectedColor}`, selectedColorVariant);
@@ -267,14 +276,14 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       } else {
         console.warn(`⚠️ 找不到顏色規格: ${selectedColor}`);
       }
-      } else if (selectedSize && variants.size) {
-        // 如果只選擇了尺寸，使用尺寸價格
-        const sizeVariant = variants.size.find((v) => v.name === selectedSize);
-        if (sizeVariant) {
-          price = sizeVariant.priceModifier;
-          console.log(`💰 使用尺寸價格（僅尺寸） [${selectedSize}]: NT$ ${price}`);
-        }
+    } else if (selectedSize && variants.size) {
+      // 如果只選擇了尺寸，使用尺寸價格
+      const sizeVariant = variants.size.find((v) => v.name === selectedSize);
+      if (sizeVariant) {
+        price = sizeVariant.priceModifier;
+        console.log(`💰 使用尺寸價格（僅尺寸） [${selectedSize}]: NT$ ${price}`);
       }
+    }
     
     console.log(`💰 [價格計算] 最終價格: NT$ ${price}`);
 
