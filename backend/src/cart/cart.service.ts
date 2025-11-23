@@ -437,40 +437,58 @@ export class CartService {
     let finalPrice = 0;
     const estimatedDuration = 60; // 固定預設值 (不再計算時長)
 
+    // 檢查是否有特殊定價邏輯（圖騰小圖案：彩色=黑白+1000）
+    // 需要檢查彩色的metadata，因為只有彩色有colorPriceDiff
+    const colorVariantForMetadata = variants.find(
+      (v) => v.type === 'color' && v.name === '彩色',
+    );
+    const colorMetadata = colorVariantForMetadata?.metadata as any;
+    const hasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
+    
     // 1. 優先使用顏色規格的固定價格（根據價格表，顏色價格是完整價格）
-    if (selectedVariants.color) {
+    if (selectedVariants.color && selectedVariants.size) {
       const colorVariant = variants.find(
         (v) => v.type === 'color' && v.name === selectedVariants.color,
       );
       console.log(`🔍 [後端價格計算] 選擇的顏色: ${selectedVariants.color}`, colorVariant);
+      console.log(`🔍 [後端價格計算] 選擇的尺寸: ${selectedVariants.size}`);
+      console.log(`🔍 [後端價格計算] 是否有colorPriceDiff: ${hasColorPriceDiff}`);
       
       if (colorVariant) {
-        // 檢查是否有metadata中的colorPriceDiff（用於圖騰小圖案等特殊定價：彩色=黑白+1000）
-        const metadata = colorVariant.metadata as any;
-        if (metadata?.colorPriceDiff !== undefined && selectedVariants.size) {
-          // 獲取尺寸的價格（黑白價格）
-          const sizeVariant = variants.find(
-            (v) => v.type === 'size' && v.name === selectedVariants.size,
-          );
+        // 獲取尺寸的價格（黑白價格）
+        const sizeVariant = variants.find(
+          (v) => v.type === 'size' && v.name === selectedVariants.size,
+        );
+        
+        if (sizeVariant) {
+          const blackWhitePrice = sizeVariant.priceModifier;
+          console.log(`🔍 [後端價格計算] 尺寸價格（黑白）: NT$ ${blackWhitePrice}`);
           
-          if (sizeVariant) {
-            const blackWhitePrice = sizeVariant.priceModifier;
-            const excludeSizes = metadata.excludeSizes || [];
-            
-            // 檢查是否在排除列表中（如Z尺寸）
-            if (excludeSizes.includes(selectedVariants.size)) {
-              // 使用特殊的彩色價格（如Z彩色=1000）
-              finalPrice = metadata.zColorPrice || 1000;
-              console.log(`💰 使用排除尺寸的特殊彩色價格 [${selectedVariants.size} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
-            } else {
-              // 彩色價格 = 黑白價格 + 差價
-              finalPrice = blackWhitePrice + metadata.colorPriceDiff;
-              console.log(`💰 使用尺寸+顏色差價 [${selectedVariants.size} 黑白=NT$ ${blackWhitePrice} + ${selectedVariants.color}差價=NT$ ${metadata.colorPriceDiff}]: NT$ ${finalPrice}`);
+          // 如果有colorPriceDiff邏輯（圖騰小圖案）
+          if (hasColorPriceDiff) {
+            if (selectedVariants.color === '彩色') {
+              const excludeSizes = colorMetadata.excludeSizes || [];
+              
+              // 檢查是否在排除列表中（如Z尺寸）
+              if (excludeSizes.includes(selectedVariants.size)) {
+                // 使用特殊的彩色價格（如Z彩色=1000）
+                finalPrice = colorMetadata.zColorPrice || 1000;
+                console.log(`💰 使用排除尺寸的特殊彩色價格 [${selectedVariants.size} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
+              } else {
+                // 彩色價格 = 黑白價格 + 差價
+                const colorPriceDiff = colorMetadata.colorPriceDiff || 1000;
+                finalPrice = blackWhitePrice + colorPriceDiff;
+                console.log(`💰 使用尺寸+顏色差價 [${selectedVariants.size} 黑白=NT$ ${blackWhitePrice} + 彩色差價=NT$ ${colorPriceDiff}]: NT$ ${finalPrice}`);
+              }
+            } else if (selectedVariants.color === '黑白') {
+              // 黑白價格 = 尺寸價格
+              finalPrice = blackWhitePrice;
+              console.log(`💰 使用尺寸價格（黑白） [${selectedVariants.size}]: NT$ ${finalPrice}`);
             }
           } else {
-            console.warn(`⚠️ 找不到尺寸「${selectedVariants.size}」`);
-          }
-        } else if (metadata?.sizePrices && selectedVariants.size) {
+            // 沒有colorPriceDiff邏輯，使用原有邏輯
+            const metadata = colorVariant.metadata as any;
+            if (metadata?.sizePrices && selectedVariants.size) {
           // 向後兼容：使用metadata中的sizePrices（舊邏輯）
           const sizePrice = metadata.sizePrices[selectedVariants.size];
           if (sizePrice !== undefined) {
