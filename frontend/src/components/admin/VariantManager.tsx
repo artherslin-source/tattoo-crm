@@ -681,22 +681,29 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                   }`}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-gray-600">{variant.name}</span>
-                        {variant.code && (
-                          <Badge variant="secondary" className="text-xs bg-gray-200 text-gray-600">
-                            {variant.code}
+                    <div className="flex items-start gap-3 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedVariantIds.has(variant.id)}
+                        onChange={() => toggleVariantSelection(variant.id)}
+                        className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-gray-600">{variant.name}</span>
+                          {variant.code && (
+                            <Badge variant="secondary" className="text-xs bg-gray-200 text-gray-600">
+                              {variant.code}
+                            </Badge>
+                          )}
+                          {variant.isRequired && (
+                            <Badge className="bg-red-100 text-red-700 text-xs">必選</Badge>
+                          )}
+                          {/* 狀態顯示 */}
+                          <Badge className="bg-gray-300 text-gray-700 border border-gray-400 text-xs">
+                            ✗ 已停用
                           </Badge>
-                        )}
-                        {variant.isRequired && (
-                          <Badge className="bg-red-100 text-red-700 text-xs">必選</Badge>
-                        )}
-                        {/* 狀態顯示 */}
-                        <Badge className="bg-gray-300 text-gray-700 border border-gray-400 text-xs">
-                          ✗ 已停用
-                        </Badge>
-                      </div>
+                        </div>
 
                       {editingVariant?.id === variant.id ? (
                         // 編輯模式
