@@ -49,6 +49,63 @@ const VARIANT_TYPE_LABELS: Record<string, string> = {
   complexity: "複雜度",
 };
 
+// 預定義的規格模板
+const PREDEFINED_VARIANTS: Record<string, Array<{
+  name: string;
+  code?: string;
+  description?: string;
+  priceModifier: number;
+  sortOrder: number;
+  isRequired?: boolean;
+}>> = {
+  size: [
+    { name: '5-6cm', code: 'S1', priceModifier: 2000, sortOrder: 1, isRequired: true, description: '5-6cm（黑白2000/彩色3000）' },
+    { name: '6-7cm', code: 'S2', priceModifier: 3000, sortOrder: 2, isRequired: true, description: '6-7cm（黑白3000/彩色4000）' },
+    { name: '7-8cm', code: 'S3', priceModifier: 4000, sortOrder: 3, isRequired: true, description: '7-8cm（黑白4000/彩色5000）' },
+    { name: '8-9cm', code: 'S4', priceModifier: 5000, sortOrder: 4, isRequired: true, description: '8-9cm（黑白5000/彩色6000）' },
+    { name: '9-10cm', code: 'S5', priceModifier: 6000, sortOrder: 5, isRequired: true, description: '9-10cm（黑白6000/彩色7000）' },
+    { name: '10-11cm', code: 'S6', priceModifier: 7000, sortOrder: 6, isRequired: true, description: '10-11cm（黑白7000/彩色8000）' },
+    { name: '11-12cm', code: 'S7', priceModifier: 8000, sortOrder: 7, isRequired: true, description: '11-12cm（黑白8000/彩色9000）' },
+    { name: '12-13cm', code: 'S8', priceModifier: 9000, sortOrder: 8, isRequired: true, description: '12-13cm（黑白9000/彩色10000）' },
+    { name: '13-14cm', code: 'S9', priceModifier: 10000, sortOrder: 9, isRequired: true, description: '13-14cm（黑白10000/彩色11000）' },
+    { name: '14-15cm', code: 'S10', priceModifier: 11000, sortOrder: 10, isRequired: true, description: '14-15cm（黑白11000/彩色12000）' },
+    { name: '15-16cm', code: 'S11', priceModifier: 12000, sortOrder: 11, isRequired: true, description: '15-16cm（黑白12000/彩色13000）' },
+    { name: '16-17cm', code: 'S12', priceModifier: 14000, sortOrder: 12, isRequired: true, description: '16-17cm（黑白14000/彩色14000）' },
+  ],
+  color: [
+    { name: '黑白', code: 'BW', priceModifier: 0, sortOrder: 1, isRequired: true, description: '黑白陰影' },
+    { name: '彩色', code: 'COLOR', priceModifier: 1000, sortOrder: 2, isRequired: true, description: '彩色上色（大部分尺寸+1000）' },
+    { name: '全彩', code: 'FULL_COLOR', priceModifier: 1000, sortOrder: 3, isRequired: false, description: '全彩色漸層' },
+  ],
+  position: [
+    { name: '手臂外側', code: 'P1', priceModifier: 0, sortOrder: 1, isRequired: false, description: '手臂外側面' },
+    { name: '手臂內側', code: 'P2', priceModifier: 200, sortOrder: 2, isRequired: false, description: '手臂內側面' },
+    { name: '小腿', code: 'P3', priceModifier: 0, sortOrder: 3, isRequired: false, description: '小腿部位' },
+    { name: '大腿', code: 'P4', priceModifier: 500, sortOrder: 4, isRequired: false, description: '大腿部位' },
+    { name: '背部', code: 'P5', priceModifier: 1000, sortOrder: 5, isRequired: false, description: '背部區域' },
+    { name: '胸部', code: 'P6', priceModifier: 800, sortOrder: 6, isRequired: false, description: '胸部區域' },
+  ],
+  side: [
+    { name: '左半邊', code: 'LEFT', priceModifier: 0, sortOrder: 1, isRequired: false, description: '左側' },
+    { name: '右半邊', code: 'RIGHT', priceModifier: 0, sortOrder: 2, isRequired: false, description: '右側' },
+  ],
+  design_fee: [
+    { name: '設計費', code: 'DESIGN', priceModifier: 0, sortOrder: 1, isRequired: false, description: '另外估價（需管理後台輸入）' },
+  ],
+  style: [
+    { name: '傳統', code: 'S1', priceModifier: 0, sortOrder: 1, isRequired: false, description: '經典傳統刺青風格' },
+    { name: '寫實', code: 'S2', priceModifier: 1500, sortOrder: 2, isRequired: false, description: '超寫實風格' },
+    { name: '圖騰', code: 'S3', priceModifier: 500, sortOrder: 3, isRequired: false, description: '部落圖騰' },
+    { name: '日式', code: 'S4', priceModifier: 1000, sortOrder: 4, isRequired: false, description: '日本傳統' },
+    { name: '極簡', code: 'S5', priceModifier: 800, sortOrder: 5, isRequired: false, description: '極簡線條' },
+  ],
+  complexity: [
+    { name: '簡單', code: 'C1', priceModifier: 0, sortOrder: 1, isRequired: false, description: '簡單線條' },
+    { name: '中等', code: 'C2', priceModifier: 1000, sortOrder: 2, isRequired: false, description: '中等複雜度' },
+    { name: '複雜', code: 'C3', priceModifier: 2500, sortOrder: 3, isRequired: false, description: '高複雜度' },
+  ],
+};
+
 export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: VariantManagerProps) {
   const [variants, setVariants] = useState<GroupedVariants>({
     size: [],
