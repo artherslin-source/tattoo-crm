@@ -300,27 +300,23 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     // 使用 hasColorPriceDiff（圖騰小圖案必須有，其他服務可能沒有）
     const effectiveHasColorPriceDiff = hasColorPriceDiff;
     
-    if (selectedColor && variants.color && selectedSize) {
-      // 對於圖騰小圖案，需要考慮專屬變體名稱
-      // 如果 selectedColor 是 "彩色" 或 "黑白"，也要查找 "彩色-圖騰" 或 "黑白-圖騰"
-      let selectedColorVariant = variants.color.find((v) => v.name === selectedColor);
+    if (selectedColor && variants.color) {
+      // 對於圖騰小圖案，必須使用專屬變體名稱
+      // 如果 selectedColor 是 "彩色" 或 "黑白"，優先查找 "彩色-圖騰" 或 "黑白-圖騰"
+      let selectedColorVariant: ServiceVariant | undefined;
       
-      if (isTotemService && !selectedColorVariant) {
-        // 如果找不到，嘗試查找專屬變體名稱
-        if (selectedColor === '彩色') {
-          selectedColorVariant = variants.color.find((v) => v.name === '彩色-圖騰');
-        } else if (selectedColor === '黑白') {
-          selectedColorVariant = variants.color.find((v) => v.name === '黑白-圖騰');
+      if (isTotemService) {
+        // 圖騰小圖案：優先查找專屬變體
+        if (selectedColor === '彩色' || selectedColor === '彩色-圖騰') {
+          selectedColorVariant = variants.color.find((v) => v.name === '彩色-圖騰') || 
+                                 variants.color.find((v) => v.name === '彩色');
+        } else if (selectedColor === '黑白' || selectedColor === '黑白-圖騰') {
+          selectedColorVariant = variants.color.find((v) => v.name === '黑白-圖騰') || 
+                                 variants.color.find((v) => v.name === '黑白');
         }
-      }
-      
-      // 如果還是找不到，嘗試反向查找（專屬變體名稱 -> 通用名稱）
-      if (!selectedColorVariant && isTotemService) {
-        if (selectedColor === '彩色-圖騰') {
-          selectedColorVariant = variants.color.find((v) => v.name === '彩色-圖騰');
-        } else if (selectedColor === '黑白-圖騰') {
-          selectedColorVariant = variants.color.find((v) => v.name === '黑白-圖騰');
-        }
+      } else {
+        // 其他服務：使用通用邏輯
+        selectedColorVariant = variants.color.find((v) => v.name === selectedColor);
       }
       
       console.log(`🔍 [價格計算] 選擇的顏色: ${selectedColor}`, selectedColorVariant);
@@ -332,7 +328,8 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       
       if (selectedColorVariant) {
         // 獲取尺寸的價格（黑白價格）
-        const sizeVariant = variants.size?.find((v) => v.name === selectedSize);
+        // 對於沒有尺寸的服務（如大腿全包），selectedSize 可能為空
+        const sizeVariant = selectedSize ? variants.size?.find((v) => v.name === selectedSize) : undefined;
         
         if (sizeVariant) {
           const blackWhitePrice = sizeVariant.priceModifier;
