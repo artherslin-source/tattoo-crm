@@ -183,7 +183,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           colorMetadata = null;
         }
       } else if (typeof colorVariant.metadata === 'object') {
-        colorMetadata = colorVariant.metadata as any;
+        colorMetadata = colorVariant.metadata as { 
+          sizePrices?: Record<string, number>;
+          colorPriceDiff?: number;
+          excludeSizes?: string[];
+          zColorPrice?: number;
+        };
       }
     }
     
