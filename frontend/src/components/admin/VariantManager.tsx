@@ -658,6 +658,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                     </>
                   )}
                 </div>
+                </div>
               </div>
             </div>
           ))}
@@ -733,6 +734,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                       {variant.description && (
                         <p className="text-xs text-gray-400 mt-1">{variant.description}</p>
                       )}
+                      </div>
                     </div>
 
                     {/* 操作按鈕 */}
