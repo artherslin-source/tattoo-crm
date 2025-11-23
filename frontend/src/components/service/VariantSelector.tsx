@@ -26,6 +26,7 @@ interface ServiceVariant {
     priceDiff?: number;
     useSizeMetadata?: boolean;
     note?: string;
+    sizePrices?: Record<string, number>;
   };
 }
 
@@ -165,7 +166,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       
       if (colorVariant) {
         // 檢查是否有metadata中的sizePrices（用於圖騰小圖案等特殊定價）
-        const metadata = colorVariant.metadata as any;
+        const metadata = colorVariant.metadata as { sizePrices?: Record<string, number> } | null | undefined;
         if (metadata?.sizePrices && selectedSize) {
           const sizePrice = metadata.sizePrices[selectedSize];
           if (sizePrice !== undefined) {
