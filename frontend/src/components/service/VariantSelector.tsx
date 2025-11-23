@@ -93,7 +93,10 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
   useEffect(() => {
     const fetchVariants = async () => {
       try {
-        console.log(`[VariantSelector] 獲取服務規格: ${service.id}`);
+        console.log(`[VariantSelector] 獲取服務規格:`, {
+          serviceId: service.id,
+          serviceName: service.name
+        });
         const url = `${getApiBase()}/services/${service.id}/variants`;
         console.log(`[VariantSelector] API URL: ${url}`);
         
@@ -108,6 +111,30 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
         if (response.ok) {
           const data = await response.json();
           console.log(`[VariantSelector] 獲取的規格數據:`, data);
+          
+          // 特別檢查圖騰小圖案的彩色變體 metadata
+          if (service.name === '圖騰小圖案' && data.color) {
+            const colorVariant = data.color.find((v: any) => v.name === '彩色');
+            if (colorVariant) {
+              console.log(`🔍 [VariantSelector] 圖騰小圖案-彩色變體:`, {
+                id: colorVariant.id,
+                name: colorVariant.name,
+                metadata: colorVariant.metadata,
+                metadataType: typeof colorVariant.metadata
+              });
+              if (colorVariant.metadata && typeof colorVariant.metadata === 'object') {
+                console.log(`🔍 [VariantSelector] metadata 的所有鍵:`, Object.keys(colorVariant.metadata));
+                console.log(`🔍 [VariantSelector] metadata.colorPriceDiff:`, colorVariant.metadata.colorPriceDiff);
+                console.log(`🔍 [VariantSelector] metadata.useSizeMetadata:`, colorVariant.metadata.useSizeMetadata);
+                if (!colorVariant.metadata.colorPriceDiff) {
+                  console.error('❌ [VariantSelector] 錯誤！metadata 中沒有 colorPriceDiff！');
+                  console.error('❌ [VariantSelector] 這可能是 API 返回了錯誤的數據！');
+                }
+              }
+            } else {
+              console.error('❌ [VariantSelector] 找不到彩色變體！');
+            }
+          }
           
           // 檢查數據結構
           if (!data || typeof data !== 'object') {
@@ -166,6 +193,16 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     // 需要檢查彩色的metadata，因為只有彩色有colorPriceDiff
     const colorVariant = variants.color?.find((v) => v.name === '彩色');
     
+    console.log(`🔍 [價格計算] 檢查 colorVariant:`, {
+      hasColorVariant: !!colorVariant,
+      colorVariantId: colorVariant?.id,
+      colorVariantName: colorVariant?.name,
+      rawMetadata: colorVariant?.metadata,
+      rawMetadataType: typeof colorVariant?.metadata,
+      serviceId: service.id,
+      serviceName: service.name
+    });
+    
     // 確保 metadata 是對象（Prisma 的 Json 類型可能返回字符串）
     let colorMetadata: { 
       sizePrices?: Record<string, number>;
@@ -178,6 +215,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       if (typeof colorVariant.metadata === 'string') {
         try {
           colorMetadata = JSON.parse(colorVariant.metadata);
+          console.log(`✅ [價格計算] 解析 metadata 字符串成功:`, colorMetadata);
         } catch (e) {
           console.warn('⚠️ 無法解析 metadata 字符串:', e);
           colorMetadata = null;
@@ -189,7 +227,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           excludeSizes?: string[];
           zColorPrice?: number;
         };
+        console.log(`✅ [價格計算] 直接使用 metadata 對象:`, colorMetadata);
+        console.log(`🔍 [價格計算] metadata 的所有鍵:`, Object.keys(colorMetadata || {}));
+        console.log(`🔍 [價格計算] metadata.colorPriceDiff:`, colorMetadata?.colorPriceDiff);
       }
+    } else {
+      console.warn('⚠️ [價格計算] colorVariant 沒有 metadata');
     }
     
     const hasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
@@ -261,9 +304,15 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           
           // 如果有colorPriceDiff邏輯（圖騰小圖案）
           // 使用 effectiveHasColorPriceDiff 而不是 hasColorPriceDiff
-          const shouldUseColorPriceDiff = effectiveHasColorPriceDiff && colorMetadata;
+          // 特別處理：如果是圖騰小圖案，強制檢查 colorMetadata
+          const shouldUseColorPriceDiff = (effectiveHasColorPriceDiff || (isTotemService && colorMetadata?.colorPriceDiff !== undefined)) && colorMetadata;
           if (shouldUseColorPriceDiff && colorMetadata) {
-            console.log(`✅ [價格計算] 使用 colorPriceDiff 邏輯`, { colorPriceDiff: colorMetadata.colorPriceDiff });
+            console.log(`✅ [價格計算] 使用 colorPriceDiff 邏輯`, { 
+              colorPriceDiff: colorMetadata.colorPriceDiff,
+              effectiveHasColorPriceDiff,
+              isTotemService,
+              hasColorPriceDiffInMetadata: colorMetadata.colorPriceDiff !== undefined
+            });
             if (selectedColor === '彩色') {
               const excludeSizes = colorMetadata.excludeSizes || [];
               
