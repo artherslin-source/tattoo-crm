@@ -95,6 +95,7 @@ export class AdminServiceVariantsService {
       size: variants.filter((v) => v.type === 'size'),
       color: variants.filter((v) => v.type === 'color'),
       position: variants.filter((v) => v.type === 'position'),
+      side: variants.filter((v) => v.type === 'side'),
       design_fee: variants.filter((v) => v.type === 'design_fee'),
       style: variants.filter((v) => v.type === 'style'),
       complexity: variants.filter((v) => v.type === 'complexity'),

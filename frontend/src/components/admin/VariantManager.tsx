@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Save, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { X, Save, Trash2, ToggleLeft, ToggleRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getApiBase, getAccessToken } from "@/lib/api";
 
 interface ServiceVariant {
@@ -24,6 +26,7 @@ interface GroupedVariants {
   size: ServiceVariant[];
   color: ServiceVariant[];
   position: ServiceVariant[];
+  side: ServiceVariant[];
   design_fee: ServiceVariant[];
   style: ServiceVariant[];
   complexity: ServiceVariant[];
@@ -40,6 +43,7 @@ const VARIANT_TYPE_LABELS: Record<string, string> = {
   size: "尺寸",
   color: "顏色",
   position: "部位",
+  side: "左右半邊",
   design_fee: "設計費",
   style: "風格",
   complexity: "複雜度",
@@ -50,6 +54,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     size: [],
     color: [],
     position: [],
+    side: [],
     design_fee: [],
     style: [],
     complexity: [],
@@ -60,6 +65,10 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
   const [editForm, setEditForm] = useState({
     priceModifier: 0,
   });
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedVariantType, setSelectedVariantType] = useState<string>("");
+  const [selectedVariantTemplate, setSelectedVariantTemplate] = useState<string>("");
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     fetchVariants();
@@ -181,6 +190,70 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
       alert("刪除失敗，請重試");
     } finally {
       setUpdating(null);
+    }
+  };
+
+  // 新增規格
+  const handleAddVariant = async () => {
+    if (!selectedVariantType || !selectedVariantTemplate) {
+      alert("請選擇規格類型和具體規格");
+      return;
+    }
+
+    const template = PREDEFINED_VARIANTS[selectedVariantType]?.find(
+      (v) => v.name === selectedVariantTemplate
+    );
+
+    if (!template) {
+      alert("找不到選中的規格模板");
+      return;
+    }
+
+    // 檢查是否已經存在相同名稱的規格
+    const existingVariants = variants[selectedVariantType as keyof GroupedVariants] || [];
+    const exists = existingVariants.some((v) => v.name === template.name);
+    if (exists) {
+      alert(`規格「${template.name}」已經存在，請勿重複添加`);
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const response = await fetch(`${getApiBase()}/admin/service-variants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getAccessToken()}`,
+        },
+        body: JSON.stringify({
+          serviceId,
+          type: selectedVariantType,
+          name: template.name,
+          code: template.code,
+          description: template.description,
+          priceModifier: template.priceModifier,
+          sortOrder: template.sortOrder,
+          isRequired: template.isRequired || false,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchVariants();
+        onUpdate();
+        setShowAddDialog(false);
+        setSelectedVariantType("");
+        setSelectedVariantTemplate("");
+        alert("規格添加成功！");
+      } else {
+        const errorData = await response.text();
+        console.error("添加規格失敗:", errorData);
+        alert(`添加規格失敗: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("添加規格時發生錯誤:", error);
+      alert("添加規格失敗，請重試");
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -546,6 +619,17 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
             </ul>
           </div>
 
+          {/* 新增規格按鈕 */}
+          <div className="mb-6 flex justify-end">
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              新增規格
+            </Button>
+          </div>
+
           {/* 規格列表 */}
           <div className="space-y-6">
             {(Object.keys(variants) as Array<keyof GroupedVariants>).map((type) =>
@@ -571,6 +655,111 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
           </Button>
         </div>
       </div>
+
+      {/* 新增規格對話框 */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>新增規格</DialogTitle>
+            <DialogDescription>
+              從預定義的規格模板中選擇並添加到服務中
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="variant-type">規格類型</Label>
+              <Select
+                value={selectedVariantType}
+                onValueChange={(value) => {
+                  setSelectedVariantType(value);
+                  setSelectedVariantTemplate(""); // 重置選中的規格
+                }}
+              >
+                <SelectTrigger id="variant-type" className="mt-1">
+                  <SelectValue placeholder="請選擇規格類型" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(VARIANT_TYPE_LABELS).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {VARIANT_TYPE_LABELS[type]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedVariantType && (
+              <div>
+                <Label htmlFor="variant-template">具體規格</Label>
+                <Select
+                  value={selectedVariantTemplate}
+                  onValueChange={setSelectedVariantTemplate}
+                >
+                  <SelectTrigger id="variant-template" className="mt-1">
+                    <SelectValue placeholder="請選擇具體規格" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PREDEFINED_VARIANTS[selectedVariantType]?.map((variant) => {
+                      // 檢查是否已經存在
+                      const existingVariants = variants[selectedVariantType as keyof GroupedVariants] || [];
+                      const exists = existingVariants.some((v) => v.name === variant.name);
+                      return (
+                        <SelectItem
+                          key={variant.name}
+                          value={variant.name}
+                          disabled={exists}
+                        >
+                          {variant.name}
+                          {variant.description && ` - ${variant.description}`}
+                          {variant.priceModifier !== 0 && ` (${variant.priceModifier > 0 ? '+' : ''}${variant.priceModifier}元)`}
+                          {exists && " (已存在)"}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {selectedVariantTemplate && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    {(() => {
+                      const template = PREDEFINED_VARIANTS[selectedVariantType]?.find(
+                        (v) => v.name === selectedVariantTemplate
+                      );
+                      return template ? (
+                        <div className="text-sm space-y-1">
+                          <div><strong>名稱：</strong>{template.name}</div>
+                          {template.code && <div><strong>代碼：</strong>{template.code}</div>}
+                          {template.description && <div><strong>說明：</strong>{template.description}</div>}
+                          <div><strong>價格調整：</strong>{template.priceModifier > 0 ? `+${template.priceModifier}` : template.priceModifier}元</div>
+                          {template.isRequired && <Badge className="mt-1">必選</Badge>}
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddDialog(false);
+                setSelectedVariantType("");
+                setSelectedVariantTemplate("");
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleAddVariant}
+              disabled={!selectedVariantType || !selectedVariantTemplate || adding}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {adding ? "添加中..." : "確認添加"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
