@@ -735,7 +735,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
                 <SelectTrigger id="variant-type" className="mt-1">
                   <SelectValue placeholder="請選擇規格類型" />
                 </SelectTrigger>
-                <SelectContent className="z-[100]">
+                <SelectContent className="z-[300]" position="popper">
                   {Object.keys(VARIANT_TYPE_LABELS).map((type) => (
                     <SelectItem key={type} value={type}>
                       {VARIANT_TYPE_LABELS[type]}
