@@ -68,7 +68,26 @@ export class AdminServicesController {
     @Query('sortBy') sortBy?: 'name' | 'price' | 'createdAt',
     @Query('sortOrder') sortOrder?: 'asc' | 'desc'
   ) {
-    return this.services.findAll({});
+    const services = await this.services.findAll({});
+    
+    // 在生產環境中，驗證圖片文件是否存在
+    if (process.env.NODE_ENV === 'production') {
+      const fs = require('fs');
+      const path = require('path');
+      
+      for (const service of services) {
+        if (service.imageUrl) {
+          const imagePath = path.join(process.cwd(), service.imageUrl);
+          if (!fs.existsSync(imagePath)) {
+            console.warn(`⚠️  服務「${service.name}」的圖片文件不存在: ${service.imageUrl}`);
+            console.warn(`   預期路徑: ${imagePath}`);
+            console.warn(`   當前工作目錄: ${process.cwd()}`);
+          }
+        }
+      }
+    }
+    
+    return services;
   }
 
   @Post()
