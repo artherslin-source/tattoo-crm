@@ -438,8 +438,8 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
 
           {/* 左右半邊選擇 - 已隱藏，不在前端顯示給顧客 */}
 
-          {/* 設計費（管理後台模式） */}
-          {isAdmin && variants.design_fee && variants.design_fee.length > 0 && (
+          {/* 設計費（前台和管理後台都可顯示） */}
+          {variants.design_fee && variants.design_fee.length > 0 && (
             <div>
               <Label className="mb-3 flex items-center text-base font-semibold text-gray-900">
                 設計費
