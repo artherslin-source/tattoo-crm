@@ -204,9 +204,11 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     } | null | undefined = null;
     
     if (isTotemService) {
-      // 圖騰小圖案：強制使用該服務的彩色變體
+      // 圖騰小圖案：強制使用該服務的專屬彩色變體
+      // 優先查找 "彩色-圖騰"，如果沒有則查找 "彩色"（向後兼容）
       // 確保不會因為變體共用而使用錯誤的 metadata
-      colorVariant = variants.color?.find((v) => v.name === '彩色');
+      colorVariant = variants.color?.find((v) => v.name === '彩色-圖騰') || 
+                     variants.color?.find((v) => v.name === '彩色');
       
       console.log(`🔍 [價格計算] 圖騰小圖案專屬檢查:`, {
         hasColorVariant: !!colorVariant,
@@ -321,7 +323,8 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
               isTotemService,
               hasColorPriceDiffInMetadata: colorMetadata.colorPriceDiff !== undefined
             });
-            if (selectedColor === '彩色') {
+            // 支持專屬變體名稱（"彩色-圖騰"、"黑白-圖騰"）和通用名稱（"彩色"、"黑白"）
+            if (selectedColor === '彩色' || selectedColor === '彩色-圖騰') {
               const excludeSizes = colorMetadata.excludeSizes || [];
               
               // 檢查是否在排除列表中（如Z尺寸）
@@ -335,7 +338,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                 price = blackWhitePrice + colorPriceDiff;
                 console.log(`💰 使用尺寸+顏色差價 [${selectedSize} 黑白=NT$ ${blackWhitePrice} + 彩色差價=NT$ ${colorPriceDiff}]: NT$ ${price}`);
               }
-            } else if (selectedColor === '黑白') {
+            } else if (selectedColor === '黑白' || selectedColor === '黑白-圖騰') {
               // 黑白價格 = 尺寸價格
               price = blackWhitePrice;
               console.log(`💰 使用尺寸價格（黑白） [${selectedSize}]: NT$ ${price}`);
@@ -577,7 +580,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                 </Badge>
               </Label>
               <div className="grid grid-cols-2 gap-3">
-                {variants.color.map((variant) => (
+                {variants.color.map((variant) => {
+                  // 對於圖騰小圖案的專屬變體，顯示時去掉 "-圖騰" 後綴
+                  const displayName = variant.name.replace('-圖騰', '');
+                  // 使用顯示名稱來查找 subtitle
+                  const subtitle = COLOR_VARIANT_SUBTITLES[displayName] || COLOR_VARIANT_SUBTITLES[variant.name];
+                  return (
                   <button
                     key={variant.id}
                     onClick={() => setSelectedColor(variant.name)}
@@ -590,18 +598,15 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                       }
                     `}
                   >
-                    <div className="text-xl font-bold">{variant.name}</div>
-                    {(() => {
-                      const subtitle = COLOR_VARIANT_SUBTITLES[variant.name];
-                      if (!subtitle) return null;
-                      return (
+                    <div className="text-xl font-bold">{displayName}</div>
+                    {subtitle && (
                       <div className="mt-1 text-xs text-gray-700 font-medium">
                         {subtitle}
                       </div>
-                      );
-                    })()}
+                    )}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -738,7 +743,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
               {selectedColor && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-blue-600 font-medium">顏色</span>
-                  <span className="font-semibold text-blue-700">{selectedColor}</span>
+                  <span className="font-semibold text-blue-700">{selectedColor.replace('-圖騰', '')}</span>
                 </div>
               )}
               {selectedPosition && (
