@@ -129,6 +129,15 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           } else {
             console.warn('[VariantSelector] 沒有顏色選項');
           }
+          
+          // 自動選擇第一個左右半邊選項（如果存在且為必選）
+          if (data.side && data.side.length > 0) {
+            const requiredSide = data.side.find((v: ServiceVariant) => v.isRequired);
+            if (requiredSide) {
+              setSelectedSide(requiredSide.name);
+              console.log(`[VariantSelector] 自動選擇左右半邊: ${requiredSide.name}`);
+            }
+          }
         } else {
           const errorText = await response.text();
           console.error(`[VariantSelector] API 錯誤: ${response.status} - ${errorText}`);
@@ -202,13 +211,13 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       }
     }
 
-    // 左右半邊加價 - 已隱藏，不計算價格
-    // if (selectedSide && variants.side) {
-    //   const sideVariant = variants.side.find((v) => v.name === selectedSide);
-    //   if (sideVariant) {
-    //     price += sideVariant.priceModifier;
-    //   }
-    // }
+    // 左右半邊加價
+    if (selectedSide && variants.side) {
+      const sideVariant = variants.side.find((v) => v.name === selectedSide);
+      if (sideVariant) {
+        price += sideVariant.priceModifier;
+      }
+    }
 
     // 設計費
     if (designFee > 0) {
@@ -237,10 +246,10 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
         selectedVariants.position = selectedPosition;
       }
 
-      // 左右半邊已隱藏，不包含在選擇中
-      // if (selectedSide) {
-      //   selectedVariants.side = selectedSide;
-      // }
+      // 左右半邊
+      if (selectedSide) {
+        selectedVariants.side = selectedSide;
+      }
 
       if (designFee > 0) {
         selectedVariants.design_fee = designFee;
@@ -430,7 +439,44 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
             </div>
           )}
 
-          {/* 左右半邊選擇 - 已隱藏，不在前端顯示給顧客 */}
+          {/* 左右半邊選擇 */}
+          {variants.side && variants.side.length > 0 && (
+            <div>
+              <Label className="mb-3 flex items-center text-base font-semibold text-gray-900">
+                左右半邊
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {variants.side.some((v) => v.isRequired) ? "必選" : "可選"}
+                </Badge>
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {variants.side.map((variant) => (
+                  <button
+                    key={variant.id}
+                    onClick={() =>
+                      setSelectedSide(
+                        selectedSide === variant.name ? "" : variant.name
+                      )
+                    }
+                    className={`
+                      rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all
+                      ${
+                        selectedSide === variant.name
+                          ? "border-blue-600 bg-blue-50 text-blue-700"
+                          : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-800 hover:text-gray-900"
+                      }
+                    `}
+                  >
+                    <div className="font-semibold">{variant.name}</div>
+                    {variant.priceModifier > 0 && (
+                      <div className="mt-0.5 text-xs text-gray-700 font-medium">
+                        +{variant.priceModifier}元
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 設計費（前台和管理後台都可顯示） */}
           {variants.design_fee && variants.design_fee.length > 0 && (
@@ -495,7 +541,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                   <span className="font-semibold text-blue-700">{selectedPosition}</span>
                 </div>
               )}
-              {/* 左右半邊已隱藏，不顯示 */}
+              {selectedSide && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-600 font-medium">左右半邊</span>
+                  <span className="font-semibold text-blue-700">{selectedSide}</span>
+                </div>
+              )}
               {designFee > 0 && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-blue-600 font-medium">設計費</span>
