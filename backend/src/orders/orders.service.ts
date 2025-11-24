@@ -111,7 +111,7 @@ export class OrdersService {
           notes: input.notes || null,
         },
         include: {
-          member: { select: { id: true, name: true, email: true } },
+          member: { select: { id: true, name: true, phone: true } },
           branch: { select: { id: true, name: true } },
           installments: true,
         },
@@ -335,7 +335,7 @@ export class OrdersService {
       const orders = await this.prisma.order.findMany({
         where,
         include: {
-          member: { select: { id: true, name: true, email: true } },
+          member: { select: { id: true, name: true, phone: true } },
           branch: { select: { id: true, name: true } },
           installments: true,
         },
