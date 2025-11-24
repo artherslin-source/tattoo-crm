@@ -142,6 +142,7 @@ export class AdminArtistsService {
   async update(id: string, data: {
     name?: string;
     email?: string;
+    phone?: string;
     branchId?: string;
     bio?: string;
     speciality?: string;
@@ -173,14 +174,15 @@ export class AdminArtistsService {
       }
 
       // 更新 User
-      if (data.name || data.email || data.branchId !== undefined) {
-        console.log('🔄 Updating user with data:', { name: data.name, email: data.email, branchId: data.branchId });
+      if (data.name || data.email || data.phone || data.branchId !== undefined) {
+        console.log('🔄 Updating user with data:', { name: data.name, email: data.email, phone: data.phone, branchId: data.branchId });
         await tx.user.update({
           where: { id: artist.user.id },
           data: {
             ...(data.name && { name: data.name }),
-            ...(data.email && { email: data.email }),
-            ...(data.branchId !== undefined && { branchId: data.branchId }),
+            ...(data.email !== undefined && { email: data.email || null }),
+            ...(data.phone !== undefined && { phone: data.phone || null }),
+            ...(data.branchId !== undefined && { branchId: data.branchId || null }),
           },
         });
       }

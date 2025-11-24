@@ -13,7 +13,9 @@ import { z } from 'zod';
 
 const CreateArtistSchema = z.object({
   name: z.string().min(1),
-  email: z.string().email(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  password: z.string().optional(),
   branchId: z.string().optional(),
   bio: z.string().optional(),
   speciality: z.string().optional(),
@@ -112,7 +114,8 @@ export class AdminArtistsController {
     return this.adminArtistsService.create({
       name: input.name,
       email: input.email,
-      password: 'temp_password_12345678', // 臨時密碼，需要後續修改
+      phone: input.phone,
+      password: input.password || 'temp_password_12345678', // 臨時密碼，需要後續修改
       branchId,
       bio: input.bio,
       speciality: input.speciality,
@@ -161,6 +164,7 @@ export class AdminArtistsController {
     const result = await this.adminArtistsService.update(id, {
       name: input.name,
       email: input.email,
+      phone: input.phone,
       branchId: input.branchId,
       bio: input.bio,
       speciality: input.speciality,
