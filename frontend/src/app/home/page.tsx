@@ -492,16 +492,16 @@ export default function HomePage() {
                               {artist.displayName.charAt(0)}
                             </div>
                           )}
-                          {/* 分店標籤：橢圓形、金色底、白色字，位於右側中間 */}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-4">
+                          <CardTitle className="text-xl text-white flex-1">{artist.displayName}</CardTitle>
+                          {/* 分店標籤：橢圓形、金色底、白色字，位於卡片右側中間，與名字同水平線 */}
                           {artist.branch?.name && (
-                            <div className="absolute top-1/2 -translate-y-1/2 right-3">
-                              <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg">
-                                {artist.branch.name}
-                              </span>
-                            </div>
+                            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg whitespace-nowrap">
+                              {artist.branch.name}
+                            </span>
                           )}
                         </div>
-                        <CardTitle className="text-xl text-white">{artist.displayName}</CardTitle>
                         <CardDescription className="text-sm text-neutral-300">{artist.speciality}</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4 text-sm text-neutral-200">
