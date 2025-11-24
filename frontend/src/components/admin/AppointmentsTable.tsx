@@ -16,7 +16,7 @@ interface Appointment {
   user: {
     id: string;
     name: string | null;
-    email: string;
+    phone: string;
   };
   service: {
     id: string;
@@ -214,7 +214,7 @@ export default function AppointmentsTable({
                       {appointment.user?.name || '未設定'}
                     </div>
                     <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                      {appointment.user?.email || 'N/A'}
+                      {appointment.user?.phone || 'N/A'}
                     </div>
                   </td>
                   <td className="px-4 py-3" data-label="分店">

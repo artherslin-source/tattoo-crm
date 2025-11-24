@@ -16,7 +16,7 @@ interface Appointment {
   user: {
     id: string;
     name: string | null;
-    email: string;
+    phone: string;
   };
   service: {
     id: string;
@@ -194,7 +194,7 @@ export default function AppointmentsCards({
                     </div>
                   </div>
                   <div className="text-sm text-on-dark-subtle">
-                    <div>{appointment.user?.name || '未設定'} ({appointment.user?.email || 'N/A'})</div>
+                    <div>{appointment.user?.name || '未設定'} ({appointment.user?.phone || 'N/A'})</div>
                     {appointment.cartSnapshot && appointment.cartSnapshot.items.length > 0 ? (
                       <div className="text-blue-400">
                         購物車 ({appointment.cartSnapshot.items.length} 項) - {formatCurrency(appointment.cartSnapshot.totalPrice)}
@@ -447,8 +447,8 @@ export default function AppointmentsCards({
                       <span className="font-medium">{appointment.user?.name || '未設定'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>客戶Email:</span>
-                      <span className="font-medium">{appointment.user?.email || 'N/A'}</span>
+                      <span>客戶手機號碼:</span>
+                      <span className="font-medium">{appointment.user?.phone || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>分店:</span>

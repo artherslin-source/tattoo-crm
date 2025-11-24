@@ -17,7 +17,7 @@ interface Order {
   member: {
     id: string;
     name: string | null;
-    email: string;
+    phone: string;
   };
   branch: {
     id: string;

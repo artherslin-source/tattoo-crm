@@ -26,7 +26,7 @@ interface Appointment {
   user: {
     id: string;
     name: string | null;
-    email: string;
+    phone: string;
   };
   service: {
     id: string;
