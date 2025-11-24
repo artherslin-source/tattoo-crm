@@ -20,7 +20,19 @@ export class AdminArtistsService {
       const artists = await this.prisma.artist.findMany({
         where: whereCondition,
         include: { 
-          user: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              role: true,
+              branchId: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true,
+            }
+          },
           branch: {
             select: {
               id: true,
@@ -42,7 +54,19 @@ export class AdminArtistsService {
     const artist = await this.prisma.artist.findUnique({
       where: { id },
       include: { 
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            role: true,
+            branchId: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          }
+        },
         branch: {
           select: {
             id: true,
@@ -96,7 +120,19 @@ export class AdminArtistsService {
           portfolioUrl: data.portfolioUrl,
           photoUrl: data.photoUrl,
         },
-        include: { user: true },
+        include: { 
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              role: true,
+              branchId: true,
+              isActive: true,
+            }
+          }
+        },
       });
 
       return artist;
@@ -117,7 +153,19 @@ export class AdminArtistsService {
     return this.prisma.$transaction(async (tx) => {
       const artist = await tx.artist.findUnique({
         where: { id },
-        include: { user: true }
+        include: { 
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              role: true,
+              branchId: true,
+              isActive: true,
+            }
+          }
+        }
       });
 
       if (!artist) {
@@ -169,7 +217,19 @@ export class AdminArtistsService {
     return this.prisma.$transaction(async (tx) => {
       const artist = await tx.artist.findUnique({
         where: { id },
-        include: { user: true }
+        include: { 
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              role: true,
+              branchId: true,
+              isActive: true,
+            }
+          }
+        }
       });
 
       if (!artist) {

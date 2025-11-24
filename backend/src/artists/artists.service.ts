@@ -8,7 +8,22 @@ export class ArtistsService {
   }
 
   async listByBranch(branchId: string) {
-    return this.prisma.artist.findMany({ where: { branchId }, include: { user: true } });
+    return this.prisma.artist.findMany({ 
+      where: { branchId }, 
+      include: { 
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            role: true,
+            branchId: true,
+            isActive: true,
+          }
+        }
+      } 
+    });
   }
 
   async availability(artistId: string, date: string, durationMinutes: number) {

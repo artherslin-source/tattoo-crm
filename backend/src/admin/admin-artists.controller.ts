@@ -73,7 +73,19 @@ export class AdminArtistsController {
       console.log('🔧 Trying direct Prisma query as fallback');
       return this.prisma.artist.findMany({
         include: { 
-          user: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              role: true,
+              branchId: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true,
+            }
+          },
           branch: {
             select: {
               id: true,
