@@ -7,8 +7,8 @@ const RegisterSchema = z.object({
   phone: z.string().min(10).regex(/^[0-9]+$/, '手機號碼只能包含數字'),
   password: z.string().min(8),
   name: z.string().min(1),
-  email: z.union([z.string().email(), z.undefined()]).optional(),
-});
+  email: z.union([z.string().email(), z.undefined()]),
+}).passthrough();
 
 const LoginSchema = z.object({
   phone: z.string().min(10).regex(/^[0-9]+$/, '手機號碼只能包含數字'),
