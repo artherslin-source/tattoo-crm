@@ -492,9 +492,9 @@ export default function HomePage() {
                               {artist.displayName.charAt(0)}
                             </div>
                           )}
-                          {/* 分店標籤：橢圓形、金色底、白色字 */}
+                          {/* 分店標籤：橢圓形、金色底、白色字，位於右側中間 */}
                           {artist.branch?.name && (
-                            <div className="absolute top-3 right-3">
+                            <div className="absolute top-1/2 -translate-y-1/2 right-3">
                               <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg">
                                 {artist.branch.name}
                               </span>
