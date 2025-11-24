@@ -631,19 +631,8 @@ export class CartService {
       }
     }
 
-    // 5. 計算設計費（如果有自訂價格）
-    if (selectedVariants.design_fee !== undefined) {
-      const designFeeVariant = variants.find(
-        (v) => v.type === 'design_fee',
-      );
-      if (designFeeVariant) {
-        // 如果有自訂價格，使用自訂價格；否則使用variant的priceModifier
-        const designFeePrice = typeof selectedVariants.design_fee === 'number' 
-          ? selectedVariants.design_fee 
-          : designFeeVariant.priceModifier;
-        finalPrice += designFeePrice;
-      }
-    }
+    // 5. 設計費另計，不計入總價
+    // 設計費將在後端或結帳時單獨處理，不在這裡加入 finalPrice
 
     // 5. 計算其他規格（風格、複雜度等）
     ['style', 'complexity', 'technique', 'custom'].forEach((type) => {
