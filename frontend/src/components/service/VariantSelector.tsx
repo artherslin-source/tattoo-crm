@@ -453,20 +453,9 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
         console.log(`💰 使用第一個尺寸價格作為基礎 [${variants.size[0].name}]: NT$ ${price}`);
       }
     } else if (!selectedSize && !selectedColor) {
-      // 如果沒有選擇任何規格，使用服務的基礎價格
-      if (service && typeof service.price === 'number') {
-        price = service.price;
-        console.log(`💰 沒有選擇規格，使用服務基礎價格: NT$ ${price}`);
-      } else {
-        // 如果服務沒有基礎價格，嘗試使用第一個尺寸的價格
-        if (variants.size && variants.size.length > 0) {
-          price = variants.size[0].priceModifier;
-          console.log(`💰 沒有選擇規格且服務無基礎價格，使用第一個尺寸價格: NT$ ${price}`);
-        } else {
-          price = 0;
-          console.log(`💰 沒有選擇規格且無可用價格，價格為 0`);
-        }
-      }
+      // 如果沒有選擇任何規格，價格為 0
+      price = 0;
+      console.log(`💰 沒有選擇規格，價格為 0`);
     }
     
     console.log(`💰 [價格計算] 最終價格: NT$ ${price}`);
