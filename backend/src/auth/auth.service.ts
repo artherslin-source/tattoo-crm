@@ -7,7 +7,6 @@ interface RegisterDto {
   phone: string;
   password: string;
   name: string;
-  email?: string;
 }
 
 interface LoginDto {
@@ -29,12 +28,12 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         phone: input.phone,
-        email: input.email ?? null,
+        email: null,
         hashedPassword,
         name: input.name,
       },
     });
-    return this.issueTokens(user.id, user.phone || user.email || '', user.role || 'USER');
+    return this.issueTokens(user.id, user.phone || '', user.role || 'USER');
   }
 
   async login(input: LoginDto) {

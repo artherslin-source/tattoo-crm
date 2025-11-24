@@ -43,7 +43,7 @@ interface Artist {
   user: {
     id: string;
     name: string;
-    email: string;
+    phone: string;
     role: string;
     status: string;
     createdAt: string;
@@ -74,7 +74,7 @@ export default function BranchArtistsPage() {
   // Form state
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    phone: "",
     password: "",
     branchId: "",
     bio: "",
@@ -122,7 +122,7 @@ export default function BranchArtistsPage() {
   const resetForm = () => {
     setFormData({
       name: "",
-      email: "",
+      phone: "",
       password: "",
       branchId: userBranchId || "",
       bio: "",
@@ -152,7 +152,7 @@ export default function BranchArtistsPage() {
     setEditingArtist(artist);
     setFormData({
       name: artist.user.name,
-      email: artist.user.email,
+      phone: artist.user.phone,
       password: "",
       branchId: artist.branch?.id || userBranchId || "",
       bio: artist.bio || "",
@@ -298,16 +298,20 @@ export default function BranchArtistsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
-                      Email *
+                      手機號碼 *
                     </label>
                     <input
-                      type="email"
+                      type="tel"
                       required
-                      value={formData.email}
+                      value={formData.phone}
                       onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
+                        setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
+                      placeholder="請輸入手機號碼"
+                      minLength={10}
+                      maxLength={15}
+                      pattern="[0-9]+"
                     />
                   </div>
 
@@ -456,7 +460,7 @@ export default function BranchArtistsPage() {
                         姓名
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">
-                        Email
+                        手機號碼
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-text-primary-light dark:text-text-primary-dark">
                         專長
@@ -484,7 +488,7 @@ export default function BranchArtistsPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-text-muted-light dark:text-text-muted-dark">
-                          {artist.user.email}
+                          {artist.user.phone}
                         </td>
                         <td className="py-3 px-4 text-text-muted-light dark:text-text-muted-dark">
                           {artist.speciality || "未設定"}

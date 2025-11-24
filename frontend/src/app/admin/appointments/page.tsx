@@ -621,8 +621,8 @@ export default function AdminAppointmentsPage() {
                     <span className="ml-2 font-medium">{selectedAppointment.user?.name || '未設定'}</span>
                   </div>
                         <div>
-                    <span className="text-text-muted-light dark:text-text-muted-dark">Email:</span>
-                    <span className="ml-2 font-medium">{selectedAppointment.user?.email || 'N/A'}</span>
+                    <span className="text-text-muted-light dark:text-text-muted-dark">手機號碼:</span>
+                    <span className="ml-2 font-medium">{selectedAppointment.user?.phone || 'N/A'}</span>
                           </div>
                           </div>
                         </div>

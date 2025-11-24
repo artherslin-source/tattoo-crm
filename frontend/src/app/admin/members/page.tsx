@@ -21,7 +21,7 @@ interface Member {
   user: {
     id: string;
     name: string;
-    email: string;
+    phone: string;
     role: 'MEMBER' | 'ADMIN';
     status: string;
     createdAt: string;
@@ -126,7 +126,6 @@ export default function AdminMembersPage() {
     isOpen: boolean;
     formData: {
       name: string;
-      email: string;
       password: string;
       phone: string;
       branchId: string;
@@ -136,7 +135,6 @@ export default function AdminMembersPage() {
     isOpen: false,
     formData: {
       name: '',
-      email: '',
       password: '',
       phone: '',
       branchId: '',
@@ -303,7 +301,6 @@ export default function AdminMembersPage() {
       isOpen: true,
       formData: {
         name: '',
-        email: '',
         password: '',
         phone: '',
         branchId: '',
@@ -317,7 +314,6 @@ export default function AdminMembersPage() {
       isOpen: false,
       formData: {
         name: '',
-        email: '',
         password: '',
         phone: '',
         branchId: '',
@@ -338,16 +334,15 @@ export default function AdminMembersPage() {
 
   const handleCreateMember = async () => {
     try {
-      const { name, email, password, phone, branchId, role } = createMemberModal.formData;
+      const { name, password, phone, branchId, role } = createMemberModal.formData;
       
-      if (!name || !email || !password || !phone || !branchId) {
+      if (!name || !password || !phone || !branchId) {
         setError('請填寫所有必填欄位');
         return;
       }
 
       await postJsonWithAuth('/admin/members', {
         name,
-        email,
         password,
         phone,
         branchId,
@@ -775,7 +770,7 @@ export default function AdminMembersPage() {
               <DialogHeader>
                 <DialogTitle>重設密碼</DialogTitle>
                 <DialogDescription>
-                  為用戶 <strong>{resetPasswordModal.member?.user?.name || resetPasswordModal.member?.user?.email}</strong> 重設密碼
+                  為用戶 <strong>{resetPasswordModal.member?.user?.name || resetPasswordModal.member?.user?.phone}</strong> 重設密碼
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -824,7 +819,7 @@ export default function AdminMembersPage() {
               <DialogHeader>
                 <DialogTitle>儲值</DialogTitle>
                 <DialogDescription>
-                  為用戶 <strong>{topUpModal.member?.user?.name || topUpModal.member?.user?.email}</strong> 儲值
+                  為用戶 <strong>{topUpModal.member?.user?.name || topUpModal.member?.user?.phone}</strong> 儲值
                   <br />
                   目前儲值餘額：{formatCurrency(topUpModal.member?.balance || 0)}
                 </DialogDescription>
@@ -876,7 +871,7 @@ export default function AdminMembersPage() {
               <DialogHeader>
                 <DialogTitle>消費</DialogTitle>
                 <DialogDescription>
-                  為用戶 <strong>{spendModal.member?.user?.name || spendModal.member?.user?.email}</strong> 進行消費
+                  為用戶 <strong>{spendModal.member?.user?.name || spendModal.member?.user?.phone}</strong> 進行消費
                   <br />
                   目前儲值餘額：{formatCurrency(spendModal.member?.balance || 0)}
                 </DialogDescription>
@@ -929,7 +924,7 @@ export default function AdminMembersPage() {
               <DialogHeader>
                 <DialogTitle>調整餘額</DialogTitle>
                 <DialogDescription>
-                  為用戶 <strong>{adjustBalanceModal.member?.user?.name || adjustBalanceModal.member?.user?.email}</strong> 調整儲值餘額
+                  為用戶 <strong>{adjustBalanceModal.member?.user?.name || adjustBalanceModal.member?.user?.phone}</strong> 調整儲值餘額
                   <br />
                   目前儲值餘額：{formatCurrency(adjustBalanceModal.member?.balance || 0)}
                 </DialogDescription>
@@ -999,19 +994,6 @@ export default function AdminMembersPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    id="memberEmail"
-                    value={createMemberModal.formData.email}
-                    onChange={(e) => handleCreateMemberFormChange('email', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
-                    placeholder="請輸入會員Email"
-                  />
-                </div>
-                <div>
                   <label htmlFor="memberPassword" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
                     密碼 *
                   </label>
@@ -1077,7 +1059,7 @@ export default function AdminMembersPage() {
                 </Button>
                 <Button
                   onClick={handleCreateMember}
-                  disabled={!createMemberModal.formData.name || !createMemberModal.formData.email || !createMemberModal.formData.password || !createMemberModal.formData.phone || !createMemberModal.formData.branchId}
+                  disabled={!createMemberModal.formData.name || !createMemberModal.formData.password || !createMemberModal.formData.phone || !createMemberModal.formData.branchId}
                 >
                   新增會員
                 </Button>
@@ -1110,9 +1092,7 @@ export default function AdminMembersPage() {
                             </span>
                           </div>
                           <span className="text-sm text-text-muted-light">
-                            {t.operator?.name 
-                               ? `${t.operator.name} (${t.operator.email})` 
-                               : t.operator?.email ?? '未知'}
+                            {t.operator?.name || '未知'}
                           </span>
                         </div>
                         <span className={`text-sm font-medium ${

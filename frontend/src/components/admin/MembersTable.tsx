@@ -12,7 +12,7 @@ interface Member {
   user: {
     id: string;
     name: string;
-    email: string;
+    phone: string;
     role: 'MEMBER' | 'ADMIN';
     status: string;
     createdAt: string;
@@ -78,7 +78,7 @@ export default function MembersTable({
         <table className="w-full table-fixed border-separate border-spacing-0 responsive-table">
           <thead>
             <tr className="text-xs text-text-muted-light border-b border-gray-200 dark:border-gray-700">
-              <th className="px-4 py-3 text-left w-[22%] font-medium">姓名 / Email</th>
+              <th className="px-4 py-3 text-left w-[22%] font-medium">姓名 / 手機號碼</th>
               <th className="px-4 py-3 text-left w-[10%] md:table-cell hidden font-medium">分店</th>
               <th className="px-4 py-3 text-left w-[10%] lg:table-cell hidden font-medium">角色</th>
               <th className="px-4 py-3 text-right w-[12%] font-medium">累計消費</th>
@@ -92,9 +92,9 @@ export default function MembersTable({
           <tbody>
             {members.map((member) => (
               <tr key={member.id} className="border-b border-gray-100 dark:border-gray-700">
-                <td className="px-4 py-3" data-label="姓名 / Email">
+                <td className="px-4 py-3" data-label="姓名 / 手機號碼">
                   <div className="font-medium">{member.user?.name || '未設定'}</div>
-                  <div className="text-text-muted-light text-xs truncate">{member.user?.email || 'N/A'}</div>
+                  <div className="text-text-muted-light text-xs truncate">{member.user?.phone || 'N/A'}</div>
                 </td>
 
                 <td className="px-4 py-3 md:table-cell hidden" data-label="分店">

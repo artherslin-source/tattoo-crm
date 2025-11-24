@@ -12,7 +12,7 @@ interface Member {
   user: {
     id: string;
     name: string;
-    email: string;
+    phone: string;
     role: 'MEMBER' | 'ADMIN';
     status: string;
     createdAt: string;
@@ -99,7 +99,7 @@ export default function MembersCards({
                     </span>
                   </div>
                 </div>
-                <div className="text-sm text-text-muted-light truncate">{member.user?.email || 'N/A'}</div>
+                <div className="text-sm text-text-muted-light truncate">{member.user?.phone || 'N/A'}</div>
               </div>
 
               {/* 中間：金額資訊 */}
@@ -184,7 +184,7 @@ export default function MembersCards({
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
                 <div className="text-base font-semibold">{member.user?.name || '未設定'}</div>
-                <div className="text-xs text-text-muted-light">{member.user?.email || 'N/A'}</div>
+                <div className="text-xs text-text-muted-light">{member.user?.phone || 'N/A'}</div>
                 <div className="mt-1 flex items-center gap-2 flex-wrap">
                   <span className="rounded-full px-2 py-0.5 text-xs branch-tag">
                     {member.user?.branch?.name || '未分配'}

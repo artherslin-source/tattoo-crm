@@ -12,7 +12,7 @@ model User {
   email           String?  // 改為可選
   hashedPassword  String
   name            String?
-  phone           String?  @unique // 改為唯一
+  phone           String   @unique // 改為必填且唯一，作為主要識別方式
   birthday        DateTime?
   gender          String?
   stylePreferences String?

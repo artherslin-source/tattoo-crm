@@ -244,11 +244,11 @@ export default function AdminOrdersPage() {
   // 獲取會員列表（用於創建訂單）
   const fetchMembers = useCallback(async () => {
     try {
-      const response = await getJsonWithAuth('/admin/members') as { data: Array<{ user: { id: string; name: string; email: string } }> };
+      const response = await getJsonWithAuth('/admin/members') as { data: Array<{ user: { id: string; name: string; phone: string } }> };
       const membersList = response.data.map(member => ({
         id: member.user.id,
         name: member.user.name || '未設定',
-        email: member.user.email
+        phone: member.user.phone
       }));
       setMembers(membersList);
     } catch (err) {
