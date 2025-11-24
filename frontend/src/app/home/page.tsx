@@ -50,6 +50,10 @@ interface Artist {
   portfolioUrl?: string;
   photoUrl?: string;
   branchId: string;
+  branch?: {
+    id: string;
+    name: string;
+  };
   user: {
     id: string;
     name: string;
@@ -210,12 +214,13 @@ export default function HomePage() {
     fetchCartCount();
   }, []);
 
-  // 過濾重複的朱川進，只保留第一個（通常是東港店）
+  // 過濾重複的朱川進，只保留第一個（通常是東港店），並按照指定順序排序
   const uniqueArtists = useMemo(() => {
     if (!artists.length) return [];
     const seenNames = new Set<string>();
     const filtered: Artist[] = [];
     
+    // 先過濾重複的朱川進
     for (const artist of artists) {
       if (artist.displayName === '朱川進') {
         // 只保留第一個朱川進
@@ -228,7 +233,26 @@ export default function HomePage() {
       }
     }
     
-    return filtered;
+    // 定義排序順序：朱川進、黃晨洋、林承葉、陳翔男、陳震宇
+    const sortOrder = ['朱川進', '黃晨洋', '林承葉', '陳翔男', '陳震宇'];
+    
+    // 按照指定順序排序
+    const sorted = filtered.sort((a, b) => {
+      const indexA = sortOrder.indexOf(a.displayName);
+      const indexB = sortOrder.indexOf(b.displayName);
+      
+      // 如果都在排序列表中，按照列表順序排序
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      // 如果只有一個在列表中，在列表中的排在前面
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      // 如果都不在列表中，保持原有順序
+      return 0;
+    });
+    
+    return sorted;
   }, [artists]);
 
   const DEFAULT_SERVICE_THUMB = "https://placehold.co/640x400?text=Tattoo";
@@ -452,11 +476,11 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {uniqueArtists.slice(0, 6).map((artist) => (
                     <Card 
                       key={artist.id} 
-                      className="border-white/10 bg-white/5 text-white"
+                      className="border-white/10 bg-white/5 text-white relative"
                       style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                     >
                       <CardHeader>
@@ -466,6 +490,14 @@ export default function HomePage() {
                           ) : (
                             <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white/70">
                               {artist.displayName.charAt(0)}
+                            </div>
+                          )}
+                          {/* 分店標籤：橢圓形、金色底、白色字 */}
+                          {artist.branch?.name && (
+                            <div className="absolute top-3 right-3">
+                              <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg">
+                                {artist.branch.name}
+                              </span>
                             </div>
                           )}
                         </div>
