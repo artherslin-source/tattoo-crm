@@ -480,7 +480,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     // 設計費將在後端或結帳時單獨處理
 
     return price;
-  }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, variants]);
+  }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, variants, service]);
 
   // 處理加入購物車
   const handleAddToCart = async () => {
