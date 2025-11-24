@@ -623,7 +623,7 @@ export class AdminAnalyticsOptimizedService {
 
     const topSpendersData = topSpenders.map((member) => ({
       userId: member.userId,
-      userName: member.user.name || member.user.email,
+      userName: member.user.name || member.user.phone,
       totalSpent: member.totalSpent,
       balance: member.balance,
     }));
