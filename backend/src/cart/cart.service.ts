@@ -474,7 +474,11 @@ export class CartService {
     const hasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
     
     // 1. 優先使用顏色規格的固定價格（根據價格表，顏色價格是完整價格）
-    if (selectedVariants.color && selectedVariants.size) {
+    // 檢查 color 和 size 是否為非空字符串
+    const hasColor = selectedVariants.color && selectedVariants.color.trim() !== '';
+    const hasSize = selectedVariants.size && selectedVariants.size.trim() !== '';
+    
+    if (hasColor && hasSize) {
       const colorVariant = variants.find(
         (v) => v.type === 'color' && v.name === selectedVariants.color,
       );
@@ -571,7 +575,7 @@ export class CartService {
       } else {
         console.warn(`⚠️ 找不到顏色規格: ${selectedVariants.color}`);
       }
-    } else if (selectedVariants.size) {
+    } else if (hasSize) {
       // 如果只選擇了尺寸，使用尺寸價格
       const sizeVariant = variants.find(
         (v) => v.type === 'size' && v.name === selectedVariants.size,
@@ -582,7 +586,7 @@ export class CartService {
         // 如果找不到對應的尺寸，使用基礎價格
         finalPrice = basePrice;
       }
-    } else if (selectedVariants.color) {
+    } else if (hasColor) {
       // 如果只選擇了顏色，使用顏色價格
       const colorVariant = variants.find(
         (v) => v.type === 'color' && v.name === selectedVariants.color,
