@@ -447,7 +447,15 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       if (sizeVariant) {
         price = sizeVariant.priceModifier;
         console.log(`💰 使用尺寸價格（僅尺寸） [${selectedSize}]: NT$ ${price}`);
+      } else if (variants.size.length > 0) {
+        // 如果找不到對應的尺寸，使用第一個尺寸的價格作為基礎
+        price = variants.size[0].priceModifier;
+        console.log(`💰 使用第一個尺寸價格作為基礎 [${variants.size[0].name}]: NT$ ${price}`);
       }
+    } else if (!selectedSize && !selectedColor) {
+      // 如果沒有選擇任何規格，使用服務的基礎價格
+      price = service.price || 0;
+      console.log(`💰 沒有選擇規格，使用服務基礎價格: NT$ ${price}`);
     }
     
     console.log(`💰 [價格計算] 最終價格: NT$ ${price}`);
@@ -482,9 +490,10 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     try {
       const selectedVariants: SelectedVariants = {
         size: selectedSize || "",
-        color: selectedColor,
+        color: selectedColor || "",
       };
 
+      // 只發送有選擇的規格
       if (selectedPosition) {
         selectedVariants.position = selectedPosition;
       }
@@ -496,6 +505,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
 
       if (designFee > 0) {
         selectedVariants.design_fee = designFee;
+      }
+      
+      // 如果沒有選擇任何規格，至少需要有一個基礎價格
+      if (!selectedSize && !selectedColor && !selectedPosition && !selectedSide && designFee === 0) {
+        // 使用服務的基礎價格
+        console.log('⚠️ 沒有選擇任何規格，使用服務基礎價格:', service.price);
       }
 
       await onAddToCart(selectedVariants, notes);
