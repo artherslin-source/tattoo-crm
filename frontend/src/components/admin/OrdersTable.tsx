@@ -125,7 +125,7 @@ export default function OrdersTable({ orders, onViewDetails, onUpdateStatus, onC
                     {order.member.name || '未設定'}
                   </div>
                   <div className="text-gray-500 dark:text-on-dark-subtle text-xs truncate">
-                    {order.member.email}
+                    {order.member.phone}
                   </div>
                 </td>
                 <td className="px-4 py-3 md:table-cell hidden" data-label="分店">

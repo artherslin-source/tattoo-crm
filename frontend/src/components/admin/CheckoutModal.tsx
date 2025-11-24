@@ -259,7 +259,7 @@ export default function CheckoutModal({
                 <div>
                   <Label className="text-sm font-medium text-text-muted-light">客戶</Label>
                   <p className="text-lg font-semibold">{order.member.name}</p>
-                  <p className="text-sm text-text-muted-light">{order.member.email}</p>
+                  <p className="text-sm text-text-muted-light">{order.member.phone}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-text-muted-light">分店</Label>

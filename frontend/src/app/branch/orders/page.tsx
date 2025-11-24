@@ -15,7 +15,7 @@ interface Order {
   member: {
     id: string;
     name: string | null;
-    email: string;
+    phone: string;
   };
   branch: {
     id: string;
@@ -195,7 +195,7 @@ export default function BranchOrdersPage() {
                       {order.member.name || '未設定姓名'}
                     </p>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark">
-                      {order.member.email}
+                      {order.member.phone}
                     </p>
                   </div>
                   <div>

@@ -29,7 +29,7 @@ interface Order {
   member: {
     id: string;
     name: string | null;
-    email: string;
+    phone: string;
   };
   branch: {
     id: string;
@@ -138,7 +138,7 @@ export default function AdminOrdersPage() {
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
 
   // 會員列表和刺青師列表（用於創建訂單時選擇）
-  const [members, setMembers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [members, setMembers] = useState<Array<{ id: string; name: string; phone: string }>>([]);
 
   // 結帳模態框狀態
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
@@ -920,8 +920,8 @@ export default function AdminOrdersPage() {
                     <p className="text-sm">{selectedOrder.member.name || '未設定'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">客戶Email</label>
-                    <p className="text-sm">{selectedOrder.member.email}</p>
+                    <label className="text-sm font-medium text-gray-700">客戶手機號碼</label>
+                    <p className="text-sm">{selectedOrder.member.phone}</p>
                   </div>
                 </div>
               </div>
@@ -1035,7 +1035,7 @@ export default function AdminOrdersPage() {
                       {members
                         .filter(member => 
                           member.name.toLowerCase().includes(createOrderData.memberSearch.toLowerCase()) ||
-                          member.email.toLowerCase().includes(createOrderData.memberSearch.toLowerCase())
+                          member.phone.toLowerCase().includes(createOrderData.memberSearch.toLowerCase())
                         )
                         .slice(0, 5)
                         .map((member) => (
@@ -1046,13 +1046,13 @@ export default function AdminOrdersPage() {
                               setCreateOrderData({ 
                                 ...createOrderData, 
                                 memberId: member.id,
-                                memberSearch: `${member.name} (${member.email})`
+                                memberSearch: `${member.name} (${member.phone})`
                               });
                               setShowMemberDropdown(false);
                             }}
                           >
                             <div className="font-medium text-text-primary-light dark:text-text-primary-dark">{member.name}</div>
-                            <div className="text-xs text-text-muted-light dark:text-text-muted-dark">{member.email}</div>
+                            <div className="text-xs text-text-muted-light dark:text-text-muted-dark">{member.phone}</div>
                           </div>
                         ))}
                     </div>

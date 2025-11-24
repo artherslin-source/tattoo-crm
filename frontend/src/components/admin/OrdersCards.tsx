@@ -145,7 +145,7 @@ export default function OrdersCards({
                     <div className="text-base font-medium truncate text-gray-900 dark:text-gray-100">
                       {order.member.name || '未設定'}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-on-dark-muted truncate">{order.member.email}</div>
+                    <div className="text-sm text-gray-600 dark:text-on-dark-muted truncate">{order.member.phone}</div>
                   </div>
 
                   {/* 金額資訊 */}
@@ -290,7 +290,7 @@ export default function OrdersCards({
                   <div className="text-xs text-gray-600 dark:text-on-dark-subtle mt-1 truncate">
                     {order.member.name || '未設定'}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-on-dark-muted truncate">{order.member.email}</div>
+                  <div className="text-xs text-gray-600 dark:text-on-dark-muted truncate">{order.member.phone}</div>
                 </div>
                 <Badge className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap ${getStatusBadgeClass(order.status)}`}>
                   {getStatusText(order.status)}
