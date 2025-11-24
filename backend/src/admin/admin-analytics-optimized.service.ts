@@ -404,7 +404,7 @@ export class AdminAnalyticsOptimizedService {
           userId: true,
           totalSpent: true,
           balance: true,
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, phone: true } },
         },
       }),
       
@@ -623,7 +623,7 @@ export class AdminAnalyticsOptimizedService {
 
     const topSpendersData = topSpenders.map((member) => ({
       userId: member.userId,
-      userName: member.user.name || member.user.phone,
+      userName: member.user.name || member.user.phone || '未知',
       totalSpent: member.totalSpent,
       balance: member.balance,
     }));

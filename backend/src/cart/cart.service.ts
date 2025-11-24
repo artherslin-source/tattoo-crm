@@ -360,20 +360,30 @@ export class CartService {
     // 獲取或創建用戶
     let actualUserId = userId;
     if (!actualUserId) {
-      // 訪客用戶：創建或查找用戶
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email: dto.customerEmail || `${dto.customerPhone}@guest.com` },
-      });
+      // 訪客用戶：創建或查找用戶（優先使用 phone，因為 phone 是唯一欄位）
+      let existingUser = null;
+      if (dto.customerPhone) {
+        existingUser = await this.prisma.user.findUnique({
+          where: { phone: dto.customerPhone },
+        });
+      }
+      
+      // 如果找不到，且提供了 email，嘗試用 email 查找（但 email 可能不是唯一欄位，使用 findFirst）
+      if (!existingUser && dto.customerEmail) {
+        existingUser = await this.prisma.user.findFirst({
+          where: { email: dto.customerEmail },
+        });
+      }
 
       if (existingUser) {
         actualUserId = existingUser.id;
       } else {
         const newUser = await this.prisma.user.create({
           data: {
-            email: dto.customerEmail || `${dto.customerPhone}@guest.com`,
+            phone: dto.customerPhone || null,
+            email: dto.customerEmail || null,
             hashedPassword: '', // 訪客無密碼
             name: dto.customerName,
-            phone: dto.customerPhone,
             role: 'MEMBER',
           },
         });

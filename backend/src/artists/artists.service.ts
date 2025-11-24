@@ -102,14 +102,15 @@ export class ArtistsService {
     });
   }
 
-  async createArtist(data: { name: string; email: string; branchId: string; speciality?: string; specialties?: string[] }) {
+  async createArtist(data: { name: string; email?: string; phone?: string; branchId: string; speciality?: string; specialties?: string[] }) {
     // 創建用戶
     const user = await this.prisma.user.create({
       data: {
         name: data.name,
-        email: data.email,
+        email: data.email || null,
+        phone: data.phone || null,
         role: 'ARTIST',
-        branchId: data.branchId,
+        branchId: data.branchId || null,
         isActive: true,
         hashedPassword: 'temp_password_12345678', // 臨時密碼，需要後續修改
       },

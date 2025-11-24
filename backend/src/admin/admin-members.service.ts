@@ -349,7 +349,6 @@ export class AdminMembersService {
               id: true,
               name: true,
               phone: true,
-              phone: true,
               role: true,
               status: true,
               createdAt: true,
@@ -411,7 +410,6 @@ export class AdminMembersService {
             select: {
               id: true,
               name: true,
-              phone: true,
               phone: true,
               role: true,
               status: true,

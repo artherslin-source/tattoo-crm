@@ -61,7 +61,8 @@ export class AdminArtistsService {
 
   async create(data: {
     name: string;
-    email: string;
+    email?: string;
+    phone?: string;
     password: string;
     branchId?: string;
     bio?: string;
@@ -76,10 +77,11 @@ export class AdminArtistsService {
       const user = await tx.user.create({
         data: {
           name: data.name,
-          email: data.email,
+          email: data.email || null,
+          phone: data.phone || null,
           hashedPassword,
           role: 'ARTIST',
-          branchId: data.branchId,
+          branchId: data.branchId || null,
         },
       });
 
