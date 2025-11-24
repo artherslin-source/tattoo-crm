@@ -17,8 +17,16 @@ export class AdminArtistsService {
       }
       // BOSS 可以看到所有分店的刺青師，不需要額外條件
 
+      // 在查詢時過濾掉 phone 為 null 的記錄，避免 Prisma 類型錯誤
       const artists = await this.prisma.artist.findMany({
-        where: whereCondition,
+        where: {
+          ...whereCondition,
+          user: {
+            phone: {
+              not: null,
+            },
+          },
+        },
         include: { 
           user: {
             select: {
