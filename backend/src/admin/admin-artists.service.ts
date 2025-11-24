@@ -199,7 +199,17 @@ export class AdminArtistsService {
           ...(data.branchId !== undefined && { branchId: data.branchId }),
         },
         include: { 
-          user: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              role: true,
+              branchId: true,
+              isActive: true,
+            }
+          },
           branch: {
             select: {
               id: true,
