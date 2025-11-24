@@ -153,28 +153,21 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           
           setVariants(data);
           
-          // 自動選擇第一個必選項
+          // 所有規格都非必選，不自動選擇，讓用戶自己選擇
           if (data.size && data.size.length > 0) {
-            setSelectedSize(data.size[0].name);
-            console.log(`[VariantSelector] 自動選擇尺寸: ${data.size[0].name}`);
+            console.log(`[VariantSelector] 尺寸選項已載入，等待用戶選擇`);
           } else {
             console.warn('[VariantSelector] 沒有尺寸選項');
           }
           
           if (data.color && data.color.length > 0) {
-            setSelectedColor(data.color[0].name);
-            console.log(`[VariantSelector] 自動選擇顏色: ${data.color[0].name}`);
+            console.log(`[VariantSelector] 顏色選項已載入，等待用戶選擇`);
           } else {
             console.warn('[VariantSelector] 沒有顏色選項');
           }
           
-          // 自動選擇第一個左右半邊選項（如果存在且為必選）
           if (data.side && data.side.length > 0) {
-            const requiredSide = data.side.find((v: ServiceVariant) => v.isRequired);
-            if (requiredSide) {
-              setSelectedSide(requiredSide.name);
-              console.log(`[VariantSelector] 自動選擇左右半邊: ${requiredSide.name}`);
-            }
+            console.log(`[VariantSelector] 左右半邊選項已載入，等待用戶選擇`);
           }
         } else {
           const errorText = await response.text();
@@ -475,21 +468,15 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       }
     }
 
-    // 設計費
-    if (designFee > 0) {
-      price += designFee;
-    }
+    // 設計費另計，不計入總價
+    // 設計費將在後端或結帳時單獨處理
 
     return price;
   }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, variants]);
 
   // 處理加入購物車
   const handleAddToCart = async () => {
-    // 只要求至少選擇顏色（尺寸已停用，變為可選）
-    if (!selectedColor) {
-      alert("請至少選擇顏色");
-      return;
-    }
+    // 所有規格都非必選，不需要驗證
 
     setAdding(true);
     try {
@@ -635,7 +622,14 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                   return (
                   <button
                     key={variant.id}
-                    onClick={() => setSelectedColor(variant.name)}
+                    onClick={() => {
+                      // 點擊切換：如果已選中則取消，未選中則選中
+                      if (selectedColor === variant.name) {
+                        setSelectedColor("");
+                      } else {
+                        setSelectedColor(variant.name);
+                      }
+                    }}
                     className={`
                       relative rounded-lg border-2 px-6 py-4 text-sm font-medium transition-all
                       ${
@@ -759,7 +753,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
               </div>
               <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                 <Info className="h-3 w-3" />
-                設計費將加入總價計算
+                設計費另計，不計入總價
               </p>
             </div>
           )}
@@ -841,7 +835,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
           <Button
             onClick={handleAddToCart}
             className="flex-1 bg-blue-600 hover:bg-blue-700"
-            disabled={adding || !selectedColor}
+            disabled={adding}
           >
             {adding ? (
               <>

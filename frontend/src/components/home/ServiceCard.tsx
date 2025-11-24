@@ -43,7 +43,7 @@ export function ServiceCard({ item, variant = "vertical", onAddToCart }: Service
     ? item.description
     : isPlaceholder
     ? "此服務尚未建立，敬請期待。"
-    : "預約前可先拍照與設計師討論細節。";
+    : "預約前可先拍照與刺青師討論細節。";
 
   const content = (
     <article
