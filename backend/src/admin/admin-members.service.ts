@@ -248,7 +248,7 @@ export class AdminMembersService {
       select: {
         id: true,
         name: true,
-        email: true,
+        phone: true,
         role: true,
         status: true,
       },
@@ -274,7 +274,7 @@ export class AdminMembersService {
       select: {
         id: true,
         name: true,
-        email: true,
+        phone: true,
         role: true,
         status: true,
       },
@@ -302,7 +302,7 @@ export class AdminMembersService {
       select: {
         id: true,
         name: true,
-        email: true,
+        phone: true,
         role: true,
         status: true,
       },
@@ -348,7 +348,7 @@ export class AdminMembersService {
             select: {
               id: true,
               name: true,
-              email: true,
+              phone: true,
               phone: true,
               role: true,
               status: true,
@@ -411,7 +411,7 @@ export class AdminMembersService {
             select: {
               id: true,
               name: true,
-              email: true,
+              phone: true,
               phone: true,
               role: true,
               status: true,
@@ -503,7 +503,7 @@ export class AdminMembersService {
         operator: {
           select: {
             id: true,
-            email: true,
+            phone: true,
             name: true,   // ✅ 確保回傳 name
           },
         },
