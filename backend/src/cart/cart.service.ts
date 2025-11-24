@@ -71,12 +71,10 @@ export class CartService {
       throw new NotFoundException('服務不存在或已停用');
     }
 
-    // 驗證規格選項（顏色為必選，尺寸已停用改為可選）
+    // 驗證規格選項（所有規格都非必選）
     const { size, color, position, side } = dto.selectedVariants;
     
-    if (!color) {
-      throw new BadRequestException('請至少選擇顏色');
-    }
+    // 所有規格都非必選，不需要驗證
 
     // 計算價格和時長
     const { finalPrice, estimatedDuration } = this.calculatePriceAndDuration(
@@ -580,6 +578,29 @@ export class CartService {
       );
       if (sizeVariant) {
         finalPrice = sizeVariant.priceModifier;
+      } else {
+        // 如果找不到對應的尺寸，使用基礎價格
+        finalPrice = basePrice;
+      }
+    } else if (selectedVariants.color) {
+      // 如果只選擇了顏色，使用顏色價格
+      const colorVariant = variants.find(
+        (v) => v.type === 'color' && v.name === selectedVariants.color,
+      );
+      if (colorVariant) {
+        if (colorVariant.priceModifier >= 1000) {
+          // 固定價格
+          finalPrice = colorVariant.priceModifier;
+        } else if (colorVariant.priceModifier > 0) {
+          // 加價
+          finalPrice = colorVariant.priceModifier;
+        } else {
+          // 價格為 0，使用基礎價格
+          finalPrice = basePrice;
+        }
+      } else {
+        // 如果找不到對應的顏色，使用基礎價格
+        finalPrice = basePrice;
       }
     } else {
       // 如果都沒有選擇，使用基礎價格
