@@ -474,9 +474,13 @@ export class CartService {
     const hasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
     
     // 1. 優先使用顏色規格的固定價格（根據價格表，顏色價格是完整價格）
-    // 檢查 color 和 size 是否為非空字符串
-    const hasColor = selectedVariants.color && selectedVariants.color.trim() !== '';
-    const hasSize = selectedVariants.size && selectedVariants.size.trim() !== '';
+    // 檢查 color 和 size 是否為非空字符串（安全檢查，避免 undefined/null 錯誤）
+    const hasColor = selectedVariants.color && 
+                     typeof selectedVariants.color === 'string' && 
+                     selectedVariants.color.trim() !== '';
+    const hasSize = selectedVariants.size && 
+                    typeof selectedVariants.size === 'string' && 
+                    selectedVariants.size.trim() !== '';
     
     if (hasColor && hasSize) {
       const colorVariant = variants.find(
@@ -612,7 +616,9 @@ export class CartService {
     }
 
     // 3. 計算部位調整
-    if (selectedVariants.position) {
+    if (selectedVariants.position && 
+        typeof selectedVariants.position === 'string' && 
+        selectedVariants.position.trim() !== '') {
       const positionVariant = variants.find(
         (v) => v.type === 'position' && v.name === selectedVariants.position,
       );
@@ -622,7 +628,9 @@ export class CartService {
     }
 
     // 4. 計算左右半邊調整
-    if (selectedVariants.side) {
+    if (selectedVariants.side && 
+        typeof selectedVariants.side === 'string' && 
+        selectedVariants.side.trim() !== '') {
       const sideVariant = variants.find(
         (v) => v.type === 'side' && v.name === selectedVariants.side,
       );
