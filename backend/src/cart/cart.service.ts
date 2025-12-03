@@ -652,7 +652,13 @@ export class CartService {
     // 5. 設計費另計，不計入總價
     // 設計費將在後端或結帳時單獨處理，不在這裡加入 finalPrice
 
-    // 5. 計算其他規格（風格、複雜度等）
+    // 6. 計算增出範圍與細膩度加購（custom_addon 是直接輸入的價格）
+    if (selectedVariants.custom_addon && typeof selectedVariants.custom_addon === 'number' && selectedVariants.custom_addon > 0) {
+      finalPrice += selectedVariants.custom_addon;
+      console.log(`💰 增出範圍與細膩度加購: +NT$ ${selectedVariants.custom_addon}`);
+    }
+
+    // 7. 計算其他規格（風格、複雜度等）
     ['style', 'complexity', 'technique', 'custom'].forEach((type) => {
       const selectedValue = selectedVariants[type];
       if (selectedValue) {

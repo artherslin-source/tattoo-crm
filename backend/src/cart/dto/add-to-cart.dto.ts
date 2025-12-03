@@ -13,6 +13,7 @@ export class AddToCartDto {
     design_fee?: number; // 設計費（自訂價格）
     style?: string;
     complexity?: string;
+    custom_addon?: number; // 增出範圍與細膩度加購（自訂價格）
   };
 
   @IsOptional()
@@ -36,6 +37,7 @@ export class UpdateCartItemDto {
     design_fee?: number; // 設計費（自訂價格）
     style?: string;
     complexity?: string;
+    custom_addon?: number; // 增出範圍與細膩度加購（自訂價格）
   };
 
   @IsOptional()
@@ -73,6 +75,8 @@ export class CartItemResponseDto {
     color: string;
     position?: string;
     side?: string;
+    design_fee?: number;
+    custom_addon?: number;
   };
   basePrice: number;
   finalPrice: number;

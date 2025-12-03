@@ -48,6 +48,7 @@ interface GroupedVariants {
   design_fee?: ServiceVariant[];
   style?: ServiceVariant[];
   complexity?: ServiceVariant[];
+  custom_addon?: ServiceVariant[];
 }
 
 interface Service {
@@ -69,6 +70,7 @@ interface SelectedVariants {
   design_fee?: number;
   style?: string;
   complexity?: string;
+  custom_addon?: number; // 增出範圍與細膩度加購的價格（用戶輸入）
 }
 
 interface VariantSelectorProps {
@@ -86,6 +88,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
   const [selectedPosition, setSelectedPosition] = useState<string>("");
   const [selectedSide, setSelectedSide] = useState<string>("");
   const [designFee, setDesignFee] = useState<number>(0);
+  const [customAddonPrice, setCustomAddonPrice] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
   const [adding, setAdding] = useState(false);
 
@@ -479,8 +482,14 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     // 設計費另計，不計入總價
     // 設計費將在後端或結帳時單獨處理
 
+    // 增出範圍與細膩度加購：計入總價
+    if (customAddonPrice > 0) {
+      price += customAddonPrice;
+      console.log(`💰 增出範圍與細膩度加購: +NT$ ${customAddonPrice}`);
+    }
+
     return price;
-  }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, variants, service]);
+  }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, customAddonPrice, variants, service]);
 
   // 處理加入購物車
   const handleAddToCart = async () => {
@@ -506,9 +515,14 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
       if (designFee > 0) {
         selectedVariants.design_fee = designFee;
       }
+
+      // 增出範圍與細膩度加購
+      if (customAddonPrice > 0) {
+        selectedVariants.custom_addon = customAddonPrice;
+      }
       
       // 如果沒有選擇任何規格，至少需要有一個基礎價格
-      if (!selectedSize && !selectedColor && !selectedPosition && !selectedSide && designFee === 0) {
+      if (!selectedSize && !selectedColor && !selectedPosition && !selectedSide && designFee === 0 && customAddonPrice === 0) {
         // 使用服務的基礎價格
         console.log('⚠️ 沒有選擇任何規格，使用服務基礎價格:', service.price);
       }
@@ -773,6 +787,34 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
             </div>
           )}
 
+          {/* 增出範圍與細膩度加購 */}
+          {variants.custom_addon && variants.custom_addon.length > 0 && (
+            <div>
+              <Label className="mb-3 flex items-center text-base font-semibold text-gray-900">
+                增出範圍與細膩度加購
+                <Badge variant="outline" className="ml-2 text-xs">
+                  可選
+                </Badge>
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  placeholder="輸入加購價格（元）"
+                  value={customAddonPrice || ""}
+                  onChange={(e) => setCustomAddonPrice(Number(e.target.value) || 0)}
+                  className="w-full"
+                  min="0"
+                  step="100"
+                />
+                <span className="text-sm text-gray-500">元</span>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                <Info className="h-3 w-3" />
+                需事前與刺青師討論評估後加購（有輸入價格時計入總價）
+              </p>
+            </div>
+          )}
+
           {/* 備註 */}
           <div>
             <Label className="mb-2 text-base font-semibold text-gray-900">
@@ -818,6 +860,12 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-blue-600 font-medium">設計費</span>
                   <span className="font-semibold text-blue-700">+{designFee.toLocaleString()}元</span>
+                </div>
+              )}
+              {customAddonPrice > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-600 font-medium">增出範圍與細膩度加購</span>
+                  <span className="font-semibold text-blue-700">+{customAddonPrice.toLocaleString()}元</span>
                 </div>
               )}
               <div className="border-t border-blue-200 pt-3 mt-3">

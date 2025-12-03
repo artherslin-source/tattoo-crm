@@ -30,6 +30,7 @@ interface GroupedVariants {
   design_fee: ServiceVariant[];
   style: ServiceVariant[];
   complexity: ServiceVariant[];
+  custom_addon: ServiceVariant[];
 }
 
 interface VariantManagerProps {
@@ -47,6 +48,7 @@ const VARIANT_TYPE_LABELS: Record<string, string> = {
   design_fee: "設計費",
   style: "風格",
   complexity: "複雜度",
+  custom_addon: "增出範圍與細膩度加購",
 };
 
 // 預定義的規格模板
@@ -105,6 +107,9 @@ const PREDEFINED_VARIANTS: Record<string, Array<{
     { name: '中等', code: 'C2', priceModifier: 1000, sortOrder: 2, isRequired: false, description: '中等複雜度' },
     { name: '複雜', code: 'C3', priceModifier: 2500, sortOrder: 3, isRequired: false, description: '高複雜度' },
   ],
+  custom_addon: [
+    { name: '增出範圍與細膩度加購', code: 'ADDON', priceModifier: 0, sortOrder: 1, isRequired: false, description: '需事前與刺青師討論評估後加購（價格由用戶輸入）' },
+  ],
 };
 
 export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: VariantManagerProps) {
@@ -116,6 +121,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     design_fee: [],
     style: [],
     complexity: [],
+    custom_addon: [],
   });
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
