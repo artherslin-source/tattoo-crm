@@ -103,8 +103,22 @@ export class AuthService {
   async refresh(refreshToken: string) {
     try {
       const payload = await this.jwtService.verifyAsync(refreshToken, { secret: process.env.JWT_REFRESH_SECRET });
-      return this.issueTokens(payload.sub, payload.email, payload.role, payload.branchId);
-    } catch {
+      
+      // 從資料庫重新獲取用戶信息，確保使用最新的 phone 和 role
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        include: { branch: true }
+      });
+      
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+      
+      // 使用 phone 或 email 作為標識（優先使用 phone）
+      const identifier = user.phone || user.email || '';
+      return this.issueTokens(user.id, identifier, user.role || 'USER', user.branchId || undefined);
+    } catch (error) {
+      console.error('❌ Refresh token 驗證失敗:', error);
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
