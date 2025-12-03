@@ -33,11 +33,11 @@ async function main() {
       hashedPassword,
       name: 'Super Admin',
       role: 'BOSS',
-      phone: faker.phone.number(),
+      phone: '0988666888', // 固定 BOSS 手機號碼
       createdAt: new Date('2024-01-01'),
     },
   });
-  console.log('✅ 建立管理員帳號:', admin.email);
+  console.log('✅ 建立管理員帳號:', admin.email, '手機:', admin.phone);
 
   // 2. 建立分店：三重店、東港店
   const branches = await Promise.all([
@@ -659,7 +659,7 @@ async function main() {
 
   console.log('🎉 完整數據重建完成！');
   console.log('📊 資料統計：');
-  console.log(`   - BOSS: 1 個 (admin@test.com / 12345678)`);
+  console.log(`   - BOSS: 1 個 (手機: 0988666888 / 密碼: 12345678)`);
   console.log(`   - 分店經理: ${managers.length} 個 (manager1@test.com, manager2@test.com / 12345678)`);
   console.log(`   - 會員: ${members.length} 個 (member1@test.com ~ member12@test.com / 12345678)`);
   console.log(`   - 刺青師: ${artists.length} 個 (artist1@test.com ~ artist3@test.com / 12345678)`);
