@@ -161,6 +161,96 @@ export class AuthService {
     return { success: true };
   }
 
+  /**
+   * 初始化 BOSS 帳號
+   * 用於修復或創建 BOSS 帳號，確保可以登入
+   */
+  async initBossAccount() {
+    const bossPhone = '0988666888';
+    const bossPassword = '12345678';
+    const bossEmail = 'admin@test.com';
+
+    try {
+      console.log('🔧 開始初始化 BOSS 帳號...');
+
+      // 先檢查是否已存在該手機號碼的用戶
+      let existingUser = await this.prisma.user.findUnique({
+        where: { phone: bossPhone }
+      });
+
+      if (existingUser) {
+        console.log(`✅ 找到現有用戶（手機: ${bossPhone}），更新為 BOSS...`);
+        const hashedPassword = await bcrypt.hash(bossPassword, 12);
+        existingUser = await this.prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            role: 'BOSS',
+            hashedPassword: hashedPassword,
+            email: bossEmail,
+            name: 'Super Admin',
+            isActive: true,
+          }
+        });
+        return {
+          success: true,
+          message: 'BOSS 帳號已更新',
+          phone: existingUser.phone,
+          email: existingUser.email,
+        };
+      }
+
+      // 檢查是否已有 BOSS 帳號
+      const existingBoss = await this.prisma.user.findFirst({
+        where: { role: 'BOSS' }
+      });
+
+      if (existingBoss) {
+        console.log(`✅ 找到現有 BOSS 帳號，更新手機號碼...`);
+        const hashedPassword = await bcrypt.hash(bossPassword, 12);
+        const updated = await this.prisma.user.update({
+          where: { id: existingBoss.id },
+          data: {
+            phone: bossPhone,
+            email: bossEmail,
+            hashedPassword: hashedPassword,
+            name: 'Super Admin',
+            isActive: true,
+          }
+        });
+        return {
+          success: true,
+          message: 'BOSS 帳號已更新',
+          phone: updated.phone,
+          email: updated.email,
+        };
+      }
+
+      // 創建新的 BOSS 帳號
+      console.log('⚠️ 未找到 BOSS 帳號，正在創建...');
+      const hashedPassword = await bcrypt.hash(bossPassword, 12);
+      const newBoss = await this.prisma.user.create({
+        data: {
+          phone: bossPhone,
+          email: bossEmail,
+          hashedPassword: hashedPassword,
+          name: 'Super Admin',
+          role: 'BOSS',
+          isActive: true,
+        }
+      });
+
+      return {
+        success: true,
+        message: 'BOSS 帳號已創建',
+        phone: newBoss.phone,
+        email: newBoss.email,
+      };
+    } catch (error) {
+      console.error('❌ 初始化 BOSS 帳號失敗:', error);
+      throw error;
+    }
+  }
+
   private async issueTokens(userId: string, email: string, role: string, branchId?: string) {
     try {
       console.log(`🔑 開始簽發 JWT tokens for user: ${email}`);

@@ -81,7 +81,19 @@ export class AuthController {
     const input = ChangePasswordSchema.parse(body);
     return this.authService.changePassword(req.user.id, input.oldPassword, input.newPassword);
   }
+
+  /**
+   * 臨時端點：初始化 BOSS 帳號（僅用於首次設置，生產環境應移除或保護）
+   * 此端點不需要認證，用於修復 BOSS 帳號無法登入的問題
+   */
+  @Post('init-boss')
+  async initBoss(@Body() body: { secret?: string }) {
+    // 簡單的保護機制：需要提供 secret（可以在環境變數中設置）
+    const requiredSecret = process.env.BOSS_INIT_SECRET || 'temporary-init-secret-2024';
+    if (body.secret !== requiredSecret) {
+      throw new BadRequestException('Invalid secret');
+    }
+
+    return this.authService.initBossAccount();
+  }
 }
-
-
-
