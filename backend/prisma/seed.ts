@@ -192,8 +192,8 @@ async function main() {
   // 3. 建立 2 個分店經理（三重店、東港店各一位）
   const managers: any[] = [];
   const managerData = [
-    { name: '三重店經理', email: 'manager1@test.com' },
-    { name: '東港店經理', email: 'manager2@test.com' }
+    { name: '三重店經理', email: 'manager1@test.com', phone: '0911111111' },
+    { name: '東港店經理', email: 'manager2@test.com', phone: '0922222222' }
   ];
   
   for (let i = 0; i < 2; i++) {
@@ -203,7 +203,7 @@ async function main() {
         hashedPassword,
         name: managerData[i].name,
         role: 'BRANCH_MANAGER',
-        phone: faker.phone.number(),
+        phone: managerData[i].phone,
         branchId: branches[i].id,
         createdAt: faker.date.past(),
       },
@@ -279,9 +279,9 @@ async function main() {
   } else {
     // 完整重建模式：創建新刺青師
     const artistData = [
-      { name: "陳震宇", bio: "專精日式刺青，擁有15年經驗，擅長龍鳳、櫻花等傳統圖案。風格沉穩內斂，注重細節與傳統美學的完美結合。身穿黑色高領毛衣，展現專業與內斂的氣質。雙臂滿布精緻的日式刺青，是傳統刺青藝術的傳承者。", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1", photoUrl: "/images/artists/chen-zhenyu.jpeg", branchIndex: 1 }, // 東港店
-      { name: "黃晨洋", bio: "專精幾何圖騰，現代風格專家，擅長線條藝術。融合當代藝術與刺青技藝，創造獨特的視覺語言。年輕有活力，對藝術有獨特見解。喜歡在藝廊中尋找靈感，將現代藝術元素融入刺青設計。", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2", photoUrl: "/images/artists/huang-chenyang.jpeg", branchIndex: 0 }, // 三重店
-      { name: "林承葉", bio: "專精黑灰寫實，細節完美主義者，擅長肖像刺青。以精湛的技藝呈現光影層次，每件作品都是藝術品。戴眼鏡展現專業形象，穿著時尚皮夾克。左前臂有彩色刺青作品，展現多元化的刺青風格。", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3", photoUrl: "/images/artists/lin-chengye.jpeg", branchIndex: 0 }, // 三重店
+      { name: "陳震宇", phone: "0933333333", bio: "專精日式刺青，擁有15年經驗，擅長龍鳳、櫻花等傳統圖案。風格沉穩內斂，注重細節與傳統美學的完美結合。身穿黑色高領毛衣，展現專業與內斂的氣質。雙臂滿布精緻的日式刺青，是傳統刺青藝術的傳承者。", speciality: "日式傳統刺青", portfolioUrl: "https://portfolio.example.com/artist1", photoUrl: "/images/artists/chen-zhenyu.jpeg", branchIndex: 1 }, // 東港店
+      { name: "黃晨洋", phone: "0944444444", bio: "專精幾何圖騰，現代風格專家，擅長線條藝術。融合當代藝術與刺青技藝，創造獨特的視覺語言。年輕有活力，對藝術有獨特見解。喜歡在藝廊中尋找靈感，將現代藝術元素融入刺青設計。", speciality: "幾何圖騰設計", portfolioUrl: "https://portfolio.example.com/artist2", photoUrl: "/images/artists/huang-chenyang.jpeg", branchIndex: 0 }, // 三重店
+      { name: "林承葉", phone: "0955555555", bio: "專精黑灰寫實，細節完美主義者，擅長肖像刺青。以精湛的技藝呈現光影層次，每件作品都是藝術品。戴眼鏡展現專業形象，穿著時尚皮夾克。左前臂有彩色刺青作品，展現多元化的刺青風格。", speciality: "黑灰寫實風格", portfolioUrl: "https://portfolio.example.com/artist3", photoUrl: "/images/artists/lin-chengye.jpeg", branchIndex: 0 }, // 三重店
     ];
     
     for (let i = 0; i < 3; i++) {
@@ -291,7 +291,7 @@ async function main() {
           hashedPassword,
           name: artistData[i].name,
           role: 'ARTIST',
-          phone: faker.phone.number(),
+          phone: artistData[i].phone,
           branchId: branches[artistData[i].branchIndex].id,
           createdAt: faker.date.between({ 
             from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 一年前

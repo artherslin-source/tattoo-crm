@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface UpdateUserDto {
@@ -127,9 +127,29 @@ export class UsersService {
   }
 
   async updateMe(userId: string, updateUserDto: UpdateUserDto) {
+    // 如果更新手機號碼，檢查唯一性
+    if (updateUserDto.phone !== undefined && updateUserDto.phone !== null && updateUserDto.phone.trim() !== '') {
+      // 驗證手機號碼格式（至少10位數字）
+      if (!/^[0-9]{10,}$/.test(updateUserDto.phone)) {
+        throw new BadRequestException('手機號碼格式不正確，請輸入至少10位數字');
+      }
+
+      // 檢查手機號碼是否已被其他用戶使用
+      const existingUser = await this.prisma.user.findUnique({
+        where: { phone: updateUserDto.phone },
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        throw new BadRequestException('此手機號碼已被其他用戶使用');
+      }
+    }
+
     const updateData: any = {};
     if (updateUserDto.name !== undefined) updateData.name = updateUserDto.name;
-    if (updateUserDto.phone !== undefined) updateData.phone = updateUserDto.phone;
+    if (updateUserDto.phone !== undefined) {
+      // 如果手機號碼是空字串，設為 null
+      updateData.phone = updateUserDto.phone === '' ? null : updateUserDto.phone;
+    }
     if (updateUserDto.avatarUrl !== undefined) updateData.avatarUrl = updateUserDto.avatarUrl;
 
     const updatedUser = await this.prisma.user.update({

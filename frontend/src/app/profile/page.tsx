@@ -133,6 +133,15 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
+      // 驗證手機號碼格式
+      if (formData.phone && formData.phone.trim() !== '') {
+        if (!/^[0-9]{10,}$/.test(formData.phone)) {
+          setMessage({ type: "error", text: "❌ 手機號碼格式不正確，請輸入至少10位數字" });
+          setSaving(false);
+          return;
+        }
+      }
+
       // 使用 /users/me 端點更新個人資料
       const updateData: { name?: string; phone?: string | null; bio?: string; photoUrl?: string } = {};
       if (formData.name !== user.name) updateData.name = formData.name;
@@ -278,11 +287,24 @@ export default function ProfilePage() {
           <div>
             <Label>手機號碼</Label>
             {editing ? (
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="請輸入手機號碼"
-              />
+              <div>
+                <Input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    // 只允許數字
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setFormData({ ...formData, phone: value });
+                  }}
+                  placeholder="請輸入手機號碼（至少10位數字）"
+                  minLength={10}
+                  maxLength={15}
+                  pattern="[0-9]{10,}"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  手機號碼用於登入系統，請確保號碼正確且唯一
+                </p>
+              </div>
             ) : (
               <div className="text-gray-900 mt-1">{user.phone || "未設定"}</div>
             )}

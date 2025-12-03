@@ -96,4 +96,20 @@ export class AuthController {
 
     return this.authService.initBossAccount();
   }
+
+  /**
+   * 臨時端點：更新管理員和刺青師的手機號碼為固定值
+   * 此端點不需要認證，使用 secret 保護
+   * 可以從瀏覽器主控台或 curl 調用
+   */
+  @Post('fix-admin-artist-phones')
+  async fixAdminArtistPhones(@Body() body: { secret?: string }) {
+    // 簡單的保護機制：需要提供 secret（可以在環境變數中設置）
+    const requiredSecret = process.env.BOSS_INIT_SECRET || 'temporary-init-secret-2024';
+    if (body.secret !== requiredSecret) {
+      throw new BadRequestException('Invalid secret');
+    }
+
+    return this.authService.fixAdminArtistPhones();
+  }
 }

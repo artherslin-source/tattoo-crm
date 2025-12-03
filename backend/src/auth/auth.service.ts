@@ -165,6 +165,155 @@ export class AuthService {
    * 初始化 BOSS 帳號
    * 用於修復或創建 BOSS 帳號，確保可以登入
    */
+  async fixAdminArtistPhones() {
+    console.log('🔧 開始更新管理員和刺青師的手機號碼...\n');
+
+    const results: any = {
+      boss: null,
+      managers: [],
+      artists: [],
+      errors: [],
+    };
+
+    try {
+      // 1. 更新 BOSS 帳號
+      console.log('📱 更新 BOSS 帳號...');
+      const boss = await this.prisma.user.findFirst({
+        where: { role: 'BOSS' },
+      });
+
+      if (boss) {
+        // 檢查目標手機號碼是否已被其他用戶使用
+        const existingUser = await this.prisma.user.findUnique({
+          where: { phone: '0988666888' },
+        });
+
+        if (existingUser && existingUser.id !== boss.id) {
+          const msg = `手機號碼 0988666888 已被用戶 ${existingUser.name} (${existingUser.id}) 使用，跳過更新`;
+          console.log(`⚠️  ${msg}`);
+          results.errors.push(msg);
+        } else {
+          await this.prisma.user.update({
+            where: { id: boss.id },
+            data: { phone: '0988666888' },
+          });
+          console.log(`✅ BOSS 帳號 (${boss.name}) 手機號碼已更新為：0988666888`);
+          results.boss = { name: boss.name, phone: '0988666888', status: 'updated' };
+        }
+      } else {
+        const msg = '未找到 BOSS 帳號';
+        console.log(`⚠️  ${msg}`);
+        results.errors.push(msg);
+      }
+
+      // 2. 更新分店經理
+      console.log('\n📱 更新分店經理...');
+      const managers = await this.prisma.user.findMany({
+        where: { role: 'BRANCH_MANAGER' },
+        include: { branch: true },
+      });
+
+      const managerPhones: Record<string, string> = {
+        '三重店經理': '0911111111',
+        '東港店經理': '0922222222',
+      };
+
+      for (const manager of managers) {
+        const targetPhone = managerPhones[manager.name || ''];
+        if (targetPhone) {
+          // 檢查目標手機號碼是否已被其他用戶使用
+          const existingUser = await this.prisma.user.findUnique({
+            where: { phone: targetPhone },
+          });
+
+          if (existingUser && existingUser.id !== manager.id) {
+            const msg = `手機號碼 ${targetPhone} 已被用戶 ${existingUser.name} (${existingUser.id}) 使用，跳過更新`;
+            console.log(`⚠️  ${msg}`);
+            results.errors.push(msg);
+            results.managers.push({ name: manager.name, phone: targetPhone, status: 'skipped', reason: msg });
+          } else {
+            await this.prisma.user.update({
+              where: { id: manager.id },
+              data: { phone: targetPhone },
+            });
+            console.log(`✅ ${manager.name} (${manager.branch?.name || '未知分店'}) 手機號碼已更新為：${targetPhone}`);
+            results.managers.push({ name: manager.name, branch: manager.branch?.name, phone: targetPhone, status: 'updated' });
+          }
+        } else {
+          const msg = `未找到 ${manager.name} 的對應手機號碼配置`;
+          console.log(`⚠️  ${msg}`);
+          results.errors.push(msg);
+          results.managers.push({ name: manager.name, status: 'not_found', reason: msg });
+        }
+      }
+
+      // 3. 更新刺青師
+      console.log('\n📱 更新刺青師...');
+      const artists = await this.prisma.artist.findMany({
+        include: {
+          user: true,
+          branch: true,
+        },
+      });
+
+      const artistPhones: Record<string, string> = {
+        '陳震宇': '0933333333',
+        '黃晨洋': '0944444444',
+        '林承葉': '0955555555',
+      };
+
+      for (const artist of artists) {
+        const targetPhone = artistPhones[artist.displayName || ''];
+        if (targetPhone) {
+          // 檢查目標手機號碼是否已被其他用戶使用
+          const existingUser = await this.prisma.user.findUnique({
+            where: { phone: targetPhone },
+          });
+
+          if (existingUser && existingUser.id !== artist.user.id) {
+            const msg = `手機號碼 ${targetPhone} 已被用戶 ${existingUser.name} (${existingUser.id}) 使用，跳過更新`;
+            console.log(`⚠️  ${msg}`);
+            results.errors.push(msg);
+            results.artists.push({ name: artist.displayName, phone: targetPhone, status: 'skipped', reason: msg });
+          } else {
+            await this.prisma.user.update({
+              where: { id: artist.user.id },
+              data: { phone: targetPhone },
+            });
+            console.log(`✅ ${artist.displayName} (${artist.branch?.name || '未知分店'}) 手機號碼已更新為：${targetPhone}`);
+            results.artists.push({ name: artist.displayName, branch: artist.branch?.name, phone: targetPhone, status: 'updated' });
+          }
+        } else {
+          const msg = `未找到 ${artist.displayName} 的對應手機號碼配置`;
+          console.log(`⚠️  ${msg}`);
+          results.errors.push(msg);
+          results.artists.push({ name: artist.displayName, status: 'not_found', reason: msg });
+        }
+      }
+
+      console.log('\n✅ 手機號碼更新完成！');
+
+      return {
+        success: true,
+        message: '手機號碼更新完成',
+        results,
+        accountList: {
+          BOSS: '0988666888',
+          '三重店經理': '0911111111',
+          '東港店經理': '0922222222',
+          '陳震宇': '0933333333',
+          '黃晨洋': '0944444444',
+          '林承葉': '0955555555',
+        },
+        defaultPassword: '12345678',
+      };
+    } catch (error) {
+      console.error('❌ 更新失敗:', error);
+      results.errors.push(`更新失敗: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
   async initBossAccount() {
     const bossPhone = '0988666888';
     const bossPassword = '12345678';

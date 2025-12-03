@@ -71,6 +71,15 @@ export default function EditProfilePage() {
         return;
       }
 
+      // 驗證手機號碼格式
+      if (phone && phone.trim() !== '') {
+        if (!/^[0-9]{10,}$/.test(phone)) {
+          setError("手機號碼格式不正確，請輸入至少10位數字");
+          setSaving(false);
+          return;
+        }
+      }
+
       const updateData: { name?: string; phone?: string | null; avatarUrl?: string } = {};
       if (name !== user?.name) updateData.name = name;
       if (phone !== (user?.phone || "")) updateData.phone = phone || null;
@@ -152,15 +161,26 @@ export default function EditProfilePage() {
 
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
-              電話
+              手機號碼
             </label>
             <input
               id="phone"
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                // 只允許數字
+                const value = e.target.value.replace(/[^0-9]/g, '');
+                setPhone(value);
+              }}
+              placeholder="請輸入手機號碼（至少10位數字）"
+              minLength={10}
+              maxLength={15}
+              pattern="[0-9]{10,}"
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
             />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              手機號碼用於登入系統，請確保號碼正確且唯一
+            </p>
           </div>
 
           <div>
