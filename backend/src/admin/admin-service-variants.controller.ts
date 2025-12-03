@@ -81,5 +81,14 @@ export class AdminServiceVariantsController {
       body?.template || 'standard',
     );
   }
+
+  /**
+   * 為所有服務項目啟用"增出範圍與細膩度加購"規格
+   * 臨時端點，用於批量啟用規格
+   */
+  @Post('enable-custom-addon-all')
+  async enableCustomAddonForAllServices() {
+    return this.variantsService.enableCustomAddonForAllServices();
+  }
 }
 

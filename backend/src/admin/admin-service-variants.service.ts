@@ -292,5 +292,94 @@ export class AdminServiceVariantsService {
       count: variantsToCreate.length,
     };
   }
+
+  /**
+   * 為所有服務項目啟用"增出範圍與細膩度加購"規格
+   */
+  async enableCustomAddonForAllServices() {
+    const services = await this.prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' }
+    });
+
+    let createdCount = 0;
+    let enabledCount = 0;
+    let alreadyEnabledCount = 0;
+
+    for (const service of services) {
+      // 檢查是否已存在 custom_addon 規格
+      const existingVariant = await this.prisma.serviceVariant.findFirst({
+        where: {
+          serviceId: service.id,
+          type: 'custom_addon',
+          name: '增出範圍與細膩度加購'
+        }
+      });
+
+      if (existingVariant) {
+        if (existingVariant.isActive) {
+          alreadyEnabledCount++;
+        } else {
+          // 啟用現有規格
+          await this.prisma.serviceVariant.update({
+            where: { id: existingVariant.id },
+            data: { isActive: true }
+          });
+          enabledCount++;
+        }
+      } else {
+        // 創建新規格
+        await this.prisma.serviceVariant.create({
+          data: {
+            serviceId: service.id,
+            type: 'custom_addon',
+            name: '增出範圍與細膩度加購',
+            code: 'ADDON',
+            description: '需事前與刺青師討論評估後加購（價格由用戶輸入）',
+            priceModifier: 0,
+            sortOrder: 1,
+            isRequired: false,
+            isActive: true
+          }
+        });
+        createdCount++;
+
+        // 確保服務的 hasVariants 標記為 true
+        if (!service.hasVariants) {
+          await this.prisma.service.update({
+            where: { id: service.id },
+            data: { hasVariants: true }
+          });
+        }
+      }
+    }
+
+    // 驗證結果
+    const allServices = await this.prisma.service.findMany({
+      where: { isActive: true },
+      include: {
+        variants: {
+          where: {
+            type: 'custom_addon',
+            isActive: true
+          }
+        }
+      }
+    });
+
+    const servicesWithAddon = allServices.filter(s => s.variants.length > 0);
+
+    return {
+      success: true,
+      message: '已為所有服務項目啟用"增出範圍與細膩度加購"規格',
+      stats: {
+        totalServices: services.length,
+        created: createdCount,
+        enabled: enabledCount,
+        alreadyEnabled: alreadyEnabledCount,
+        servicesWithAddon: servicesWithAddon.length
+      }
+    };
+  }
 }
 
