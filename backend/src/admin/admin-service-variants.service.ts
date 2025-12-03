@@ -99,6 +99,7 @@ export class AdminServiceVariantsService {
       design_fee: variants.filter((v) => v.type === 'design_fee'),
       style: variants.filter((v) => v.type === 'style'),
       complexity: variants.filter((v) => v.type === 'complexity'),
+      custom_addon: variants.filter((v) => v.type === 'custom_addon'),
     };
 
     return grouped;
