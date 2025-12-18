@@ -9,7 +9,7 @@ interface Appointment {
   id: string;
   startAt: string;
   endAt: string;
-  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
+  status: 'INTENT' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'NO_SHOW';
   notes: string | null;
   createdAt: string;
   orderId: string | null;
@@ -70,6 +70,8 @@ export default function AppointmentsTable({
 }: AppointmentsTableProps) {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
+      case 'INTENT':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'CONFIRMED':
@@ -80,6 +82,8 @@ export default function AppointmentsTable({
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'CANCELED':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'NO_SHOW':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       default:
         return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
@@ -87,6 +91,8 @@ export default function AppointmentsTable({
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case 'INTENT':
+        return '意向';
       case 'PENDING':
         return '待確認';
       case 'CONFIRMED':
@@ -97,6 +103,8 @@ export default function AppointmentsTable({
         return '已完成';
       case 'CANCELED':
         return '已取消';
+      case 'NO_SHOW':
+        return '未到場';
       default:
         return status;
     }

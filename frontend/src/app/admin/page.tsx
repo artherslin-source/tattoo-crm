@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getUserRole, getAccessToken } from "@/lib/api";
+import { hasAdminAccess } from "@/lib/access";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function AdminPage() {
     const userRole = getUserRole();
     const token = getAccessToken();
     
-    if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
+    if (!token || !hasAdminAccess(userRole)) {
       router.replace('/');
     } else {
       router.replace('/admin/dashboard');

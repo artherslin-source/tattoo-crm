@@ -1,13 +1,13 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, BadRequestException, Req } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, BadRequestException } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { AdminMembersService } from "./admin-members.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { RolesGuard } from "../common/guards/roles.guard";
-import { Roles } from "../common/decorators/roles.decorator";
+import { AccessGuard } from "../common/access/access.guard";
+import { Actor } from "../common/access/actor.decorator";
+import type { AccessActor } from "../common/access/access.types";
 
 @Controller("admin/members")
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER')
+@UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminMembersController {
   constructor(
     private readonly service: AdminMembersService,
@@ -49,11 +49,12 @@ export class AdminMembersController {
   }
 
   @Get()
-  findAll(@Query() query: any) {
+  findAll(@Actor() actor: AccessActor, @Query() query: any) {
     console.log('🎯 AdminMembersController.findAll called');
     console.log('🔍 Query params:', query);
     try {
       return this.service.findAll({
+        actor,
         search: query.search,
         role: query.role,
         status: query.status,
@@ -71,7 +72,7 @@ export class AdminMembersController {
   }
 
   @Post()
-  createMember(@Body() data: {
+  createMember(@Actor() actor: AccessActor, @Body() data: {
     name: string;
     email: string;
     password: string;
@@ -82,7 +83,7 @@ export class AdminMembersController {
     balance?: number;
     membershipLevel?: string;
   }) {
-    return this.service.createMember(data);
+    return this.service.createMember(actor, data);
   }
 
   @Get('simple-test')
@@ -98,44 +99,31 @@ export class AdminMembersController {
   }
 
   @Get(':id/topups')
-  async getTopupHistory(@Param('id') id: string) {
+  async getTopupHistory(@Actor() actor: AccessActor, @Param('id') id: string) {
     console.log('🎯 Controller getTopupHistory called with id:', id);
-    const result = await this.service.getTopupHistory(id);
+    const result = await this.service.getTopupHistory(actor, id);
     console.log('TopupHistory response:', result);   // ✅ Debug
     return result;
   }
 
   @Patch(':id/topup')
-  @UseGuards(AuthGuard('jwt'))
   async topupUser(
     @Param('id') id: string,
     @Body() body: { amount: number },
-    @Req() req
+    @Actor() actor: AccessActor
   ) {
     try {
-      console.log('💰 Controller: topupUser called with:', { memberId: id, amount: body.amount, user: req.user });
+      console.log('💰 Controller: topupUser called with:', { memberId: id, amount: body.amount, actor });
 
       const amount = Number(body.amount);
       if (amount <= 0) {
         throw new BadRequestException('儲值金額必須大於 0');
       }
 
-      if (!req.user || !req.user.id) {
-        console.error('❌ Controller: req.user is missing or invalid:', req.user);
-        throw new BadRequestException('操作人員未登入或缺少 ID');
-      }
-
-      // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行儲值操作
-      const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
-      if (!allowedRoles.includes(req.user.role)) {
-        console.error('❌ Controller: Insufficient permissions. User role:', req.user.role);
-        throw new BadRequestException('權限不足：只有管理員才能執行儲值操作');
-      }
-
-      const operatorId = req.user.id;
-      console.log('💰 Controller: Calling service.topupUser with:', { id, amount, operatorId });
+      const operatorId = actor.id;
+      console.log('💰 Controller: Calling service.topupUser with:', { id, amount, operatorId, actor });
       
-      const result = await this.service.topupUser(id, amount, operatorId);
+      const result = await this.service.topupUser(actor, id, amount, operatorId);
       console.log('💰 Controller: topupUser completed successfully');
       return result;
     } catch (error) {
@@ -145,36 +133,23 @@ export class AdminMembersController {
   }
 
   @Post(':id/spend')
-  @UseGuards(AuthGuard('jwt'))
   async spend(
     @Param('id') id: string,
     @Body() body: { amount: number },
-    @Req() req
+    @Actor() actor: AccessActor
   ) {
     try {
-      console.log('💸 Controller: spend called with:', { memberId: id, amount: body.amount, user: req.user });
+      console.log('💸 Controller: spend called with:', { memberId: id, amount: body.amount, actor });
 
       const amount = Number(body.amount);
       if (amount <= 0) {
         throw new BadRequestException('消費金額必須大於 0');
       }
 
-      if (!req.user || !req.user.id) {
-        console.error('❌ Controller: req.user is missing or invalid:', req.user);
-        throw new BadRequestException('操作人員未登入或缺少 ID');
-      }
-
-      // 權限檢查：只有 BOSS、BRANCH_MANAGER、SUPER_ADMIN 可以執行消費操作
-      const allowedRoles = ['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'];
-      if (!allowedRoles.includes(req.user.role)) {
-        console.error('❌ Controller: Insufficient permissions. User role:', req.user.role);
-        throw new BadRequestException('權限不足：只有管理員才能執行消費操作');
-      }
-
-      const operatorId = req.user.id;
-      console.log('💸 Controller: Calling service.spend with:', { id, amount, operatorId });
+      const operatorId = actor.id;
+      console.log('💸 Controller: Calling service.spend with:', { id, amount, operatorId, actor });
       
-      const result = await this.service.spend(id, amount, operatorId);
+      const result = await this.service.spend(actor, id, amount, operatorId);
       console.log('💸 Controller: spend completed successfully');
       return result;
     } catch (error) {
@@ -184,8 +159,18 @@ export class AdminMembersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Actor() actor: AccessActor, @Param('id') id: string) {
+    return this.service.findOne(actor, id);
+  }
+
+  @Patch(':id/primary-artist')
+  async setPrimaryArtist(
+    @Actor() actor: AccessActor,
+    @Param('id') id: string,
+    @Body() body: { primaryArtistId: string }
+  ) {
+    if (!body?.primaryArtistId) throw new BadRequestException('primaryArtistId is required');
+    return this.service.setPrimaryArtist(actor, id, body.primaryArtistId);
   }
 
   @Patch(':id/role')

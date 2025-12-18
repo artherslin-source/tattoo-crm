@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Req, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { AccessGuard } from '../common/access/access.guard';
+import { Actor } from '../common/access/actor.decorator';
+import type { AccessActor } from '../common/access/access.types';
 import { AdminArtistsService } from './admin-artists.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BranchesService } from '../branches/branches.service';
@@ -27,8 +28,7 @@ const CreateArtistSchema = z.object({
 const UpdateArtistSchema = CreateArtistSchema.partial();
 
 @Controller('admin/artists')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER')
+@UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminArtistsController {
   constructor(
     private readonly adminArtistsService: AdminArtistsService,
@@ -46,14 +46,14 @@ export class AdminArtistsController {
   }
 
   @Get('branches')
-  async getBranches(@Req() req: any) {
+  async getBranches(@Actor() actor: AccessActor) {
     console.log('🎯 AdminArtistsController.getBranches called');
-    console.log('🔍 User info:', { role: req.user?.role, branchId: req.user?.branchId });
+    console.log('🔍 Actor info:', { role: actor.role, branchId: actor.branchId });
     
-    // 如果是分店經理，只返回自己的分店
-    if (req.user?.role === 'BRANCH_MANAGER' && req.user?.branchId) {
+    // ARTIST: only own branch
+    if (actor.role === 'ARTIST' && actor.branchId) {
       const branch = await this.prisma.branch.findUnique({
-        where: { id: req.user.branchId },
+        where: { id: actor.branchId },
         select: { id: true, name: true }
       });
       return branch ? [branch] : [];
@@ -64,12 +64,12 @@ export class AdminArtistsController {
   }
 
   @Get()
-  async findAll(@Req() req: any) {
+  async findAll(@Actor() actor: AccessActor) {
     console.log('🎯 AdminArtistsController.findAll called');
-    console.log('🔍 User info:', { role: req.user?.role, branchId: req.user?.branchId });
+    console.log('🔍 Actor info:', { role: actor.role, branchId: actor.branchId });
     try {
       console.log('🔧 Trying to call adminArtistsService.findAll()');
-      return this.adminArtistsService.findAll(req.user?.role, req.user?.branchId);
+      return this.adminArtistsService.findAll(actor);
     } catch (error) {
       console.log('❌ Error calling adminArtistsService:', error);
       console.log('🔧 Trying direct Prisma query as fallback');
@@ -184,8 +184,6 @@ export class AdminArtistsController {
 
   // 上傳刺青師照片（允許管理員和刺青師自己上傳）
   @Post('upload-photo')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('BOSS', 'BRANCH_MANAGER', 'ARTIST')
   @UseInterceptors(FileInterceptor('photo', {
     storage: diskStorage({
       destination: (req, file, callback) => {

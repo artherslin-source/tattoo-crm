@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, DollarSign, ShoppingCart, Wallet, History, Key, Trash2 } from "lucide-react";
+import { hasAdminAccess } from "@/lib/access";
 
 interface Member {
   id: string;
@@ -127,7 +128,7 @@ export default function MembersCards({
               {/* 右側：操作按鈕 */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {/* 主按鈕：儲值 */}
-                {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                {hasAdminAccess(getUserRole()) && (
                   <Button
                     size="sm"
                     onClick={() => onTopUp(member)}
@@ -146,7 +147,7 @@ export default function MembersCards({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-white dark:bg-white">
-                    {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                    {hasAdminAccess(getUserRole()) && (
                       <>
                         <DropdownMenuItem onClick={() => onSpend(member)} className="dropdown-menu-item">
                           <ShoppingCart className="h-4 w-4 mr-2" />
@@ -228,7 +229,7 @@ export default function MembersCards({
 
             <div className="mt-3 flex items-center justify-end gap-2">
               {/* 主按鈕：儲值 */}
-              {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+              {hasAdminAccess(getUserRole()) && (
                 <Button
                   size="sm"
                   onClick={() => onTopUp(member)}
@@ -247,7 +248,7 @@ export default function MembersCards({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white dark:bg-white">
-                  {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                  {hasAdminAccess(getUserRole()) && (
                     <>
                       <DropdownMenuItem onClick={() => onSpend(member)} className="dropdown-menu-item">
                         <ShoppingCart className="h-4 w-4 mr-2" />

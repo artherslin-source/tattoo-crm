@@ -47,14 +47,22 @@ interface AppointmentFormData {
   contactId: string;
 }
 
+type AppointmentFormInitialData = Partial<AppointmentFormData> & {
+  holdMin?: number;
+};
+
 interface AppointmentFormProps {
-  initialData?: Partial<AppointmentFormData>;
+  initialData?: AppointmentFormInitialData;
   fromContact?: Record<string, string>;
   onSubmitSuccess?: () => void;
   onCancel?: () => void;
   title?: string;
   description?: string;
   'data-testid'?: string;
+}
+
+interface AvailabilityResponse {
+  slots: string[];
 }
 
 function useAccessToken() {
@@ -86,6 +94,14 @@ export default function AppointmentForm({
   const [services, setServices] = useState<Service[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [holdMin, setHoldMin] = useState<number>(() => {
+    // Default: 120 + buffer(30) = 150
+    const seed = Number(initialData?.holdMin);
+    if (Number.isFinite(seed) && seed > 0) return seed;
+    return 150;
+  });
 
   const canFetch = useMemo(() => !!token, [token]);
 
@@ -100,6 +116,23 @@ export default function AppointmentForm({
     artistId: "",
     startAt: "",
     endAt: "",
+  });
+
+  const [appointmentDate, setAppointmentDate] = useState<string>(() => {
+    const seed = initialData.startAt || "";
+    if (!seed) return "";
+    const d = new Date(seed);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toISOString().slice(0, 10);
+  });
+  const [timeSlot, setTimeSlot] = useState<string>(() => {
+    const seed = initialData.startAt || "";
+    if (!seed) return "";
+    const d = new Date(seed);
+    if (Number.isNaN(d.getTime())) return "";
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
   });
 
   // 載入數據
@@ -145,62 +178,63 @@ export default function AppointmentForm({
         }));
       }
     }
+  };
 
-    // 時間同步
-    if (field === 'startAt') {
-      const startTime = new Date(value);
-      let endTime;
-      
-      if (formData.serviceId) {
-        const service = services.find(s => s.id === formData.serviceId);
-        if (service) {
-          endTime = new Date(startTime.getTime() + service.durationMin * 60000);
+  // Scheduling uses holdMin (store-wide default 150; admin can adjust)
+  const durationMin = useMemo(() => holdMin, [holdMin]);
+
+  // Fetch available slots from backend policy endpoint (single source of truth)
+  useEffect(() => {
+    const run = async () => {
+      if (!canFetch) return;
+      if (!formData.branchId || !formData.artistId || !appointmentDate || !formData.serviceId) {
+        setAvailableSlots([]);
+        return;
+      }
+      setSlotsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("branchId", formData.branchId);
+        params.set("artistId", formData.artistId);
+        params.set("date", appointmentDate);
+        params.set("durationMin", String(durationMin));
+        params.set("stepMin", "30");
+
+        const data = await getJsonWithAuth<AvailabilityResponse>(`/public/appointments/availability?${params.toString()}`);
+        const slots = Array.isArray(data?.slots) ? data.slots : [];
+        setAvailableSlots(slots);
+
+        if (slots.length) {
+          if (!timeSlot || !slots.includes(timeSlot)) {
+            setTimeSlot(slots[0]);
+          }
         } else {
-          endTime = new Date(startTime.getTime() + 60 * 60000);
+          setTimeSlot("");
         }
-      } else {
-        endTime = new Date(startTime.getTime() + 60 * 60000);
+      } catch (err) {
+        console.error("Failed to fetch availability:", err);
+        setAvailableSlots([]);
+      } finally {
+        setSlotsLoading(false);
       }
-      
-      setFormData(prev => ({
-        ...prev,
-        startAt: value,
-        endAt: endTime.toISOString().slice(0, 16)
-      }));
-    }
-  };
+    };
+    run();
+  }, [canFetch, formData.branchId, formData.artistId, appointmentDate, formData.serviceId, durationMin, timeSlot]);
 
-  // 檢查時間衝突
-  const checkTimeConflict = async (artistId: string, startAt: string, endAt: string) => {
-    try {
-      interface AppointmentConflict {
-        id: string;
-        artistId: string;
-        startAt: string;
-        endAt: string;
-        status: string;
-      }
-      
-      const appointments = await getJsonWithAuth<AppointmentConflict[]>("/admin/appointments");
-      const startTime = new Date(startAt);
-      const endTime = new Date(endAt);
-      
-      const conflict = appointments.find(apt => {
-        if (apt.artistId !== artistId) return false;
-        if (apt.status === 'CANCELED') return false;
-        
-        const aptStart = new Date(apt.startAt);
-        const aptEnd = new Date(apt.endAt);
-        
-        return (startTime < aptEnd && endTime > aptStart);
-      });
-      
-      return conflict;
-    } catch (err) {
-      console.error('Failed to check time conflict:', err);
-      return null;
-    }
-  };
+  // Derive startAt/endAt (datetime-local strings) from date + slot + duration
+  useEffect(() => {
+    if (!appointmentDate || !timeSlot) return;
+    const startLocal = `${appointmentDate}T${timeSlot}`;
+    const start = new Date(startLocal);
+    if (Number.isNaN(start.getTime())) return;
+    const end = new Date(start.getTime() + durationMin * 60000);
+    // No cross-day lock: clamp to 23:59
+    const dayEnd = new Date(start);
+    dayEnd.setHours(23, 59, 0, 0);
+    const clampedEnd = end > dayEnd ? dayEnd : end;
+    const endLocal = `${clampedEnd.getFullYear()}-${String(clampedEnd.getMonth() + 1).padStart(2, "0")}-${String(clampedEnd.getDate()).padStart(2, "0")}T${String(clampedEnd.getHours()).padStart(2, "0")}:${String(clampedEnd.getMinutes()).padStart(2, "0")}`;
+    setFormData((prev) => ({ ...prev, startAt: startLocal, endAt: endLocal }));
+  }, [appointmentDate, timeSlot, durationMin]);
 
   // 提交表單
   const handleSubmit = async (e: React.FormEvent) => {
@@ -211,25 +245,34 @@ export default function AppointmentForm({
 
     try {
       // 驗證必填欄位
-      if (!formData.name || !formData.email || !formData.serviceId || !formData.artistId || !formData.branchId || !formData.startAt || !formData.endAt) {
+      if (!formData.name || !formData.email || !formData.serviceId || !formData.artistId || !formData.branchId || !appointmentDate || !timeSlot) {
         setError("請填寫所有必填欄位");
         return;
       }
 
-      // 驗證時間
-      const startTime = new Date(formData.startAt);
-      const endTime = new Date(formData.endAt);
-      if (startTime >= endTime) {
-        setError("結束時間必須晚於開始時間");
+      if (availableSlots.length && !availableSlots.includes(timeSlot)) {
+        setError("所選時段已不可用，請重新選擇");
         return;
       }
 
-      // 檢查時間衝突
-      const conflict = await checkTimeConflict(formData.artistId, formData.startAt, formData.endAt);
-      if (conflict) {
-        setError("刺青師的時間已經有預約了");
+      const startLocal = `${appointmentDate}T${timeSlot}`;
+      const startTime = new Date(startLocal);
+      if (Number.isNaN(startTime.getTime())) {
+        setError("開始時間格式不正確");
         return;
       }
+      if (!Number.isFinite(holdMin) || holdMin <= 0) {
+        setError("保留時間必須 > 0（分鐘）");
+        return;
+      }
+      if (holdMin > 24 * 60) {
+        setError("保留時間不可超過 24 小時");
+        return;
+      }
+      const endTimeRaw = new Date(startTime.getTime() + holdMin * 60000);
+      const dayEnd = new Date(startTime);
+      dayEnd.setHours(23, 59, 0, 0);
+      const endTime = endTimeRaw > dayEnd ? dayEnd : endTimeRaw;
 
       const payload = {
         name: formData.name,
@@ -240,6 +283,7 @@ export default function AppointmentForm({
         branchId: formData.branchId,
         startAt: startTime.toISOString(),
         endAt: endTime.toISOString(),
+        holdMin,
         notes: formData.notes || undefined,
       };
 
@@ -411,32 +455,137 @@ export default function AppointmentForm({
               </select>
             </div>
 
+            {/* 排程保留時間（可自由加減） */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary-light mb-2">
+                保留時間（分鐘）
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={() => setHoldMin((v) => Math.max(1, v - 60))}
+                >
+                  -60
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={() => setHoldMin((v) => Math.max(1, v - 30))}
+                >
+                  -30
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={() => setHoldMin((v) => Math.max(1, v - 15))}
+                >
+                  -15
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={() => setHoldMin((v) => v + 15)}
+                >
+                  +15
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={() => setHoldMin((v) => v + 30)}
+                >
+                  +30
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={() => setHoldMin((v) => v + 60)}
+                >
+                  +60
+                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={24 * 60}
+                    value={holdMin}
+                    onChange={(e) => setHoldMin(Number(e.target.value))}
+                    className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-text-muted-light">預設 150（120 + buffer 30）</span>
+                </div>
+              </div>
+              <p className="text-xs text-text-muted-light mt-2">
+                系統會用「保留時間」計算結束時間並避免撞單；若跨日會自動截斷到 23:59。
+              </p>
+            </div>
+
             {/* 時間 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="startAt" className="block text-sm font-medium text-text-secondary-light mb-2">
-                  開始時間 *
+                <label htmlFor="appointmentDate" className="block text-sm font-medium text-text-secondary-light mb-2">
+                  預約日期 *
+                </label>
+                <input
+                  type="date"
+                  id="appointmentDate"
+                  value={appointmentDate}
+                  onChange={(e) => setAppointmentDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!formData.artistId || !formData.serviceId}
+                  required
+                />
+                {!formData.artistId || !formData.serviceId ? (
+                  <p className="text-sm text-text-muted-light mt-1">請先選擇刺青師與服務</p>
+                ) : null}
+              </div>
+              <div>
+                <label htmlFor="timeSlot" className="block text-sm font-medium text-text-secondary-light mb-2">
+                  預約時段 *
+                </label>
+                <select
+                  id="timeSlot"
+                  value={timeSlot}
+                  onChange={(e) => setTimeSlot(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!appointmentDate || slotsLoading || availableSlots.length === 0}
+                  required
+                >
+                  <option value="">{slotsLoading ? "載入可用時段中..." : "請選擇時段"}</option>
+                  {availableSlots.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+                {appointmentDate && !slotsLoading && availableSlots.length === 0 ? (
+                  <p className="text-sm text-text-muted-light mt-1">此日期暫無可用時段，請更換日期</p>
+                ) : null}
+              </div>
+            </div>
+
+            {/* 顯示計算後的時間（只讀，避免手動輸入造成不一致） */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary-light mb-2">
+                  開始時間（自動）
                 </label>
                 <input
                   type="datetime-local"
-                  id="startAt"
                   value={formData.startAt}
-                  onChange={(e) => handleInputChange('startAt', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
                 />
               </div>
               <div>
-                <label htmlFor="endAt" className="block text-sm font-medium text-text-secondary-light mb-2">
-                  結束時間 *
+                <label className="block text-sm font-medium text-text-secondary-light mb-2">
+                  結束時間（自動）
                 </label>
                 <input
                   type="datetime-local"
-                  id="endAt"
                   value={formData.endAt}
-                  onChange={(e) => handleInputChange('endAt', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
                 />
               </div>
             </div>

@@ -8,6 +8,10 @@
 /* Import our token-based theme system */
 @import "../styles/index.css";
 
+/* react-big-calendar base styles + drag&drop addon */
+@import "react-big-calendar/lib/css/react-big-calendar.css";
+@import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
+
 /* ==========================================
    GLOBAL BASE STYLES
    ========================================== */

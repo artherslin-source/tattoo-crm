@@ -15,6 +15,7 @@ const CreateAppointmentSchema = z.object({
   branchId: z.string().optional(),
   startAt: z.string(),
   endAt: z.string(),
+  holdMin: z.coerce.number().int().min(1).max(24 * 60).optional(),
   notes: z.string().optional(),
 });
 
@@ -26,6 +27,31 @@ const CreatePublicAppointmentSchema = z.object({
   serviceId: z.string(),
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
+  holdMin: z.coerce.number().int().min(1).max(24 * 60).optional(),
+  notes: z.string().optional(),
+});
+
+const CreatePublicIntentAppointmentSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  artistId: z.string(),
+  serviceId: z.string(),
+  preferredDate: z.string(), // YYYY-MM-DD
+  holdMin: z.coerce.number().int().min(1).max(24 * 60).optional(),
+  notes: z.string().optional(),
+});
+
+const CreateIntentAppointmentSchema = z.object({
+  contactId: z.string().optional(),
+  name: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  artistId: z.string().optional(),
+  serviceId: z.string().optional(),
+  branchId: z.string().optional(),
+  preferredDate: z.string(), // YYYY-MM-DD
+  holdMin: z.coerce.number().int().min(1).max(24 * 60).optional(),
   notes: z.string().optional(),
 });
 
@@ -85,8 +111,54 @@ export class AppointmentsController {
       serviceId: input.serviceId,
       startAt: new Date(input.startAt),
       endAt: new Date(input.endAt),
+      holdMin: input.holdMin,
       notes: input.notes,
       branchId: artist.branchId,
+    });
+  }
+
+  // C-flow: 公開意向預約（不需要認證，只送日期意向，不鎖時段）
+  @Post('public-intent')
+  async createPublicIntent(@Body() body: unknown) {
+    const input = CreatePublicIntentAppointmentSchema.parse(body);
+
+    const artist = await this.appointments['prisma'].artist.findUnique({
+      where: { userId: input.artistId },
+      select: { branchId: true }
+    });
+    if (!artist?.branchId) {
+      throw new Error('無法找到指定的刺青師或分店');
+    }
+
+    // 創建臨時用戶或使用現有用戶
+    let userId: string;
+    const existingUser = await this.appointments['prisma'].user.findFirst({
+      where: { email: input.email }
+    });
+    if (existingUser) {
+      userId = existingUser.id;
+    } else {
+      const tempUser = await this.appointments['prisma'].user.create({
+        data: {
+          email: input.email,
+          name: input.name,
+          phone: input.phone,
+          role: 'MEMBER',
+          branchId: artist.branchId,
+          hashedPassword: 'temp-password',
+        }
+      });
+      userId = tempUser.id;
+    }
+
+    return this.appointments.createIntent({
+      userId,
+      artistId: input.artistId,
+      serviceId: input.serviceId,
+      branchId: artist.branchId,
+      preferredDate: input.preferredDate,
+      holdMin: input.holdMin,
+      notes: input.notes,
     });
   }
 
@@ -197,6 +269,7 @@ export class AppointmentsController {
         serviceId: input.serviceId,
         startAt: new Date(input.startAt),
         endAt: new Date(input.endAt),
+        holdMin: input.holdMin,
         notes: input.notes,
         branchId,
         contactId: contactId,
@@ -205,6 +278,96 @@ export class AppointmentsController {
       console.error('Create appointment error:', error);
       throw error;
     }
+  }
+
+  // C-flow: create an intent appointment (date only, no schedule lock)
+  @UseGuards(AuthGuard('jwt'))
+  @Post('intent')
+  async createIntent(@Req() req: any, @Body() body: unknown) {
+    const input = CreateIntentAppointmentSchema.parse(body);
+
+    // Determine branchId (same logic as create)
+    let branchId = req.user.branchId || input.branchId;
+    if (!branchId && input.artistId) {
+      const artist = await this.appointments['prisma'].artist.findUnique({
+        where: { userId: input.artistId },
+        select: { branchId: true }
+      });
+      branchId = artist?.branchId;
+    }
+    if (!branchId) throw new Error('無法確定分店，請聯繫管理員');
+
+    // Resolve userId/contact similar to create()
+    let userId: string;
+    let contactId: string | undefined = input.contactId;
+
+    if (contactId) {
+      const contact = await this.appointments['prisma'].contact.findUnique({ where: { id: contactId } });
+      if (!contact) throw new Error('指定的聯絡記錄不存在');
+
+      if (contact.email) {
+        const existingUser = await this.appointments['prisma'].user.findFirst({ where: { email: contact.email } });
+        if (existingUser) {
+          userId = existingUser.id;
+        } else {
+          const tempUser = await this.appointments['prisma'].user.create({
+            data: {
+              email: contact.email,
+              name: contact.name,
+              phone: contact.phone,
+              role: 'MEMBER',
+              branchId,
+              hashedPassword: 'temp-password',
+            }
+          });
+          userId = tempUser.id;
+        }
+      } else {
+        userId = req.user.id;
+      }
+    } else if (input.name && input.email) {
+      const newContact = await this.appointments['prisma'].contact.create({
+        data: {
+          name: input.name,
+          email: input.email,
+          phone: input.phone || '',
+          notes: input.notes || '',
+          branchId,
+          status: 'PENDING',
+        }
+      });
+      contactId = newContact.id;
+
+      const existingUser = await this.appointments['prisma'].user.findFirst({ where: { email: input.email } });
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        const tempUser = await this.appointments['prisma'].user.create({
+          data: {
+            email: input.email,
+            name: input.name,
+            phone: input.phone,
+            role: 'MEMBER',
+            branchId,
+            hashedPassword: 'temp-password',
+          }
+        });
+        userId = tempUser.id;
+      }
+    } else {
+      userId = req.user.id;
+    }
+
+    return this.appointments.createIntent({
+      userId,
+      artistId: input.artistId,
+      serviceId: input.serviceId,
+      branchId,
+      contactId,
+      notes: input.notes,
+      preferredDate: input.preferredDate,
+      holdMin: input.holdMin,
+    });
   }
 
   @UseGuards(AuthGuard('jwt'))

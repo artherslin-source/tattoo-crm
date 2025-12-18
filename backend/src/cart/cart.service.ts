@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { AddToCartDto, UpdateCartItemDto, CartResponseDto, CartItemResponseDto } from './dto/add-to-cart.dto';
 import { CheckoutCartDto } from './dto/checkout-cart.dto';
+// dayBounds was previously used for slot-based conflict checks; C-flow INTENT checkout doesn't need it.
 
 @Injectable()
 export class CartService {
@@ -303,7 +304,7 @@ export class CartService {
     dto: CheckoutCartDto,
     userId?: string,
     sessionId?: string,
-  ): Promise<{ appointmentId: string; orderId: string }> {
+  ): Promise<{ appointmentId: string }> {
     // 獲取購物車
     const cart = await this.prisma.cart.findFirst({
       where: {
@@ -329,17 +330,17 @@ export class CartService {
       throw new BadRequestException('購物車為空');
     }
 
-    // 計算總價和總時長
+    // 計算總價和總時長（用於 cartSnapshot / 未來訂單）
     const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice, 0);
     const totalDuration = cart.items.reduce((sum, item) => sum + item.estimatedDuration, 0);
 
-    // 解析預約時間
-    const [hours, minutes] = dto.preferredTimeSlot.split(':').map(Number);
-    const startAt = new Date(dto.preferredDate);
-    startAt.setHours(hours, minutes, 0, 0);
-
-    const endAt = new Date(startAt);
-    endAt.setMinutes(endAt.getMinutes() + totalDuration);
+    // C-flow: 只建立意向（INTENT），不鎖定時間
+    const preferredDateStart = new Date(`${dto.preferredDate}T00:00:00`);
+    if (Number.isNaN(preferredDateStart.getTime())) {
+      throw new BadRequestException('preferredDate 格式錯誤，需為 YYYY-MM-DD');
+    }
+    const startAt = preferredDateStart;
+    const endAt = preferredDateStart; // INTENT placeholder, excluded from conflicts
 
     // 創建購物車快照
     const cartSnapshot = {
@@ -421,6 +422,8 @@ export class CartService {
       }
     }
 
+    // C-flow: INTENT does not lock schedule, so we do NOT do time conflict/availability checks here.
+
     // 創建預約
     const appointment = await this.prisma.appointment.create({
       data: {
@@ -429,23 +432,10 @@ export class CartService {
         userId: actualUserId,
         startAt,
         endAt,
-        status: 'PENDING',
+        status: 'INTENT',
+        holdMin: 150,
         notes: dto.specialRequests,
         cartId: cart.id,
-        cartSnapshot,
-      },
-    });
-
-    // 創建訂單
-    const order = await this.prisma.order.create({
-      data: {
-        memberId: actualUserId,
-        branchId: dto.branchId,
-        appointmentId: appointment.id,
-        totalAmount: totalPrice,
-        finalAmount: totalPrice,
-        paymentType: 'ONE_TIME',
-        status: 'PENDING_PAYMENT',
         cartSnapshot,
       },
     });
@@ -458,7 +448,6 @@ export class CartService {
 
     return {
       appointmentId: appointment.id,
-      orderId: order.id,
     };
   }
 

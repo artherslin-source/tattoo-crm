@@ -139,12 +139,11 @@ export async function checkout(data: {
   branchId: string;
   artistId?: string;
   preferredDate: string;
-  preferredTimeSlot: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
   specialRequests?: string;
-}): Promise<{ appointmentId: string; orderId: string }> {
+}): Promise<{ appointmentId: string }> {
   const res = await fetch(`${getApiBase()}/cart/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

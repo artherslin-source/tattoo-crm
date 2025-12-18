@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getAccessToken, getUserRole, clearTokens } from "@/lib/api";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { hasAdminAccess } from "@/lib/access";
 
 
 export default function AdminLayoutWrapper({
@@ -29,7 +30,7 @@ export default function AdminLayoutWrapper({
 
   // 監聽 token 變化，執行權限驗證
   useEffect(() => {
-    if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
+    if (!token || !hasAdminAccess(userRole)) {
       // 不跳轉，讓頁面顯示錯誤信息
       setLoading(false);
       return;
@@ -55,7 +56,7 @@ export default function AdminLayoutWrapper({
   }
 
   // 如果沒有 token 或權限不足，顯示錯誤頁面
-  if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
+  if (!token || !hasAdminAccess(userRole)) {
     return (
       <div className="min-h-screen bg-[var(--bg)] text-on-dark flex items-center justify-center">
         <div className="text-center">

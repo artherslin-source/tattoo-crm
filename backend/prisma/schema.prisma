@@ -19,6 +19,8 @@ model User {
   role            String?
   // personId        String?  // 多帳號對應同一真人（跨分店排程互斥）
   branchId        String?
+  // 顧客主責刺青師（用於資料範圍：ARTIST 只能看自己顧客）
+  primaryArtistId String?
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -30,6 +32,8 @@ model User {
   member             Member?
   artist             Artist?
   branch             Branch?       @relation(fields: [branchId], references: [id])
+  primaryArtist      User?         @relation("PrimaryArtistOwnership", fields: [primaryArtistId], references: [id])
+  primaryCustomers   User[]        @relation("PrimaryArtistOwnership")
   topupHistory       TopupHistory[]
   portfolioItems     PortfolioItem[]
   notifications      Notification[]
@@ -43,6 +47,7 @@ model User {
   @@index([branchId, role, isActive])
   @@index([role, createdAt])
   @@index([email])
+  @@index([primaryArtistId, branchId])
   // @@index([personId])
 }
 
@@ -136,6 +141,19 @@ model Appointment {
   endAt        DateTime
   status       AppointmentStatus @default(PENDING)
   notes        String?
+  // V2: 排程保留時間（分鐘）。預設 120 + buffer(30) = 150，可由後台自由調整。
+  holdMin      Int               @default(150)
+  holdUpdatedAt DateTime?
+  holdUpdatedBy String?
+  holdUpdateReason String?
+  // V2: 改期/取消/No-show 記錄（用於規則 enforcement 與後續報表）
+  rescheduleCount Int            @default(0)
+  lastRescheduledAt DateTime?
+  rescheduleReason String?
+  canceledAt   DateTime?
+  cancelReason String?
+  noShowAt     DateTime?
+  noShowReason String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   userId       String
@@ -156,6 +174,7 @@ model Appointment {
   @@index([artistId, status])
   @@index([serviceId, createdAt])
   @@index([cartId])
+  @@index([branchId, artistId, startAt])
 }
 
 model Order {
@@ -222,11 +241,13 @@ enum Role {
 }
 
 enum AppointmentStatus {
+  INTENT
   PENDING
   CONFIRMED
   IN_PROGRESS
   COMPLETED
   CANCELED
+  NO_SHOW
 }
 
 enum PaymentType {

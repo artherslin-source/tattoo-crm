@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   Users,
   Image,
   Bell,
@@ -26,6 +27,11 @@ const navigation = [
     name: '我的行程',
     href: '/artist/appointments',
     icon: Calendar,
+  },
+  {
+    name: '週行程日曆',
+    href: '/artist/calendar',
+    icon: CalendarDays,
   },
   {
     name: '顧客資訊',

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, User, Phone, Mail, MapPin, Clock, Sparkles } from "lucide-react";
+import { Calendar, User, Phone, Mail, MapPin, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,6 @@ export default function CheckoutPage() {
     branchId: "",
     artistId: "",
     preferredDate: "",
-    preferredTimeSlot: "10:00",
     customerName: "",
     customerPhone: "",
     customerEmail: "",
@@ -140,15 +139,14 @@ export default function CheckoutPage() {
         branchId: formData.branchId,
         artistId: formData.artistId || undefined,
         preferredDate: formData.preferredDate,
-        preferredTimeSlot: formData.preferredTimeSlot,
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
         customerEmail: formData.customerEmail,
         specialRequests: formData.specialRequests,
       });
 
-      // 成功後跳轉到成功頁面
-      router.push(`/cart/success?appointmentId=${result.appointmentId}&orderId=${result.orderId}`);
+      // 成功後跳轉到成功頁面（C 路線：此時尚未產生訂單）
+      router.push(`/cart/success?appointmentId=${result.appointmentId}`);
     } catch (error) {
       console.error("結帳失敗:", error);
       alert(error instanceof Error ? error.message : "結帳失敗，請重試");
@@ -259,7 +257,7 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
-                  {/* 預約日期和時間 */}
+                  {/* 預約日期（C 路線：只送意向日期，不鎖時段） */}
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="date" className="flex items-center gap-1">
@@ -277,32 +275,6 @@ export default function CheckoutPage() {
                         className="mt-2"
                         required
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor="time" className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        預約時間 <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={formData.preferredTimeSlot}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, preferredTimeSlot: value })
-                        }
-                      >
-                        <SelectTrigger className="mt-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="10:00">10:00</SelectItem>
-                          <SelectItem value="11:00">11:00</SelectItem>
-                          <SelectItem value="12:00">12:00</SelectItem>
-                          <SelectItem value="13:00">13:00</SelectItem>
-                          <SelectItem value="14:00">14:00</SelectItem>
-                          <SelectItem value="15:00">15:00</SelectItem>
-                          <SelectItem value="16:00">16:00</SelectItem>
-                          <SelectItem value="17:00">17:00</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
 

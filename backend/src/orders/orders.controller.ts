@@ -1,10 +1,11 @@
-import { Body, Controller, Post, Get, Req, UseGuards, Query, Param, Put } from '@nestjs/common';
+import { Body, Controller, Post, Get, Req, UseGuards, Query, Param, Put, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 import { OrdersService } from './orders.service';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { BranchGuard } from '../common/guards/branch.guard';
+import { buildActorFromJwtUser } from '../common/access/access.types';
 
 const CreateOrderSchema = z.object({
   branchId: z.string().min(1),
@@ -76,7 +77,9 @@ export class OrdersController {
   @UseGuards(RolesGuard)
   @Roles('BOSS', 'BRANCH_MANAGER')
   async getOrders(@Query() query: GetOrdersQuery, @Req() req: any) {
-    return this.orders.getOrders(query, req.user.role, req.user.branchId);
+    const actor = buildActorFromJwtUser(req.user);
+    if (!actor) throw new ForbiddenException('Insufficient permissions');
+    return this.orders.getOrders(query, actor);
   }
 }
 

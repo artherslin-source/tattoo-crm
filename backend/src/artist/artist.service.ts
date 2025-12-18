@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -171,6 +171,68 @@ export class ArtistService {
     });
 
     return appointments;
+  }
+
+  private clampEndToSameDay(startAt: Date, endAt: Date): Date {
+    const dayEnd = new Date(startAt);
+    dayEnd.setHours(23, 59, 59, 999);
+    return endAt > dayEnd ? dayEnd : endAt;
+  }
+
+  async moveIntentDate(input: {
+    artistId: string;
+    appointmentId: string;
+    preferredDate: string; // YYYY-MM-DD
+    holdMin?: number;
+    reason?: string;
+  }) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.preferredDate)) {
+      throw new BadRequestException('preferredDate must be YYYY-MM-DD');
+    }
+
+    const appointment = await this.prisma.appointment.findFirst({
+      where: {
+        id: input.appointmentId,
+        artistId: input.artistId,
+        status: 'INTENT' as any,
+      },
+      select: { id: true, holdMin: true, startAt: true, endAt: true },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('預約不存在或無權限操作');
+    }
+
+    const nextHoldMin = input.holdMin ?? appointment.holdMin ?? 150;
+    if (!Number.isInteger(nextHoldMin) || nextHoldMin <= 0) {
+      throw new BadRequestException('保留時間必須為正整數（分鐘）');
+    }
+    if (nextHoldMin > 24 * 60) {
+      throw new BadRequestException('保留時間不可超過 24 小時');
+    }
+
+    const startAt = new Date(`${input.preferredDate}T00:00:00`);
+    if (Number.isNaN(startAt.getTime())) {
+      throw new BadRequestException('preferredDate invalid');
+    }
+    const computedEndAt = this.clampEndToSameDay(startAt, new Date(startAt.getTime() + nextHoldMin * 60 * 1000));
+
+    return this.prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        startAt,
+        endAt: computedEndAt,
+        holdMin: nextHoldMin,
+        holdUpdatedAt: new Date(),
+        holdUpdatedBy: input.artistId,
+        holdUpdateReason: input.reason ?? null,
+      },
+      include: {
+        user: { select: { id: true, name: true, phone: true, email: true } },
+        service: { select: { id: true, name: true, description: true, durationMin: true, price: true } },
+        branch: { select: { id: true, name: true } },
+      },
+    });
   }
 
   // 客戶標註相關方法

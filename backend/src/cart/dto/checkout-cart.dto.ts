@@ -12,9 +12,6 @@ export class CheckoutCartDto {
   preferredDate: string;
 
   @IsString()
-  preferredTimeSlot: string; // "10:00" format
-
-  @IsString()
   customerName: string;
 
   @IsString()

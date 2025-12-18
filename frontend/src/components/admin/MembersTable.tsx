@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, DollarSign, ShoppingCart, Wallet, History, Key, Trash2 } from "lucide-react";
+import { hasAdminAccess } from "@/lib/access";
 
 interface Member {
   id: string;
@@ -139,7 +140,7 @@ export default function MembersTable({
                 <td className="px-2 py-3 text-right" data-label="操作">
                   <div className="inline-flex items-center gap-1">
                     {/* 主按鈕：儲值 */}
-                    {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                    {hasAdminAccess(getUserRole()) && (
                       <Button
                         size="sm"
                         onClick={() => onTopUp(member)}
@@ -158,7 +159,7 @@ export default function MembersTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white dark:bg-white">
-                        {['BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN'].includes(getUserRole()) && (
+                        {hasAdminAccess(getUserRole()) && (
                           <>
                             <DropdownMenuItem onClick={() => onSpend(member)} className="dropdown-menu-item">
                               <ShoppingCart className="h-4 w-4 mr-2" />

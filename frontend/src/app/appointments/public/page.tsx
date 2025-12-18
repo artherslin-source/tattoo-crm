@@ -42,8 +42,7 @@ export default function PublicAppointmentPage() {
     phone: '',
     artistId: '',
     serviceId: '',
-    startAt: '',
-    endAt: '',
+    preferredDate: '',
     notes: ''
   });
 
@@ -91,40 +90,9 @@ export default function PublicAppointmentPage() {
     }
   };
 
-  // 處理服務選擇變更
+  // C 路線：公開端只收「意向日期」，不鎖定時間
   const handleServiceChange = (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
-    if (service && formData.startAt) {
-      const startDate = new Date(formData.startAt);
-      const endDate = new Date(startDate.getTime() + service.durationMin * 60000);
-      setFormData(prev => ({
-        ...prev,
-        serviceId,
-        endAt: endDate.toISOString().slice(0, 16)
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, serviceId }));
-    }
-  };
-
-  // 處理開始時間變更
-  const handleStartTimeChange = (startAt: string) => {
-    if (formData.serviceId && startAt) {
-      const service = services.find(s => s.id === formData.serviceId);
-      if (service) {
-        const startDate = new Date(startAt);
-        const endDate = new Date(startDate.getTime() + service.durationMin * 60000);
-        setFormData(prev => ({
-          ...prev,
-          startAt,
-          endAt: endDate.toISOString().slice(0, 16)
-        }));
-      } else {
-        setFormData(prev => ({ ...prev, startAt }));
-      }
-    } else {
-      setFormData(prev => ({ ...prev, startAt }));
-    }
+    setFormData(prev => ({ ...prev, serviceId }));
   };
 
   // 處理表單提交
@@ -135,22 +103,8 @@ export default function PublicAppointmentPage() {
 
     try {
       // 驗證必填欄位
-      if (!formData.name || !formData.email || !formData.artistId || !formData.serviceId || !formData.startAt || !formData.endAt) {
+      if (!formData.name || !formData.email || !formData.artistId || !formData.serviceId || !formData.preferredDate) {
         setError('請填寫所有必填欄位');
-        return;
-      }
-
-      // 驗證時間
-      const startDate = new Date(formData.startAt);
-      const endDate = new Date(formData.endAt);
-      
-      if (endDate <= startDate) {
-        setError('結束時間必須晚於開始時間');
-        return;
-      }
-
-      if (startDate <= new Date()) {
-        setError('預約時間必須是未來時間');
         return;
       }
 
@@ -160,12 +114,11 @@ export default function PublicAppointmentPage() {
         phone: formData.phone || undefined,
         artistId: formData.artistId,
         serviceId: formData.serviceId,
-        startAt: startDate.toISOString(),
-        endAt: endDate.toISOString(),
+        preferredDate: formData.preferredDate,
         notes: formData.notes || undefined
       };
 
-      const res = await postJSON('/appointments/public', payload);
+      const res = await postJSON('/appointments/public-intent', payload);
 
       if (!res.ok) {
         const errorMessage = typeof res.data === 'string' ? res.data : (res.data as { message?: string })?.message || '預約失敗';
@@ -183,8 +136,7 @@ export default function PublicAppointmentPage() {
         phone: '',
         artistId: '',
         serviceId: '',
-        startAt: '',
-        endAt: '',
+        preferredDate: '',
         notes: ''
       });
     } catch (error) {
@@ -336,34 +288,23 @@ export default function PublicAppointmentPage() {
               </select>
             </div>
 
-            {/* 時間選擇 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="startAt" className="block text-sm font-medium text-text-secondary-light mb-2">
-                  開始時間 *
-                </label>
-                <input
-                  id="startAt"
-                  type="datetime-local"
-                  value={formData.startAt}
-                  onChange={(e) => handleStartTimeChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="endAt" className="block text-sm font-medium text-text-secondary-light mb-2">
-                  結束時間 *
-                </label>
-                <input
-                  id="endAt"
-                  type="datetime-local"
-                  value={formData.endAt}
-                  onChange={(e) => handleInputChange('endAt', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  required
-                />
-              </div>
+            {/* 意向日期（C 路線：只收日期，不鎖定時間） */}
+            <div>
+              <label htmlFor="preferredDate" className="block text-sm font-medium text-text-secondary-light mb-2">
+                意向日期 *
+              </label>
+              <input
+                id="preferredDate"
+                type="date"
+                value={formData.preferredDate}
+                onChange={(e) => handleInputChange('preferredDate', e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                required
+              />
+              <p className="text-xs text-text-muted-light mt-2">
+                我們會在 24 小時內與您聯繫確認正式預約時間。
+              </p>
             </div>
 
             {/* 備註 */}

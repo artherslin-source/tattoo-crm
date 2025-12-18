@@ -12,7 +12,6 @@ function SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const appointmentId = searchParams.get("appointmentId");
-  const orderId = searchParams.get("orderId");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -35,7 +34,7 @@ function SuccessContent() {
               預約成功！
             </h1>
             <p className="text-gray-600 mb-8">
-              我們已收到您的預約申請，稍後會有專人與您聯繫確認時間
+              我們已收到您的意向預約，稍後會有專人與您聯繫確認正式時間。確認後系統才會建立訂單。
             </p>
 
             {/* 預約資訊 */}
@@ -51,14 +50,6 @@ function SuccessContent() {
                   </span>
                 </div>
               )}
-              {orderId && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">訂單編號</span>
-                  <span className="font-mono font-semibold text-gray-900">
-                    {orderId.slice(0, 8).toUpperCase()}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* 後續步驟 */}
@@ -67,11 +58,11 @@ function SuccessContent() {
               <ol className="space-y-2 text-sm text-gray-600">
                 <li className="flex gap-2">
                   <span className="font-semibold">1.</span>
-                  <span>我們會在 24 小時內與您聯繫確認預約時間</span>
+                  <span>我們會在 24 小時內與您聯繫確認正式預約時間</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="font-semibold">2.</span>
-                  <span>刺青師會與您討論設計細節</span>
+                  <span>排定後系統會建立訂單（可於「我的預約」查看）</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="font-semibold">3.</span>

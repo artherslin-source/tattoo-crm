@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { z } from 'zod';
 import { AppointmentsService } from './appointments.service';
 
@@ -13,9 +13,30 @@ const CreatePublicAppointmentSchema = z.object({
   notes: z.string().optional(),
 });
 
+const AvailabilityQuerySchema = z.object({
+  branchId: z.string().min(1),
+  artistId: z.string().optional(),
+  date: z.string().min(8), // YYYY-MM-DD (or ISO)
+  durationMin: z.coerce.number().int().min(15).max(8 * 60).default(60),
+  stepMin: z.coerce.number().int().min(5).max(60).default(30),
+});
+
 @Controller('public/appointments')
 export class PublicAppointmentsController {
   constructor(private readonly appointments: AppointmentsService) {}
+
+  @Get('availability')
+  async availability(@Query() query: any) {
+    const input = AvailabilityQuerySchema.parse(query);
+    const date = new Date(input.date);
+    return this.appointments.getAvailableSlots({
+      branchId: input.branchId,
+      artistId: input.artistId,
+      date,
+      durationMin: input.durationMin,
+      stepMin: input.stepMin,
+    });
+  }
 
   @Post()
   async createPublic(@Body() body: unknown) {

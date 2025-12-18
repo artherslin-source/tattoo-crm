@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderStatus, Prisma } from '@prisma/client';
+import { isBoss, type AccessActor } from '../common/access/access.types';
 
 interface GetOrdersQuery {
   branchId?: string;
@@ -12,6 +13,7 @@ interface GetOrdersQuery {
 }
 
 interface CreateOrderInput {
+  actor?: AccessActor;
   memberId: string;
   branchId: string;
   appointmentId?: string | null;
@@ -32,15 +34,22 @@ export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** 列表/統計 共用：把查詢參數轉成 Prisma where */
-  private buildWhere(query: GetOrdersQuery, userRole: string, userBranchId?: string): Prisma.OrderWhereInput {
+  private buildWhere(query: GetOrdersQuery, actor: AccessActor): Prisma.OrderWhereInput {
     const where: Prisma.OrderWhereInput = {};
 
-    // 如果不是 BOSS，只能查看自己分店的訂單
-    if (userRole !== 'BOSS') {
-      where.branchId = userBranchId;
-    } else if (query.branchId) {
-      // BOSS 可以指定分店查看
-      where.branchId = query.branchId;
+    if (isBoss(actor)) {
+      if (query.branchId) where.branchId = query.branchId;
+    } else {
+      // ARTIST: force branch + customer scope (primary owner OR appointment exception)
+      where.AND = [
+        { branchId: actor.branchId ?? undefined },
+        {
+          OR: [
+            { member: { primaryArtistId: actor.id } },
+            { appointment: { artistId: actor.id } },
+          ],
+        },
+      ];
     }
     
     if (query.status) {
@@ -84,6 +93,21 @@ export class OrdersService {
   }
 
   async create(input: CreateOrderInput) {
+    if (input.actor && !isBoss(input.actor)) {
+      if (input.branchId !== input.actor.branchId) {
+        throw new ForbiddenException('Cannot create order outside your branch');
+      }
+      // Customer must be owned by artist (manual primary assignment) for direct order creation.
+      // Orders linked from appointments will be handled by appointment scope.
+      const customer = await this.prisma.user.findUnique({
+        where: { id: input.memberId },
+        select: { primaryArtistId: true },
+      });
+      if (customer?.primaryArtistId !== input.actor.id) {
+        throw new ForbiddenException('Customer is not owned by this artist');
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       // 檢查用戶儲值餘額（如果使用儲值付款）
       if (input.useStoredValue) {
@@ -285,7 +309,7 @@ export class OrdersService {
     }
   }
 
-  async getOrders(query: GetOrdersQuery, userRole: string, userBranchId?: string) {
+  async getOrders(query: GetOrdersQuery, actor: AccessActor) {
     try {
       const { page = 1, limit = 10, sortField, sortOrder } = query;
       
@@ -293,11 +317,11 @@ export class OrdersService {
       const pageNum = typeof page === 'string' ? parseInt(page) : page;
       const limitNum = typeof limit === 'string' ? parseInt(limit) : limit;
       
-      console.log('🔍 getOrders called with:', { query, userRole, userBranchId });
+      console.log('🔍 getOrders called with:', { query, actor });
       console.log('🔍 Page and limit types:', { pageType: typeof pageNum, limitType: typeof limitNum, pageNum, limitNum });
       
       // 使用共用的 where 構建邏輯
-      const where = this.buildWhere(query, userRole, userBranchId);
+      const where = this.buildWhere(query, actor);
 
       // 構建排序條件 - 簡單版本，不使用關聯排序
       let orderBy: any = { createdAt: 'desc' };
@@ -335,9 +359,10 @@ export class OrdersService {
       const orders = await this.prisma.order.findMany({
         where,
         include: {
-          member: { select: { id: true, name: true, phone: true } },
+          member: { select: { id: true, name: true, phone: true, primaryArtistId: true } },
           branch: { select: { id: true, name: true } },
           installments: true,
+          appointment: { select: { id: true, artistId: true } },
         },
         skip,
         take: limitNum,
@@ -365,12 +390,12 @@ export class OrdersService {
   }
 
   /** ✅ 新增：彙總統計，不分頁、不排序（但沿用所有篩選） */
-  async getOrdersSummary(query: GetOrdersQuery, userRole: string, userBranchId?: string) {
+  async getOrdersSummary(query: GetOrdersQuery, actor: AccessActor) {
     try {
-      console.log('🔍 getOrdersSummary called with:', { query, userRole, userBranchId });
+      console.log('🔍 getOrdersSummary called with:', { query, actor });
       
       // 使用共用的 where 構建邏輯
-      const where = this.buildWhere(query, userRole, userBranchId);
+      const where = this.buildWhere(query, actor);
       
       console.log('🔍 Summary where condition:', JSON.stringify(where, null, 2));
 
@@ -458,9 +483,30 @@ export class OrdersService {
     });
   }
 
-  async findOne(id: string) {
+  private async ensureOrderReadable(actor: AccessActor, orderId: string) {
+    if (isBoss(actor)) return;
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        AND: [
+          { branchId: actor.branchId ?? undefined },
+          {
+            OR: [
+              { member: { primaryArtistId: actor.id } },
+              { appointment: { artistId: actor.id } },
+            ],
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!order) throw new ForbiddenException('Insufficient permissions');
+  }
+
+  async findOne(input: { actor: AccessActor; id: string }) {
+    await this.ensureOrderReadable(input.actor, input.id);
     return this.prisma.order.findUnique({
-      where: { id },
+      where: { id: input.id },
       include: {
         member: { select: { id: true, name: true, email: true } },
         branch: { select: { id: true, name: true } },
@@ -469,10 +515,11 @@ export class OrdersService {
     });
   }
 
-  async updateStatus(id: string, status: string) {
+  async updateStatus(input: { actor: AccessActor; id: string; status: string }) {
+    await this.ensureOrderReadable(input.actor, input.id);
     return this.prisma.order.update({
-      where: { id },
-      data: { status: status as any },
+      where: { id: input.id },
+      data: { status: input.status as any },
       include: {
         member: { select: { id: true, name: true, email: true } },
         branch: { select: { id: true, name: true } },
