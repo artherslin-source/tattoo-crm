@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminAppointmentsService } from './admin-appointments.service';
 import { AccessGuard } from '../common/access/access.guard';
@@ -19,6 +19,27 @@ const CreateAppointmentSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
   contactId: z.string().optional(),
+});
+
+const RescheduleSchema = z.object({
+  startAt: z.string().datetime(),
+  endAt: z.string().datetime(),
+  holdMin: z.coerce.number().int().min(1).max(24 * 60).optional(),
+  reason: z.string().optional(),
+});
+
+const CancelSchema = z.object({
+  reason: z.string().optional(),
+});
+
+const NoShowSchema = z.object({
+  reason: z.string().optional(),
+});
+
+const ConfirmScheduleSchema = z.object({
+  startAt: z.string().datetime(),
+  holdMin: z.coerce.number().int().min(1).max(24 * 60),
+  reason: z.string().optional(),
 });
 
 @Controller('admin/appointments')
@@ -129,6 +150,55 @@ export class AdminAppointmentsController {
   @Patch(':id/status')
   async updateAppointmentStatus(@Actor() actor: AccessActor, @Param('id') id: string, @Body('status') status: string) {
     return this.adminAppointmentsService.updateStatus({ actor, id, status });
+  }
+
+  @Post(':id/reschedule')
+  async reschedule(@Actor() actor: AccessActor, @Param('id') id: string, @Body() body: unknown) {
+    const input = RescheduleSchema.parse(body);
+    const startAt = new Date(input.startAt);
+    const endAt = new Date(input.endAt);
+    if (startAt >= endAt) throw new BadRequestException('endAt must be after startAt');
+    return this.adminAppointmentsService.reschedule({
+      actor,
+      id,
+      startAt,
+      endAt,
+      holdMin: input.holdMin,
+      reason: input.reason,
+    });
+  }
+
+  @Post(':id/cancel')
+  async cancel(@Actor() actor: AccessActor, @Param('id') id: string, @Body() body: unknown) {
+    const input = CancelSchema.parse(body);
+    return this.adminAppointmentsService.cancel({
+      actor,
+      id,
+      reason: input.reason,
+    });
+  }
+
+  @Post(':id/no-show')
+  async noShow(@Actor() actor: AccessActor, @Param('id') id: string, @Body() body: unknown) {
+    const input = NoShowSchema.parse(body);
+    return this.adminAppointmentsService.noShow({
+      actor,
+      id,
+      reason: input.reason,
+    });
+  }
+
+  // C-flow: confirm schedule for INTENT appointment (does not count as reschedule)
+  @Post(':id/confirm-schedule')
+  async confirmSchedule(@Actor() actor: AccessActor, @Param('id') id: string, @Body() body: unknown) {
+    const input = ConfirmScheduleSchema.parse(body);
+    return this.adminAppointmentsService.confirmSchedule({
+      actor,
+      id,
+      startAt: new Date(input.startAt),
+      holdMin: input.holdMin,
+      reason: input.reason,
+    });
   }
 
   @Patch(':id')

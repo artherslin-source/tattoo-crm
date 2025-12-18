@@ -7,6 +7,12 @@ import type { Prisma } from '@prisma/client';
 export class AdminAppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Policy: reschedule up to 2 times, must be >=24h before start
+  private rescheduleCutoffMs = 24 * 60 * 60 * 1000;
+  private rescheduleMaxCount = 2;
+  private cancelCutoffMs = 24 * 60 * 60 * 1000;
+  private maxHoldMin = 24 * 60; // 24h cap
+
   private buildScopeWhere(actor: AccessActor): Prisma.AppointmentWhereInput {
     if (isBoss(actor)) return {};
     return {
@@ -40,11 +46,11 @@ export class AdminAppointmentsService {
       where.AND = where.AND ?? [];
       where.AND.push({
         user: {
-          OR: [
-            { name: { contains: filters.search, mode: 'insensitive' } },
-            { email: { contains: filters.search, mode: 'insensitive' } },
+        OR: [
+          { name: { contains: filters.search, mode: 'insensitive' } },
+          { email: { contains: filters.search, mode: 'insensitive' } },
             { phone: { contains: filters.search, mode: 'insensitive' } },
-          ],
+        ],
         },
       });
     }
@@ -397,6 +403,233 @@ export class AdminAppointmentsService {
 
       return updatedAppointment;
     });
+  }
+
+  private clampEndToSameDay(startAt: Date, endAt: Date): Date {
+    const dayEnd = new Date(startAt);
+    dayEnd.setHours(23, 59, 0, 0);
+    return endAt > dayEnd ? dayEnd : endAt;
+  }
+
+  async confirmSchedule(input: { actor: AccessActor; id: string; startAt: Date; holdMin: number; reason?: string }) {
+    return this.prisma.$transaction(async (tx) => {
+      const appointment = await tx.appointment.findFirst({
+        where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+        select: {
+          id: true,
+          status: true,
+          branchId: true,
+          artistId: true,
+          userId: true,
+          serviceId: true,
+          orderId: true,
+          cartSnapshot: true,
+        },
+      });
+      if (!appointment) throw new NotFoundException('預約不存在');
+      if (appointment.status !== 'INTENT') {
+        throw new BadRequestException('只有意向預約可以排定正式時間');
+      }
+
+      const holdMin = input.holdMin;
+      if (!Number.isInteger(holdMin) || holdMin <= 0) {
+        throw new BadRequestException('保留時間必須為正整數（分鐘）');
+      }
+      if (holdMin > this.maxHoldMin) {
+        throw new BadRequestException('保留時間不可超過 24 小時');
+      }
+
+      const computedEndAt = this.clampEndToSameDay(input.startAt, new Date(input.startAt.getTime() + holdMin * 60000));
+
+      if (appointment.artistId) {
+        const conflict = await tx.appointment.findFirst({
+          where: {
+            id: { not: appointment.id },
+            branchId: appointment.branchId,
+            artistId: appointment.artistId,
+            status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+            startAt: { lt: computedEndAt },
+            endAt: { gt: input.startAt },
+          },
+          select: { id: true },
+        });
+        if (conflict) throw new ConflictException('該時段已被預約');
+      }
+
+      const updatedAppointment = await tx.appointment.update({
+        where: { id: appointment.id },
+        data: {
+          startAt: input.startAt,
+          endAt: computedEndAt,
+          holdMin,
+          holdUpdatedAt: new Date(),
+          holdUpdatedBy: input.actor.id,
+          holdUpdateReason: input.reason ?? null,
+          status: 'CONFIRMED',
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true, phone: true, primaryArtistId: true } },
+          service: { select: { id: true, name: true, price: true, durationMin: true } },
+          artist: { select: { id: true, name: true } },
+          branch: { select: { id: true, name: true } },
+          order: true,
+        },
+      });
+
+      // Create order on CONFIRMED (C-flow simplification), if not exists
+      if (!appointment.orderId) {
+        const snapshot: any = appointment.cartSnapshot ?? null;
+        const totalFromSnapshot = snapshot && typeof snapshot.totalPrice === 'number' ? snapshot.totalPrice : undefined;
+        let totalAmount = totalFromSnapshot;
+
+        if (typeof totalAmount !== 'number' && appointment.serviceId) {
+          const svc = await tx.service.findUnique({
+            where: { id: appointment.serviceId },
+            select: { price: true, name: true },
+          });
+          totalAmount = svc?.price ?? 0;
+        }
+        if (typeof totalAmount !== 'number') totalAmount = 0;
+
+        const order = await tx.order.create({
+          data: {
+            memberId: appointment.userId,
+            branchId: appointment.branchId,
+            appointmentId: appointment.id,
+            totalAmount,
+            finalAmount: totalAmount,
+            paymentType: 'ONE_TIME',
+            status: 'PENDING_PAYMENT',
+            cartSnapshot: appointment.cartSnapshot ?? undefined,
+          },
+        });
+
+        // Mirror to Appointment.orderId (UI convenience; no FK currently)
+        await tx.appointment.update({
+          where: { id: appointment.id },
+          data: { orderId: order.id },
+        });
+      }
+
+      return updatedAppointment;
+    });
+  }
+
+  async reschedule(input: { actor: AccessActor; id: string; startAt: Date; endAt: Date; holdMin?: number; reason?: string }) {
+    const appointment = await this.prisma.appointment.findFirst({
+      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      include: { user: { select: { id: true, primaryArtistId: true } } },
+    });
+    if (!appointment) throw new NotFoundException('預約不存在');
+
+    if (appointment.status === 'CANCELED' || appointment.status === 'COMPLETED' || appointment.status === 'NO_SHOW') {
+      throw new BadRequestException('此預約狀態不可改期');
+    }
+
+    const now = Date.now();
+    if (appointment.startAt.getTime() - now < this.rescheduleCutoffMs) {
+      throw new BadRequestException('改期需提前 24 小時以上');
+    }
+    if ((appointment.rescheduleCount ?? 0) >= this.rescheduleMaxCount) {
+      throw new BadRequestException(`最多可改期 ${this.rescheduleMaxCount} 次`);
+    }
+
+    // holdMin: if provided, validate; otherwise keep existing appointment.holdMin
+    const nextHoldMin = input.holdMin ?? appointment.holdMin ?? 150;
+    if (!Number.isInteger(nextHoldMin) || nextHoldMin <= 0) {
+      throw new BadRequestException('保留時間必須為正整數（分鐘）');
+    }
+    if (nextHoldMin > this.maxHoldMin) {
+      throw new BadRequestException('保留時間不可超過 24 小時');
+    }
+
+    // Recompute endAt from holdMin (source of truth) and clamp to same day (no cross-day lock)
+    const computedEndAt = this.clampEndToSameDay(input.startAt, new Date(input.startAt.getTime() + nextHoldMin * 60000));
+
+    // Conflict check for artist
+    if (appointment.artistId) {
+      const conflict = await this.prisma.appointment.findFirst({
+        where: {
+          id: { not: appointment.id },
+          branchId: appointment.branchId,
+          artistId: appointment.artistId,
+          status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+          startAt: { lt: computedEndAt },
+          endAt: { gt: input.startAt },
+        },
+        select: { id: true },
+      });
+      if (conflict) throw new ConflictException('該時段已被預約');
+    }
+
+    return this.prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        startAt: input.startAt,
+        endAt: computedEndAt,
+        holdMin: nextHoldMin,
+        holdUpdatedAt: new Date(),
+        holdUpdatedBy: input.actor.id,
+        holdUpdateReason: input.reason ?? null,
+        rescheduleCount: { increment: 1 },
+        lastRescheduledAt: new Date(),
+        rescheduleReason: input.reason ?? null,
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, phone: true, primaryArtistId: true } },
+        service: { select: { id: true, name: true, price: true, durationMin: true } },
+        artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
+        order: true,
+      },
+    });
+  }
+
+  async cancel(input: { actor: AccessActor; id: string; reason?: string }) {
+    const appointment = await this.prisma.appointment.findFirst({
+      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      select: { id: true, status: true, startAt: true },
+    });
+    if (!appointment) throw new NotFoundException('預約不存在');
+
+    if (appointment.status === 'COMPLETED') throw new BadRequestException('已完成預約不可取消');
+    if (appointment.status === 'CANCELED') return { success: true };
+
+    const now = Date.now();
+    if (appointment.startAt.getTime() - now < this.cancelCutoffMs) {
+      throw new BadRequestException('取消需提前 24 小時以上');
+    }
+
+    await this.prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        status: 'CANCELED',
+        canceledAt: new Date(),
+        cancelReason: input.reason ?? null,
+      },
+    });
+    return { success: true };
+  }
+
+  async noShow(input: { actor: AccessActor; id: string; reason?: string }) {
+    const appointment = await this.prisma.appointment.findFirst({
+      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      select: { id: true, status: true },
+    });
+    if (!appointment) throw new NotFoundException('預約不存在');
+
+    if (appointment.status === 'COMPLETED') throw new BadRequestException('已完成預約不可標記 No-show');
+    if (appointment.status === 'CANCELED') throw new BadRequestException('已取消預約不可標記 No-show');
+
+    await this.prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        status: 'NO_SHOW',
+        noShowAt: new Date(),
+        noShowReason: input.reason ?? null,
+      },
+    });
+    return { success: true };
   }
 
   async update(input: { actor: AccessActor; id: string; data: { startAt?: Date; endAt?: Date; notes?: string; artistId?: string } }) {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, Query, UseInterceptors, UploadedFile } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, Query, UseInterceptors, UploadedFile, BadRequestException } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ArtistService } from "./artist.service";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -95,6 +95,25 @@ export class ArtistController {
   ) {
     const artistId = req.user.id;
     return this.artistService.updateAppointmentStatus(appointmentId, body.status, artistId);
+  }
+
+  @Patch("appointments/:id/intent-date")
+  async moveIntentDate(
+    @Param('id') appointmentId: string,
+    @Body() body: { preferredDate: string; holdMin?: number; reason?: string },
+    @Req() req
+  ) {
+    const artistId = req.user.id;
+    if (!body?.preferredDate || typeof body.preferredDate !== 'string') {
+      throw new BadRequestException('preferredDate is required');
+    }
+    return this.artistService.moveIntentDate({
+      artistId,
+      appointmentId,
+      preferredDate: body.preferredDate,
+      holdMin: body.holdMin,
+      reason: body.reason,
+    });
   }
 
   // 3. 顧客資訊

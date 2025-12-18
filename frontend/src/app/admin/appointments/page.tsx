@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import type { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Calendar, Plus, ShoppingCart } from "lucide-react";
 import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
@@ -20,7 +22,7 @@ interface Appointment {
   id: string;
   startAt: string;
   endAt: string;
-  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
+  status: 'INTENT' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'NO_SHOW';
   notes: string | null;
   createdAt: string;
   orderId: string | null;
@@ -64,6 +66,21 @@ interface Appointment {
     totalPrice: number;
     totalDuration: number;
   };
+  holdMin?: number;
+}
+
+function toLocalDateTimeInputValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function getAppointmentDurationMin(apt: Appointment): number {
+  if (typeof apt.holdMin === "number" && apt.holdMin > 0) return apt.holdMin;
+  if (apt.cartSnapshot?.totalDuration) return apt.cartSnapshot.totalDuration;
+  if (apt.service?.durationMin) return apt.service.durationMin;
+  const diff = (new Date(apt.endAt).getTime() - new Date(apt.startAt).getTime()) / 60000;
+  return Number.isFinite(diff) && diff > 0 ? Math.round(diff) : 60;
 }
 
 export default function AdminAppointmentsPage() {
@@ -88,6 +105,19 @@ export default function AdminAppointmentsPage() {
   // 詳情模態框狀態
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [rescheduleStartAt, setRescheduleStartAt] = useState<string>("");
+  const [rescheduleReason, setRescheduleReason] = useState<string>("");
+  const [rescheduleHoldMin, setRescheduleHoldMin] = useState<number>(150);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [noShowModalOpen, setNoShowModalOpen] = useState(false);
+  const [noShowReason, setNoShowReason] = useState<string>("");
+
+  const [confirmScheduleModalOpen, setConfirmScheduleModalOpen] = useState(false);
+  const [confirmStartAt, setConfirmStartAt] = useState<string>("");
+  const [confirmHoldMin, setConfirmHoldMin] = useState<number>(150);
+  const [confirmReason, setConfirmReason] = useState<string>("");
 
   // 新增預約模態框狀態
   const [createAppointmentModal, setCreateAppointmentModal] = useState<{
@@ -245,6 +275,35 @@ export default function AdminAppointmentsPage() {
     setIsDetailModalOpen(false);
   };
 
+  const openRescheduleModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setRescheduleStartAt(toLocalDateTimeInputValue(appointment.startAt));
+    setRescheduleReason("");
+    setRescheduleHoldMin(getAppointmentDurationMin(appointment));
+    setRescheduleModalOpen(true);
+  };
+
+  const openCancelModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setCancelReason("");
+    setCancelModalOpen(true);
+  };
+
+  const openNoShowModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setNoShowReason("");
+    setNoShowModalOpen(true);
+  };
+
+  const openConfirmScheduleModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    // If startAt is only a date placeholder (intent), still show as datetime-local at 00:00
+    setConfirmStartAt(toLocalDateTimeInputValue(appointment.startAt));
+    setConfirmHoldMin(getAppointmentDurationMin(appointment));
+    setConfirmReason("");
+    setConfirmScheduleModalOpen(true);
+  };
+
   // 新增預約相關函數
   const handleOpenCreateAppointmentModal = () => {
     setCreateAppointmentModal({
@@ -263,6 +322,11 @@ export default function AdminAppointmentsPage() {
   // 更新預約狀態
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
     try {
+      // Cancel must go through policy endpoint (24h rule + optional reason)
+      if (newStatus === 'CANCELED') {
+        openCancelModal(appointment);
+        return;
+      }
       await patchJsonWithAuth(`/admin/appointments/${appointment.id}/status`, {
         status: newStatus
       });
@@ -278,6 +342,112 @@ export default function AdminAppointmentsPage() {
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "更新預約狀態失敗");
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedAppointment) return;
+    try {
+      const startAt = new Date(rescheduleStartAt);
+      if (Number.isNaN(startAt.getTime())) {
+        setError("開始時間格式不正確");
+        return;
+      }
+      if (!Number.isFinite(rescheduleHoldMin) || rescheduleHoldMin <= 0) {
+        setError("保留時間必須 > 0（分鐘）");
+        return;
+      }
+      if (rescheduleHoldMin > 24 * 60) {
+        setError("保留時間不可超過 24 小時");
+        return;
+      }
+      const endAt = new Date(startAt.getTime() + rescheduleHoldMin * 60000);
+
+      await postJsonWithAuth(`/admin/appointments/${selectedAppointment.id}/reschedule`, {
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        holdMin: rescheduleHoldMin,
+        reason: rescheduleReason || undefined,
+      });
+
+      setSuccessMessage("已送出改期");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setRescheduleModalOpen(false);
+      handleCloseDetailModal();
+      fetchAppointments();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "改期失敗");
+    }
+  };
+
+  const handleCancelAppointment = async () => {
+    if (!selectedAppointment) return;
+    try {
+      await postJsonWithAuth(`/admin/appointments/${selectedAppointment.id}/cancel`, {
+        reason: cancelReason || undefined,
+      });
+
+      setSuccessMessage("預約已取消");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setCancelModalOpen(false);
+      handleCloseDetailModal();
+      fetchAppointments();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "取消失敗");
+    }
+  };
+
+  const handleNoShow = async () => {
+    if (!selectedAppointment) return;
+    try {
+      await postJsonWithAuth(`/admin/appointments/${selectedAppointment.id}/no-show`, {
+        reason: noShowReason || undefined,
+      });
+
+      setSuccessMessage("已標記未到場");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setNoShowModalOpen(false);
+      handleCloseDetailModal();
+      fetchAppointments();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "標記未到場失敗");
+    }
+  };
+
+  const handleConfirmSchedule = async () => {
+    if (!selectedAppointment) return;
+    try {
+      const startAt = new Date(confirmStartAt);
+      if (Number.isNaN(startAt.getTime())) {
+        setError("開始時間格式不正確");
+        return;
+      }
+      if (!Number.isFinite(confirmHoldMin) || confirmHoldMin <= 0) {
+        setError("保留時間必須 > 0（分鐘）");
+        return;
+      }
+      if (confirmHoldMin > 24 * 60) {
+        setError("保留時間不可超過 24 小時");
+        return;
+      }
+
+      await postJsonWithAuth(`/admin/appointments/${selectedAppointment.id}/confirm-schedule`, {
+        startAt: startAt.toISOString(),
+        holdMin: confirmHoldMin,
+        reason: confirmReason || undefined,
+      });
+
+      setSuccessMessage("已排定正式時間並確認預約");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setConfirmScheduleModalOpen(false);
+      handleCloseDetailModal();
+      fetchAppointments();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || "排定正式時間失敗");
     }
   };
 
@@ -302,6 +472,8 @@ export default function AdminAppointmentsPage() {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
+      case 'INTENT':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'CONFIRMED':
@@ -312,6 +484,8 @@ export default function AdminAppointmentsPage() {
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'CANCELED':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'NO_SHOW':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       default:
         return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
@@ -319,6 +493,8 @@ export default function AdminAppointmentsPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case 'INTENT':
+        return '意向';
       case 'PENDING':
         return '待確認';
       case 'CONFIRMED':
@@ -329,6 +505,8 @@ export default function AdminAppointmentsPage() {
         return '已完成';
       case 'CANCELED':
         return '已取消';
+      case 'NO_SHOW':
+        return '未到場';
       default:
         return status;
     }
@@ -411,7 +589,7 @@ export default function AdminAppointmentsPage() {
       )}
 
       {/* Stats Card */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">總預約數</CardTitle>
@@ -419,6 +597,17 @@ export default function AdminAppointmentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalItems}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">意向</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-gray-500"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {appointments.filter(a => a.status === 'INTENT').length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -677,6 +866,48 @@ export default function AdminAppointmentsPage() {
                     查看關聯訂單
                   </Button>
                 )}
+
+                {/* V2 操作：改期 / 取消 / No-show */}
+                <div className="grid grid-cols-1 gap-2">
+                  {selectedAppointment.status === 'INTENT' && (
+                    <Button
+                      variant="outline"
+                      onClick={() => openConfirmScheduleModal(selectedAppointment)}
+                      className="w-full"
+                    >
+                      排定正式時間
+                    </Button>
+                  )}
+                  {selectedAppointment.status !== 'COMPLETED' && selectedAppointment.status !== 'CANCELED' && selectedAppointment.status !== 'NO_SHOW' && (
+                    <Button
+                      variant="outline"
+                      onClick={() => openRescheduleModal(selectedAppointment)}
+                      className="w-full"
+                    >
+                      改期
+                    </Button>
+                  )}
+
+                  {selectedAppointment.status !== 'COMPLETED' && selectedAppointment.status !== 'CANCELED' && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => openCancelModal(selectedAppointment)}
+                      className="w-full"
+                    >
+                      取消預約
+                    </Button>
+                  )}
+
+                  {selectedAppointment.status !== 'COMPLETED' && selectedAppointment.status !== 'CANCELED' && selectedAppointment.status !== 'NO_SHOW' && (
+                    <Button
+                      variant="outline"
+                      onClick={() => openNoShowModal(selectedAppointment)}
+                      className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+                    >
+                      標記未到場
+                    </Button>
+                  )}
+                </div>
                 
                 <div className="flex gap-2">
                   <Button
@@ -694,13 +925,6 @@ export default function AdminAppointmentsPage() {
                     >
                       確認預約
                             </Button>
-                            <Button
-                      onClick={() => handleUpdateStatus(selectedAppointment, 'CANCELED')}
-                      variant="destructive"
-                      className="flex-1"
-                    >
-                      取消預約
-                            </Button>
                           </>
                         )}
                 {selectedAppointment.status === 'CONFIRMED' && (
@@ -717,13 +941,6 @@ export default function AdminAppointmentsPage() {
                     >
                       標記完成
                     </Button>
-                          <Button
-                      onClick={() => handleUpdateStatus(selectedAppointment, 'CANCELED')}
-                      variant="destructive"
-                      className="flex-1"
-                    >
-                      取消預約
-                          </Button>
                   </>
                 )}
                 {selectedAppointment.status === 'IN_PROGRESS' && (
@@ -743,6 +960,227 @@ export default function AdminAppointmentsPage() {
                   </>
                 )}
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Modal */}
+      <Dialog open={rescheduleModalOpen} onOpenChange={setRescheduleModalOpen}>
+        <DialogContent className="max-w-full sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>改期</DialogTitle>
+          </DialogHeader>
+          {selectedAppointment && (
+            <div className="space-y-3">
+              <div className="text-sm text-gray-600">
+                保留時間（分鐘）：{rescheduleHoldMin}（預設 120 + buffer 30）
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRescheduleHoldMin((v) => Math.max(1, v - 60))}
+                >
+                  -60
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRescheduleHoldMin((v) => Math.max(1, v - 30))}
+                >
+                  -30
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRescheduleHoldMin((v) => Math.max(1, v - 15))}
+                >
+                  -15
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRescheduleHoldMin((v) => v + 15)}
+                >
+                  +15
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRescheduleHoldMin((v) => v + 30)}
+                >
+                  +30
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRescheduleHoldMin((v) => v + 60)}
+                >
+                  +60
+                </Button>
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm text-gray-700">自訂保留時間（分鐘）</div>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24 * 60}
+                  value={rescheduleHoldMin}
+                  onChange={(e) => setRescheduleHoldMin(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm text-gray-700">新開始時間</div>
+                <Input
+                  type="datetime-local"
+                  value={rescheduleStartAt}
+                  onChange={(e) => setRescheduleStartAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm text-gray-700">原因（選填）</div>
+                <Textarea
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="例如：客戶臨時有事／刺青師改期"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setRescheduleModalOpen(false)}>
+                  取消
+                </Button>
+                <Button className="flex-1" onClick={handleReschedule}>
+                  確認改期
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Modal */}
+      <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+        <DialogContent className="max-w-full sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>取消預約</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-gray-600">
+              取消需提前 24 小時（系統會自動檢查）。
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm text-gray-700">原因（選填）</div>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="例如：客戶取消／改到其他日期"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setCancelModalOpen(false)}>
+                返回
+              </Button>
+              <Button variant="destructive" className="flex-1" onClick={handleCancelAppointment}>
+                確認取消
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* No-show Modal */}
+      <Dialog open={noShowModalOpen} onOpenChange={setNoShowModalOpen}>
+        <DialogContent className="max-w-full sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>標記未到場</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <div className="text-sm text-gray-700">原因（選填）</div>
+              <Textarea
+                value={noShowReason}
+                onChange={(e) => setNoShowReason(e.target.value)}
+                placeholder="例如：未聯絡／遲到超過 30 分鐘"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setNoShowModalOpen(false)}>
+                返回
+              </Button>
+              <Button className="flex-1 border-orange-300 bg-orange-600 hover:bg-orange-700" onClick={handleNoShow}>
+                確認標記
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Schedule Modal (INTENT -> CONFIRMED) */}
+      <Dialog open={confirmScheduleModalOpen} onOpenChange={setConfirmScheduleModalOpen}>
+        <DialogContent className="max-w-full sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>排定正式時間</DialogTitle>
+          </DialogHeader>
+          {selectedAppointment && (
+            <div className="space-y-3">
+              <div className="text-sm text-gray-600">
+                保留時間（分鐘）：{confirmHoldMin}（預設 120 + buffer 30）
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => setConfirmHoldMin((v) => Math.max(1, v - 60))}>
+                  -60
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setConfirmHoldMin((v) => Math.max(1, v - 30))}>
+                  -30
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setConfirmHoldMin((v) => Math.max(1, v - 15))}>
+                  -15
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setConfirmHoldMin((v) => v + 15)}>
+                  +15
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setConfirmHoldMin((v) => v + 30)}>
+                  +30
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setConfirmHoldMin((v) => v + 60)}>
+                  +60
+                </Button>
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm text-gray-700">自訂保留時間（分鐘）</div>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24 * 60}
+                  value={confirmHoldMin}
+                  onChange={(e) => setConfirmHoldMin(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm text-gray-700">正式開始時間</div>
+                <Input
+                  type="datetime-local"
+                  value={confirmStartAt}
+                  onChange={(e) => setConfirmStartAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm text-gray-700">原因（選填）</div>
+                <Textarea
+                  value={confirmReason}
+                  onChange={(e) => setConfirmReason(e.target.value)}
+                  placeholder="例如：與客戶確認後排定"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setConfirmScheduleModalOpen(false)}>
+                  取消
+                </Button>
+                <Button className="flex-1" onClick={handleConfirmSchedule}>
+                  確認排定
+                </Button>
               </div>
             </div>
           )}

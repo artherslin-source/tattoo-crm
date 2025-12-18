@@ -81,6 +81,7 @@ export default function AppointmentsToolbar({
               </SelectTrigger>
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部狀態</SelectItem>
+                <SelectItem value="INTENT">意向</SelectItem>
                 <SelectItem value="PENDING">待確認</SelectItem>
                 <SelectItem value="CONFIRMED">已確認</SelectItem>
                 <SelectItem value="IN_PROGRESS">進行中</SelectItem>
@@ -176,6 +177,7 @@ export default function AppointmentsToolbar({
               </SelectTrigger>
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部狀態</SelectItem>
+                <SelectItem value="INTENT">意向</SelectItem>
                 <SelectItem value="PENDING">待確認</SelectItem>
                 <SelectItem value="CONFIRMED">已確認</SelectItem>
                 <SelectItem value="IN_PROGRESS">進行中</SelectItem>
@@ -307,8 +309,10 @@ export default function AppointmentsToolbar({
                   </SelectTrigger>
                   <SelectContent className="bg-white/85">
                     <SelectItem value="all">全部狀態</SelectItem>
+                    <SelectItem value="INTENT">意向</SelectItem>
                     <SelectItem value="PENDING">待確認</SelectItem>
                     <SelectItem value="CONFIRMED">已確認</SelectItem>
+                    <SelectItem value="IN_PROGRESS">進行中</SelectItem>
                     <SelectItem value="COMPLETED">已完成</SelectItem>
                     <SelectItem value="CANCELED">已取消</SelectItem>
                   </SelectContent>
