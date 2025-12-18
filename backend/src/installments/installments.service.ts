@@ -1,18 +1,62 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInstallmentDto } from './dto/create-installment.dto';
 import { UpdateInstallmentDto } from './dto/update-installment.dto';
 import { CreateInstallmentPlanDto } from './dto/create-installment-plan.dto';
 import { InstallmentStatus, OrderStatus, PaymentType } from '@prisma/client';
+import { isBoss, type AccessActor } from '../common/access/access.types';
 
 @Injectable()
 export class InstallmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async ensureOrderReadable(actor: AccessActor, orderId: string) {
+    if (isBoss(actor)) return;
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        AND: [
+          { branchId: actor.branchId ?? undefined },
+          {
+            OR: [
+              { member: { primaryArtistId: actor.id } },
+              { appointment: { artistId: actor.id } },
+            ],
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!order) throw new ForbiddenException('Insufficient permissions');
+  }
+
+  private async ensureInstallmentReadable(actor: AccessActor, installmentId: string) {
+    if (isBoss(actor)) return;
+    const installment = await this.prisma.installment.findFirst({
+      where: {
+        id: installmentId,
+        order: {
+          AND: [
+            { branchId: actor.branchId ?? undefined },
+            {
+              OR: [
+                { member: { primaryArtistId: actor.id } },
+                { appointment: { artistId: actor.id } },
+              ],
+            },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    if (!installment) throw new ForbiddenException('Insufficient permissions');
+  }
+
   /**
    * 創建分期付款計劃
    */
-  async createInstallmentPlan(dto: CreateInstallmentPlanDto) {
+  async createInstallmentPlan(actor: AccessActor, dto: CreateInstallmentPlanDto) {
+    await this.ensureOrderReadable(actor, dto.orderId);
     return await this.prisma.$transaction(async (tx) => {
       // 檢查訂單是否存在
       const order = await tx.order.findUnique({
@@ -124,7 +168,8 @@ export class InstallmentsService {
   /**
    * 獲取訂單的分期付款記錄
    */
-  async getInstallmentsByOrderId(orderId: string) {
+  async getInstallmentsByOrderId(actor: AccessActor, orderId: string) {
+    await this.ensureOrderReadable(actor, orderId);
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -150,11 +195,12 @@ export class InstallmentsService {
   /**
    * 記錄分期付款
    */
-  async recordPayment(installmentId: string, paymentData: {
+  async recordPayment(actor: AccessActor, installmentId: string, paymentData: {
     paymentMethod?: string;
     notes?: string;
     paidAt?: Date;
   }) {
+    await this.ensureInstallmentReadable(actor, installmentId);
     return await this.prisma.$transaction(async (tx) => {
       // 更新分期付款記錄
       const installment = await tx.installment.update({
@@ -219,7 +265,10 @@ export class InstallmentsService {
   /**
    * 更新分期付款記錄
    */
-  async updateInstallment(installmentId: string, dto: UpdateInstallmentDto) {
+  async updateInstallment(actor: AccessActor, installmentId: string, dto: UpdateInstallmentDto) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('Only BOSS can update installments directly');
+    }
     const installment = await this.prisma.installment.findUnique({
       where: { id: installmentId }
     });
@@ -240,7 +289,10 @@ export class InstallmentsService {
   /**
    * 刪除分期付款記錄
    */
-  async deleteInstallment(installmentId: string) {
+  async deleteInstallment(actor: AccessActor, installmentId: string) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('Only BOSS can delete installments');
+    }
     const installment = await this.prisma.installment.findUnique({
       where: { id: installmentId }
     });
@@ -261,7 +313,10 @@ export class InstallmentsService {
   /**
    * 獲取逾期分期付款
    */
-  async getOverdueInstallments() {
+  async getOverdueInstallments(actor: AccessActor) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('Only BOSS can view overdue installments');
+    }
     const now = new Date();
     
     return await this.prisma.installment.findMany({
@@ -290,7 +345,10 @@ export class InstallmentsService {
   /**
    * 標記逾期分期付款
    */
-  async markOverdueInstallments() {
+  async markOverdueInstallments(actor: AccessActor) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('Only BOSS can mark overdue installments');
+    }
     const now = new Date();
     
     const result = await this.prisma.installment.updateMany({
@@ -312,10 +370,9 @@ export class InstallmentsService {
   /**
    * 調整分期付款金額（Boss/Manager 專用）
    */
-  async adjustInstallmentAmount(orderId: string, installmentNo: number, newAmount: number, userRole: string) {
-    // 檢查權限
-    if (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER') {
-      throw new BadRequestException('只有 Boss 或分店經理可以調整分期金額');
+  async adjustInstallmentAmount(actor: AccessActor, orderId: string, installmentNo: number, newAmount: number) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('Only BOSS can adjust installment amounts');
     }
 
     // ✅ 驗證金額為正整數
@@ -503,12 +560,13 @@ export class InstallmentsService {
   /**
    * 完成訂單結帳（選擇付款方式）
    */
-  async completeOrderPayment(orderId: string, paymentData: {
+  async completeOrderPayment(actor: AccessActor, orderId: string, paymentData: {
     paymentType: PaymentType;
     installmentTerms?: number;
     startDate?: Date;
     customPlan?: { [key: number]: number };
   }) {
+    await this.ensureOrderReadable(actor, orderId);
     return await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },

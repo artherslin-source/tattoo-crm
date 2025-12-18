@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { isBoss, type AccessActor } from '../common/access/access.types';
 
 @Injectable()
 export class AdminMembersService {
@@ -9,6 +10,7 @@ export class AdminMembersService {
   }
 
   async findAll(filters?: {
+    actor: AccessActor;
     search?: string;
     role?: string;
     status?: string;
@@ -24,17 +26,32 @@ export class AdminMembersService {
       const where: any = {};
       const userWhere: any = {};
 
+      // Scope rules:
+      // - BOSS: can view all
+      // - ARTIST: only own branch + own customers (primaryArtistId)
+      if (!filters?.actor) throw new BadRequestException('actor is required');
+      if (!isBoss(filters.actor)) {
+        userWhere.branchId = filters.actor.branchId;
+        userWhere.primaryArtistId = filters.actor.id;
+        // ARTIST only manages customers (members)
+        userWhere.role = 'MEMBER';
+      }
+
       // 搜尋條件
       if (filters?.search) {
         where.OR = [
           { user: { name: { contains: filters.search, mode: 'insensitive' } } },
           { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+          { user: { phone: { contains: filters.search, mode: 'insensitive' } } },
         ];
       }
       
       // 角色篩選
       if (filters?.role && filters.role !== 'all') {
-        userWhere.role = filters.role;
+        // Prevent ARTIST from broadening scope
+        if (isBoss(filters.actor)) {
+          userWhere.role = filters.role;
+        }
       }
       
       // 狀態篩選
@@ -44,7 +61,9 @@ export class AdminMembersService {
       
       // 分店篩選
       if (filters?.branchId && filters.branchId !== 'all') {
-        userWhere.branchId = filters.branchId;
+        if (isBoss(filters.actor)) {
+          userWhere.branchId = filters.branchId;
+        }
       }
       
       // 會員等級篩選
@@ -196,7 +215,7 @@ export class AdminMembersService {
     }
   }
 
-  async findOne(id: string) {
+  async findOne(actor: AccessActor, id: string) {
     const member = await this.prisma.member.findUnique({
       where: { id },
       include: { user: true },
@@ -204,6 +223,11 @@ export class AdminMembersService {
 
     if (!member) {
       throw new NotFoundException('會員不存在');
+    }
+
+    if (!isBoss(actor)) {
+      if (member.user.branchId !== actor.branchId) throw new ForbiddenException('Insufficient permissions');
+      if (member.user.primaryArtistId !== actor.id) throw new ForbiddenException('Insufficient permissions');
     }
 
     // 取得會員的預約紀錄
@@ -222,10 +246,26 @@ export class AdminMembersService {
       orderBy: { createdAt: 'desc' },
     });
 
+    const customerNotes = await this.prisma.customerNote.findMany({
+      where: { customerId: member.userId },
+      include: { creator: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    const historyServices = await this.prisma.completedService.findMany({
+      where: { customerId: member.userId },
+      select: { id: true, serviceName: true, servicePrice: true, completedAt: true, artistId: true, branchId: true },
+      orderBy: { completedAt: 'desc' },
+      take: 50,
+    });
+
     return {
       ...member,
       appointments,
       orders,
+      customerNotes,
+      historyServices,
     };
   }
 
@@ -309,7 +349,7 @@ export class AdminMembersService {
     });
   }
 
-  async createMember(data: {
+  async createMember(actor: AccessActor, data: {
     name: string;
     email: string;
     password: string;
@@ -331,7 +371,8 @@ export class AdminMembersService {
           hashedPassword,
           phone: data.phone,
           role: data.role || 'MEMBER',
-          branchId: data.branchId,
+          branchId: isBoss(actor) ? data.branchId : (actor.branchId ?? data.branchId),
+          primaryArtistId: isBoss(actor) ? undefined : actor.id,
         },
       });
 
@@ -365,6 +406,27 @@ export class AdminMembersService {
 
       return member;
     });
+  }
+
+  async setPrimaryArtist(actor: AccessActor, memberId: string, primaryArtistId: string) {
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      include: { user: true },
+    });
+    if (!member) throw new NotFoundException('會員不存在');
+
+    if (!isBoss(actor)) {
+      // ARTIST can only assign customers in their branch to themselves
+      if (primaryArtistId !== actor.id) throw new ForbiddenException('ARTIST can only assign customers to themselves');
+      if (member.user.branchId !== actor.branchId) throw new ForbiddenException('Cannot modify customer outside your branch');
+    }
+
+    await this.prisma.user.update({
+      where: { id: member.userId },
+      data: { primaryArtistId },
+    });
+
+    return { success: true };
   }
 
   async updateMember(id: string, data: {
@@ -448,9 +510,9 @@ export class AdminMembersService {
     });
   }
 
-  async topupUser(memberId: string, amount: number, operatorId: string) {
+  async topupUser(actor: AccessActor, memberId: string, amount: number, operatorId: string) {
     try {
-      console.log('💰 topupUser called with:', { memberId, amount, operatorId });
+      console.log('💰 topupUser called with:', { memberId, amount, operatorId, actor });
       
       // 如果沒有 operatorId，使用預設的管理員 ID
       const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
@@ -459,6 +521,7 @@ export class AdminMembersService {
         // 先檢查會員是否存在
         const existingMember = await tx.member.findUnique({
           where: { id: memberId },
+          include: { user: true },
         });
 
         if (!existingMember) {
@@ -466,6 +529,15 @@ export class AdminMembersService {
         }
 
         console.log('💰 Found member:', existingMember);
+
+        if (!isBoss(actor)) {
+          if (existingMember.user.branchId !== actor.branchId) {
+            throw new ForbiddenException('Cannot topup outside your branch');
+          }
+          if (existingMember.user.primaryArtistId !== actor.id) {
+            throw new ForbiddenException('Cannot topup customer not owned by this artist');
+          }
+        }
 
         const member = await tx.member.update({
           where: { id: memberId },
@@ -493,8 +565,17 @@ export class AdminMembersService {
     }
   }
 
-  async getTopupHistory(id: string) {
+  async getTopupHistory(actor: AccessActor, id: string) {
     console.log('🔍 getTopupHistory called with id:', id);
+    if (!isBoss(actor)) {
+      const member = await this.prisma.member.findUnique({
+        where: { id },
+        include: { user: true },
+      });
+      if (!member) throw new NotFoundException('會員不存在');
+      if (member.user.branchId !== actor.branchId) throw new ForbiddenException('Insufficient permissions');
+      if (member.user.primaryArtistId !== actor.id) throw new ForbiddenException('Insufficient permissions');
+    }
     const result = await this.prisma.topupHistory.findMany({
       where: { memberId: id },
       include: {
@@ -512,9 +593,9 @@ export class AdminMembersService {
     return result;
   }
 
-  async spend(memberId: string, amount: number, operatorId: string) {
+  async spend(actor: AccessActor, memberId: string, amount: number, operatorId: string) {
     try {
-      console.log('💸 spend called with:', { memberId, amount, operatorId });
+      console.log('💸 spend called with:', { memberId, amount, operatorId, actor });
       
       if (amount <= 0) {
         throw new BadRequestException('消費金額必須大於 0');
@@ -527,6 +608,7 @@ export class AdminMembersService {
         // 檢查會員餘額是否足夠
         const member = await tx.member.findUnique({
           where: { id: memberId },
+          include: { user: true },
         });
 
         if (!member) {
@@ -534,6 +616,15 @@ export class AdminMembersService {
         }
 
         console.log('💸 Found member:', member);
+
+        if (!isBoss(actor)) {
+          if (member.user.branchId !== actor.branchId) {
+            throw new ForbiddenException('Cannot spend outside your branch');
+          }
+          if (member.user.primaryArtistId !== actor.id) {
+            throw new ForbiddenException('Cannot spend for customer not owned by this artist');
+          }
+        }
 
         if (member.balance < amount) {
           throw new BadRequestException(`餘額不足，無法完成消費。當前餘額: ${member.balance}, 消費金額: ${amount}`);

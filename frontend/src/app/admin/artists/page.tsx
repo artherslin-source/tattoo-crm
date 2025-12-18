@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, patchJsonWithAuth, ApiError, getApiBase } from "@/lib/api";
+import { hasAdminAccess, isBossRole } from "@/lib/access";
 import { ArtistPhotoUpload } from "@/components/admin/ArtistPhotoUpload";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { Branch } from "@/types/branch";
@@ -60,7 +61,7 @@ export default function AdminArtistsPage() {
     const userRole = getUserRole();
     const token = getAccessToken();
     
-    if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
+    if (!token || !hasAdminAccess(userRole)) {
       router.replace('/profile');
       return;
     }

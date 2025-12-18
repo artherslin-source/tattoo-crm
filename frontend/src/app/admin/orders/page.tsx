@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError } from "@/lib/api";
+import { hasAdminAccess } from "@/lib/access";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import type { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
@@ -204,7 +205,7 @@ export default function AdminOrdersPage() {
     const userRole = getUserRole();
     const token = getAccessToken();
     
-    if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
+    if (!token || !hasAdminAccess(userRole)) {
       router.replace('/profile');
       return;
     }

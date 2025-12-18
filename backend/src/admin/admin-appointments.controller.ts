@@ -1,8 +1,9 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminAppointmentsService } from './admin-appointments.service';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { AccessGuard } from '../common/access/access.guard';
+import { Actor } from '../common/access/actor.decorator';
+import type { AccessActor } from '../common/access/access.types';
 import { z } from 'zod';
 
 const CreateAppointmentSchema = z.object({
@@ -21,17 +22,17 @@ const CreateAppointmentSchema = z.object({
 });
 
 @Controller('admin/appointments')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER')
+@UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminAppointmentsController {
   constructor(private readonly adminAppointmentsService: AdminAppointmentsService) {}
 
   @Get()
-  async getAppointments(@Query() query: any) {
+  async getAppointments(@Actor() actor: AccessActor, @Query() query: any) {
     console.log('🎯 AdminAppointmentsController.getAppointments called');
     console.log('🔍 Query params:', query);
     try {
       return this.adminAppointmentsService.findAll({
+        actor,
         search: query.search,
         status: query.status,
         startDate: query.startDate,
@@ -47,7 +48,7 @@ export class AdminAppointmentsController {
   }
 
   @Post()
-  async createAppointment(@Body() body: unknown) {
+  async createAppointment(@Actor() actor: AccessActor, @Body() body: unknown) {
     console.log('🎯 AdminAppointmentsController.createAppointment called');
     console.log('🔍 Request body:', body);
     try {
@@ -104,6 +105,7 @@ export class AdminAppointmentsController {
       }
       
       return this.adminAppointmentsService.create({
+        actor,
         startAt: new Date(input.startAt),
         endAt: new Date(input.endAt),
         userId: userId,
@@ -120,27 +122,27 @@ export class AdminAppointmentsController {
   }
 
   @Get(':id')
-  async getAppointment(@Param('id') id: string) {
-    return this.adminAppointmentsService.findOne(id);
+  async getAppointment(@Actor() actor: AccessActor, @Param('id') id: string) {
+    return this.adminAppointmentsService.findOne({ actor, id });
   }
 
   @Patch(':id/status')
-  async updateAppointmentStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.adminAppointmentsService.updateStatus(id, status);
+  async updateAppointmentStatus(@Actor() actor: AccessActor, @Param('id') id: string, @Body('status') status: string) {
+    return this.adminAppointmentsService.updateStatus({ actor, id, status });
   }
 
   @Patch(':id')
-  async updateAppointment(@Param('id') id: string, @Body() data: any) {
-    return this.adminAppointmentsService.update(id, {
+  async updateAppointment(@Actor() actor: AccessActor, @Param('id') id: string, @Body() data: any) {
+    return this.adminAppointmentsService.update({ actor, id, data: {
       startAt: data.startAt ? new Date(data.startAt) : undefined,
       endAt: data.endAt ? new Date(data.endAt) : undefined,
       notes: data.notes,
       artistId: data.artistId,
-    });
+    }});
   }
 
   @Delete(':id')
-  async deleteAppointment(@Param('id') id: string) {
-    return this.adminAppointmentsService.remove(id);
+  async deleteAppointment(@Actor() actor: AccessActor, @Param('id') id: string) {
+    return this.adminAppointmentsService.remove({ actor, id });
   }
 }

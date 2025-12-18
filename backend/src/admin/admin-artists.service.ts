@@ -1,21 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { isBoss, type AccessActor } from '../common/access/access.types';
 
 @Injectable()
 export class AdminArtistsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(userRole?: string, userBranchId?: string) {
+  async findAll(actor: AccessActor) {
     try {
       // 構建查詢條件
       const whereCondition: any = {};
       
-      // 如果是分店經理，只能看到自己分店的刺青師
-      if (userRole === 'BRANCH_MANAGER' && userBranchId) {
-        whereCondition.branchId = userBranchId;
+      if (!isBoss(actor)) {
+        // ARTIST: only self (keeps appointment-creation UI simple and prevents cross-artist access)
+        whereCondition.userId = actor.id;
       }
-      // BOSS 可以看到所有分店的刺青師，不需要額外條件
 
       const artists = await this.prisma.artist.findMany({
         where: whereCondition,

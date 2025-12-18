@@ -19,6 +19,8 @@ model User {
   role            String?
   // personId        String?  // 多帳號對應同一真人（跨分店排程互斥）
   branchId        String?
+  // 顧客主責刺青師（用於資料範圍：ARTIST 只能看自己顧客）
+  primaryArtistId String?
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -30,6 +32,8 @@ model User {
   member             Member?
   artist             Artist?
   branch             Branch?       @relation(fields: [branchId], references: [id])
+  primaryArtist      User?         @relation("PrimaryArtistOwnership", fields: [primaryArtistId], references: [id])
+  primaryCustomers   User[]        @relation("PrimaryArtistOwnership")
   topupHistory       TopupHistory[]
   portfolioItems     PortfolioItem[]
   notifications      Notification[]
@@ -43,6 +47,7 @@ model User {
   @@index([branchId, role, isActive])
   @@index([role, createdAt])
   @@index([email])
+  @@index([primaryArtistId, branchId])
   // @@index([personId])
 }
 

@@ -1,7 +1,8 @@
-import { Controller, Get, Patch, Param, Body, Query, UseGuards, Req, Post } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query, UseGuards, Post } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { AccessGuard } from '../common/access/access.guard';
+import { Actor } from '../common/access/actor.decorator';
+import type { AccessActor } from '../common/access/access.types';
 import { OrdersService } from '../orders/orders.service';
 import { z } from 'zod';
 
@@ -22,13 +23,12 @@ const CreateOrderSchema = z.object({
 });
 
 @Controller('admin/orders')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER')
+@UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  async findAll(@Query() query: GetOrdersQuery, @Req() req: any) {
+  async findAll(@Actor() actor: AccessActor, @Query() query: GetOrdersQuery) {
     console.log('🎯 AdminOrdersController.findAll called');
     console.log('🔍 Query params:', query);
     try {
@@ -39,7 +39,7 @@ export class AdminOrdersController {
         limit: query.limit ? parseInt(query.limit.toString()) : 10,
       };
       console.log('🔍 Processed query:', processedQuery);
-      return this.ordersService.getOrders(processedQuery, req.user.role, req.user.branchId);
+      return this.ordersService.getOrders(processedQuery, actor);
     } catch (error) {
       console.error('❌ Error in AdminOrdersController.findAll:', error);
       throw error;
@@ -48,11 +48,11 @@ export class AdminOrdersController {
 
   /** ✅ 新增：彙總統計，不分頁 */
   @Get('summary')
-  async summary(@Query() query: GetOrdersQuery, @Req() req: any) {
+  async summary(@Actor() actor: AccessActor, @Query() query: GetOrdersQuery) {
     console.log('🎯 AdminOrdersController.summary called');
     console.log('🔍 Query params:', query);
     try {
-      return this.ordersService.getOrdersSummary(query, req.user.role, req.user.branchId);
+      return this.ordersService.getOrdersSummary(query, actor);
     } catch (error) {
       console.error('❌ Error in AdminOrdersController.summary:', error);
       throw error;
@@ -60,12 +60,13 @@ export class AdminOrdersController {
   }
 
   @Post()
-  async create(@Body() body: unknown) {
+  async create(@Actor() actor: AccessActor, @Body() body: unknown) {
     console.log('🎯 AdminOrdersController.create called');
     console.log('🔍 Request body:', body);
     try {
       const input = CreateOrderSchema.parse(body);
       return this.ordersService.create({
+        actor,
         memberId: input.memberId,
         branchId: input.branchId,
         appointmentId: null,
@@ -80,12 +81,12 @@ export class AdminOrdersController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(id);
+  async findOne(@Actor() actor: AccessActor, @Param('id') id: string) {
+    return this.ordersService.findOne({ actor, id });
   }
 
   @Patch(':id/status')
-  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.ordersService.updateStatus(id, status);
+  async updateStatus(@Actor() actor: AccessActor, @Param('id') id: string, @Body('status') status: string) {
+    return this.ordersService.updateStatus({ actor, id, status });
   }
 }

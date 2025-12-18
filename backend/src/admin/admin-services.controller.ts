@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { AccessGuard } from '../common/access/access.guard';
 import { ServicesService } from '../services/services.service';
 import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -39,8 +38,7 @@ const CreateServiceSchema = z.object({
 const UpdateServiceSchema = CreateServiceSchema.partial();
 
 @Controller('admin/services')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER')
+@UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminServicesController {
   constructor(private readonly services: ServicesService) {}
 

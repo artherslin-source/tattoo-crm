@@ -14,6 +14,7 @@ import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
 import AppointmentForm from "@/components/appointments/AppointmentForm";
+import { hasAdminAccess } from "@/lib/access";
 
 interface Appointment {
   id: string;
@@ -159,7 +160,7 @@ export default function AdminAppointmentsPage() {
     const userRole = getUserRole();
     const token = getAccessToken();
     
-    if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
+    if (!token || !hasAdminAccess(userRole)) {
       router.replace('/profile');
       return;
     }

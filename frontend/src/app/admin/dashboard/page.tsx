@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth } from "@/lib/api";
+import { hasAdminAccess, normalizeAccessRole } from "@/lib/access";
 import BranchSelector from "@/components/BranchSelector";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Settings, MessageSquare } from "lucide-react";
@@ -70,20 +71,18 @@ export default function AdminDashboardPage() {
     const userRole = getUserRole();
     const token = getAccessToken();
 
-    if (!token || (userRole !== 'BOSS' && userRole !== 'BRANCH_MANAGER')) {
+    if (!token || !hasAdminAccess(userRole)) {
       router.replace('/profile');
       return;
     }
 
     // 設置預設分店
     if (!selectedBranchId) {
-      if (userRole === 'BOSS') {
+      if (normalizeAccessRole(userRole) === 'BOSS') {
         setSelectedBranchId('all');
-      } else if (userRole === 'BRANCH_MANAGER') {
-        const userBranchId = getUserBranchId();
-        if (userBranchId) {
-          setSelectedBranchId(userBranchId);
-        }
+      } else {
+        const bid = getUserBranchId();
+        if (bid) setSelectedBranchId(bid);
       }
     }
 
