@@ -200,7 +200,10 @@ export class BillingService {
         items: { orderBy: { sortOrder: 'asc' } },
         payments: {
           orderBy: { paidAt: 'asc' },
-          include: { allocations: true },
+          include: {
+            allocations: true,
+            recordedBy: { select: { id: true, name: true } },
+          },
         },
       },
     });

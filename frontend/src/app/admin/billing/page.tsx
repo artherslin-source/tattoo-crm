@@ -54,6 +54,7 @@ interface BillDetail extends BillRow {
     method: string;
     paidAt: string;
     notes: string | null;
+    recordedBy?: { id: string; name: string | null } | null;
     allocations: Array<{ target: "ARTIST" | "SHOP"; amount: number }>;
   }>;
 }
@@ -447,6 +448,7 @@ export default function AdminBillingPage() {
                         <th className="py-2 px-3">時間</th>
                         <th className="py-2 px-3">方式</th>
                         <th className="py-2 px-3">金額</th>
+                        <th className="py-2 px-3">收款人</th>
                         <th className="py-2 px-3">拆帳（刺青師/店家）</th>
                       </tr>
                     </thead>
@@ -460,6 +462,9 @@ export default function AdminBillingPage() {
                             <td className="py-2 px-3">{p.method}</td>
                             <td className="py-2 px-3">${formatMoney(p.amount)}</td>
                             <td className="py-2 px-3">
+                              {p.recordedBy?.name || "（歷史匯入/未知）"}
+                            </td>
+                            <td className="py-2 px-3">
                               ${formatMoney(a)} / ${formatMoney(s)}
                             </td>
                           </tr>
@@ -467,7 +472,7 @@ export default function AdminBillingPage() {
                       })}
                       {selected.payments.length === 0 && (
                         <tr>
-                          <td className="py-4 px-3 text-muted-foreground" colSpan={4}>
+                          <td className="py-4 px-3 text-muted-foreground" colSpan={5}>
                             尚無付款
                           </td>
                         </tr>
