@@ -38,6 +38,30 @@ export class AdminAnalyticsUnifiedService {
 
   // 單一口徑：用 paidAt 聚合營收（使用原生 SQL 避免 Prisma 類型問題）
   private async revenueByPaidAt(range: TimeRange, branchFilter: any = {}) {
+    // 如果已導入 Billing v3（Payment/Allocation），優先使用 Payment 作為單一口徑
+    const billingCount = await this.prisma.payment.count({
+      where: {
+        paidAt: { gte: range.start, lte: range.end },
+        bill: branchFilter.branchId ? { branchId: branchFilter.branchId } : undefined,
+      } as any,
+    });
+
+    if (billingCount > 0) {
+      const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
+      const params = [range.start, range.end];
+      if (branchFilter.branchId) params.push(branchFilter.branchId);
+
+      const result = await this.prisma.$queryRawUnsafe<{ total: bigint | number }[]>(`
+        SELECT COALESCE(SUM(p."amount"), 0) AS total
+        FROM "Payment" p
+        JOIN "AppointmentBill" b ON p."billId" = b.id
+        WHERE p."paidAt" BETWEEN $1 AND $2
+          ${branchCondition}
+      `, ...params);
+
+      return this.safeBigIntToNumber(result[0]?.total);
+    }
+
     const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
     const params = [range.start, range.end];
     if (branchFilter.branchId) {
@@ -60,6 +84,23 @@ export class AdminAnalyticsUnifiedService {
     `, ...params);
 
     return this.safeBigIntToNumber(result[0]?.total);
+  }
+
+  // Billing v3：付款方式統計（Payment.method）
+  private async billingPaymentMethodStats(range: TimeRange, branchFilter: any = {}) {
+    const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) params.push(branchFilter.branchId);
+
+    return this.prisma.$queryRawUnsafe<{ method: string; amount: bigint | number; count: bigint | number }[]>(`
+      SELECT COALESCE(p."method", 'UNKNOWN') AS method, SUM(p."amount") AS amount, COUNT(*) AS count
+      FROM "Payment" p
+      JOIN "AppointmentBill" b ON p."billId" = b.id
+      WHERE p."paidAt" BETWEEN $1 AND $2
+        ${branchCondition}
+      GROUP BY method
+      ORDER BY amount DESC
+    `, ...params);
   }
 
   // 付款方式本地化顯示名稱
@@ -412,22 +453,33 @@ export class AdminAnalyticsUnifiedService {
       `, ...allParams),
       
       // 付款方式統計（使用原生 SQL）
-      this.prisma.$queryRawUnsafe<{ method: string; amount: bigint | number; count: bigint | number }[]>(`
-        SELECT method, SUM(amount) AS amount, COUNT(*) AS count
-        FROM (
-          SELECT COALESCE(o."paymentMethod", 'UNKNOWN') AS method, o."finalAmount" AS amount FROM "Order" o
-            WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND o."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-          UNION ALL
-          SELECT COALESCE(i."paymentMethod", 'UNKNOWN') AS method, i."amount" FROM "Installment" i
-            JOIN "Order" o ON i."orderId" = o.id
-            WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-        ) t
-        GROUP BY method
-        ORDER BY amount DESC
-      `, ...allParams),
+      (async () => {
+        const billingCount = await this.prisma.payment.count({
+          where: {
+            paidAt: { gte: currentRange.start, lte: currentRange.end },
+            bill: branchFilter.branchId ? { branchId: branchFilter.branchId } : undefined,
+          } as any,
+        });
+        if (billingCount > 0) {
+          return this.billingPaymentMethodStats(currentRange, branchFilter);
+        }
+        return this.prisma.$queryRawUnsafe<{ method: string; amount: bigint | number; count: bigint | number }[]>(`
+          SELECT method, SUM(amount) AS amount, COUNT(*) AS count
+          FROM (
+            SELECT COALESCE(o."paymentMethod", 'UNKNOWN') AS method, o."finalAmount" AS amount FROM "Order" o
+              WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
+                AND o."paidAt" BETWEEN $1 AND $2
+                ${branchCondition}
+            UNION ALL
+            SELECT COALESCE(i."paymentMethod", 'UNKNOWN') AS method, i."amount" FROM "Installment" i
+              JOIN "Order" o ON i."orderId" = o.id
+              WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
+                ${branchCondition}
+          ) t
+          GROUP BY method
+          ORDER BY amount DESC
+        `, ...allParams);
+      })(),
       
       // 會員總數
       this.prisma.member.count(),

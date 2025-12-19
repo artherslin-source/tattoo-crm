@@ -19,6 +19,7 @@ import { ArtistModule } from './artist/artist.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { HealthModule } from './health/health.module';
 import { CartModule } from './cart/cart.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { CartModule } from './cart/cart.module';
     ContactsModule,
     HealthModule,
     CartModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

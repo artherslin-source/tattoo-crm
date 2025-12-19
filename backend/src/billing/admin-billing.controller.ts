@@ -1,0 +1,117 @@
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards, BadRequestException } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { z } from 'zod';
+import { AccessGuard } from '../common/access/access.guard';
+import { Actor } from '../common/access/actor.decorator';
+import type { AccessActor } from '../common/access/access.types';
+import { BillingService } from './billing.service';
+
+const EnsureBillSchema = z.object({
+  appointmentId: z.string().min(1),
+});
+
+const RecordPaymentSchema = z.object({
+  amount: z.coerce.number().int().refine((v) => v !== 0, 'amount must be non-zero'),
+  method: z.string().min(1),
+  paidAt: z.string().datetime().optional(),
+  notes: z.string().optional(),
+});
+
+const UpdateBillSchema = z.object({
+  discountTotal: z.coerce.number().int().min(0).optional(),
+  voidReason: z.string().optional(),
+  status: z.enum(['OPEN', 'SETTLED', 'VOID']).optional(),
+});
+
+const UpsertSplitRuleSchema = z.object({
+  artistId: z.string().min(1),
+  branchId: z.string().optional().nullable(),
+  artistRateBps: z.coerce.number().int().min(0).max(10000),
+  effectiveFrom: z.string().datetime().optional(),
+});
+
+@Controller('admin/billing')
+@UseGuards(AuthGuard('jwt'), AccessGuard)
+export class AdminBillingController {
+  constructor(private readonly billing: BillingService) {}
+
+  // List bills (with summary fields) for admin page
+  @Get('appointments')
+  async list(@Actor() actor: AccessActor, @Query() query: any) {
+    return this.billing.listBills(actor, {
+      branchId: query.branchId,
+      artistId: query.artistId,
+      customerSearch: query.customerSearch,
+      status: query.status,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  // Create / ensure a bill exists for an appointment, based on cartSnapshot (multi-items)
+  @Post('appointments/ensure')
+  async ensure(@Actor() actor: AccessActor, @Body() body: unknown) {
+    const input = EnsureBillSchema.parse(body);
+    return this.billing.ensureBillForAppointment(actor, input.appointmentId);
+  }
+
+  // Get bill detail by appointment id (preferred UI key)
+  @Get('appointments/:appointmentId')
+  async getByAppointment(@Actor() actor: AccessActor, @Param('appointmentId') appointmentId: string) {
+    return this.billing.getBillByAppointment(actor, appointmentId);
+  }
+
+  @Patch('appointments/:appointmentId')
+  async update(@Actor() actor: AccessActor, @Param('appointmentId') appointmentId: string, @Body() body: unknown) {
+    const input = UpdateBillSchema.parse(body);
+    return this.billing.updateBill(actor, appointmentId, {
+      discountTotal: input.discountTotal,
+      status: input.status,
+      voidReason: input.voidReason,
+    });
+  }
+
+  // Record payment / refund
+  @Post('appointments/:appointmentId/payments')
+  async recordPayment(@Actor() actor: AccessActor, @Param('appointmentId') appointmentId: string, @Body() body: unknown) {
+    const input = RecordPaymentSchema.parse(body);
+    const paidAt = input.paidAt ? new Date(input.paidAt) : undefined;
+    if (paidAt && Number.isNaN(paidAt.getTime())) throw new BadRequestException('paidAt is invalid');
+    return this.billing.recordPayment(actor, appointmentId, {
+      amount: input.amount,
+      method: input.method,
+      paidAt,
+      notes: input.notes,
+    });
+  }
+
+  // Split rules
+  @Get('split-rules')
+  async listSplitRules(@Actor() actor: AccessActor, @Query() query: any) {
+    return this.billing.listSplitRules(actor, { artistId: query.artistId, branchId: query.branchId });
+  }
+
+  @Post('split-rules')
+  async upsertSplitRule(@Actor() actor: AccessActor, @Body() body: unknown) {
+    const input = UpsertSplitRuleSchema.parse(body);
+    return this.billing.upsertSplitRule(actor, {
+      artistId: input.artistId,
+      branchId: input.branchId ?? null,
+      artistRateBps: input.artistRateBps,
+      effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : undefined,
+    });
+  }
+
+  // Reports (paidAt based)
+  @Get('reports')
+  async reports(@Actor() actor: AccessActor, @Query() query: any) {
+    return this.billing.getReports(actor, {
+      branchId: query.branchId,
+      artistId: query.artistId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+}
+
+

@@ -29,6 +29,11 @@ model User {
   artistAppointments Appointment[] @relation("ArtistAppointments")
   appointments       Appointment[]
   orders             Order[]
+  // Billing v3 relations
+  appointmentBillsAsCustomer AppointmentBill[] @relation("AppointmentBillCustomer")
+  appointmentBillsAsArtist   AppointmentBill[] @relation("AppointmentBillArtist")
+  paymentsRecorded           Payment[]         @relation("PaymentRecordedBy")
+  artistSplitRules           ArtistSplitRule[] @relation("ArtistSplitRuleArtist")
   member             Member?
   artist             Artist?
   branch             Branch?       @relation(fields: [branchId], references: [id])
@@ -73,6 +78,9 @@ model Branch {
   updatedAt     DateTime       @updatedAt
   appointments  Appointment[]
   orders        Order[]
+  // Billing v3 relations
+  appointmentBills AppointmentBill[]
+  artistSplitRules ArtistSplitRule[]
   artists       Artist[]
   users         User[]
   completedServices CompletedService[]
@@ -129,6 +137,8 @@ model Service {
   completedServices CompletedService[]
   variants     ServiceVariant[]
   cartItems    CartItem[]
+  // Billing v3 relations
+  appointmentBillItems AppointmentBillItem[]
 }
 
 model Appointment {
@@ -166,6 +176,8 @@ model Appointment {
   user         User              @relation(fields: [userId], references: [id])
   contact      Contact?          @relation(fields: [contactId], references: [id])
   order        Order?
+  // V3: 帳務（以預約為帳）
+  bill         AppointmentBill?
   completedService CompletedService?
   cart         Cart?             @relation(fields: [cartId], references: [id])
   
@@ -219,6 +231,118 @@ model Installment {
   order         Order             @relation(fields: [orderId], references: [id])
 
   @@unique([orderId, installmentNo])
+}
+
+// -----------------------------
+// Billing v3 (以預約為帳)
+// -----------------------------
+
+enum BillStatus {
+  OPEN
+  SETTLED
+  VOID
+}
+
+enum AllocationTarget {
+  ARTIST
+  SHOP
+}
+
+model AppointmentBill {
+  id            String     @id @default(cuid())
+  appointmentId String     @unique
+  branchId      String
+  customerId    String
+  artistId      String?
+  currency      String     @default("TWD")
+  listTotal     Int
+  discountTotal Int        @default(0)
+  billTotal     Int
+  status        BillStatus @default(OPEN)
+  voidReason    String?
+  voidedAt      DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  branch      Branch      @relation(fields: [branchId], references: [id])
+  customer    User        @relation("AppointmentBillCustomer", fields: [customerId], references: [id])
+  artist      User?       @relation("AppointmentBillArtist", fields: [artistId], references: [id])
+
+  items    AppointmentBillItem[]
+  payments Payment[]
+
+  @@index([branchId, createdAt, status])
+  @@index([customerId, status])
+  @@index([artistId, status])
+}
+
+model AppointmentBillItem {
+  id                 String  @id @default(cuid())
+  billId             String
+  serviceId          String?
+  nameSnapshot       String
+  basePriceSnapshot  Int
+  finalPriceSnapshot Int
+  variantsSnapshot   Json?
+  notes              String?
+  sortOrder          Int     @default(0)
+  createdAt          DateTime @default(now())
+
+  bill    AppointmentBill @relation(fields: [billId], references: [id])
+  service Service?        @relation(fields: [serviceId], references: [id])
+
+  @@index([billId, sortOrder])
+}
+
+model Payment {
+  id               String   @id @default(cuid())
+  billId           String
+  amount           Int      // 正數=收款；負數=退款/沖帳
+  method           String   // CASH/CARD/TRANSFER/STORED_VALUE/OTHER...
+  paidAt           DateTime @default(now())
+  recordedById     String?
+  notes            String?
+  refundOfPaymentId String?
+  createdAt        DateTime @default(now())
+
+  bill        AppointmentBill @relation(fields: [billId], references: [id])
+  recordedBy  User?           @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  refundOf    Payment?        @relation("PaymentRefundOf", fields: [refundOfPaymentId], references: [id])
+  refunds     Payment[]       @relation("PaymentRefundOf")
+  allocations PaymentAllocation[]
+
+  @@index([billId, paidAt])
+  @@index([recordedById, paidAt])
+}
+
+model PaymentAllocation {
+  id        String           @id @default(cuid())
+  paymentId String
+  target    AllocationTarget
+  amount    Int
+  createdAt DateTime         @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@unique([paymentId, target])
+  @@index([target, createdAt])
+}
+
+model ArtistSplitRule {
+  id           String   @id @default(cuid())
+  artistId     String
+  branchId     String?
+  artistRateBps Int     @default(7000) // 70.00%
+  shopRateBps   Int     @default(3000) // 30.00%
+  effectiveFrom DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  artist User   @relation("ArtistSplitRuleArtist", fields: [artistId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@index([artistId, branchId, effectiveFrom])
 }
 
 model ServiceHistory {
