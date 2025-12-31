@@ -50,7 +50,7 @@ const STATUS_OPTIONS = [
   { value: 'PENDING', label: '待處理', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' },
   { value: 'CONTACTED', label: '已聯繫', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
   { value: 'CONVERTED', label: '已轉換', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
-  { value: 'CLOSED', label: '已關閉', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' },
+  { value: 'CLOSED', label: '已取消', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' },
 ];
 
 export default function AdminContactsPage() {
@@ -316,7 +316,7 @@ export default function AdminContactsPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">已關閉</CardTitle>
+              <CardTitle className="text-sm font-medium">已取消</CardTitle>
               <div className="h-4 w-4 rounded-full bg-gray-500"></div>
             </CardHeader>
             <CardContent>
@@ -340,7 +340,7 @@ export default function AdminContactsPage() {
               >
                 <option value="ACTIVE">進行中（待處理/已聯繫）</option>
                 <option value="CONVERTED">已轉換</option>
-                <option value="CLOSED">已關閉</option>
+                <option value="CLOSED">已取消</option>
                 <option value="ALL">全部</option>
               </select>
             </div>
