@@ -457,11 +457,8 @@ export default function AppointmentForm({
         if (onSubmitSuccess) {
           onSubmitSuccess();
         } else {
-          // 若由聯絡轉換（有 contactId），跳回預約管理並精準開啟該筆預約
-          if (payload.contactId && created?.id) {
-            router.push(`/admin/appointments?openId=${encodeURIComponent(created.id)}`);
-            return;
-          }
+          // 若由聯絡轉換（有 contactId），建立成功後留在頁面（不自動跳轉）
+          if (payload.contactId && created?.id) return;
           router.push("/admin/appointments");
         }
       }, 2000);
@@ -822,7 +819,9 @@ export default function AppointmentForm({
                   <div className="mt-2">
                     <button
                       type="button"
-                      onClick={() => router.push(`/admin/appointments?openId=${encodeURIComponent(conflictAppointmentId)}`)}
+                      onClick={() =>
+                        router.push(`/admin/appointments?highlightId=${encodeURIComponent(conflictAppointmentId)}`)
+                      }
                       className="text-sm text-blue-700 hover:text-blue-900 underline"
                     >
                       前往該預約

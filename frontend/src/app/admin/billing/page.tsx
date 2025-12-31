@@ -230,39 +230,41 @@ export default function AdminBillingPage() {
     }
   }, []);
 
-  const clearOpenIdFromUrl = useCallback(() => {
+  const clearFocusIdFromUrl = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
-    if (!params.has("openId")) return;
+    if (!params.has("openId") && !params.has("highlightId")) return;
     params.delete("openId");
+    params.delete("highlightId");
     const next = `/admin/billing${params.toString() ? `?${params.toString()}` : ""}`;
     router.replace(next);
   }, [router, searchParams]);
 
-  // Deep-link support: /admin/billing?openId=<billId>
+  // Deep-link support (定位高亮，不自動展開): /admin/billing?highlightId=<id>
+  // Back-compat: 若有人仍帶 openId，也只做定位高亮。
   useEffect(() => {
-    const openId = searchParams.get("openId");
-    if (!openId) return;
-    if (openId === lastDeepLinkBillId && (detailOpen || highlightBillId === openId)) return;
+    const focusId = searchParams.get("highlightId") || searchParams.get("openId");
+    if (!focusId) return;
+    if (focusId === lastDeepLinkBillId && highlightBillId === focusId) return;
 
-    setLastDeepLinkBillId(openId);
-    setHighlightBillId(openId);
+    setLastDeepLinkBillId(focusId);
+    setHighlightBillId(focusId);
 
     (async () => {
       try {
         await fetchBills();
-        await openDetail(openId);
       } catch (e) {
         const apiErr = e as ApiError;
-        setError(apiErr.message || "開啟帳務失敗");
-        clearOpenIdFromUrl();
+        setError(apiErr.message || "載入帳務清單失敗");
+        clearFocusIdFromUrl();
       }
     })();
 
     const t = window.setTimeout(() => {
-      setHighlightBillId((cur) => (cur === openId ? null : cur));
+      setHighlightBillId((cur) => (cur === focusId ? null : cur));
+      clearFocusIdFromUrl();
     }, 3000);
     return () => window.clearTimeout(t);
-  }, [searchParams, lastDeepLinkBillId, detailOpen, highlightBillId, fetchBills, openDetail, clearOpenIdFromUrl]);
+  }, [searchParams, lastDeepLinkBillId, highlightBillId, fetchBills, clearFocusIdFromUrl]);
 
   // After rows rendered, auto-scroll highlighted row into view.
   useEffect(() => {
@@ -899,7 +901,7 @@ export default function AdminBillingPage() {
           setDetailOpen(open);
           if (!open) {
             setSelected(null);
-            clearOpenIdFromUrl();
+            clearFocusIdFromUrl();
           }
         }}
       >

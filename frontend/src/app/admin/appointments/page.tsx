@@ -203,42 +203,33 @@ export default function AdminAppointmentsPage() {
     fetchOptionsData(); // ✅ 問題1：調用 fetchOptionsData 以載入分店選項
   }, [router, fetchAppointments, fetchOptionsData]);
 
-  // Deep-link support: /admin/appointments?openId=<appointmentId>
-  const clearOpenIdFromUrl = useCallback(() => {
+  // Deep-link support (定位高亮，不自動展開): /admin/appointments?highlightId=<id>
+  // Back-compat: 若有人仍帶 openId，也只做定位高亮。
+  const clearFocusIdFromUrl = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
-    if (!params.has("openId")) return;
+    if (!params.has("openId") && !params.has("highlightId")) return;
     params.delete("openId");
+    params.delete("highlightId");
     const next = `/admin/appointments${params.toString() ? `?${params.toString()}` : ""}`;
     router.replace(next);
   }, [router, searchParams]);
 
   useEffect(() => {
-    const openId = searchParams.get("openId");
-    if (!openId) return;
-    if (lastDeepLinkOpenId === openId && isDetailModalOpen) return;
+    const focusId = searchParams.get("highlightId") || searchParams.get("openId");
+    if (!focusId) return;
+    if (lastDeepLinkOpenId === focusId && highlightAppointmentId === focusId) return;
 
-    (async () => {
-      try {
-        const appt = await getJsonWithAuth(`/admin/appointments/${openId}`) as Appointment;
-        setSelectedAppointment(appt);
-        setIsDetailModalOpen(true);
-        setLastDeepLinkOpenId(openId);
-        setHighlightAppointmentId(openId);
-      } catch (err) {
-        const apiErr = err as ApiError;
-        setError(apiErr.message || "開啟預約詳情失敗");
-        // avoid a broken URL loop
-        clearOpenIdFromUrl();
-      }
-    })();
-  }, [searchParams, lastDeepLinkOpenId, isDetailModalOpen, clearOpenIdFromUrl]);
+    setLastDeepLinkOpenId(focusId);
+    setHighlightAppointmentId(focusId);
 
-  // Auto-clear highlight after ~3s
-  useEffect(() => {
-    if (!highlightAppointmentId) return;
-    const t = window.setTimeout(() => setHighlightAppointmentId(null), 3000);
+    // 不自動展開詳情：只做定位高亮，3 秒後清除並清理 URL
+    const t = window.setTimeout(() => {
+      setHighlightAppointmentId((cur) => (cur === focusId ? null : cur));
+      clearFocusIdFromUrl();
+    }, 3000);
+
     return () => window.clearTimeout(t);
-  }, [highlightAppointmentId]);
+  }, [searchParams, lastDeepLinkOpenId, highlightAppointmentId, clearFocusIdFromUrl]);
 
   // After list rendered, auto-scroll highlighted row into view.
   useEffect(() => {
@@ -322,7 +313,7 @@ export default function AdminAppointmentsPage() {
   const handleCloseDetailModal = () => {
     setSelectedAppointment(null);
     setIsDetailModalOpen(false);
-    clearOpenIdFromUrl();
+    clearFocusIdFromUrl();
   };
 
   const openRescheduleModal = (appointment: Appointment) => {
@@ -818,7 +809,7 @@ export default function AdminAppointmentsPage() {
           setIsDetailModalOpen(open);
           if (!open) {
             setSelectedAppointment(null);
-            clearOpenIdFromUrl();
+            clearFocusIdFromUrl();
           }
         }}
       >
@@ -923,7 +914,7 @@ export default function AdminAppointmentsPage() {
 
                     try {
                       if (existingBillId) {
-                        router.push(`/admin/billing?openId=${encodeURIComponent(existingBillId)}`);
+                        router.push(`/admin/billing?highlightId=${encodeURIComponent(existingBillId)}`);
                         return;
                       }
 
@@ -931,7 +922,7 @@ export default function AdminAppointmentsPage() {
                         `/admin/billing/appointments/ensure`,
                         { appointmentId: apptId },
                       );
-                      router.push(`/admin/billing?openId=${encodeURIComponent(ensured.id)}`);
+                      router.push(`/admin/billing?highlightId=${encodeURIComponent(ensured.id)}`);
                     } catch (err) {
                       const apiErr = err as ApiError;
                       setError(apiErr.message || "建立帳務失敗");

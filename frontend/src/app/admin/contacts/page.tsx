@@ -191,7 +191,8 @@ export default function AdminContactsPage() {
       setError("此聯絡已轉換，但找不到對應的預約紀錄（可能是舊資料）。");
       return;
     }
-    router.push(`/admin/appointments?openId=${encodeURIComponent(apptId)}`);
+    // 跳到預約管理，但不自動展開詳情；僅定位高亮
+    router.push(`/admin/appointments?highlightId=${encodeURIComponent(apptId)}`);
   };
 
   const getStatusInfo = (status: string) => {
