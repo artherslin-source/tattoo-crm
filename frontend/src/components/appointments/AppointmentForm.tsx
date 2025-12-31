@@ -592,7 +592,7 @@ export default function AppointmentForm({
                 <option value="">請選擇服務</option>
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
-                    {service.name} - NT$ {service.price.toLocaleString()} ({service.durationMin}分鐘)
+                    {service.name} - NT$ {service.price.toLocaleString()}
                   </option>
                 ))}
               </select>
@@ -603,60 +603,19 @@ export default function AppointmentForm({
               <label className="block text-sm font-medium text-text-secondary-light mb-2">
                 保留時間（分鐘）
               </label>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  onClick={() => setHoldMin((v) => Math.max(1, v - 60))}
+              <div className="flex items-center gap-3">
+                <select
+                  value={String(holdMin)}
+                  onChange={(e) => setHoldMin(Number(e.target.value))}
+                  className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  -60
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  onClick={() => setHoldMin((v) => Math.max(1, v - 30))}
-                >
-                  -30
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  onClick={() => setHoldMin((v) => Math.max(1, v - 15))}
-                >
-                  -15
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  onClick={() => setHoldMin((v) => v + 15)}
-                >
-                  +15
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  onClick={() => setHoldMin((v) => v + 30)}
-                >
-                  +30
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  onClick={() => setHoldMin((v) => v + 60)}
-                >
-                  +60
-                </button>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    max={24 * 60}
-                    value={holdMin}
-                    onChange={(e) => setHoldMin(Number(e.target.value))}
-                    className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-text-muted-light">預設 150（120 + buffer 30）</span>
-                </div>
+                  {Array.from({ length: 24 }, (_, i) => (i + 1) * 30).map((min) => (
+                    <option key={min} value={String(min)}>
+                      {min}{min === 150 ? "（預設）" : ""}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-sm text-text-muted-light">預設 150（120 + buffer 30）</span>
               </div>
               <p className="text-xs text-text-muted-light mt-2">
                 系統會用「保留時間」計算結束時間並避免撞單；若跨日會自動截斷到 23:59。

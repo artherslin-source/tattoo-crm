@@ -325,8 +325,9 @@ export default function AdminAppointmentsPage() {
         openCancelModal(appointment);
         return;
       }
-      await patchJsonWithAuth(`/admin/appointments/${appointment.id}/status`, {
-        status: newStatus
+      // Use POST to avoid PATCH routing inconsistencies on some deployments; backend supports both.
+      await postJsonWithAuth(`/admin/appointments/${appointment.id}/status`, {
+        status: newStatus,
       });
       
       setSuccessMessage(`預約狀態已更新為：${getStatusText(newStatus)}`);

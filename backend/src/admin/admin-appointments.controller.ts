@@ -37,6 +37,10 @@ const NoShowSchema = z.object({
   reason: z.string().optional(),
 });
 
+const UpdateStatusSchema = z.object({
+  status: z.string().min(1),
+});
+
 const ConfirmScheduleSchema = z.object({
   startAt: z.string().datetime(),
   holdMin: z.coerce.number().int().min(1).max(24 * 60),
@@ -173,9 +177,17 @@ export class AdminAppointmentsController {
     return this.adminAppointmentsService.findOne({ actor, id });
   }
 
+  // Update appointment status (support both PATCH and POST to avoid proxy/method edge-cases)
   @Patch(':id/status')
-  async updateAppointmentStatus(@Actor() actor: AccessActor, @Param('id') id: string, @Body('status') status: string) {
-    return this.adminAppointmentsService.updateStatus({ actor, id, status });
+  async updateAppointmentStatus(@Actor() actor: AccessActor, @Param('id') id: string, @Body() body: unknown) {
+    const input = UpdateStatusSchema.parse(body);
+    return this.adminAppointmentsService.updateStatus({ actor, id, status: input.status });
+  }
+
+  @Post(':id/status')
+  async updateAppointmentStatusPost(@Actor() actor: AccessActor, @Param('id') id: string, @Body() body: unknown) {
+    const input = UpdateStatusSchema.parse(body);
+    return this.adminAppointmentsService.updateStatus({ actor, id, status: input.status });
   }
 
   @Post(':id/reschedule')
