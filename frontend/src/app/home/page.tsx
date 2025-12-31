@@ -89,11 +89,17 @@ export default function HomePage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [variantSelectorOpen, setVariantSelectorOpen] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    phone: string;
+    branchId: string;
+    ownerArtistId: string;
+    notes: string;
+  }>({
     name: "",
-    email: "",
     phone: "",
     branchId: "",
+    ownerArtistId: "",
     notes: "",
   });
 
@@ -324,11 +330,44 @@ export default function HomePage() {
     []
   );
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (
+    field: "name" | "phone" | "branchId" | "ownerArtistId" | "notes",
+    value: string,
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (message) {
       setMessage(null);
     }
+  };
+
+  const branchLocked = !!formData.ownerArtistId;
+  const bookingArtistOptions = useMemo(() => {
+    const list = uniqueArtists
+      .map((a) => ({
+        id: a.user?.id || a.id,
+        name: a.displayName || a.user?.name || "未命名",
+        branchId: a.branchId,
+        branchName: a.branch?.name || "未分店",
+      }))
+      .filter((a) => !!a.id && !!a.branchId);
+    return list;
+  }, [uniqueArtists]);
+
+  const handleArtistSelect = (value: string) => {
+    if (!value || value === "none") {
+      // 解除指定刺青師，分店可自行選擇
+      setFormData((prev) => ({ ...prev, ownerArtistId: "" }));
+      return;
+    }
+    const artist = bookingArtistOptions.find((a) => a.id === value);
+    if (!artist) return;
+    // 指定刺青師 → 自動帶入並鎖定分店
+    setFormData((prev) => ({
+      ...prev,
+      ownerArtistId: artist.id,
+      branchId: artist.branchId,
+    }));
+    if (message) setMessage(null);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -337,16 +376,16 @@ export default function HomePage() {
     setMessage(null);
 
     try {
-      if (!formData.name || !formData.email || !formData.branchId) {
+      if (!formData.name || !formData.phone || !formData.branchId) {
         setMessage({ type: "error", text: "請填寫所有必填欄位" });
         return;
       }
 
       const payload = {
         name: formData.name,
-        email: formData.email,
-        phone: formData.phone || undefined,
+        phone: formData.phone,
         branchId: formData.branchId,
+        ownerArtistId: formData.ownerArtistId || undefined,
         notes: formData.notes || undefined,
       };
 
@@ -362,7 +401,7 @@ export default function HomePage() {
       }
 
       setMessage({ type: "success", text: "✅ 聯絡資訊已提交！我們將盡快與您聯繫" });
-      setFormData({ name: "", email: "", phone: "", branchId: "", notes: "" });
+      setFormData({ name: "", phone: "", branchId: "", ownerArtistId: "", notes: "" });
     } catch (error) {
       console.error("提交錯誤:", error);
       setMessage({ type: "error", text: "提交失敗，請檢查網路連線" });
@@ -573,37 +612,48 @@ export default function HomePage() {
                             value={formData.name}
                             onChange={(event) => handleInputChange("name", event.target.value)}
                             placeholder="請輸入您的姓名"
-                            className="bg-white/10 text-white placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
+                            className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
                         </div>
                         <div>
-                          <Label htmlFor="email">Email *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={(event) => handleInputChange("email", event.target.value)}
-                            placeholder="請輸入您的 Email"
-                            className="bg-white/10 text-white placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
-                            required
-                          />
+                          <Label htmlFor="artist">指定刺青師（可選）</Label>
+                          <Select value={formData.ownerArtistId || "none"} onValueChange={handleArtistSelect}>
+                            <SelectTrigger className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light">
+                              <SelectValue placeholder="不指定，讓我們為您安排" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border border-gray-200">
+                              <SelectItem value="none" className="text-text-primary-light hover:bg-gray-100">
+                                不指定
+                              </SelectItem>
+                              {bookingArtistOptions.map((a) => (
+                                <SelectItem key={a.id} value={a.id} className="text-text-primary-light hover:bg-gray-100">
+                                  {a.name}（{a.branchName}）
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
-                          <Label htmlFor="phone">聯絡電話</Label>
+                          <Label htmlFor="phone">聯絡電話 *</Label>
                           <Input
                             id="phone"
                             type="tel"
                             value={formData.phone}
                             onChange={(event) => handleInputChange("phone", event.target.value)}
                             placeholder="請輸入您的聯絡電話"
-                            className="bg-white/10 text-white placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
+                            className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
+                            required
                           />
                         </div>
                         <div>
                           <Label htmlFor="branch">指定分店 *</Label>
-                          <Select value={formData.branchId} onValueChange={(value) => handleInputChange("branchId", value)}>
-                            <SelectTrigger className="bg-white/10 text-white placeholder:text-text-muted-light">
+                          <Select
+                            value={formData.branchId}
+                            onValueChange={(value) => handleInputChange("branchId", value)}
+                            disabled={branchLocked}
+                          >
+                            <SelectTrigger className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light disabled:opacity-70">
                               <SelectValue placeholder="請選擇分店" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border border-gray-200">
@@ -620,6 +670,11 @@ export default function HomePage() {
                               )}
                             </SelectContent>
                           </Select>
+                          {branchLocked && (
+                            <p className="mt-1 text-xs text-neutral-300">
+                              已指定刺青師，分店將自動鎖定為該刺青師所屬分店。
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -639,7 +694,7 @@ export default function HomePage() {
                         <div
                           className={`flex items-start gap-2 rounded-lg border p-4 text-sm ${
                             message.type === "success"
-                              ? "border-green-400/40 bg-green-400/10 text-green-200"
+                              ? "border-emerald-600/40 bg-emerald-50 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-200"
                               : message.type === "warning"
                               ? "border-yellow-400/40 bg-yellow-400/10 text-yellow-200"
                               : "border-red-400/40 bg-red-400/10 text-red-200"

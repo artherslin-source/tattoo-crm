@@ -133,12 +133,12 @@ export class AdminAppointmentsController {
           });
         }
 
-        // Create Contact only if email is provided (Contact.email is required in schema)
-        if (!contactId && input.name && email) {
+      // Create Contact if name is provided (email is optional)
+      if (!contactId && input.name) {
           const newContact = await prisma.contact.create({
             data: {
               name: input.name,
-              email,
+              email: email || null,
               phone,
               notes: input.notes || '',
               branchId: input.branchId,

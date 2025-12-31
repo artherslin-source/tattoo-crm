@@ -429,7 +429,7 @@ model CustomerReminder {
 model Contact {
   id        String   @id @default(cuid())
   name      String
-  email     String
+  email     String?
   phone     String?
   branchId  String
   ownerArtistId String?

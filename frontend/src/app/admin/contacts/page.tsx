@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 interface Contact {
   id: string;
   name: string;
-  email: string;
+  email?: string | null;
   phone?: string;
   notes?: string;
   status: string;
@@ -383,7 +383,7 @@ export default function AdminContactsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{contact.name}</div>
-                        <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.email}</div>
+                        <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.email || "-"}</div>
                         {contact.phone && (
                           <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.phone}</div>
                         )}

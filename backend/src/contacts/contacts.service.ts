@@ -9,16 +9,30 @@ export class ContactsService {
   constructor(private prisma: PrismaService) {}
 
   async createPublic(createContactDto: CreateContactDto) {
-    // Public endpoint: allow creating a lead/contact without owner assignment.
-    // Do not allow ownerArtistId from public channel.
+    // Public endpoint: allow creating a lead/contact with optional owner assignment (user-selected artist).
     const safeDto: CreateContactDto = {
       name: createContactDto.name,
       email: createContactDto.email,
       phone: createContactDto.phone,
       branchId: createContactDto.branchId,
       notes: createContactDto.notes,
-      ownerArtistId: undefined,
+      ownerArtistId: createContactDto.ownerArtistId,
     };
+
+    // If ownerArtistId is provided, validate role + lock branch to that artist's branch (if available).
+    if (safeDto.ownerArtistId) {
+      const owner = await this.prisma.user.findUnique({
+        where: { id: safeDto.ownerArtistId },
+        select: { id: true, role: true, branchId: true },
+      });
+      if (!owner) throw new Error('指定的刺青師不存在');
+      if (String(owner.role || '').toUpperCase() !== 'ARTIST') {
+        throw new Error('ownerArtistId 必須是 ARTIST');
+      }
+      if (owner.branchId) {
+        safeDto.branchId = owner.branchId;
+      }
+    }
 
     // Validate branch exists
     const branch = await this.prisma.branch.findUnique({
