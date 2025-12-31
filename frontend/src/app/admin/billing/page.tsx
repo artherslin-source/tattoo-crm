@@ -88,6 +88,7 @@ type AdminArtistApiRow = {
   id?: string;
   name?: string | null;
   user?: { id?: string; name?: string | null } | null;
+  branch?: { id?: string; name?: string | null } | null;
 };
 
 const paymentMethods = [
@@ -138,7 +139,7 @@ export default function AdminBillingPage() {
   const [sortOrder, setSortOrder] = useState<BillSortOrder>("desc");
 
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
-  const [artists, setArtists] = useState<Array<{ id: string; name: string | null }>>([]);
+  const [artists, setArtists] = useState<Array<{ id: string; name: string | null; branchName: string | null }>>([]);
 
   const [selected, setSelected] = useState<BillDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -287,10 +288,13 @@ export default function AdminBillingPage() {
         ]);
         setBranches((branchesData || []).map((b) => ({ id: b.id, name: b.name })));
         setArtists(
-          (artistsData || []).map((a) => ({
-            id: a.id ?? a.user?.id ?? "",
-            name: a.name ?? a.user?.name ?? null,
-          })),
+          (artistsData || [])
+            .map((a) => ({
+              id: a.id ?? a.user?.id ?? "",
+              name: a.name ?? a.user?.name ?? null,
+              branchName: a.branch?.name ?? null,
+            }))
+            .filter((a) => !!a.id),
         );
       } catch (e) {
         console.warn("Failed to load branches/artists for billing filters", e);
@@ -522,7 +526,7 @@ export default function AdminBillingPage() {
                   <SelectItem value="all">全部刺青師</SelectItem>
                   {artists.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.name || a.id}
+                      {(a.name || a.id) + `（${a.branchName || "未分店"}）`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -570,37 +574,62 @@ export default function AdminBillingPage() {
               <Input inputMode="numeric" value={maxDueTotal} onChange={(e) => setMaxDueTotal(e.target.value)} placeholder="999999" />
             </div>
 
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">排序</div>
-              <Select
-                value={sortField}
-                onValueChange={(v) => setSortField(isBillSortField(v) ? v : "createdAt")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="createdAt" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="createdAt">帳單建立時間</SelectItem>
-                  <SelectItem value="billTotal">應收金額</SelectItem>
-                  <SelectItem value="paidTotal">已收金額</SelectItem>
-                  <SelectItem value="dueTotal">未收金額</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">排序方向</div>
-              <Select
-                value={sortOrder}
-                onValueChange={(v) => setSortOrder(isBillSortOrder(v) ? v : "desc")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="desc" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">新 → 舊 / 大 → 小</SelectItem>
-                  <SelectItem value="asc">舊 → 新 / 小 → 大</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Advanced (collapsible) */}
+            <div className="md:col-span-4">
+              <details className="rounded-md border border-gray-200 bg-white px-3 py-2">
+                <summary className="cursor-pointer select-none text-sm font-medium text-gray-700">
+                  進階設定（排序）
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {sortField === "createdAt" ? "帳單建立時間" : sortField === "billTotal" ? "應收金額" : sortField === "paidTotal" ? "已收金額" : "未收金額"}
+                    {sortOrder === "desc" ? "（新→舊/大→小）" : "（舊→新/小→大）"}
+                  </span>
+                </summary>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">排序</div>
+                    <Select
+                      value={sortField}
+                      onValueChange={(v) => setSortField(isBillSortField(v) ? v : "createdAt")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="createdAt" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="createdAt">帳單建立時間</SelectItem>
+                        <SelectItem value="billTotal">應收金額</SelectItem>
+                        <SelectItem value="paidTotal">已收金額</SelectItem>
+                        <SelectItem value="dueTotal">未收金額</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">排序方向</div>
+                    <Select
+                      value={sortOrder}
+                      onValueChange={(v) => setSortOrder(isBillSortOrder(v) ? v : "desc")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="desc" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desc">新 → 舊 / 大 → 小</SelectItem>
+                        <SelectItem value="asc">舊 → 新 / 小 → 大</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2 flex items-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSortField("createdAt");
+                        setSortOrder("desc");
+                      }}
+                    >
+                      重置排序
+                    </Button>
+                  </div>
+                </div>
+              </details>
             </div>
 
             <div className="md:col-span-4 flex gap-2">
