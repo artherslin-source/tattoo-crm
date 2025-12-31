@@ -619,8 +619,8 @@ export class AdminMembersService {
         throw new BadRequestException('消費金額必須大於 0');
       }
 
-      // 如果沒有 operatorId，使用預設的管理員 ID
-      const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
+      // If no operatorId, fallback to actor.id (safer than hardcoded)
+      const finalOperatorId = operatorId || actor.id;
 
       return await this.prisma.$transaction(async (tx) => {
         // 檢查會員餘額是否足夠
@@ -648,29 +648,85 @@ export class AdminMembersService {
           throw new BadRequestException(`餘額不足，無法完成消費。當前餘額: ${member.balance}, 消費金額: ${amount}`);
         }
 
-        // 扣減餘額
-        const updatedMember = await tx.member.update({
-          where: { id: memberId },
-          data: { 
-            balance: { decrement: amount },
-            totalSpent: { increment: amount }  // 同時增加累計消費
+        const resolvedBranchId = member.user.branchId ?? actor.branchId ?? null;
+        if (!resolvedBranchId) {
+          throw new BadRequestException('此會員未分配分店，無法建立帳務。請先為會員指定分店');
+        }
+
+        // 建立一筆「非預約帳單 + 儲值扣款付款」，讓帳務管理可追蹤，並讓 totalSpent 與帳務實收一致
+        const bill = await tx.appointmentBill.create({
+          data: {
+            appointmentId: null,
+            branchId: resolvedBranchId,
+            customerId: member.userId,
+            artistId: null,
+            currency: 'TWD',
+            billType: 'OTHER',
+            customerNameSnapshot: member.user.name ?? null,
+            customerPhoneSnapshot: member.user.phone ?? null,
+            createdById: actor.id,
+            listTotal: Math.trunc(amount),
+            discountTotal: 0,
+            billTotal: Math.trunc(amount),
+            status: 'SETTLED',
+            voidReason: null,
+            voidedAt: null,
+            items: {
+              create: [
+                {
+                  serviceId: null,
+                  nameSnapshot: '儲值扣款消費',
+                  basePriceSnapshot: Math.trunc(amount),
+                  finalPriceSnapshot: Math.trunc(amount),
+                  variantsSnapshot: null,
+                  notes: null,
+                  sortOrder: 0,
+                },
+              ],
+            },
           },
         });
 
-        console.log('💸 Updated member after spend:', updatedMember);
+        const payment = await tx.payment.create({
+          data: {
+            billId: bill.id,
+            amount: Math.trunc(amount),
+            method: 'STORED_VALUE',
+            paidAt: new Date(),
+            recordedById: actor.id,
+            notes: '會員管理-消費（儲值扣款）',
+          },
+        });
 
-        // 記錄消費歷史
+        // No artist: allocate all to SHOP
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+            { paymentId: payment.id, target: 'SHOP', amount: Math.trunc(amount) },
+          ],
+        });
+
+        // 扣減餘額 + 同步累計消費（以帳務實收為準）
+        const updatedMember = await tx.member.update({
+          where: { id: memberId },
+          data: {
+            balance: { decrement: Math.trunc(amount) },
+            totalSpent: { increment: Math.trunc(amount) },
+          },
+        });
+
+        // 記錄消費歷史（儲值扣款）
         await tx.topupHistory.create({
           data: {
             memberId,
             operatorId: finalOperatorId,
-            amount,
+            amount: Math.trunc(amount),
             type: 'SPEND',
           },
         });
 
-        console.log('💸 Created spend history');
-
+        console.log('💸 Created billing bill/payment for spend:', { billId: bill.id, paymentId: payment.id });
+        console.log('💸 Updated member after spend:', updatedMember);
         return updatedMember;
       });
     } catch (error) {

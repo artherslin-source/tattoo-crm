@@ -593,15 +593,22 @@ export class BillingService {
       if (amount === 0) throw new BadRequestException('amount must be non-zero');
 
       const method = input.method.toUpperCase();
+      const member = bill.customerId
+        ? await tx.member.findUnique({ where: { userId: bill.customerId } })
+        : null;
+
       if (method === 'STORED_VALUE') {
         if (!bill.customerId) throw new BadRequestException('此帳務未綁定會員，無法使用儲值金付款');
-        const member = await tx.member.findUnique({ where: { userId: bill.customerId } });
         if (!member) throw new BadRequestException('此會員尚未建立儲值帳戶');
         const nextBalance = member.balance - amount;
         if (amount > 0 && nextBalance < 0) throw new BadRequestException('儲值餘額不足');
         await tx.member.update({
           where: { userId: bill.customerId },
-          data: { balance: nextBalance },
+          data: {
+            balance: nextBalance,
+            // totalSpent should align with Billing actual received (net): sum of Payment.amount
+            totalSpent: { increment: amount },
+          },
         });
         await tx.topupHistory.create({
           data: {
@@ -623,6 +630,14 @@ export class BillingService {
           notes: input.notes ?? null,
         },
       });
+
+      // For non-stored-value payments, still keep Member.totalSpent in sync with Billing payments.
+      if (method !== 'STORED_VALUE' && member) {
+        await tx.member.update({
+          where: { id: member.id },
+          data: { totalSpent: { increment: amount } },
+        });
+      }
 
       // If no artist, allocate all to SHOP.
       if (!bill.artistId) {
@@ -681,14 +696,21 @@ export class BillingService {
 
       // Stored value: update member balance + history as part of payment recording.
       const method = input.method.toUpperCase();
+      const member = bill.customerId
+        ? await tx.member.findUnique({ where: { userId: bill.customerId } })
+        : null;
+
       if (method === 'STORED_VALUE') {
-        const member = await tx.member.findUnique({ where: { userId: bill.customerId } });
         if (!member) throw new BadRequestException('此會員尚未建立儲值帳戶');
         const nextBalance = member.balance - amount;
         if (amount > 0 && nextBalance < 0) throw new BadRequestException('儲值餘額不足');
         await tx.member.update({
           where: { userId: bill.customerId },
-          data: { balance: nextBalance },
+          data: {
+            balance: nextBalance,
+            // totalSpent should align with Billing actual received (net): sum of Payment.amount
+            totalSpent: { increment: amount },
+          },
         });
         await tx.topupHistory.create({
           data: {
@@ -710,6 +732,14 @@ export class BillingService {
           notes: input.notes ?? null,
         },
       });
+
+      // For non-stored-value payments, still keep Member.totalSpent in sync with Billing payments.
+      if (method !== 'STORED_VALUE' && member) {
+        await tx.member.update({
+          where: { id: member.id },
+          data: { totalSpent: { increment: amount } },
+        });
+      }
 
       // Compute allocations for this payment (hybrid: based on remaining target totals)
       const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
