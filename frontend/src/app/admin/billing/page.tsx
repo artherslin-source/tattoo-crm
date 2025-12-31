@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getJsonWithAuth, postJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { getJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { hasAdminAccess } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,6 +99,10 @@ const paymentMethods = [
   { value: "OTHER", label: "其他" },
 ];
 
+function formatPayMethod(method: string) {
+  return paymentMethods.find((m) => m.value === method)?.label || method;
+}
+
 function formatMoney(n: number) {
   return new Intl.NumberFormat("zh-TW").format(n);
 }
@@ -148,7 +152,6 @@ export default function AdminBillingPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [highlightBillId, setHighlightBillId] = useState<string | null>(null);
   const [lastDeepLinkBillId, setLastDeepLinkBillId] = useState<string | null>(null);
-  const [paymentSubmittedAt, setPaymentSubmittedAt] = useState<number | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newBranchId, setNewBranchId] = useState("");
@@ -156,14 +159,16 @@ export default function AdminBillingPage() {
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newArtistId, setNewArtistId] = useState("");
-  const [newDiscountTotal, setNewDiscountTotal] = useState("");
   const [newItems, setNewItems] = useState<Array<{ name: string; amount: string }>>([{ name: "刺青服務", amount: "" }]);
 
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState<string>("CASH");
   const [payNotes, setPayNotes] = useState("");
-
-  const [discountTotal, setDiscountTotal] = useState<string>("");
+  const payAmountTrimmed = payAmount.trim();
+  const isPayAmountValid =
+    /^-?\d+$/.test(payAmountTrimmed) &&
+    Number.isFinite(parseInt(payAmountTrimmed, 10)) &&
+    parseInt(payAmountTrimmed, 10) !== 0;
 
   // Split rules (BOSS only)
   const [splitRules, setSplitRules] = useState<SplitRule[]>([]);
@@ -224,14 +229,12 @@ export default function AdminBillingPage() {
       setError(null);
       const data = await getJsonWithAuth<BillDetail>(`/admin/billing/bills/${billId}`);
       setSelected(data);
-      setDiscountTotal(String(data.discountTotal ?? 0));
       setDetailOpen(true);
       // 使用者主動查看時，高光也切換到該筆
       setHighlightBillId(billId);
       if (typeof window !== "undefined") {
         window.localStorage.setItem(highlightStorageKey, billId);
       }
-      setPaymentSubmittedAt(null);
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "載入帳務明細失敗");
@@ -286,11 +289,11 @@ export default function AdminBillingPage() {
 
   const onRecordPayment = useCallback(async () => {
     if (!selected) return;
-    const amount = parseInt(payAmount, 10);
-    if (!Number.isFinite(amount) || amount === 0) {
-      setError("請輸入正確的收款金額（不可為 0）");
+    if (!isPayAmountValid) {
+      setError("請輸入正確的收款金額（不可為空或 0；可為負數代表退款）");
       return;
     }
+    const amount = parseInt(payAmountTrimmed, 10);
     try {
       setError(null);
       await postJsonWithAuth(`/admin/billing/bills/${selected.id}/payments`, {
@@ -300,42 +303,14 @@ export default function AdminBillingPage() {
       });
       setPayAmount("");
       setPayNotes("");
-      await fetchBills();
-      setPaymentSubmittedAt(Date.now());
-    } catch (e) {
-      const apiErr = e as ApiError;
-      setError(apiErr.message || "收款失敗");
-    }
-  }, [selected, payAmount, payMethod, payNotes, openDetail, fetchBills]);
-
-  // 收款/退款送出成功後：3 秒自動關閉明細視窗回到列表
-  useEffect(() => {
-    if (!paymentSubmittedAt) return;
-    const t = window.setTimeout(() => {
-      setDetailOpen(false);
-      setSelected(null);
-      setPaymentSubmittedAt(null);
-    }, 3000);
-    return () => window.clearTimeout(t);
-  }, [paymentSubmittedAt]);
-
-  const onUpdateDiscount = useCallback(async () => {
-    if (!selected) return;
-    const d = parseInt(discountTotal, 10);
-    if (!Number.isFinite(d) || d < 0) {
-      setError("折扣必須是大於等於 0 的整數");
-      return;
-    }
-    try {
-      setError(null);
-      await patchJsonWithAuth(`/admin/billing/bills/${selected.id}`, { discountTotal: d });
+      // 留在視窗內並更新歷史紀錄
       await openDetail(selected.id);
       await fetchBills();
     } catch (e) {
       const apiErr = e as ApiError;
-      setError(apiErr.message || "更新折扣失敗");
+      setError(apiErr.message || "收款失敗");
     }
-  }, [selected, discountTotal, openDetail, fetchBills]);
+  }, [selected, isPayAmountValid, payAmountTrimmed, payMethod, payNotes, openDetail, fetchBills]);
 
   useEffect(() => {
     const role = (typeof window !== "undefined" && localStorage.getItem("userRole")) || "";
@@ -475,12 +450,6 @@ export default function AdminBillingPage() {
       return;
     }
 
-    const discount = newDiscountTotal.trim() ? parseInt(newDiscountTotal, 10) : undefined;
-    if (discount !== undefined && (!Number.isFinite(discount) || discount < 0)) {
-      setError("折扣必須是大於等於 0 的整數");
-      return;
-    }
-
     try {
       setError(null);
       await postJsonWithAuth("/admin/billing/bills", {
@@ -489,7 +458,6 @@ export default function AdminBillingPage() {
         customerNameSnapshot: newCustomerName.trim() ? newCustomerName.trim() : null,
         customerPhoneSnapshot: newCustomerPhone.trim() ? newCustomerPhone.trim() : null,
         artistId: newArtistId.trim() ? newArtistId.trim() : null,
-        discountTotal: discount,
         items,
       });
       setCreateOpen(false);
@@ -498,14 +466,13 @@ export default function AdminBillingPage() {
       setNewCustomerName("");
       setNewCustomerPhone("");
       setNewArtistId("");
-      setNewDiscountTotal("");
       setNewItems([{ name: "刺青服務", amount: "" }]);
       await fetchBills();
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "建立帳單失敗");
     }
-  }, [newBranchId, newBillType, newCustomerName, newCustomerPhone, newArtistId, newDiscountTotal, newItems, fetchBills]);
+  }, [newBranchId, newBillType, newCustomerName, newCustomerPhone, newArtistId, newItems, fetchBills]);
 
   return (
     <div className="p-6 space-y-6">
@@ -855,10 +822,6 @@ export default function AdminBillingPage() {
                 <label className="text-xs text-muted-foreground">刺青師 User.id（可空）</label>
                 <Input value={newArtistId} onChange={(e) => setNewArtistId(e.target.value)} placeholder="cmhec2wp8001oogb6a5nyp47n" />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground">折扣（可空）</label>
-                <Input value={newDiscountTotal} onChange={(e) => setNewDiscountTotal(e.target.value)} placeholder="0" />
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -975,16 +938,6 @@ export default function AdminBillingPage() {
                 </Card>
               </div>
 
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="w-40">
-                  <label className="text-xs text-muted-foreground">折扣</label>
-                  <Input value={discountTotal} onChange={(e) => setDiscountTotal(e.target.value)} />
-                </div>
-                <Button variant="outline" onClick={onUpdateDiscount}>
-                  更新折扣
-                </Button>
-              </div>
-
               <div>
                 <div className="font-medium mb-2">服務明細</div>
                 <div className="border rounded-md overflow-hidden">
@@ -1042,7 +995,9 @@ export default function AdminBillingPage() {
                     <label className="text-xs text-muted-foreground">備註</label>
                     <Input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} placeholder="交易碼/說明" />
                   </div>
-                  <Button onClick={onRecordPayment}>送出</Button>
+                  <Button onClick={onRecordPayment} disabled={!isPayAmountValid}>
+                    送出
+                  </Button>
                 </div>
               </div>
 
@@ -1066,7 +1021,7 @@ export default function AdminBillingPage() {
                         return (
                           <tr key={p.id} className="border-b">
                             <td className="py-2 px-3">{new Date(p.paidAt).toLocaleString()}</td>
-                            <td className="py-2 px-3">{p.method}</td>
+                            <td className="py-2 px-3">{formatPayMethod(p.method)}</td>
                             <td className="py-2 px-3">${formatMoney(p.amount)}</td>
                             <td className="py-2 px-3">
                               {p.recordedBy?.name || "（歷史匯入/未知）"}
