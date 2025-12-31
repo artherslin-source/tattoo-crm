@@ -57,6 +57,7 @@ interface AppointmentsCardsProps {
   onViewDetails: (appointment: Appointment) => void;
   onUpdateStatus: (appointment: Appointment, status: string) => void;
   onDelete: (appointmentId: string) => void;
+  highlightId?: string | null;
 }
 
 export default function AppointmentsCards({
@@ -64,6 +65,7 @@ export default function AppointmentsCards({
   onViewDetails,
   onUpdateStatus,
   onDelete,
+  highlightId,
 }: AppointmentsCardsProps) {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -154,7 +156,13 @@ export default function AppointmentsCards({
     <div className="xl:hidden">
       <div className="space-y-4">
         {appointments.map((appointment) => (
-          <div key={appointment.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm">
+          <div
+            key={appointment.id}
+            id={`appt-row-${appointment.id}`}
+            className={`rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm ${
+              highlightId === appointment.id ? "bg-amber-100/60 transition-colors" : ""
+            }`}
+          >
             {/* 平板版 (768px ~ 1023px) - 橫向布局 */}
             <div className="hidden md:block">
               <div className="flex items-center justify-between gap-4">

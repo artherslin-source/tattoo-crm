@@ -58,6 +58,7 @@ interface AppointmentsTableProps {
   onViewDetails: (appointment: Appointment) => void;
   onUpdateStatus: (appointment: Appointment, status: string) => void;
   onDelete: (appointmentId: string) => void;
+  highlightId?: string | null;
 }
 
 export default function AppointmentsTable({
@@ -65,6 +66,7 @@ export default function AppointmentsTable({
   onViewDetails,
   onUpdateStatus,
   onDelete,
+  highlightId,
 }: AppointmentsTableProps) {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -173,7 +175,13 @@ export default function AppointmentsTable({
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {appointments.map((appointment) => (
-                <tr key={appointment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr
+                  key={appointment.id}
+                  id={`appt-row-${appointment.id}`}
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    highlightId === appointment.id ? "bg-amber-100/60 transition-colors" : ""
+                  }`}
+                >
                   <td className="px-4 py-3" data-label="預約時間">
                     <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
                       {formatDate(appointment.startAt)}

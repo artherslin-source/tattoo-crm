@@ -448,7 +448,7 @@ export default function AppointmentForm({
         contactId: formData.contactId || undefined,
       };
 
-      await postJsonWithAuth("/admin/appointments", payload);
+      const created = await postJsonWithAuth<{ id: string }>("/admin/appointments", payload);
       
       setSuccess("預約創建成功！");
       
@@ -457,6 +457,11 @@ export default function AppointmentForm({
         if (onSubmitSuccess) {
           onSubmitSuccess();
         } else {
+          // 若由聯絡轉換（有 contactId），跳回預約管理並精準開啟該筆預約
+          if (payload.contactId && created?.id) {
+            router.push(`/admin/appointments?openId=${encodeURIComponent(created.id)}`);
+            return;
+          }
           router.push("/admin/appointments");
         }
       }, 2000);

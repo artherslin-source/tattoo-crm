@@ -108,6 +108,7 @@ export default function AdminAppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [lastDeepLinkOpenId, setLastDeepLinkOpenId] = useState<string | null>(null);
+  const [highlightAppointmentId, setHighlightAppointmentId] = useState<string | null>(null);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [rescheduleStartAt, setRescheduleStartAt] = useState<string>("");
   const [rescheduleReason, setRescheduleReason] = useState<string>("");
@@ -222,6 +223,7 @@ export default function AdminAppointmentsPage() {
         setSelectedAppointment(appt);
         setIsDetailModalOpen(true);
         setLastDeepLinkOpenId(openId);
+        setHighlightAppointmentId(openId);
       } catch (err) {
         const apiErr = err as ApiError;
         setError(apiErr.message || "開啟預約詳情失敗");
@@ -230,6 +232,21 @@ export default function AdminAppointmentsPage() {
       }
     })();
   }, [searchParams, lastDeepLinkOpenId, isDetailModalOpen, clearOpenIdFromUrl]);
+
+  // Auto-clear highlight after ~3s
+  useEffect(() => {
+    if (!highlightAppointmentId) return;
+    const t = window.setTimeout(() => setHighlightAppointmentId(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [highlightAppointmentId]);
+
+  // After list rendered, auto-scroll highlighted row into view.
+  useEffect(() => {
+    if (!highlightAppointmentId) return;
+    const el = document.getElementById(`appt-row-${highlightAppointmentId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [appointments, highlightAppointmentId]);
 
   // 當篩選條件改變時重新載入資料
   useEffect(() => {
@@ -718,19 +735,21 @@ export default function AdminAppointmentsPage() {
       ) : (
         <>
           {/* Desktop Table */}
-          <AppointmentsTable
+            <AppointmentsTable
             appointments={appointments}
             onViewDetails={handleViewDetails}
             onUpdateStatus={handleUpdateStatus}
             onDelete={handleDelete}
+              highlightId={highlightAppointmentId}
           />
 
           {/* Mobile/Tablet Cards */}
-          <AppointmentsCards
+            <AppointmentsCards
             appointments={appointments}
             onViewDetails={handleViewDetails}
             onUpdateStatus={handleUpdateStatus}
             onDelete={handleDelete}
+              highlightId={highlightAppointmentId}
           />
         </>
       )}
