@@ -8,8 +8,6 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { ArtistsModule } from './artists/artists.module';
-import { OrdersModule } from './orders/orders.module';
-import { InstallmentsModule } from './installments/installments.module';
 import { BranchesModule } from './branches/branches.module';
 import { ServicesModule } from './services/services.module';
 import { AdminModule } from './admin/admin.module';
@@ -31,8 +29,6 @@ import { BillingModule } from './billing/billing.module';
     ArtistModule,
     ArtistsModule,
     AppointmentsModule,
-    OrdersModule,
-    InstallmentsModule,
     BranchesModule,
     ServicesModule,
     AdminMembersModule,

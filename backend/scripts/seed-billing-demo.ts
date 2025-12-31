@@ -4,35 +4,38 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-function isTruthy(v: unknown): boolean {
-  return v === true || v === 'true' || v === '1' || v === 1;
+function hasFlag(name: string) {
+  return process.argv.includes(name);
+}
+
+function detectProductionDb(databaseUrl: string | undefined): boolean {
+  if (!databaseUrl) return false;
+  const u = databaseUrl.toLowerCase();
+  return u.includes('railway') || u.includes('rlwy.net') || u.includes('proxy.rlwy.net');
 }
 
 async function main() {
-  console.log('🌱 Prisma seed (Billing-only)');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error('DATABASE_URL is not set');
 
-  // PROTECT_REAL_DATA=true: keep Branch/Service/Artist/Admin; only reset Contact/Appointment/Billing + MEMBER demo data
-  const PROTECT_REAL_DATA = isTruthy(process.env.PROTECT_REAL_DATA);
-  console.log(PROTECT_REAL_DATA ? '🛡️ 保護模式：保留分店/刺青師/服務/管理員' : 'ℹ️ 預設行為：仍保留分店/刺青師/服務/管理員');
+  const isProdLike = detectProductionDb(databaseUrl);
+  const force = hasFlag('--yes') || hasFlag('--force');
+  const iUnderstand = hasFlag('--i-understand');
 
-  // 1) Domain-only cleanup (contacts/appointments/billing + demo members)
-  console.log('🧹 清理 domain data (Contact/Appointment/Billing/Members)...');
-  await prisma.paymentAllocation.deleteMany();
-  await prisma.payment.deleteMany();
-  await prisma.appointmentBillItem.deleteMany();
-  await prisma.appointmentBill.deleteMany();
-  await prisma.completedService.deleteMany();
-  await prisma.appointment.deleteMany();
-  await prisma.contact.deleteMany();
-  await prisma.topupHistory.deleteMany();
-  await prisma.member.deleteMany();
-  await prisma.user.deleteMany({ where: { role: 'MEMBER' } });
+  if (!force) throw new Error('Refusing to run without --yes (or --force)');
+  if (isProdLike && !iUnderstand) throw new Error('Refusing to run against production-like DB without --i-understand');
 
-  // 2) Ensure at least one admin exists (for local dev convenience)
-  const hashedPassword = await bcrypt.hash('12345678', 12);
-  const existingAdmin = await prisma.user.findFirst({ where: { role: { in: ['BOSS', 'SUPER_ADMIN', 'BRANCH_MANAGER'] } } });
-  if (!existingAdmin && !PROTECT_REAL_DATA) {
-    await prisma.user.create({
+  console.log('🌱 seed-billing-demo: start');
+  console.log(`   - production_like: ${isProdLike}`);
+
+  // Ensure at least one admin exists (do NOT modify existing admins)
+  let admin = await prisma.user.findFirst({
+    where: { role: { in: ['BOSS', 'SUPER_ADMIN', 'BRANCH_MANAGER'] } },
+    select: { id: true },
+  });
+  if (!admin) {
+    const hashedPassword = await bcrypt.hash('12345678', 12);
+    const created = await prisma.user.create({
       data: {
         email: 'admin@test.com',
         hashedPassword,
@@ -40,54 +43,43 @@ async function main() {
         role: 'BOSS',
         phone: '0988666888',
       },
+      select: { id: true },
     });
-    console.log('✅ 建立管理員帳號：admin@test.com / 0988666888 / 12345678');
+    console.log('✅ created admin (local convenience)');
+    admin = created;
   }
 
-  // 3) Load required references
   const branches = await prisma.branch.findMany({ orderBy: { name: 'asc' } });
-  if (branches.length === 0) {
-    throw new Error('No branches found. Please create branches first (or run a bootstrap script).');
-  }
+  if (branches.length === 0) throw new Error('No branches found. Please create branches first.');
 
   const services = await prisma.service.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } });
-  if (services.length === 0) {
-    throw new Error('No services found. Please create services first.');
-  }
+  if (services.length === 0) throw new Error('No services found. Please create services first.');
 
   const artists = await prisma.user.findMany({
     where: { role: 'ARTIST', isActive: true },
-    select: { id: true, name: true, branchId: true },
+    select: { id: true, name: true },
     take: 10,
   });
-  if (artists.length === 0) {
-    throw new Error('No ARTIST users found. Please create artists first.');
-  }
+  if (artists.length === 0) throw new Error('No ARTIST users found. Please create artists first.');
 
-  const admin = await prisma.user.findFirst({
-    where: { role: { in: ['BOSS', 'SUPER_ADMIN', 'BRANCH_MANAGER'] } },
-    select: { id: true },
-  });
-  if (!admin) throw new Error('No admin user found (create one or disable PROTECT_REAL_DATA).');
-
-  // 4) Create members + member accounts
-  console.log('👥 建立會員...');
+  // Create members (demo)
+  const hashedPassword = await bcrypt.hash('12345678', 12);
   const memberNames = ['張小明', '李美華', '王大偉', '陳雅婷', '林志強', '黃建華', '張淑芬', '李俊豪'];
   const members: Array<{ userId: string; branchId: string; name: string; phone: string }> = [];
   for (let i = 0; i < memberNames.length; i++) {
     const branch = branches[i % branches.length];
-    const primaryArtist = artists[i % artists.length];
     const phone = faker.helpers.replaceSymbolWithNumber('09########');
     const user = await prisma.user.create({
       data: {
-        email: `member${i + 1}@demo.local`,
+        email: `member${Date.now()}_${i}@demo.local`,
         hashedPassword,
         name: memberNames[i],
         role: 'MEMBER',
         phone,
         branchId: branch.id,
-        primaryArtistId: primaryArtist.id,
+        primaryArtistId: artists[i % artists.length].id,
       },
+      select: { id: true, name: true, phone: true },
     });
     await prisma.member.create({
       data: {
@@ -100,10 +92,10 @@ async function main() {
     members.push({ userId: user.id, branchId: branch.id, name: user.name ?? '客戶', phone: user.phone ?? phone });
   }
 
-  // 5) Create contacts + appointments + bills + payments
-  console.log('📅 建立預約與帳務...');
   const now = new Date();
-  for (let i = 0; i < 12; i++) {
+
+  // Appointment bills
+  for (let i = 0; i < 10; i++) {
     const m = members[i % members.length];
     const branch = branches[i % branches.length];
     const service = services[i % services.length];
@@ -119,10 +111,7 @@ async function main() {
       } as any,
     });
 
-    const startAt = faker.date.between({
-      from: new Date(now.getTime() - 30 * 86400_000),
-      to: new Date(now.getTime() + 30 * 86400_000),
-    });
+    const startAt = faker.date.between({ from: new Date(now.getTime() - 14 * 86400_000), to: new Date(now.getTime() + 14 * 86400_000) });
     const endAt = new Date(startAt.getTime() + (service.durationMin || 120) * 60_000);
 
     const appointment = await prisma.appointment.create({
@@ -134,10 +123,11 @@ async function main() {
         contactId: contact.id,
         startAt,
         endAt,
-        status: faker.helpers.arrayElement(['CONFIRMED', 'COMPLETED', 'PENDING']) as any,
+        status: faker.helpers.arrayElement(['CONFIRMED', 'COMPLETED']) as any,
         notes: faker.lorem.sentence(),
         holdMin: 150,
       },
+      select: { id: true },
     });
 
     const billTotal = service.price;
@@ -168,6 +158,7 @@ async function main() {
           ],
         },
       },
+      select: { id: true },
     });
 
     const payAmount = i % 3 === 0 ? Math.round(billTotal * 0.3) : billTotal;
@@ -176,23 +167,23 @@ async function main() {
         billId: bill.id,
         amount: payAmount,
         method: faker.helpers.arrayElement(['CASH', 'CARD', 'TRANSFER']),
-        paidAt: faker.date.between({ from: startAt, to: new Date(startAt.getTime() + 10 * 86400_000) }),
+        paidAt: new Date(),
         recordedById: admin.id,
         notes: null,
       },
+      select: { id: true },
     });
+
     const artistAmount = Math.round(payAmount * 0.7);
-    const shopAmount = payAmount - artistAmount;
     await prisma.paymentAllocation.createMany({
       data: [
         { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
-        { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+        { paymentId: payment.id, target: 'SHOP', amount: payAmount - artistAmount },
       ],
     });
   }
 
-  // 6) Create a few walk-in bills
-  console.log('💰 建立非預約帳單...');
+  // Walk-in bills
   for (let i = 0; i < 3; i++) {
     const branch = branches[i % branches.length];
     const artist = artists[i % artists.length];
@@ -227,6 +218,7 @@ async function main() {
           ],
         },
       },
+      select: { id: true },
     });
 
     const payment = await prisma.payment.create({
@@ -238,7 +230,9 @@ async function main() {
         recordedById: admin.id,
         notes: null,
       },
+      select: { id: true },
     });
+
     const artistAmount = Math.round(amount * 0.7);
     await prisma.paymentAllocation.createMany({
       data: [
@@ -248,12 +242,12 @@ async function main() {
     });
   }
 
-  console.log('✅ Seed 完成');
+  console.log('✅ seed-billing-demo: done');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('❌ seed-billing-demo failed:', e?.message || e);
     process.exit(1);
   })
   .finally(async () => {

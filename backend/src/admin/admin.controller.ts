@@ -5,7 +5,6 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CacheService } from '../common/cache.service';
 import { AdminAnalyticsUnifiedService } from './admin-analytics-unified.service';
-import { OrderStatus, Prisma } from '@prisma/client';
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -122,67 +121,33 @@ export class AdminController {
         }
       });
 
-      // 獲取總營收：一次付清訂單的 finalAmount + 分期訂單中已付款的分期金額
-      const paidStatuses: OrderStatus[] = [
-        'PAID',
-        'PAID_COMPLETE',
-        'INSTALLMENT_ACTIVE',
-        'PARTIALLY_PAID',
-        'COMPLETED'
-      ];
+      // 獲取總營收：Billing v3 單一口徑（Payment.paidAt）
+      const paymentWhere: any = {
+        paidAt: { not: null },
+        ...(whereCondition.branchId ? { bill: { branchId: whereCondition.branchId } } : {}),
+      };
 
-      // 1. 計算一次付清且已付款的訂單
-      const oneTimeRevenue = await this.prisma.order.aggregate({
-        where: {
-          ...whereCondition,
-          paymentType: 'ONE_TIME',
-          status: { in: paidStatuses }
-        },
-        _sum: { finalAmount: true }
+      const totalRevenue = await this.prisma.payment.aggregate({
+        where: paymentWhere,
+        _sum: { amount: true },
       });
 
-      // 2. 計算分期訂單中已付款的分期金額
-      const installmentRevenue = await this.prisma.installment.aggregate({
-        where: {
-          status: 'PAID',
-          order: whereCondition
-        },
-        _sum: { amount: true }
-      });
-
-      const totalRevenueAmount = 
-        Number(oneTimeRevenue._sum.finalAmount || 0) + 
-        Number(installmentRevenue._sum.amount || 0);
+      const totalRevenueAmount = Number(totalRevenue._sum.amount || 0);
 
       // 獲取本月營收
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      // 1. 計算本月一次付清且已付款的訂單
-      const monthlyOneTimeRevenue = await this.prisma.order.aggregate({
+      const monthlyRevenue = await this.prisma.payment.aggregate({
         where: {
-          ...whereCondition,
-          paymentType: 'ONE_TIME',
-          status: { in: paidStatuses },
-          createdAt: { gte: startOfMonth }
-        },
-        _sum: { finalAmount: true }
-      });
-
-      // 2. 計算本月分期訂單中已付款的分期金額
-      const monthlyInstallmentRevenue = await this.prisma.installment.aggregate({
-        where: {
-          status: 'PAID',
+          ...paymentWhere,
           paidAt: { gte: startOfMonth },
-          order: whereCondition
         },
-        _sum: { amount: true }
+        _sum: { amount: true },
       });
 
-      const monthlyRevenueAmount = 
-        Number(monthlyOneTimeRevenue._sum.finalAmount || 0) + 
-        Number(monthlyInstallmentRevenue._sum.amount || 0);
+      const monthlyRevenueAmount = Number(monthlyRevenue._sum.amount || 0);
 
       return {
         users: { 

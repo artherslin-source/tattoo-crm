@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException, 
 import { PrismaService } from '../prisma/prisma.service';
 import { isBoss, type AccessActor } from '../common/access/access.types';
 import type { Prisma } from '@prisma/client';
+import { BillingService } from '../billing/billing.service';
 
 @Injectable()
 export class AdminAppointmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billing: BillingService,
+  ) {}
 
   // Policy: reschedule up to 2 times, must be >=24h before start
   private rescheduleCutoffMs = 24 * 60 * 60 * 1000;
@@ -126,7 +130,7 @@ export class AdminAppointmentsService {
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
-        order: { select: { id: true, totalAmount: true, finalAmount: true, status: true, paymentType: true } },
+        bill: { select: { id: true, billTotal: true, status: true, billType: true } },
       },
       orderBy,
     });
@@ -140,7 +144,7 @@ export class AdminAppointmentsService {
         service: { select: { id: true, name: true, description: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
-        order: { select: { id: true, totalAmount: true, finalAmount: true, status: true, paymentType: true, installments: true } },
+        bill: { select: { id: true, billTotal: true, status: true, billType: true } },
       },
     });
 
@@ -343,7 +347,7 @@ export class AdminAppointmentsService {
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
-        order: true
+        bill: true,
       }
     });
     
@@ -351,58 +355,25 @@ export class AdminAppointmentsService {
       throw new NotFoundException('預約不存在');
     }
 
-    // 使用事務來確保預約狀態更新和訂單創建的原子性
-    return await this.prisma.$transaction(async (tx) => {
-      // 更新預約狀態
-      const updatedAppointment = await tx.appointment.update({
-        where: { id: input.id },
-        data: { status: input.status as any },
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          service: { select: { id: true, name: true, price: true, durationMin: true } },
-          artist: { select: { id: true, name: true } },
-          branch: { select: { id: true, name: true } },
-          order: true
-        },
-      });
-
-      // 如果狀態變為 COMPLETED 且還沒有關聯的訂單，則自動創建訂單
-      if (input.status === 'COMPLETED' && !appointment.order && appointment.service) {
-        console.log('🎯 預約完成，自動創建訂單:', {
-          appointmentId: input.id,
-          memberId: appointment.userId,
-          branchId: appointment.branchId,
-          servicePrice: appointment.service.price
-        });
-
-        const order = await tx.order.create({
-          data: {
-            memberId: appointment.userId,
-            branchId: appointment.branchId,
-            appointmentId: input.id,
-            totalAmount: appointment.service.price,
-            finalAmount: appointment.service.price,
-            paymentType: 'ONE_TIME',
-            status: 'PENDING_PAYMENT',
-            notes: `自動生成訂單 - 預約ID: ${input.id}`
-          }
-        });
-
-        // 更新預約的 orderId
-        await tx.appointment.update({
-          where: { id: input.id },
-          data: { orderId: order.id }
-        });
-
-        console.log('✅ 訂單創建成功:', {
-          orderId: order.id,
-          appointmentId: input.id,
-          amount: order.finalAmount
-        });
-      }
-
-      return updatedAppointment;
+    // 只更新狀態；訂單機制已移除，改由 Billing 作為單一口徑
+    const updatedAppointment = await this.prisma.appointment.update({
+      where: { id: input.id },
+      data: { status: input.status as any },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        service: { select: { id: true, name: true, price: true, durationMin: true } },
+        artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
+        bill: true,
+      },
     });
+
+    // Ensure bill exists once schedule is confirmed / completed
+    if (input.status === 'CONFIRMED' || input.status === 'COMPLETED') {
+      await this.billing.ensureBillForAppointment(input.actor, input.id);
+    }
+
+    return updatedAppointment;
   }
 
   private clampEndToSameDay(startAt: Date, endAt: Date): Date {
@@ -412,7 +383,7 @@ export class AdminAppointmentsService {
   }
 
   async confirmSchedule(input: { actor: AccessActor; id: string; startAt: Date; holdMin: number; reason?: string }) {
-    return this.prisma.$transaction(async (tx) => {
+    const updatedAppointment = await this.prisma.$transaction(async (tx) => {
       const appointment = await tx.appointment.findFirst({
         where: { id: input.id, ...this.buildScopeWhere(input.actor) },
         select: {
@@ -422,7 +393,6 @@ export class AdminAppointmentsService {
           artistId: true,
           userId: true,
           serviceId: true,
-          orderId: true,
           cartSnapshot: true,
         },
       });
@@ -472,47 +442,15 @@ export class AdminAppointmentsService {
           service: { select: { id: true, name: true, price: true, durationMin: true } },
           artist: { select: { id: true, name: true } },
           branch: { select: { id: true, name: true } },
-          order: true,
+          bill: true,
         },
       });
 
-      // Create order on CONFIRMED (C-flow simplification), if not exists
-      if (!appointment.orderId) {
-        const snapshot: any = appointment.cartSnapshot ?? null;
-        const totalFromSnapshot = snapshot && typeof snapshot.totalPrice === 'number' ? snapshot.totalPrice : undefined;
-        let totalAmount = totalFromSnapshot;
-
-        if (typeof totalAmount !== 'number' && appointment.serviceId) {
-          const svc = await tx.service.findUnique({
-            where: { id: appointment.serviceId },
-            select: { price: true, name: true },
-          });
-          totalAmount = svc?.price ?? 0;
-        }
-        if (typeof totalAmount !== 'number') totalAmount = 0;
-
-        const order = await tx.order.create({
-          data: {
-            memberId: appointment.userId,
-            branchId: appointment.branchId,
-            appointmentId: appointment.id,
-            totalAmount,
-            finalAmount: totalAmount,
-            paymentType: 'ONE_TIME',
-            status: 'PENDING_PAYMENT',
-            cartSnapshot: appointment.cartSnapshot ?? undefined,
-          },
-        });
-
-        // Mirror to Appointment.orderId (UI convenience; no FK currently)
-        await tx.appointment.update({
-          where: { id: appointment.id },
-          data: { orderId: order.id },
-        });
-      }
-
       return updatedAppointment;
     });
+
+    await this.billing.ensureBillForAppointment(input.actor, input.id);
+    return updatedAppointment;
   }
 
   async reschedule(input: { actor: AccessActor; id: string; startAt: Date; endAt: Date; holdMin?: number; reason?: string }) {
@@ -580,7 +518,7 @@ export class AdminAppointmentsService {
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
-        order: true,
+        bill: true,
       },
     });
   }

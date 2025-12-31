@@ -33,6 +33,21 @@ export class BillingService {
     return appt;
   }
 
+  private async ensureBillReadable(actor: AccessActor, billId: string) {
+    const bill = await this.prisma.appointmentBill.findFirst({
+      where: {
+        id: billId,
+        ...(isBoss(actor) ? {} : { branchId: actor.branchId ?? undefined }),
+      },
+      select: { id: true, branchId: true, artistId: true, appointmentId: true },
+    });
+    if (!bill) throw new ForbiddenException('Insufficient permissions');
+    if (isArtist(actor)) {
+      if (!bill.artistId || bill.artistId !== actor.id) throw new ForbiddenException('Insufficient permissions');
+    }
+    return bill;
+  }
+
   private computeTotalsFromCartSnapshot(cartSnapshot: any): {
     listTotal: number;
     billTotal: number;
@@ -97,7 +112,7 @@ export class BillingService {
     return { artistRateBps, shopRateBps };
   }
 
-  private async ensureBillInternal(tx: Prisma.TransactionClient, appointmentId: string) {
+  private async ensureBillInternal(tx: Prisma.TransactionClient, appointmentId: string, createdById?: string) {
     const appointment = await tx.appointment.findUnique({
       where: { id: appointmentId },
       include: { service: true },
@@ -138,6 +153,8 @@ export class BillingService {
         customerId: appointment.userId,
         artistId: appointment.artistId ?? null,
         currency: 'TWD',
+        billType: 'APPOINTMENT',
+        createdById: createdById ?? null,
         listTotal,
         discountTotal,
         billTotal,
@@ -180,9 +197,49 @@ export class BillingService {
   async ensureBillForAppointment(actor: AccessActor, appointmentId: string) {
     await this.ensureAppointmentReadable(actor, appointmentId);
     return this.prisma.$transaction(async (tx) => {
-      await this.ensureBillInternal(tx, appointmentId);
+      await this.ensureBillInternal(tx, appointmentId, actor.id);
       return this.getBillByAppointment(actor, appointmentId);
     });
+  }
+
+  async getBillById(actor: AccessActor, billId: string) {
+    await this.ensureBillReadable(actor, billId);
+    const bill = await this.prisma.appointmentBill.findUnique({
+      where: { id: billId },
+      include: {
+        appointment: {
+          include: {
+            user: { select: { id: true, name: true, phone: true, email: true } },
+            artist: { select: { id: true, name: true } },
+            branch: { select: { id: true, name: true } },
+          },
+        },
+        branch: { select: { id: true, name: true } },
+        customer: { select: { id: true, name: true, phone: true } },
+        artist: { select: { id: true, name: true } },
+        createdBy: { select: { id: true, name: true } },
+        items: { orderBy: { sortOrder: 'asc' } },
+        payments: {
+          orderBy: { paidAt: 'asc' },
+          include: {
+            allocations: true,
+            recordedBy: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+    if (!bill) throw new NotFoundException('帳務不存在');
+
+    const paidTotal = bill.payments.reduce((sum, p) => sum + p.amount, 0);
+    const dueTotal = bill.billTotal - paidTotal;
+
+    return {
+      ...bill,
+      summary: {
+        paidTotal,
+        dueTotal,
+      },
+    };
   }
 
   async getBillByAppointment(actor: AccessActor, appointmentId: string) {
@@ -254,25 +311,30 @@ export class BillingService {
 
     if (query.customerSearch && query.customerSearch.trim() !== '') {
       const q = query.customerSearch.trim();
-      where.customer = {
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { email: { contains: q, mode: 'insensitive' } },
-          { phone: { contains: q, mode: 'insensitive' } },
-        ],
-      };
+      where.OR = [
+        {
+          customer: {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } },
+              { phone: { contains: q, mode: 'insensitive' } },
+            ],
+          },
+        },
+        { customerNameSnapshot: { contains: q, mode: 'insensitive' } as any },
+        { customerPhoneSnapshot: { contains: q, mode: 'insensitive' } as any },
+      ];
     }
 
     const bills = await this.prisma.appointmentBill.findMany({
       where,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
-        appointment: {
-          select: { id: true, startAt: true, endAt: true, status: true },
-        },
+        appointment: { select: { id: true, startAt: true, endAt: true, status: true } },
         customer: { select: { id: true, name: true, phone: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
+        createdBy: { select: { id: true, name: true } },
         payments: { select: { amount: true } },
       },
     });
@@ -328,6 +390,197 @@ export class BillingService {
     });
   }
 
+  async updateBillById(
+    actor: AccessActor,
+    billId: string,
+    input: { discountTotal?: number; status?: BillStatus; voidReason?: string },
+  ) {
+    await this.ensureBillReadable(actor, billId);
+    return this.prisma.$transaction(async (tx) => {
+      const bill = await tx.appointmentBill.findUnique({ where: { id: billId } });
+      if (!bill) throw new NotFoundException('帳務不存在');
+
+      const data: any = {};
+      if (input.discountTotal !== undefined) {
+        const discountTotal = Math.max(0, Math.trunc(input.discountTotal));
+        data.discountTotal = discountTotal;
+        data.billTotal = Math.max(0, bill.listTotal - discountTotal);
+      }
+      if (input.status) {
+        data.status = input.status;
+        if (input.status === 'VOID') {
+          data.voidReason = input.voidReason ?? bill.voidReason ?? null;
+          data.voidedAt = new Date();
+        } else {
+          data.voidReason = null;
+          data.voidedAt = null;
+        }
+      }
+
+      await tx.appointmentBill.update({ where: { id: billId }, data });
+      return this.getBillById(actor, billId);
+    });
+  }
+
+  async createManualBill(
+    actor: AccessActor,
+    input: {
+      branchId: string;
+      billType: string;
+      customerId?: string | null;
+      customerNameSnapshot?: string | null;
+      customerPhoneSnapshot?: string | null;
+      artistId?: string | null;
+      currency?: string;
+      items: Array<{
+        serviceId?: string | null;
+        nameSnapshot: string;
+        basePriceSnapshot: number;
+        finalPriceSnapshot: number;
+        variantsSnapshot?: any;
+        notes?: string | null;
+        sortOrder?: number;
+      }>;
+      discountTotal?: number;
+      notes?: string | null;
+    },
+  ) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can create manual bills');
+    if (!input.branchId) throw new BadRequestException('branchId is required');
+    if (!Array.isArray(input.items) || input.items.length === 0) {
+      throw new BadRequestException('items is required');
+    }
+
+    const mappedItems = input.items.map((it, idx) => ({
+      serviceId: it.serviceId ?? null,
+      nameSnapshot: String(it.nameSnapshot ?? '項目'),
+      basePriceSnapshot: Math.max(0, Math.trunc(Number(it.basePriceSnapshot ?? 0))),
+      finalPriceSnapshot: Math.max(0, Math.trunc(Number(it.finalPriceSnapshot ?? 0))),
+      variantsSnapshot: it.variantsSnapshot ?? null,
+      notes: it.notes ?? null,
+      sortOrder: Number.isInteger(it.sortOrder) ? (it.sortOrder as number) : idx,
+    }));
+
+    const listTotal = mappedItems.reduce((s, it) => s + it.basePriceSnapshot, 0);
+    const derivedBillTotal = mappedItems.reduce((s, it) => s + it.finalPriceSnapshot, 0);
+    const discountTotal =
+      input.discountTotal !== undefined ? Math.max(0, Math.trunc(input.discountTotal)) : Math.max(0, listTotal - derivedBillTotal);
+    const billTotal = Math.max(0, listTotal - discountTotal);
+
+    const bill = await this.prisma.appointmentBill.create({
+      data: {
+        appointmentId: null,
+        branchId: input.branchId,
+        customerId: input.customerId ?? null,
+        artistId: input.artistId ?? null,
+        currency: input.currency ?? 'TWD',
+        billType: input.billType || 'WALK_IN',
+        customerNameSnapshot: input.customerNameSnapshot ?? null,
+        customerPhoneSnapshot: input.customerPhoneSnapshot ?? null,
+        createdById: actor.id,
+        listTotal,
+        discountTotal,
+        billTotal,
+        status: 'OPEN',
+        voidReason: null,
+        voidedAt: null,
+        items: {
+          create: mappedItems.map((it) => ({
+            serviceId: it.serviceId,
+            nameSnapshot: it.nameSnapshot,
+            basePriceSnapshot: it.basePriceSnapshot,
+            finalPriceSnapshot: it.finalPriceSnapshot,
+            variantsSnapshot: it.variantsSnapshot,
+            notes: it.notes,
+            sortOrder: it.sortOrder,
+          })),
+        },
+      },
+    });
+
+    return this.getBillById(actor, bill.id);
+  }
+
+  async recordPaymentByBillId(
+    actor: AccessActor,
+    billId: string,
+    input: { amount: number; method: string; paidAt?: Date; notes?: string },
+  ) {
+    await this.ensureBillReadable(actor, billId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const bill = await tx.appointmentBill.findUnique({
+        where: { id: billId },
+        include: { payments: { include: { allocations: true } } },
+      });
+      if (!bill) throw new NotFoundException('帳務不存在');
+
+      const paidAt = input.paidAt ?? new Date();
+      const amount = Math.trunc(input.amount);
+      if (amount === 0) throw new BadRequestException('amount must be non-zero');
+
+      const method = input.method.toUpperCase();
+      if (method === 'STORED_VALUE') {
+        if (!bill.customerId) throw new BadRequestException('此帳務未綁定會員，無法使用儲值金付款');
+        const member = await tx.member.findUnique({ where: { userId: bill.customerId } });
+        if (!member) throw new BadRequestException('此會員尚未建立儲值帳戶');
+        const nextBalance = member.balance - amount;
+        if (amount > 0 && nextBalance < 0) throw new BadRequestException('儲值餘額不足');
+        await tx.member.update({
+          where: { userId: bill.customerId },
+          data: { balance: nextBalance },
+        });
+        await tx.topupHistory.create({
+          data: {
+            memberId: member.id,
+            operatorId: actor.id,
+            amount: Math.abs(amount),
+            type: amount > 0 ? 'SPEND' : 'TOPUP',
+          },
+        });
+      }
+
+      const payment = await tx.payment.create({
+        data: {
+          billId: bill.id,
+          amount,
+          method,
+          paidAt,
+          recordedById: actor.id,
+          notes: input.notes ?? null,
+        },
+      });
+
+      // If no artist, allocate all to SHOP.
+      if (!bill.artistId) {
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+            { paymentId: payment.id, target: 'SHOP', amount: amount },
+          ],
+        });
+      } else {
+        const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
+        const artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
+        const shopAmount = amount - artistAmount;
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
+            { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+          ],
+        });
+      }
+
+      const paidTotal = (await tx.payment.aggregate({ where: { billId: bill.id }, _sum: { amount: true } }))._sum.amount || 0;
+      const nextStatus: BillStatus = bill.status === 'VOID' ? 'VOID' : paidTotal >= bill.billTotal ? 'SETTLED' : 'OPEN';
+      if (nextStatus !== bill.status) {
+        await tx.appointmentBill.update({ where: { id: bill.id }, data: { status: nextStatus } });
+      }
+
+      return this.getBillById(actor, billId);
+    });
+  }
+
   async recordPayment(
     actor: AccessActor,
     appointmentId: string,
@@ -341,7 +594,7 @@ export class BillingService {
         include: { payments: { include: { allocations: true } } },
       });
       if (!bill) {
-        await this.ensureBillInternal(tx, appointmentId);
+        await this.ensureBillInternal(tx, appointmentId, actor.id);
         bill = await tx.appointmentBill.findUnique({
           where: { appointmentId },
           include: { payments: { include: { allocations: true } } },

@@ -211,15 +211,7 @@ export class AppointmentsService {
         artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
-        order: { 
-          select: { 
-            id: true, 
-            totalAmount: true, 
-            finalAmount: true, 
-            status: true, 
-            paymentType: true 
-          } 
-        },
+        bill: { select: { id: true, billTotal: true, status: true, billType: true } },
         // cartSnapshot 是 JSON 字段，會自動包含在結果中，不需要在 include 中指定
       },
     });
@@ -276,15 +268,7 @@ export class AppointmentsService {
         artist: true,
         service: { select: { id: true, name: true, price: true, durationMin: true } },
         branch: { select: { id: true, name: true } },
-        order: { 
-          select: { 
-            id: true, 
-            totalAmount: true, 
-            finalAmount: true, 
-            status: true, 
-            paymentType: true 
-          } 
-        },
+        bill: { select: { id: true, billTotal: true, status: true, billType: true } },
       },
       // ✅ 包含 cartSnapshot（購物車結帳創建的預約會有此欄位）
     });
@@ -293,82 +277,19 @@ export class AppointmentsService {
   // 管理員專用：更新預約狀態
   async updateStatus(id: string, status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED') {
     return this.prisma.$transaction(async (tx) => {
-      const appointment = await tx.appointment.findUnique({ 
+      const appointment = await tx.appointment.findUnique({
         where: { id },
-        include: {
-          service: { select: { id: true, name: true, price: true } },
-          user: { select: { id: true, name: true, email: true } },
-          artist: true,
-        }
+        select: { id: true },
       });
       
       if (!appointment) {
         throw new NotFoundException('Appointment not found');
       }
 
-      // 如果預約狀態變為 COMPLETED 且還沒有關聯的訂單，自動生成訂單
-      let orderId: string | null = null;
-      if (status === 'COMPLETED' && !appointment.orderId && appointment.serviceId) {
-        try {
-          // 確保用戶有 Member 記錄
-          const member = await tx.member.findUnique({
-            where: { userId: appointment.userId },
-          });
-
-          if (!member) {
-            await tx.member.create({
-              data: {
-                userId: appointment.userId,
-                totalSpent: 0,
-                balance: 0,
-                membershipLevel: 'BRONZE',
-              },
-            });
-          }
-
-          // 獲取服務價格信息
-          const service = await tx.service.findUnique({
-            where: { id: appointment.serviceId },
-            select: { price: true, name: true }
-          });
-
-          if (!service) {
-            throw new Error('Service not found');
-          }
-
-          // 直接在事務中創建訂單
-          const order = await tx.order.create({
-            data: {
-              memberId: appointment.userId,
-              branchId: appointment.branchId,
-              appointmentId: appointment.id,
-              totalAmount: service.price,
-              finalAmount: service.price,
-              status: 'PENDING_PAYMENT',
-              paymentType: 'ONE_TIME',
-              isInstallment: false,
-            },
-          });
-
-          orderId = order.id;
-
-          console.log('🎯 預約完成，自動生成訂單:', {
-            appointmentId: appointment.id,
-            orderId: order.id,
-            totalAmount: service.price,
-            serviceName: service.name
-          });
-        } catch (error) {
-          console.error('❌ 自動生成訂單失敗:', error);
-          // 不拋出錯誤，避免影響預約狀態更新
-        }
-      }
-
-      // 更新預約狀態和 orderId
-      const updateData: { status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED'; orderId?: string } = { status: status as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED' };
-      if (orderId) {
-        updateData.orderId = orderId;
-      }
+      // 訂單機制已移除：僅更新狀態
+      const updateData: { status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED' } = {
+        status: status as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELED',
+      };
 
       const updatedAppointment = await tx.appointment.update({
         where: { id },

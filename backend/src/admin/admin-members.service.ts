@@ -240,10 +240,17 @@ export class AdminMembersService {
       orderBy: { startAt: 'desc' },
     });
 
-    // 取得會員的訂單紀錄
-    const orders = await this.prisma.order.findMany({
-      where: { memberId: member.userId },
+    // 取得會員的帳務紀錄（Billing v3 單一口徑）
+    const bills = await this.prisma.appointmentBill.findMany({
+      where: { customerId: member.userId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        appointment: { select: { id: true, startAt: true, status: true } },
+        branch: { select: { id: true, name: true } },
+        artist: { select: { id: true, name: true } },
+        payments: { select: { amount: true, paidAt: true, method: true } },
+      },
+      take: 50,
     });
 
     const customerNotes = await this.prisma.customerNote.findMany({
@@ -263,7 +270,7 @@ export class AdminMembersService {
     return {
       ...member,
       appointments,
-      orders,
+      bills,
       customerNotes,
       historyServices,
     };

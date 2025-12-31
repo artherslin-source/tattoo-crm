@@ -8,229 +8,181 @@ datasource db {
 }
 
 model User {
-  id              String   @id @default(cuid())
-  email           String?  // 改為可選
-  hashedPassword  String
-  name            String?
-  phone           String?  @unique // 改為可選但唯一，作為主要識別方式（允許 null 以處理舊資料）
-  birthday        DateTime?
-  gender          String?
-  stylePreferences String?
-  role            String?
+  id                          String             @id @default(cuid())
+  email                       String? // 改為可選
+  hashedPassword              String
+  name                        String?
+  phone                       String?            @unique // 改為可選但唯一，作為主要識別方式（允許 null 以處理舊資料）
+  birthday                    DateTime?
+  gender                      String?
+  stylePreferences            String?
+  role                        String?
   // personId        String?  // 多帳號對應同一真人（跨分店排程互斥）
-  branchId        String?
+  branchId                    String?
   // 顧客主責刺青師（用於資料範圍：ARTIST 只能看自己顧客）
-  primaryArtistId String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lastLogin       DateTime?
-  status          String?
-  artistAppointments Appointment[] @relation("ArtistAppointments")
-  appointments       Appointment[]
-  orders             Order[]
+  primaryArtistId             String?
+  isActive                    Boolean            @default(true)
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+  lastLogin                   DateTime?
+  status                      String?
+  artistAppointments          Appointment[]      @relation("ArtistAppointments")
+  appointments                Appointment[]
   // Billing v3 relations
-  appointmentBillsAsCustomer AppointmentBill[] @relation("AppointmentBillCustomer")
-  appointmentBillsAsArtist   AppointmentBill[] @relation("AppointmentBillArtist")
-  paymentsRecorded           Payment[]         @relation("PaymentRecordedBy")
-  artistSplitRules           ArtistSplitRule[] @relation("ArtistSplitRuleArtist")
-  member             Member?
-  artist             Artist?
-  branch             Branch?       @relation(fields: [branchId], references: [id])
-  primaryArtist      User?         @relation("PrimaryArtistOwnership", fields: [primaryArtistId], references: [id])
-  primaryCustomers   User[]        @relation("PrimaryArtistOwnership")
-  topupHistory       TopupHistory[]
-  portfolioItems     PortfolioItem[]
-  notifications      Notification[]
+  appointmentBillsAsCustomer  AppointmentBill[]  @relation("AppointmentBillCustomer")
+  appointmentBillsAsArtist    AppointmentBill[]  @relation("AppointmentBillArtist")
+  paymentsRecorded            Payment[]          @relation("PaymentRecordedBy")
+  artistSplitRules            ArtistSplitRule[]  @relation("ArtistSplitRuleArtist")
+  appointmentBillsCreatedBy   AppointmentBill[]  @relation("AppointmentBillCreatedBy")
+  member                      Member?
+  artist                      Artist?
+  branch                      Branch?            @relation(fields: [branchId], references: [id])
+  primaryArtist               User?              @relation("PrimaryArtistOwnership", fields: [primaryArtistId], references: [id])
+  primaryCustomers            User[]             @relation("PrimaryArtistOwnership")
+  topupHistory                TopupHistory[]
+  portfolioItems              PortfolioItem[]
+  notifications               Notification[]
   completedServicesAsCustomer CompletedService[] @relation("CustomerCompletedServices")
   completedServicesAsArtist   CompletedService[] @relation("ArtistCompletedServices")
   customerNotes               CustomerNote[]
   customerReminders           CustomerReminder[]
-  createdCustomerNotes        CustomerNote[] @relation("CustomerNoteCreator")
+  createdCustomerNotes        CustomerNote[]     @relation("CustomerNoteCreator")
   createdCustomerReminders    CustomerReminder[] @relation("CustomerReminderCreator")
-  
+  // @@index([personId])
+
   @@index([branchId, role, isActive])
   @@index([role, createdAt])
   @@index([email])
   @@index([primaryArtistId, branchId])
-  // @@index([personId])
 }
 
 model Member {
-  id              String @id @default(cuid())
-  userId          String @unique
-  totalSpent      Int    @default(0)    // 累計消費
-  balance         Int    @default(0)    // 儲值餘額
-  membershipLevel String?               // 會員等級
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  totalSpent      Int     @default(0) // 累計消費
+  balance         Int     @default(0) // 儲值餘額
+  membershipLevel String? // 會員等級
 
-  user User @relation(fields: [userId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
   topupHistory TopupHistory[]
 }
 
-
 model Branch {
-  id            String         @id @default(cuid())
-  name          String
-  address       String
-  phone         String?
-  businessHours Json?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  appointments  Appointment[]
-  orders        Order[]
+  id                String             @id @default(cuid())
+  name              String
+  address           String
+  phone             String?
+  businessHours     Json?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  appointments      Appointment[]
   // Billing v3 relations
-  appointmentBills AppointmentBill[]
-  artistSplitRules ArtistSplitRule[]
-  artists       Artist[]
-  users         User[]
+  appointmentBills  AppointmentBill[]
+  artistSplitRules  ArtistSplitRule[]
+  artists           Artist[]
+  users             User[]
   completedServices CompletedService[]
-  contacts      Contact[]
+  contacts          Contact[]
 }
 
 model Artist {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  displayName String?
-  bio         String?
-  styles      Json?
-  speciality  String?
+  id           String               @id @default(cuid())
+  userId       String               @unique
+  displayName  String?
+  bio          String?
+  styles       Json?
+  speciality   String?
   portfolioUrl String?
-  photoUrl    String?
-  branchId    String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  photoUrl     String?
+  branchId     String?
+  active       Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
   availability ArtistAvailability[]
-  branch      Branch?  @relation(fields: [branchId], references: [id])
-  user        User     @relation(fields: [userId], references: [id])
+  branch       Branch?              @relation(fields: [branchId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id])
 
-  @@map("TattooArtist")   // 讓 Artist 模型對應到既有的 TattooArtist 表
+  @@map("TattooArtist") // 讓 Artist 模型對應到既有的 TattooArtist 表
 }
 
 model ArtistAvailability {
-  id           String       @id @default(cuid())
+  id           String    @id @default(cuid())
   artistId     String
   weekday      Int?
   specificDate DateTime?
   startTime    String
   endTime      String
-  isBlocked    Boolean      @default(false)
+  isBlocked    Boolean   @default(false)
   repeatRule   String?
-  artist       Artist @relation(fields: [artistId], references: [id])
+  artist       Artist    @relation(fields: [artistId], references: [id])
 }
 
 model Service {
-  id           String           @id @default(cuid())
-  name         String
-  description  String
-  isActive     Boolean          @default(true)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  category     String?
-  currency     String           @default("TWD")
-  durationMin  Int
-  imageUrl     String?
-  price        Int
-  hasVariants  Boolean          @default(false)  // 是否有規格選項
-  appointments Appointment[]
-  history      ServiceHistory[]
-  completedServices CompletedService[]
-  variants     ServiceVariant[]
-  cartItems    CartItem[]
+  id                   String                @id @default(cuid())
+  name                 String
+  description          String
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  category             String?
+  currency             String                @default("TWD")
+  durationMin          Int
+  imageUrl             String?
+  price                Int
+  hasVariants          Boolean               @default(false) // 是否有規格選項
+  appointments         Appointment[]
+  history              ServiceHistory[]
+  completedServices    CompletedService[]
+  variants             ServiceVariant[]
+  cartItems            CartItem[]
   // Billing v3 relations
   appointmentBillItems AppointmentBillItem[]
 }
 
 model Appointment {
-  id           String            @id @default(cuid())
-  branchId     String
-  artistId     String?
-  serviceId    String?
-  contactId    String?
-  startAt      DateTime
-  endAt        DateTime
-  status       AppointmentStatus @default(PENDING)
-  notes        String?
+  id                String            @id @default(cuid())
+  branchId          String
+  artistId          String?
+  serviceId         String?
+  contactId         String?
+  startAt           DateTime
+  endAt             DateTime
+  status            AppointmentStatus @default(PENDING)
+  notes             String?
   // V2: 排程保留時間（分鐘）。預設 120 + buffer(30) = 150，可由後台自由調整。
-  holdMin      Int               @default(150)
-  holdUpdatedAt DateTime?
-  holdUpdatedBy String?
-  holdUpdateReason String?
+  holdMin           Int               @default(150)
+  holdUpdatedAt     DateTime?
+  holdUpdatedBy     String?
+  holdUpdateReason  String?
   // V2: 改期/取消/No-show 記錄（用於規則 enforcement 與後續報表）
-  rescheduleCount Int            @default(0)
+  rescheduleCount   Int               @default(0)
   lastRescheduledAt DateTime?
-  rescheduleReason String?
-  canceledAt   DateTime?
-  cancelReason String?
-  noShowAt     DateTime?
-  noShowReason String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  userId       String
-  orderId      String?           @unique
-  cartId       String?           // 關聯購物車
-  cartSnapshot Json?             // 購物車快照
-  artist       User?             @relation("ArtistAppointments", fields: [artistId], references: [id])
-  branch       Branch            @relation(fields: [branchId], references: [id])
-  service      Service?          @relation(fields: [serviceId], references: [id])
-  user         User              @relation(fields: [userId], references: [id])
-  contact      Contact?          @relation(fields: [contactId], references: [id])
-  order        Order?
+  rescheduleReason  String?
+  canceledAt        DateTime?
+  cancelReason      String?
+  noShowAt          DateTime?
+  noShowReason      String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  userId            String
+  cartId            String? // 關聯購物車
+  cartSnapshot      Json? // 購物車快照
+  artist            User?             @relation("ArtistAppointments", fields: [artistId], references: [id])
+  branch            Branch            @relation(fields: [branchId], references: [id])
+  service           Service?          @relation(fields: [serviceId], references: [id])
+  user              User              @relation(fields: [userId], references: [id])
+  contact           Contact?          @relation(fields: [contactId], references: [id])
   // V3: 帳務（以預約為帳）
-  bill         AppointmentBill?
-  completedService CompletedService?
-  cart         Cart?             @relation(fields: [cartId], references: [id])
-  
+  bill              AppointmentBill?
+  completedService  CompletedService?
+  cart              Cart?             @relation(fields: [cartId], references: [id])
+
   @@index([branchId, createdAt, status])
   @@index([status, startAt])
   @@index([artistId, status])
   @@index([serviceId, createdAt])
   @@index([cartId])
   @@index([branchId, artistId, startAt])
-}
-
-model Order {
-  id            String        @id @default(cuid())
-  memberId      String
-  branchId      String
-  appointmentId String?       @unique
-  totalAmount   Int
-  discount      Int?          @default(0)
-  finalAmount   Int           @default(0)
-  paymentType   PaymentType
-  status        OrderStatus   @default(PENDING_PAYMENT)
-  paymentMethod String?       // 現金、信用卡、匯款等
-  paidAt        DateTime?
-  notes         String?
-  isInstallment Boolean       @default(false) // 是否為分期付款
-  cartSnapshot  Json?         // 購物車快照（保存規格資訊）
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @default(now()) @updatedAt
-  installments  Installment[]
-  branch        Branch        @relation(fields: [branchId], references: [id])
-  member        User          @relation(fields: [memberId], references: [id])
-  appointment   Appointment?  @relation(fields: [appointmentId], references: [id])
-  
-  @@index([branchId, createdAt, status])
-  @@index([memberId, status])
-  @@index([status, createdAt])
-}
-
-model Installment {
-  id            String            @id @default(cuid())
-  orderId       String
-  installmentNo Int
-  dueDate       DateTime
-  amount        Int
-  status        InstallmentStatus @default(UNPAID)
-  paidAt        DateTime?
-  paymentMethod String?           // 付款方式：現金、信用卡、匯款等
-  notes         String?           // 備註，可記錄交易碼
-  isCustom      Boolean           @default(false)  // 是否為人工調整的金額
-  autoAdjusted  Boolean           @default(false)  // 是否經過系統自動重新分配
-  order         Order             @relation(fields: [orderId], references: [id])
-
-  @@unique([orderId, installmentNo])
 }
 
 // -----------------------------
@@ -249,25 +201,32 @@ enum AllocationTarget {
 }
 
 model AppointmentBill {
-  id            String     @id @default(cuid())
-  appointmentId String     @unique
-  branchId      String
-  customerId    String
-  artistId      String?
-  currency      String     @default("TWD")
-  listTotal     Int
-  discountTotal Int        @default(0)
-  billTotal     Int
-  status        BillStatus @default(OPEN)
-  voidReason    String?
-  voidedAt      DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                    String     @id @default(cuid())
+  // Optional: supports non-appointment bills (walk-in / goods / manual bills)
+  appointmentId         String?    @unique
+  branchId              String
+  customerId            String?
+  artistId              String?
+  currency              String     @default("TWD")
+  billType              String     @default("APPOINTMENT") // APPOINTMENT | WALK_IN | OTHER
+  listTotal             Int
+  discountTotal         Int        @default(0)
+  billTotal             Int
+  status                BillStatus @default(OPEN)
+  voidReason            String?
+  voidedAt              DateTime?
+  // Snapshots for non-member / non-appointment
+  customerNameSnapshot  String?
+  customerPhoneSnapshot String?
+  createdById           String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
 
-  appointment Appointment @relation(fields: [appointmentId], references: [id])
-  branch      Branch      @relation(fields: [branchId], references: [id])
-  customer    User        @relation("AppointmentBillCustomer", fields: [customerId], references: [id])
-  artist      User?       @relation("AppointmentBillArtist", fields: [artistId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  branch      Branch       @relation(fields: [branchId], references: [id])
+  customer    User?        @relation("AppointmentBillCustomer", fields: [customerId], references: [id])
+  artist      User?        @relation("AppointmentBillArtist", fields: [artistId], references: [id])
+  createdBy   User?        @relation("AppointmentBillCreatedBy", fields: [createdById], references: [id])
 
   items    AppointmentBillItem[]
   payments Payment[]
@@ -275,10 +234,11 @@ model AppointmentBill {
   @@index([branchId, createdAt, status])
   @@index([customerId, status])
   @@index([artistId, status])
+  @@index([billType, createdAt])
 }
 
 model AppointmentBillItem {
-  id                 String  @id @default(cuid())
+  id                 String   @id @default(cuid())
   billId             String
   serviceId          String?
   nameSnapshot       String
@@ -286,7 +246,7 @@ model AppointmentBillItem {
   finalPriceSnapshot Int
   variantsSnapshot   Json?
   notes              String?
-  sortOrder          Int     @default(0)
+  sortOrder          Int      @default(0)
   createdAt          DateTime @default(now())
 
   bill    AppointmentBill @relation(fields: [billId], references: [id])
@@ -296,20 +256,20 @@ model AppointmentBillItem {
 }
 
 model Payment {
-  id               String   @id @default(cuid())
-  billId           String
-  amount           Int      // 正數=收款；負數=退款/沖帳
-  method           String   // CASH/CARD/TRANSFER/STORED_VALUE/OTHER...
-  paidAt           DateTime @default(now())
-  recordedById     String?
-  notes            String?
+  id                String   @id @default(cuid())
+  billId            String
+  amount            Int // 正數=收款；負數=退款/沖帳
+  method            String // CASH/CARD/TRANSFER/STORED_VALUE/OTHER...
+  paidAt            DateTime @default(now())
+  recordedById      String?
+  notes             String?
   refundOfPaymentId String?
-  createdAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
 
-  bill        AppointmentBill @relation(fields: [billId], references: [id])
-  recordedBy  User?           @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
-  refundOf    Payment?        @relation("PaymentRefundOf", fields: [refundOfPaymentId], references: [id])
-  refunds     Payment[]       @relation("PaymentRefundOf")
+  bill        AppointmentBill     @relation(fields: [billId], references: [id])
+  recordedBy  User?               @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  refundOf    Payment?            @relation("PaymentRefundOf", fields: [refundOfPaymentId], references: [id])
+  refunds     Payment[]           @relation("PaymentRefundOf")
   allocations PaymentAllocation[]
 
   @@index([billId, paidAt])
@@ -330,16 +290,16 @@ model PaymentAllocation {
 }
 
 model ArtistSplitRule {
-  id           String   @id @default(cuid())
-  artistId     String
-  branchId     String?
-  artistRateBps Int     @default(7000) // 70.00%
-  shopRateBps   Int     @default(3000) // 30.00%
+  id            String   @id @default(cuid())
+  artistId      String
+  branchId      String?
+  artistRateBps Int      @default(7000) // 70.00%
+  shopRateBps   Int      @default(3000) // 30.00%
   effectiveFrom DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  artist User   @relation("ArtistSplitRuleArtist", fields: [artistId], references: [id])
+  artist User    @relation("ArtistSplitRuleArtist", fields: [artistId], references: [id])
   branch Branch? @relation(fields: [branchId], references: [id])
 
   @@index([artistId, branchId, effectiveFrom])
@@ -374,37 +334,17 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
-enum PaymentType {
-  ONE_TIME
-  INSTALLMENT
-}
-
-enum OrderStatus {
-  PENDING_PAYMENT  // 待結帳
-  PARTIALLY_PAID  // 部分付款（分期付款中）
-  INSTALLMENT_ACTIVE  // 分期付款中
-  PAID
-  PAID_COMPLETE  // 分期付款完成
-  CANCELLED
-  COMPLETED
-}
-
-enum InstallmentStatus {
-  UNPAID
-  PAID
-  OVERDUE    // 逾期
-  CANCELLED  // 取消
-}
+// (Order/Installment removed; Billing is the single source of truth)
 
 model TopupHistory {
-  id          String   @id @default(cuid())
-  member      Member   @relation(fields: [memberId], references: [id])
-  memberId    String
-  operator    User     @relation(fields: [operatorId], references: [id])
-  operatorId  String
-  amount      Int
-  type        String   @default("TOPUP")  // "TOPUP" | "SPEND"
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  member     Member   @relation(fields: [memberId], references: [id])
+  memberId   String
+  operator   User     @relation(fields: [operatorId], references: [id])
+  operatorId String
+  amount     Int
+  type       String   @default("TOPUP") // "TOPUP" | "SPEND"
+  createdAt  DateTime @default(now())
 }
 
 model PortfolioItem {
@@ -413,7 +353,7 @@ model PortfolioItem {
   title       String
   description String?
   imageUrl    String
-  tags        Json     // Array of strings
+  tags        Json // Array of strings
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   artist      User     @relation(fields: [artistId], references: [id])
@@ -424,33 +364,33 @@ model Notification {
   userId    String
   title     String
   message   String
-  type      String   // "APPOINTMENT" | "MESSAGE" | "SYSTEM"
+  type      String // "APPOINTMENT" | "MESSAGE" | "SYSTEM"
   isRead    Boolean  @default(false)
-  data      Json?    // Additional data for the notification
+  data      Json? // Additional data for the notification
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
 }
 
 model CompletedService {
-  id            String   @id @default(cuid())
-  appointmentId String   @unique
-  customerId    String
-  artistId      String
-  serviceId     String
-  branchId      String
-  serviceName   String
-  servicePrice  Int
+  id              String   @id @default(cuid())
+  appointmentId   String   @unique
+  customerId      String
+  artistId        String
+  serviceId       String
+  branchId        String
+  serviceName     String
+  servicePrice    Int
   serviceDuration Int
-  completedAt   DateTime @default(now())
-  notes         String?
-  
+  completedAt     DateTime @default(now())
+  notes           String?
+
   // Relations
-  appointment   Appointment @relation(fields: [appointmentId], references: [id])
-  customer      User        @relation("CustomerCompletedServices", fields: [customerId], references: [id])
-  artist        User        @relation("ArtistCompletedServices", fields: [artistId], references: [id])
-  service       Service     @relation(fields: [serviceId], references: [id])
-  branch        Branch      @relation(fields: [branchId], references: [id])
-  
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  customer    User        @relation("CustomerCompletedServices", fields: [customerId], references: [id])
+  artist      User        @relation("ArtistCompletedServices", fields: [artistId], references: [id])
+  service     Service     @relation(fields: [serviceId], references: [id])
+  branch      Branch      @relation(fields: [branchId], references: [id])
+
   @@index([branchId, completedAt])
   @@index([artistId, completedAt])
   @@index([serviceId, completedAt])
@@ -458,68 +398,68 @@ model CompletedService {
 
 // 客戶標註模型
 model CustomerNote {
-  id        String   @id @default(cuid())
-  content   String
-  createdAt DateTime @default(now())
-  createdBy String   // 關聯到 User.id (刺青師)
-  customer  User     @relation(fields: [customerId], references: [id])
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+  createdBy  String // 關聯到 User.id (刺青師)
+  customer   User     @relation(fields: [customerId], references: [id])
   customerId String
-  
+
   // Relations
-  creator   User     @relation("CustomerNoteCreator", fields: [createdBy], references: [id])
+  creator User @relation("CustomerNoteCreator", fields: [createdBy], references: [id])
 }
 
 // 客戶提醒模型
 model CustomerReminder {
-  id        String   @id @default(cuid())
-  title     String
-  date      DateTime
-  note      String?
-  createdAt DateTime @default(now())
-  createdBy String   // 關聯到 User.id (刺青師)
-  customer  User     @relation(fields: [customerId], references: [id])
+  id         String   @id @default(cuid())
+  title      String
+  date       DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+  createdBy  String // 關聯到 User.id (刺青師)
+  customer   User     @relation(fields: [customerId], references: [id])
   customerId String
-  
+
   // Relations
-  creator   User     @relation("CustomerReminderCreator", fields: [createdBy], references: [id])
+  creator User @relation("CustomerReminderCreator", fields: [createdBy], references: [id])
 }
 
 // 聯絡表單模型
 model Contact {
-  id           String         @id @default(cuid())
-  name         String
-  email        String
-  phone        String?
-  branchId     String
-  notes        String?
-  status       String         @default("PENDING") // PENDING, CONTACTED, CONVERTED, CLOSED
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  branchId  String
+  notes     String?
+  status    String   @default("PENDING") // PENDING, CONTACTED, CONVERTED, CLOSED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  branch       Branch         @relation(fields: [branchId], references: [id])
+  branch       Branch        @relation(fields: [branchId], references: [id])
   appointments Appointment[]
 }
 
 // 服務規格模型
 model ServiceVariant {
-  id               String   @id @default(cuid())
-  serviceId        String
-  type             String   // "size" / "color" / "position" / "style" / "complexity" / "technique" / "custom"
-  name             String   // "5x5cm" / "割線A" / "部位1"
-  code             String?  // "A" / "B" / "C" / "D" for color
-  description      String?  // 規格詳細說明（例如："適合小型圖案"）
-  priceModifier    Int      @default(0)  // 價格調整（正數加價，負數減價）
-  sortOrder        Int      @default(0)  // 顯示順序
-  isActive         Boolean  @default(true)  // 是否啟用（可針對商品隱藏）
-  isRequired       Boolean  @default(false) // 是否為必選項
-  icon             String?  // 圖示 URL 或 icon name
-  metadata         Json?    // 額外的元數據（例如：顏色代碼、預覽圖等）
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  service          Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  
+  id            String   @id @default(cuid())
+  serviceId     String
+  type          String // "size" / "color" / "position" / "style" / "complexity" / "technique" / "custom"
+  name          String // "5x5cm" / "割線A" / "部位1"
+  code          String? // "A" / "B" / "C" / "D" for color
+  description   String? // 規格詳細說明（例如："適合小型圖案"）
+  priceModifier Int      @default(0) // 價格調整（正數加價，負數減價）
+  sortOrder     Int      @default(0) // 顯示順序
+  isActive      Boolean  @default(true) // 是否啟用（可針對商品隱藏）
+  isRequired    Boolean  @default(false) // 是否為必選項
+  icon          String? // 圖示 URL 或 icon name
+  metadata      Json? // 額外的元數據（例如：顏色代碼、預覽圖等）
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
   @@index([serviceId, type])
   @@index([serviceId, isActive])
   @@index([serviceId, type, isActive])
@@ -527,17 +467,17 @@ model ServiceVariant {
 
 // 購物車模型
 model Cart {
-  id           String        @id @default(cuid())
-  userId       String?       // 已登入用戶
-  sessionId    String?       // 訪客用 session ID
-  status       String        @default("active") // active / checked_out / expired
-  expiresAt    DateTime      // 過期時間（7天）
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  
+  id        String   @id @default(cuid())
+  userId    String? // 已登入用戶
+  sessionId String? // 訪客用 session ID
+  status    String   @default("active") // active / checked_out / expired
+  expiresAt DateTime // 過期時間（7天）
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   items        CartItem[]
   appointments Appointment[]
-  
+
   @@index([userId])
   @@index([sessionId])
   @@index([status, expiresAt])
@@ -545,29 +485,29 @@ model Cart {
 
 // 購物車項目模型
 model CartItem {
-  id                String   @id @default(cuid())
-  cartId            String
-  serviceId         String
-  
+  id        String @id @default(cuid())
+  cartId    String
+  serviceId String
+
   // 選擇的規格（JSON 格式）
   // { size: "10x10cm", color: "割線A", position: "部位1" }
-  selectedVariants  Json
-  
+  selectedVariants Json
+
   // 計算後的價格和時長
-  basePrice         Int      // 服務基礎價
-  finalPrice        Int      // 最終價格（基礎價 + 規格調整）
-  estimatedDuration Int      // 預估時長（分鐘）
-  
+  basePrice         Int // 服務基礎價
+  finalPrice        Int // 最終價格（基礎價 + 規格調整）
+  estimatedDuration Int // 預估時長（分鐘）
+
   // 用戶備註
-  notes             String?
-  referenceImages   String[] // 參考圖片 URLs
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  cart              Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  service           Service  @relation(fields: [serviceId], references: [id])
-  
+  notes           String?
+  referenceImages String[] // 參考圖片 URLs
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id])
+
   @@index([cartId])
   @@index([serviceId])
 }

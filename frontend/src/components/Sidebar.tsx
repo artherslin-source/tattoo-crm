@@ -35,7 +35,7 @@ export default function Sidebar({ open, onClose }: Props) {
             <Link href="/admin/contacts" prefetch={true}>💬 聯絡管理</Link>
             <Link href="/admin/appointments" prefetch={true}>📅 預約管理</Link>
             <Link href="/admin/billing" prefetch={true}>💰 帳務管理</Link>
-            <Link href="/admin/orders" prefetch={true}>🧾 訂單管理</Link>
+                <Link href="/admin/billing" prefetch={true}>💰 帳務管理</Link>
           </nav>
         </div>
         <div className="flex flex-col gap-3">
@@ -76,7 +76,7 @@ export default function Sidebar({ open, onClose }: Props) {
                 <Link href="/admin/contacts" onClick={onClose} prefetch={true}>💬 聯絡管理</Link>
                 <Link href="/admin/appointments" onClick={onClose} prefetch={true}>📅 預約管理</Link>
                 <Link href="/admin/billing" onClick={onClose} prefetch={true}>💰 帳務管理</Link>
-                <Link href="/admin/orders" onClick={onClose} prefetch={true}>🧾 訂單管理</Link>
+                <Link href="/admin/billing" onClick={onClose} prefetch={true}>💰 帳務管理</Link>
               </nav>
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-neutral-700 flex flex-col gap-4">
                 <ThemeToggle />

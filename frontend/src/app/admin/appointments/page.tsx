@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar, Plus, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Calendar, Plus } from "lucide-react";
 import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
@@ -25,7 +25,6 @@ interface Appointment {
   status: 'INTENT' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'NO_SHOW';
   notes: string | null;
   createdAt: string;
-  orderId: string | null;
   user: {
     id: string;
     name: string | null;
@@ -45,13 +44,12 @@ interface Appointment {
     id: string;
     name: string;
   };
-  order?: {
+  bill?: {
     id: string;
-    totalAmount: number;
-    finalAmount: number;
+    billTotal: number;
     status: string;
-    paymentType: string;
-  };
+    billType: string;
+  } | null;
   // ✅ 購物車快照（從購物車結帳創建的預約會有此欄位）
   cartSnapshot?: {
     items: Array<{
@@ -852,20 +850,16 @@ export default function AdminAppointmentsPage() {
 
               {/* 操作按鈕 */}
               <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                {/* ✅ 問題1：添加跳轉到訂單的按鈕 */}
-                {selectedAppointment.orderId && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      handleCloseDetailModal();
-                      router.push(`/admin/orders?orderId=${selectedAppointment.orderId}`);
-                    }}
-                    className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    查看關聯訂單
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleCloseDetailModal();
+                    router.push(`/admin/billing`);
+                  }}
+                  className="w-full"
+                >
+                  前往帳務管理
+                </Button>
 
                 {/* V2 操作：改期 / 取消 / No-show */}
                 <div className="grid grid-cols-1 gap-2">

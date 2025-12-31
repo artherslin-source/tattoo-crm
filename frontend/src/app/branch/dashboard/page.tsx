@@ -6,7 +6,7 @@ import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth, ApiError
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Palette, Settings, Building2 } from "lucide-react";
+import { Users, Calendar, DollarSign, UserCheck, Palette, Settings, Building2 } from "lucide-react";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 
 interface DashboardStats {
@@ -180,13 +180,6 @@ export default function BranchDashboardPage() {
       href: "/branch/appointments",
       color: "bg-purple-500"
     },
-    {
-      title: "管理訂單",
-      description: "處理分店客戶訂單和付款",
-      icon: ShoppingCart,
-      href: "/branch/orders",
-      color: "bg-orange-500"
-    }
   ];
 
   return (

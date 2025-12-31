@@ -23,6 +23,31 @@ const UpdateBillSchema = z.object({
   status: z.enum(['OPEN', 'SETTLED', 'VOID']).optional(),
 });
 
+const CreateManualBillSchema = z.object({
+  branchId: z.string().min(1),
+  billType: z.string().min(1).default('WALK_IN'),
+  customerId: z.string().optional().nullable(),
+  customerNameSnapshot: z.string().optional().nullable(),
+  customerPhoneSnapshot: z.string().optional().nullable(),
+  artistId: z.string().optional().nullable(),
+  currency: z.string().optional().nullable(),
+  discountTotal: z.coerce.number().int().min(0).optional(),
+  notes: z.string().optional().nullable(),
+  items: z
+    .array(
+      z.object({
+        serviceId: z.string().optional().nullable(),
+        nameSnapshot: z.string().min(1),
+        basePriceSnapshot: z.coerce.number().int().min(0),
+        finalPriceSnapshot: z.coerce.number().int().min(0),
+        variantsSnapshot: z.any().optional(),
+        notes: z.string().optional().nullable(),
+        sortOrder: z.coerce.number().int().optional(),
+      }),
+    )
+    .min(1),
+});
+
 const UpsertSplitRuleSchema = z.object({
   artistId: z.string().min(1),
   branchId: z.string().optional().nullable(),
@@ -35,7 +60,7 @@ const UpsertSplitRuleSchema = z.object({
 export class AdminBillingController {
   constructor(private readonly billing: BillingService) {}
 
-  // List bills (with summary fields) for admin page
+  // List bills (with summary fields) for admin page (legacy path)
   @Get('appointments')
   async list(@Actor() actor: AccessActor, @Query() query: any) {
     return this.billing.listBills(actor, {
@@ -48,6 +73,37 @@ export class AdminBillingController {
     });
   }
 
+  // List bills (preferred)
+  @Get('bills')
+  async listBills(@Actor() actor: AccessActor, @Query() query: any) {
+    return this.billing.listBills(actor, {
+      branchId: query.branchId,
+      artistId: query.artistId,
+      customerSearch: query.customerSearch,
+      status: query.status,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+  }
+
+  // Create non-appointment / manual bill
+  @Post('bills')
+  async createManualBill(@Actor() actor: AccessActor, @Body() body: unknown) {
+    const input = CreateManualBillSchema.parse(body);
+    return this.billing.createManualBill(actor, {
+      branchId: input.branchId,
+      billType: input.billType,
+      customerId: input.customerId ?? null,
+      customerNameSnapshot: input.customerNameSnapshot ?? null,
+      customerPhoneSnapshot: input.customerPhoneSnapshot ?? null,
+      artistId: input.artistId ?? null,
+      currency: input.currency ?? undefined,
+      discountTotal: input.discountTotal,
+      notes: input.notes ?? null,
+      items: input.items,
+    });
+  }
+
   // Create / ensure a bill exists for an appointment, based on cartSnapshot (multi-items)
   @Post('appointments/ensure')
   async ensure(@Actor() actor: AccessActor, @Body() body: unknown) {
@@ -55,16 +111,32 @@ export class AdminBillingController {
     return this.billing.ensureBillForAppointment(actor, input.appointmentId);
   }
 
-  // Get bill detail by appointment id (preferred UI key)
+  // Get bill detail by appointment id (legacy path)
   @Get('appointments/:appointmentId')
   async getByAppointment(@Actor() actor: AccessActor, @Param('appointmentId') appointmentId: string) {
     return this.billing.getBillByAppointment(actor, appointmentId);
+  }
+
+  // Get bill detail by bill id (preferred)
+  @Get('bills/:billId')
+  async getById(@Actor() actor: AccessActor, @Param('billId') billId: string) {
+    return this.billing.getBillById(actor, billId);
   }
 
   @Patch('appointments/:appointmentId')
   async update(@Actor() actor: AccessActor, @Param('appointmentId') appointmentId: string, @Body() body: unknown) {
     const input = UpdateBillSchema.parse(body);
     return this.billing.updateBill(actor, appointmentId, {
+      discountTotal: input.discountTotal,
+      status: input.status,
+      voidReason: input.voidReason,
+    });
+  }
+
+  @Patch('bills/:billId')
+  async updateById(@Actor() actor: AccessActor, @Param('billId') billId: string, @Body() body: unknown) {
+    const input = UpdateBillSchema.parse(body);
+    return this.billing.updateBillById(actor, billId, {
       discountTotal: input.discountTotal,
       status: input.status,
       voidReason: input.voidReason,
@@ -78,6 +150,19 @@ export class AdminBillingController {
     const paidAt = input.paidAt ? new Date(input.paidAt) : undefined;
     if (paidAt && Number.isNaN(paidAt.getTime())) throw new BadRequestException('paidAt is invalid');
     return this.billing.recordPayment(actor, appointmentId, {
+      amount: input.amount,
+      method: input.method,
+      paidAt,
+      notes: input.notes,
+    });
+  }
+
+  @Post('bills/:billId/payments')
+  async recordPaymentByBillId(@Actor() actor: AccessActor, @Param('billId') billId: string, @Body() body: unknown) {
+    const input = RecordPaymentSchema.parse(body);
+    const paidAt = input.paidAt ? new Date(input.paidAt) : undefined;
+    if (paidAt && Number.isNaN(paidAt.getTime())) throw new BadRequestException('paidAt is invalid');
+    return this.billing.recordPaymentByBillId(actor, billId, {
       amount: input.amount,
       method: input.method,
       paidAt,

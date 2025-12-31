@@ -6,7 +6,7 @@ import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth } from "@
 import { hasAdminAccess, normalizeAccessRole } from "@/lib/access";
 import BranchSelector from "@/components/BranchSelector";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, ShoppingCart, DollarSign, UserCheck, Settings, MessageSquare } from "lucide-react";
+import { Users, Calendar, DollarSign, UserCheck, Settings, MessageSquare } from "lucide-react";
 
 interface DashboardStats {
   totalUsers: number;
@@ -191,10 +191,10 @@ export default function AdminDashboardPage() {
       color: "bg-purple-500"
     },
     {
-      title: "管理訂單",
-      description: "處理客戶訂單和付款",
-      icon: ShoppingCart,
-      href: "/admin/orders",
+      title: "帳務管理",
+      description: "收款、拆帳、查帳（唯一口徑）",
+      icon: DollarSign,
+      href: "/admin/billing",
       color: "bg-orange-500"
     }
   ];

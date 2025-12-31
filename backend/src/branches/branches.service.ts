@@ -13,8 +13,8 @@ export class BranchesService {
           select: {
             users: true,
             artists: true,
-            orders: true,
             appointments: true,
+            appointmentBills: true,
           }
         }
       }
@@ -49,8 +49,8 @@ export class BranchesService {
           select: {
             users: true,
             artists: true,
-            orders: true,
             appointments: true,
+            appointmentBills: true,
           }
         }
       }

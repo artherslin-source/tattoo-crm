@@ -20,22 +20,26 @@ interface BillSummary {
 
 interface BillRow {
   id: string;
-  appointmentId: string;
+  appointmentId: string | null;
+  billType: string;
   status: BillStatus;
   billTotal: number;
   discountTotal: number;
   currency: string;
   createdAt: string;
   updatedAt: string;
-  appointment: {
+  customerNameSnapshot?: string | null;
+  customerPhoneSnapshot?: string | null;
+  appointment?: {
     id: string;
     startAt: string;
     endAt: string;
     status: string;
-  };
-  customer: { id: string; name: string | null; phone: string | null };
+  } | null;
+  customer: { id: string; name: string | null; phone: string | null } | null;
   artist: { id: string; name: string | null } | null;
   branch: { id: string; name: string };
+  createdBy?: { id: string; name: string | null } | null;
   summary: BillSummary;
 }
 
@@ -103,6 +107,15 @@ export default function AdminBillingPage() {
   const [selected, setSelected] = useState<BillDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newBranchId, setNewBranchId] = useState("");
+  const [newBillType, setNewBillType] = useState("WALK_IN");
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newArtistId, setNewArtistId] = useState("");
+  const [newDiscountTotal, setNewDiscountTotal] = useState("");
+  const [newItems, setNewItems] = useState<Array<{ name: string; amount: string }>>([{ name: "刺青服務", amount: "" }]);
+
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState<string>("CASH");
   const [payNotes, setPayNotes] = useState("");
@@ -119,7 +132,7 @@ export default function AdminBillingPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getJsonWithAuth<BillRow[]>("/admin/billing/appointments");
+      const data = await getJsonWithAuth<BillRow[]>("/admin/billing/bills");
       setRows(data);
     } catch (e) {
       const apiErr = e as ApiError;
@@ -129,10 +142,10 @@ export default function AdminBillingPage() {
     }
   }, []);
 
-  const openDetail = useCallback(async (appointmentId: string) => {
+  const openDetail = useCallback(async (billId: string) => {
     try {
       setError(null);
-      const data = await getJsonWithAuth<BillDetail>(`/admin/billing/appointments/${appointmentId}`);
+      const data = await getJsonWithAuth<BillDetail>(`/admin/billing/bills/${billId}`);
       setSelected(data);
       setDiscountTotal(String(data.discountTotal ?? 0));
       setDetailOpen(true);
@@ -151,14 +164,14 @@ export default function AdminBillingPage() {
     }
     try {
       setError(null);
-      await postJsonWithAuth(`/admin/billing/appointments/${selected.appointmentId}/payments`, {
+      await postJsonWithAuth(`/admin/billing/bills/${selected.id}/payments`, {
         amount,
         method: payMethod,
         notes: payNotes || undefined,
       });
       setPayAmount("");
       setPayNotes("");
-      await openDetail(selected.appointmentId);
+      await openDetail(selected.id);
       await fetchBills();
     } catch (e) {
       const apiErr = e as ApiError;
@@ -175,8 +188,8 @@ export default function AdminBillingPage() {
     }
     try {
       setError(null);
-      await patchJsonWithAuth(`/admin/billing/appointments/${selected.appointmentId}`, { discountTotal: d });
-      await openDetail(selected.appointmentId);
+      await patchJsonWithAuth(`/admin/billing/bills/${selected.id}`, { discountTotal: d });
+      await openDetail(selected.id);
       await fetchBills();
     } catch (e) {
       const apiErr = e as ApiError;
@@ -246,16 +259,84 @@ export default function AdminBillingPage() {
     return { billTotal, paidTotal, dueTotal: billTotal - paidTotal };
   }, [rows]);
 
+  const onCreateManualBill = useCallback(async () => {
+    const branchId = newBranchId.trim();
+    if (!branchId) {
+      setError("請輸入 branchId（分店 ID）");
+      return;
+    }
+    const items = newItems
+      .map((it, idx) => {
+        const nameSnapshot = it.name.trim();
+        const amt = parseInt(it.amount, 10);
+        if (!nameSnapshot) return null;
+        if (!Number.isFinite(amt) || amt < 0) return null;
+        return {
+          nameSnapshot,
+          basePriceSnapshot: amt,
+          finalPriceSnapshot: amt,
+          sortOrder: idx,
+        };
+      })
+      .filter(Boolean) as Array<{
+      nameSnapshot: string;
+      basePriceSnapshot: number;
+      finalPriceSnapshot: number;
+      sortOrder: number;
+    }>;
+
+    if (items.length === 0) {
+      setError("請至少輸入 1 個有效的明細項目（名稱與金額）");
+      return;
+    }
+
+    const discount = newDiscountTotal.trim() ? parseInt(newDiscountTotal, 10) : undefined;
+    if (discount !== undefined && (!Number.isFinite(discount) || discount < 0)) {
+      setError("折扣必須是大於等於 0 的整數");
+      return;
+    }
+
+    try {
+      setError(null);
+      await postJsonWithAuth("/admin/billing/bills", {
+        branchId,
+        billType: newBillType,
+        customerNameSnapshot: newCustomerName.trim() ? newCustomerName.trim() : null,
+        customerPhoneSnapshot: newCustomerPhone.trim() ? newCustomerPhone.trim() : null,
+        artistId: newArtistId.trim() ? newArtistId.trim() : null,
+        discountTotal: discount,
+        items,
+      });
+      setCreateOpen(false);
+      setNewBranchId("");
+      setNewBillType("WALK_IN");
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewArtistId("");
+      setNewDiscountTotal("");
+      setNewItems([{ name: "刺青服務", amount: "" }]);
+      await fetchBills();
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "建立帳單失敗");
+    }
+  }, [newBranchId, newBillType, newCustomerName, newCustomerPhone, newArtistId, newDiscountTotal, newItems, fetchBills]);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">帳務管理（預約為帳）</h1>
-          <p className="text-sm text-muted-foreground">以預約為主體，記錄多次收款與拆帳</p>
+          <h1 className="text-2xl font-bold">帳務管理</h1>
+          <p className="text-sm text-muted-foreground">以帳務為唯一口徑（可含預約帳、非預約帳）</p>
         </div>
-        <Button variant="outline" onClick={() => router.push("/admin/orders")}>
-          回到訂單（舊）
-        </Button>
+        <div className="flex gap-2">
+          {userRole.toUpperCase() === "BOSS" && (
+            <Button onClick={() => setCreateOpen(true)}>新增非預約帳單</Button>
+          )}
+          <Button variant="outline" onClick={fetchBills} disabled={loading}>
+            {loading ? "載入中..." : "重新整理"}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -286,9 +367,7 @@ export default function AdminBillingPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>帳務清單</CardTitle>
-          <Button variant="outline" onClick={fetchBills} disabled={loading}>
-            {loading ? "載入中..." : "重新整理"}
-          </Button>
+          <div />
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -309,8 +388,16 @@ export default function AdminBillingPage() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="border-b hover:bg-muted/40">
-                    <td className="py-2 pr-3">{new Date(r.appointment.startAt).toLocaleString()}</td>
-                    <td className="py-2 pr-3">{r.customer?.name || r.customer?.phone || "-"}</td>
+                    <td className="py-2 pr-3">
+                      {r.appointment?.startAt ? new Date(r.appointment.startAt).toLocaleString() : "（非預約）"}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {r.customer?.name ||
+                        r.customer?.phone ||
+                        r.customerNameSnapshot ||
+                        r.customerPhoneSnapshot ||
+                        "-"}
+                    </td>
                     <td className="py-2 pr-3">{r.artist?.name || "-"}</td>
                     <td className="py-2 pr-3">{r.branch?.name || "-"}</td>
                     <td className="py-2 pr-3">${formatMoney(r.billTotal)}</td>
@@ -318,7 +405,7 @@ export default function AdminBillingPage() {
                     <td className="py-2 pr-3">${formatMoney(r.summary?.dueTotal || 0)}</td>
                     <td className="py-2 pr-3">{statusBadge(r.status)}</td>
                     <td className="py-2 pr-3">
-                      <Button size="sm" variant="outline" onClick={() => openDetail(r.appointmentId)}>
+                      <Button size="sm" variant="outline" onClick={() => openDetail(r.id)}>
                         查看
                       </Button>
                     </td>
@@ -336,6 +423,115 @@ export default function AdminBillingPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>新增非預約帳單</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">分店 ID（branchId）</label>
+                <Input value={newBranchId} onChange={(e) => setNewBranchId(e.target.value)} placeholder="cmhec2wnk0001ogb6s1jmvvdc" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">類型</label>
+                <Select value={newBillType} onValueChange={setNewBillType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="WALK_IN" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WALK_IN">現場（WALK_IN）</SelectItem>
+                    <SelectItem value="OTHER">其他（OTHER）</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">客戶姓名（可空）</label>
+                <Input value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} placeholder="王小明" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">客戶手機（可空）</label>
+                <Input value={newCustomerPhone} onChange={(e) => setNewCustomerPhone(e.target.value)} placeholder="0912345678" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">刺青師 User.id（可空）</label>
+                <Input value={newArtistId} onChange={(e) => setNewArtistId(e.target.value)} placeholder="cmhec2wp8001oogb6a5nyp47n" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">折扣（可空）</label>
+                <Input value={newDiscountTotal} onChange={(e) => setNewDiscountTotal(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="font-medium">明細</div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewItems((prev) => [...prev, { name: "", amount: "" }])}
+                >
+                  + 新增項目
+                </Button>
+              </div>
+              <div className="border rounded-md overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b">
+                      <th className="py-2 px-3">項目名稱</th>
+                      <th className="py-2 px-3 w-40">金額</th>
+                      <th className="py-2 px-3 w-24">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {newItems.map((it, idx) => (
+                      <tr key={idx} className="border-b">
+                        <td className="py-2 px-3">
+                          <Input
+                            value={it.name}
+                            onChange={(e) =>
+                              setNewItems((prev) => prev.map((p, i) => (i === idx ? { ...p, name: e.target.value } : p)))
+                            }
+                            placeholder="刺青服務"
+                          />
+                        </td>
+                        <td className="py-2 px-3">
+                          <Input
+                            value={it.amount}
+                            onChange={(e) =>
+                              setNewItems((prev) => prev.map((p, i) => (i === idx ? { ...p, amount: e.target.value } : p)))
+                            }
+                            placeholder="30000"
+                          />
+                        </td>
+                        <td className="py-2 px-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setNewItems((prev) => prev.filter((_, i) => i !== idx))}
+                            disabled={newItems.length <= 1}
+                          >
+                            移除
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={onCreateManualBill}>建立</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-3xl">

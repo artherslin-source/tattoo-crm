@@ -12,7 +12,6 @@ interface Appointment {
   status: 'INTENT' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'NO_SHOW';
   notes: string | null;
   createdAt: string;
-  orderId: string | null;
   user: {
     id: string;
     name: string | null;
@@ -32,13 +31,12 @@ interface Appointment {
     id: string;
     name: string;
   };
-  order?: {
+  bill?: {
     id: string;
-    totalAmount: number;
-    finalAmount: number;
+    billTotal: number;
     status: string;
-    paymentType: string;
-  };
+    billType: string;
+  } | null;
   cartSnapshot?: {
     items: Array<{
       serviceId: string;
@@ -109,49 +107,29 @@ export default function AppointmentsCards({
     }
   };
 
-  const getOrderStatusBadgeClass = (status: string) => {
+  const getBillStatusText = (status: string) => {
     switch (status) {
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'PENDING_PAYMENT':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-      case 'PAID':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'PAID_COMPLETE':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'INSTALLMENT_ACTIVE':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'PARTIALLY_PAID':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-      case 'COMPLETED':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'OPEN':
+        return '未結清';
+      case 'SETTLED':
+        return '已結清';
+      case 'VOID':
+        return '作廢';
       default:
-        return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
+        return status;
     }
   };
 
-  const getOrderStatusText = (status: string) => {
+  const getBillStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'PENDING':
-        return '未付款';
-      case 'PENDING_PAYMENT':
-        return '待結帳';
-      case 'PAID':
-        return '已付款';
-      case 'PAID_COMPLETE':
-        return '已結清';
-      case 'INSTALLMENT_ACTIVE':
-        return '分期付款中';
-      case 'PARTIALLY_PAID':
-        return '部分付款';
-      case 'COMPLETED':
-        return '已完成';
-      case 'CANCELLED':
-        return '已取消';
+      case 'OPEN':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      case 'SETTLED':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'VOID':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return status;
+        return 'bg-gray-100 text-text-primary-light dark:bg-gray-900 dark:text-text-secondary-dark';
     }
   };
 
@@ -194,9 +172,9 @@ export default function AppointmentsCards({
                       <Badge className={`text-xs ${getStatusBadgeClass(appointment.status)}`}>
                         {getStatusText(appointment.status)}
                       </Badge>
-                      {appointment.order && (
-                        <Badge className={`text-xs ${getOrderStatusBadgeClass(appointment.order.status)}`}>
-                          {getOrderStatusText(appointment.order.status)}
+                      {appointment.bill && (
+                        <Badge className={`text-xs ${getBillStatusBadgeClass(appointment.bill.status)}`}>
+                          {getBillStatusText(appointment.bill.status)}
                         </Badge>
                       )}
                     </div>
@@ -339,9 +317,9 @@ export default function AppointmentsCards({
                       <Badge className={`text-xs ${getStatusBadgeClass(appointment.status)}`}>
                         {getStatusText(appointment.status)}
                       </Badge>
-                      {appointment.order && (
-                        <Badge className={`text-xs ${getOrderStatusBadgeClass(appointment.order.status)}`}>
-                          {getOrderStatusText(appointment.order.status)}
+                      {appointment.bill && (
+                        <Badge className={`text-xs ${getBillStatusBadgeClass(appointment.bill.status)}`}>
+                          {getBillStatusText(appointment.bill.status)}
                         </Badge>
                       )}
                     </div>

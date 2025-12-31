@@ -38,49 +38,16 @@ export class AdminAnalyticsUnifiedService {
 
   // 單一口徑：用 paidAt 聚合營收（使用原生 SQL 避免 Prisma 類型問題）
   private async revenueByPaidAt(range: TimeRange, branchFilter: any = {}) {
-    // 如果已導入 Billing v3（Payment/Allocation），優先使用 Payment 作為單一口徑
-    const billingCount = await this.prisma.payment.count({
-      where: {
-        paidAt: { gte: range.start, lte: range.end },
-        bill: branchFilter.branchId ? { branchId: branchFilter.branchId } : undefined,
-      } as any,
-    });
-
-    if (billingCount > 0) {
-      const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
-      const params = [range.start, range.end];
-      if (branchFilter.branchId) params.push(branchFilter.branchId);
-
-      const result = await this.prisma.$queryRawUnsafe<{ total: bigint | number }[]>(`
-        SELECT COALESCE(SUM(p."amount"), 0) AS total
-        FROM "Payment" p
-        JOIN "AppointmentBill" b ON p."billId" = b.id
-        WHERE p."paidAt" BETWEEN $1 AND $2
-          ${branchCondition}
-      `, ...params);
-
-      return this.safeBigIntToNumber(result[0]?.total);
-    }
-
-    const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
+    const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
     const params = [range.start, range.end];
-    if (branchFilter.branchId) {
-      params.push(branchFilter.branchId);
-    }
+    if (branchFilter.branchId) params.push(branchFilter.branchId);
 
     const result = await this.prisma.$queryRawUnsafe<{ total: bigint | number }[]>(`
-      SELECT COALESCE(SUM(amount), 0) AS total
-      FROM (
-        SELECT o."finalAmount" AS amount FROM "Order" o
-          WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-            AND o."paidAt" BETWEEN $1 AND $2
-            ${branchCondition}
-        UNION ALL
-        SELECT i."amount" FROM "Installment" i
-          JOIN "Order" o ON i."orderId" = o.id
-          WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
-            ${branchCondition}
-      ) t
+      SELECT COALESCE(SUM(p."amount"), 0) AS total
+      FROM "Payment" p
+      JOIN "AppointmentBill" b ON p."billId" = b.id
+      WHERE p."paidAt" BETWEEN $1 AND $2
+        ${branchCondition}
     `, ...params);
 
     return this.safeBigIntToNumber(result[0]?.total);
@@ -117,45 +84,38 @@ export class AdminAnalyticsUnifiedService {
     return paymentMethodMap[method] || method;
   }
 
-  // 查詢第一筆訂單的日期（用於計算全部時間的日均營收）
-  private async getFirstOrderDate(): Promise<Date | null> {
+  // 查詢第一筆付款日期（用於計算全部時間的日均營收）
+  private async getFirstPaymentDate(branchFilter: any = {}): Promise<Date | null> {
+    const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $1' : '';
+    const params = [];
+    if (branchFilter.branchId) params.push(branchFilter.branchId);
+
     const result = await this.prisma.$queryRawUnsafe<{ first_date: Date }[]>(`
-      SELECT MIN(paid_date) AS first_date
-      FROM (
-        SELECT o."paidAt" AS paid_date FROM "Order" o
-          WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-            AND o."paidAt" IS NOT NULL
-        UNION ALL
-        SELECT i."paidAt" AS paid_date FROM "Installment" i
-          JOIN "Order" o ON i."orderId" = o.id
-          WHERE i."status"='PAID' AND i."paidAt" IS NOT NULL
-      ) t
-    `);
-    
+      SELECT MIN(p."paidAt") AS first_date
+      FROM "Payment" p
+      JOIN "AppointmentBill" b ON p."billId" = b.id
+      WHERE p."paidAt" IS NOT NULL
+        ${branchCondition}
+    `, ...params);
+
     return result[0]?.first_date || null;
   }
 
   // 活躍會員查詢（統一使用 paidAt）
   private async getActiveMembers(range: TimeRange, branchFilter: any = {}) {
-    const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
+    const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
     const params = [range.start, range.end];
     if (branchFilter.branchId) {
       params.push(branchFilter.branchId);
     }
 
     const result = await this.prisma.$queryRawUnsafe<{ count: bigint | number }[]>(`
-      SELECT COUNT(DISTINCT t."memberId") AS count
-      FROM (
-        SELECT o."memberId" FROM "Order" o
-          WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-            AND o."paidAt" BETWEEN $1 AND $2
-            ${branchCondition}
-        UNION
-        SELECT o."memberId" FROM "Installment" i
-          JOIN "Order" o ON i."orderId" = o.id
-          WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
-            ${branchCondition}
-      ) t
+      SELECT COUNT(DISTINCT b."customerId") AS count
+      FROM "Payment" p
+      JOIN "AppointmentBill" b ON p."billId" = b.id
+      WHERE p."paidAt" BETWEEN $1 AND $2
+        ${branchCondition}
+        AND b."customerId" IS NOT NULL
     `, ...params);
     
     return this.safeBigIntToNumber(result[0]?.count);
@@ -196,7 +156,7 @@ export class AdminAnalyticsUnifiedService {
       pending: this.safeBigIntToNumber(statusResult.find(s => s.status === 'PENDING')?.count || 0),
       confirmed: this.safeBigIntToNumber(statusResult.find(s => s.status === 'CONFIRMED')?.count || 0),
       completed: this.safeBigIntToNumber(completedCount),
-      cancelled: this.safeBigIntToNumber(statusResult.find(s => s.status === 'CANCELLED')?.count || 0),
+      cancelled: this.safeBigIntToNumber(statusResult.find(s => s.status === 'CANCELED')?.count || 0),
       conversionRate: Math.round(conversionRate * 100) / 100,
       byStatus: statusResult.map(item => ({
         status: item.status,
@@ -234,7 +194,7 @@ export class AdminAnalyticsUnifiedService {
         ${activeBranchCondition}
     `, ...fullParams);
 
-    // 績效 TOP 5（按預約完成數）
+    // 績效 TOP 5（按預約完成數 / Billing 口徑營收）
     const topPerformersBranchCondition = branchFilter.branchId ? 'AND a."branchId" = $3' : '';
     const topPerformersResult = await this.prisma.$queryRawUnsafe<{ 
       artistId: string, 
@@ -244,15 +204,18 @@ export class AdminAnalyticsUnifiedService {
     }[]>(`
       SELECT 
         a."artistId",
-        ar."displayName" AS "artistName",
+        COALESCE(u."name", ar."displayName", '') AS "artistName",
         COUNT(CASE WHEN a."status" = 'COMPLETED' THEN 1 END) AS "completedCount",
-        COALESCE(SUM(o."finalAmount"), 0) AS "totalRevenue"
+        COALESCE(SUM(CASE WHEN pa."target" = 'ARTIST' THEN pa."amount" ELSE 0 END), 0) AS "totalRevenue"
       FROM "Appointment" a
-      JOIN "TattooArtist" ar ON a."artistId" = ar.id
-      LEFT JOIN "Order" o ON a."orderId" = o.id
+      LEFT JOIN "TattooArtist" ar ON a."artistId" = ar.id
+      LEFT JOIN "User" u ON a."artistId" = u.id
+      LEFT JOIN "AppointmentBill" b ON b."appointmentId" = a.id
+      LEFT JOIN "Payment" p ON p."billId" = b.id AND p."paidAt" BETWEEN $1 AND $2
+      LEFT JOIN "PaymentAllocation" pa ON pa."paymentId" = p.id
       WHERE a."createdAt" BETWEEN $1 AND $2
         ${topPerformersBranchCondition}
-      GROUP BY a."artistId", ar."displayName"
+      GROUP BY a."artistId", u."name", ar."displayName"
       ORDER BY "completedCount" DESC, "totalRevenue" DESC
       LIMIT 5
     `, ...fullParams);
@@ -295,7 +258,7 @@ export class AdminAnalyticsUnifiedService {
       WHERE s."isActive" = true
     `);
 
-    // 熱門服務 TOP 5（按預約數）
+    // 熱門服務 TOP 5（按預約數 / Billing 口徑營收）
     const topServicesResult = await this.prisma.$queryRawUnsafe<{ 
       serviceId: string, 
       serviceName: string, 
@@ -306,10 +269,11 @@ export class AdminAnalyticsUnifiedService {
         a."serviceId",
         s."name" AS "serviceName",
         COUNT(*) AS "appointmentCount",
-        COALESCE(SUM(o."finalAmount"), 0) AS "totalRevenue"
+        COALESCE(SUM(p."amount"), 0) AS "totalRevenue"
       FROM "Appointment" a
       JOIN "Service" s ON a."serviceId" = s.id
-      LEFT JOIN "Order" o ON a."orderId" = o.id
+      LEFT JOIN "AppointmentBill" b ON b."appointmentId" = a.id
+      LEFT JOIN "Payment" p ON p."billId" = b.id AND p."paidAt" BETWEEN $1 AND $2
       WHERE a."createdAt" BETWEEN $1 AND $2
         ${branchCondition}
       GROUP BY a."serviceId", s."name"
@@ -375,7 +339,7 @@ export class AdminAnalyticsUnifiedService {
     });
 
     // 按照 ChatGPT 方案：使用原生 SQL 查詢所有統計數據
-    const branchCondition = branchFilter.branchId ? 'AND o."branchId" = $3' : '';
+    const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
     const baseParams = [currentRange.start, currentRange.end];
     const branchParams = branchFilter.branchId ? [branchFilter.branchId] : [];
     const allParams = [...baseParams, ...branchParams];
@@ -411,75 +375,35 @@ export class AdminAnalyticsUnifiedService {
       
       // 分店營收排行（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: bigint | number }[]>(`
-        SELECT "branchId" AS branch_id, SUM(amount) AS revenue
-        FROM (
-          SELECT o."branchId", o."finalAmount" AS amount FROM "Order" o
-            WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND o."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-          UNION ALL
-          SELECT o."branchId", i."amount" FROM "Installment" i
-            JOIN "Order" o ON i."orderId" = o.id
-            WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-        ) t
-        GROUP BY "branchId"
+        SELECT b."branchId" AS branch_id, COALESCE(SUM(p."amount"), 0) AS revenue
+        FROM "Payment" p
+        JOIN "AppointmentBill" b ON p."billId" = b.id
+        WHERE p."paidAt" BETWEEN $1 AND $2
+          ${branchCondition}
+        GROUP BY b."branchId"
         ORDER BY revenue DESC
         LIMIT 5
       `, ...allParams),
       
       // 服務項目營收（使用原生 SQL）
       this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: bigint | number; count: bigint | number }[]>(`
-        SELECT s.id AS service_id, s.name AS service_name, SUM(amount) AS revenue, COUNT(*) AS count
-        FROM (
-          SELECT a."serviceId", o."finalAmount" AS amount FROM "Order" o
-            JOIN "Appointment" a ON o."appointmentId" = a.id
-            WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND o."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-              AND a."serviceId" IS NOT NULL
-          UNION ALL
-          SELECT a."serviceId", i."amount" FROM "Installment" i
-            JOIN "Order" o ON i."orderId" = o.id
-            JOIN "Appointment" a ON o."appointmentId" = a.id
-            WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-              AND a."serviceId" IS NOT NULL
-        ) t
-        JOIN "Service" s ON t."serviceId" = s.id
+        SELECT s.id AS service_id, s.name AS service_name,
+               COALESCE(SUM(p."amount"), 0) AS revenue,
+               COUNT(DISTINCT a.id) AS count
+        FROM "Payment" p
+        JOIN "AppointmentBill" b ON p."billId" = b.id
+        JOIN "Appointment" a ON b."appointmentId" = a.id
+        JOIN "Service" s ON a."serviceId" = s.id
+        WHERE p."paidAt" BETWEEN $1 AND $2
+          ${branchCondition}
+          AND a."serviceId" IS NOT NULL
         GROUP BY s.id, s.name
         ORDER BY revenue DESC
         LIMIT 5
       `, ...allParams),
       
       // 付款方式統計（使用原生 SQL）
-      (async () => {
-        const billingCount = await this.prisma.payment.count({
-          where: {
-            paidAt: { gte: currentRange.start, lte: currentRange.end },
-            bill: branchFilter.branchId ? { branchId: branchFilter.branchId } : undefined,
-          } as any,
-        });
-        if (billingCount > 0) {
-          return this.billingPaymentMethodStats(currentRange, branchFilter);
-        }
-        return this.prisma.$queryRawUnsafe<{ method: string; amount: bigint | number; count: bigint | number }[]>(`
-        SELECT method, SUM(amount) AS amount, COUNT(*) AS count
-        FROM (
-          SELECT COALESCE(o."paymentMethod", 'UNKNOWN') AS method, o."finalAmount" AS amount FROM "Order" o
-            WHERE o."paymentType"='ONE_TIME' AND o."status" IN ('PAID','PAID_COMPLETE','INSTALLMENT_ACTIVE','PARTIALLY_PAID','COMPLETED')
-              AND o."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-          UNION ALL
-          SELECT COALESCE(i."paymentMethod", 'UNKNOWN') AS method, i."amount" FROM "Installment" i
-            JOIN "Order" o ON i."orderId" = o.id
-            WHERE i."status"='PAID' AND i."paidAt" BETWEEN $1 AND $2
-              ${branchCondition}
-        ) t
-        GROUP BY method
-        ORDER BY amount DESC
-        `, ...allParams);
-      })(),
+      this.billingPaymentMethodStats(currentRange, branchFilter),
       
       // 會員總數
       this.prisma.member.count(),
@@ -516,11 +440,11 @@ export class AdminAnalyticsUnifiedService {
     if (rangeKey === 'all') {
       // 全部時間：計算從第一筆訂單到現在的實際天數
       if (totalRevenue > 0) {
-        // 查詢第一筆訂單的日期
-        const firstOrderDate = await this.getFirstOrderDate();
-        if (firstOrderDate) {
+        // 查詢第一筆付款的日期
+        const firstPaymentDate = await this.getFirstPaymentDate(branchFilter);
+        if (firstPaymentDate) {
           const now = DateTime.now().setZone('Asia/Taipei');
-          const firstDate = DateTime.fromJSDate(firstOrderDate).setZone('Asia/Taipei');
+          const firstDate = DateTime.fromJSDate(firstPaymentDate).setZone('Asia/Taipei');
           const totalDays = Math.max(1, now.diff(firstDate, 'days').days); // 至少1天
           dailyRevenue = Math.round(totalRevenue / totalDays);
           actualDays = Math.round(totalDays);

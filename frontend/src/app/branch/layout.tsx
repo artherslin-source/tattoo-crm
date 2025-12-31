@@ -7,7 +7,6 @@ import {
   LayoutDashboard, 
   Users, 
   UserCheck, 
-  ShoppingCart, 
   Settings, 
   Calendar,
   LogOut,
@@ -40,11 +39,6 @@ const navigationItems = [
     name: "管理預約",
     href: "/branch/appointments",
     icon: Calendar,
-  },
-  {
-    name: "管理訂單",
-    href: "/branch/orders",
-    icon: ShoppingCart,
   },
 ];
 

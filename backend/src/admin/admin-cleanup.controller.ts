@@ -19,7 +19,7 @@ export class AdminCleanupController {
         _count: {
           select: {
             appointments: true,
-            orders: true,
+            appointmentBills: true,
             users: true,
             artists: true,
           },
@@ -56,7 +56,7 @@ export class AdminCleanupController {
             {
               id: branchList[0].id,
               appointments: branchList[0]._count.appointments,
-              orders: branchList[0]._count.orders,
+              bills: branchList[0]._count.appointmentBills,
               users: branchList[0]._count.users,
               artists: branchList[0]._count.artists,
             },
@@ -66,7 +66,7 @@ export class AdminCleanupController {
         const withData = branchList.filter(
           (b) =>
             b._count.appointments > 0 ||
-            b._count.orders > 0 ||
+            b._count.appointmentBills > 0 ||
             b._count.users > 0 ||
             b._count.artists > 0
         );
@@ -74,7 +74,7 @@ export class AdminCleanupController {
         const withoutData = branchList.filter(
           (b) =>
             b._count.appointments === 0 &&
-            b._count.orders === 0 &&
+            b._count.appointmentBills === 0 &&
             b._count.users === 0 &&
             b._count.artists === 0
         );
@@ -111,7 +111,7 @@ export class AdminCleanupController {
             id: b.id,
             action: toKeep.includes(b.id) ? 'keep' : 'delete',
             appointments: b._count.appointments,
-            orders: b._count.orders,
+            bills: b._count.appointmentBills,
             users: b._count.users,
             artists: b._count.artists,
           })),
@@ -145,7 +145,7 @@ export class AdminCleanupController {
         _count: {
           select: {
             appointments: true,
-            orders: true,
+            appointmentBills: true,
             users: true,
             artists: true,
           },
@@ -158,7 +158,7 @@ export class AdminCleanupController {
     const toDelete = branches.filter(
       (b) =>
         b._count.appointments === 0 &&
-        b._count.orders === 0 &&
+        b._count.appointmentBills === 0 &&
         b._count.users === 0 &&
         b._count.artists === 0
     );
@@ -193,7 +193,7 @@ export class AdminCleanupController {
         _count: {
           select: {
             appointments: true,
-            orders: true,
+            appointmentBills: true,
             users: true,
             artists: true,
           },
@@ -213,7 +213,7 @@ export class AdminCleanupController {
         id: b.id,
         name: b.name,
         appointments: b._count.appointments,
-        orders: b._count.orders,
+        bills: b._count.appointmentBills,
         users: b._count.users,
         artists: b._count.artists,
       })),
@@ -262,7 +262,7 @@ export class AdminCleanupController {
         _count: {
           select: {
             appointments: true,
-            orders: true,
+            appointmentBills: true,
             users: true,
             artists: true,
           },
@@ -280,7 +280,7 @@ export class AdminCleanupController {
         id: b.id,
         name: b.name,
         appointments: b._count.appointments,
-        orders: b._count.orders,
+        bills: b._count.appointmentBills,
         users: b._count.users,
         artists: b._count.artists,
       })),
