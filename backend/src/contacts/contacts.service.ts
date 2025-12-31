@@ -8,6 +8,42 @@ import { isBoss, type AccessActor } from '../common/access/access.types';
 export class ContactsService {
   constructor(private prisma: PrismaService) {}
 
+  async createPublic(createContactDto: CreateContactDto) {
+    // Public endpoint: allow creating a lead/contact without owner assignment.
+    // Do not allow ownerArtistId from public channel.
+    const safeDto: CreateContactDto = {
+      name: createContactDto.name,
+      email: createContactDto.email,
+      phone: createContactDto.phone,
+      branchId: createContactDto.branchId,
+      notes: createContactDto.notes,
+      ownerArtistId: undefined,
+    };
+
+    // Validate branch exists
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: safeDto.branchId },
+      select: { id: true },
+    });
+    if (!branch) {
+      throw new Error('指定的分店不存在');
+    }
+
+    return this.prisma.contact.create({
+      data: safeDto,
+      include: {
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            phone: true,
+          },
+        },
+      },
+    });
+  }
+
   private async ensureContactReadable(actor: AccessActor, contactId: string) {
     const contact = await this.prisma.contact.findUnique({
       where: { id: contactId },

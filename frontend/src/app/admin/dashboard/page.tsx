@@ -6,7 +6,7 @@ import { getAccessToken, getUserRole, getUserBranchId, getJsonWithAuth } from "@
 import { hasAdminAccess, normalizeAccessRole } from "@/lib/access";
 import BranchSelector from "@/components/BranchSelector";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, DollarSign, UserCheck, Settings, MessageSquare } from "lucide-react";
+import { Users, Calendar, DollarSign, UserCheck, Settings, MessageSquare, type LucideIcon } from "lucide-react";
 
 interface DashboardStats {
   totalUsers: number;
@@ -175,7 +175,7 @@ export default function AdminDashboardPage() {
   type QuickAction = {
     title: string;
     description: string;
-    icon: any;
+    icon: LucideIcon;
     href: string;
     color: string;
   };

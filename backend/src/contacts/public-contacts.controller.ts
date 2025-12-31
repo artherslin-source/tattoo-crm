@@ -18,6 +18,6 @@ export class PublicContactsController {
   async createPublic(@Body() body: unknown) {
     const input = CreatePublicContactSchema.parse(body);
     
-    return this.contactsService.create(input);
+    return this.contactsService.createPublic(input);
   }
 }
