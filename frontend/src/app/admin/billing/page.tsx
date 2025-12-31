@@ -12,6 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 
 type BillStatus = "OPEN" | "SETTLED" | "VOID";
+type BillSortField = "createdAt" | "billTotal" | "paidTotal" | "dueTotal";
+type BillSortOrder = "asc" | "desc";
+
+function isBillSortField(v: string): v is BillSortField {
+  return v === "createdAt" || v === "billTotal" || v === "paidTotal" || v === "dueTotal";
+}
+
+function isBillSortOrder(v: string): v is BillSortOrder {
+  return v === "asc" || v === "desc";
+}
 
 interface BillSummary {
   paidTotal: number;
@@ -74,6 +84,12 @@ interface SplitRule {
   branch?: { id: string; name: string } | null;
 }
 
+type AdminArtistApiRow = {
+  id?: string;
+  name?: string | null;
+  user?: { id?: string; name?: string | null } | null;
+};
+
 const paymentMethods = [
   { value: "CASH", label: "現金" },
   { value: "CARD", label: "刷卡" },
@@ -118,8 +134,8 @@ export default function AdminBillingPage() {
   const [maxPaidTotal, setMaxPaidTotal] = useState<string>("");
   const [minDueTotal, setMinDueTotal] = useState<string>("");
   const [maxDueTotal, setMaxDueTotal] = useState<string>("");
-  const [sortField, setSortField] = useState<"createdAt" | "billTotal" | "paidTotal" | "dueTotal">("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortField, setSortField] = useState<BillSortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<BillSortOrder>("desc");
 
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [artists, setArtists] = useState<Array<{ id: string; name: string | null }>>([]);
@@ -267,12 +283,12 @@ export default function AdminBillingPage() {
       try {
         const [branchesData, artistsData] = await Promise.all([
           getJsonWithAuth<Array<{ id: string; name: string }>>("/branches"),
-          getJsonWithAuth<Array<Record<string, any>>>("/admin/artists"),
+          getJsonWithAuth<AdminArtistApiRow[]>("/admin/artists"),
         ]);
         setBranches((branchesData || []).map((b) => ({ id: b.id, name: b.name })));
         setArtists(
           (artistsData || []).map((a) => ({
-            id: a.id ?? a.user?.id,
+            id: a.id ?? a.user?.id ?? "",
             name: a.name ?? a.user?.name ?? null,
           })),
         );
@@ -556,7 +572,10 @@ export default function AdminBillingPage() {
 
             <div>
               <div className="text-xs text-muted-foreground mb-1">排序</div>
-              <Select value={sortField} onValueChange={(v) => setSortField(v as any)}>
+              <Select
+                value={sortField}
+                onValueChange={(v) => setSortField(isBillSortField(v) ? v : "createdAt")}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="createdAt" />
                 </SelectTrigger>
@@ -570,7 +589,10 @@ export default function AdminBillingPage() {
             </div>
             <div>
               <div className="text-xs text-muted-foreground mb-1">排序方向</div>
-              <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as any)}>
+              <Select
+                value={sortOrder}
+                onValueChange={(v) => setSortOrder(isBillSortOrder(v) ? v : "desc")}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="desc" />
                 </SelectTrigger>
