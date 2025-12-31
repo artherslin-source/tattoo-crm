@@ -48,6 +48,17 @@ interface AppointmentFormData {
   contactId: string;
 }
 
+type ContactDetail = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  branch?: { id: string; name: string } | null;
+  ownerArtistId?: string | null;
+  ownerArtist?: { id: string; branchId?: string | null; branch?: { id: string; name: string } | null } | null;
+};
+
 type MemberSearchRow = {
   id: string; // Member.id
   membershipLevel?: string | null;
@@ -125,6 +136,14 @@ export default function AppointmentForm({
 
   const canFetch = useMemo(() => !!token, [token]);
 
+  const contactIdParam = useMemo(() => {
+    const from = (fromContact?.contactId as string | undefined) || "";
+    return from || searchParams.get("contactId") || "";
+  }, [fromContact, searchParams]);
+
+  const [lockedByOwner, setLockedByOwner] = useState(false);
+  const [lockedOwnerArtistId, setLockedOwnerArtistId] = useState<string>("");
+
   const [formData, setFormData] = useState<AppointmentFormData>({
     userId: "",
     name: fromContact?.name ?? searchParams.get("name") ?? "",
@@ -132,7 +151,7 @@ export default function AppointmentForm({
     phone: fromContact?.phone ?? searchParams.get("phone") ?? "",
     notes: fromContact?.notes ?? searchParams.get("notes") ?? "",
     branchId: fromContact?.branchId ?? searchParams.get("branchId") ?? "",
-    contactId: "", // 前端不再處理 contactId，由後端統一生成
+    contactId: contactIdParam || "",
     serviceId: "",
     artistId: "",
     startAt: "",
@@ -190,6 +209,65 @@ export default function AppointmentForm({
     fetchData();
   }, [canFetch]);
 
+  // If coming from a Contact, fetch the latest contact detail and apply ownerArtist lock rules.
+  useEffect(() => {
+    const run = async () => {
+      if (!canFetch) return;
+      if (!contactIdParam) return;
+
+      try {
+        const c = await getJsonWithAuth<ContactDetail>(`/admin/contacts/${contactIdParam}`);
+
+        // Always keep contactId so backend can link appointment -> contact.
+        setFormData((prev) => ({
+          ...prev,
+          contactId: c.id,
+          name: (c.name ?? prev.name) as string,
+          email: (c.email ?? prev.email) as string,
+          phone: (c.phone ?? prev.phone) as string,
+          notes: (c.notes ?? prev.notes) as string,
+          // Keep branchId as-is for now; if ownerArtist exists we'll override to owner's branch once we can resolve it.
+        }));
+
+        if (c.ownerArtistId) {
+          setLockedOwnerArtistId(c.ownerArtistId);
+
+          const ownerBranchId =
+            (c.ownerArtist?.branchId as string | null | undefined) ||
+            c.ownerArtist?.branch?.id ||
+            "";
+
+          setLockedByOwner(true);
+          setFormData((prev) => ({
+            ...prev,
+            artistId: c.ownerArtistId as string,
+            branchId: ownerBranchId || prev.branchId,
+          }));
+        }
+      } catch (e) {
+        // Non-blocking: user can still book manually; but show a helpful message.
+        console.warn("Failed to fetch contact detail:", e);
+      }
+    };
+    run();
+  }, [canFetch, contactIdParam]);
+
+  // Resolve branchId from artists list if we only have ownerArtistId.
+  useEffect(() => {
+    if (!lockedByOwner) return;
+    if (!lockedOwnerArtistId) return;
+    if (!artists.length) return;
+
+    const owner = artists.find((a) => a.user.id === lockedOwnerArtistId);
+    if (!owner?.branchId) return;
+
+    setFormData((prev) => {
+      if (prev.artistId !== lockedOwnerArtistId) return prev;
+      if (prev.branchId === owner.branchId) return prev;
+      return { ...prev, branchId: owner.branchId };
+    });
+  }, [artists, lockedByOwner, lockedOwnerArtistId]);
+
   // Search members (phone/name) for existing member booking
   useEffect(() => {
     if (!canFetch) return;
@@ -243,6 +321,7 @@ export default function AppointmentForm({
 
   // 處理輸入變更
   const handleInputChange = (field: string, value: string) => {
+    if (lockedByOwner && field === "artistId") return;
     setFormData(prev => ({ ...prev, [field]: value }));
 
     // 刺青師與分店連動
@@ -364,6 +443,7 @@ export default function AppointmentForm({
         endAt: endTime.toISOString(),
         holdMin,
         notes: formData.notes || undefined,
+        contactId: formData.contactId || undefined,
       };
 
       await postJsonWithAuth("/admin/appointments", payload);
@@ -537,7 +617,10 @@ export default function AppointmentForm({
                   id="artistId"
                   value={formData.artistId}
                   onChange={(e) => handleInputChange('artistId', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    lockedByOwner ? "bg-gray-100 cursor-not-allowed" : ""
+                  }`}
+                  disabled={lockedByOwner}
                   required
                 >
                   <option value="">請選擇刺青師</option>
@@ -547,6 +630,11 @@ export default function AppointmentForm({
                     </option>
                   ))}
                 </select>
+                {lockedByOwner && (
+                  <p className="text-sm text-text-muted-light mt-1">
+                    此聯絡已指派刺青師，預約刺青師已鎖定
+                  </p>
+                )}
               </div>
               <div>
                 <label htmlFor="branchId" className="block text-sm font-medium text-text-secondary-light mb-2">

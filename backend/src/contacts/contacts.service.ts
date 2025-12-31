@@ -123,7 +123,15 @@ export class ContactsService {
             phone: true,
           },
         },
-        ownerArtist: { select: { id: true, name: true, phone: true } },
+        ownerArtist: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            branchId: true,
+            branch: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -165,7 +173,15 @@ export class ContactsService {
             phone: true,
           },
         },
-        ownerArtist: { select: { id: true, name: true, phone: true } },
+        ownerArtist: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            branchId: true,
+            branch: { select: { id: true, name: true } },
+          },
+        },
         appointments: { select: { id: true, artistId: true, startAt: true, status: true } },
       },
     });
@@ -195,7 +211,15 @@ export class ContactsService {
             phone: true,
           },
         },
-        ownerArtist: { select: { id: true, name: true, phone: true } },
+        ownerArtist: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            branchId: true,
+            branch: { select: { id: true, name: true } },
+          },
+        },
       },
     });
   }
@@ -264,7 +288,15 @@ export class ContactsService {
               phone: true,
             },
           },
-          ownerArtist: { select: { id: true, name: true, phone: true } },
+          ownerArtist: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              branchId: true,
+              branch: { select: { id: true, name: true } },
+            },
+          },
         },
       });
     });

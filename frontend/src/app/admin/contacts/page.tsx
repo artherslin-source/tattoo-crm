@@ -169,6 +169,8 @@ export default function AdminContactsPage() {
   const convertToAppointment = (contact: Contact) => {
     const params = new URLSearchParams({
       contactId: contact.id ?? "",
+      // Keep basic fields for backward compatibility / faster perceived load,
+      // but the appointment form will re-fetch contact detail by contactId (source of truth).
       name: contact.name ?? "",
       email: contact.email ?? "",
       phone: contact.phone ?? "",
