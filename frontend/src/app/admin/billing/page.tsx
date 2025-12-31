@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getJsonWithAuth, postJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { hasAdminAccess } from "@/lib/access";
 import { Button } from "@/components/ui/button";
@@ -116,6 +116,7 @@ function statusBadge(status: BillStatus) {
 
 export default function AdminBillingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<BillRow[]>([]);
@@ -144,6 +145,8 @@ export default function AdminBillingPage() {
 
   const [selected, setSelected] = useState<BillDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [highlightBillId, setHighlightBillId] = useState<string | null>(null);
+  const [lastDeepLinkBillId, setLastDeepLinkBillId] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newBranchId, setNewBranchId] = useState("");
@@ -226,6 +229,48 @@ export default function AdminBillingPage() {
       setError(apiErr.message || "載入帳務明細失敗");
     }
   }, []);
+
+  const clearOpenIdFromUrl = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has("openId")) return;
+    params.delete("openId");
+    const next = `/admin/billing${params.toString() ? `?${params.toString()}` : ""}`;
+    router.replace(next);
+  }, [router, searchParams]);
+
+  // Deep-link support: /admin/billing?openId=<billId>
+  useEffect(() => {
+    const openId = searchParams.get("openId");
+    if (!openId) return;
+    if (openId === lastDeepLinkBillId && (detailOpen || highlightBillId === openId)) return;
+
+    setLastDeepLinkBillId(openId);
+    setHighlightBillId(openId);
+
+    (async () => {
+      try {
+        await fetchBills();
+        await openDetail(openId);
+      } catch (e) {
+        const apiErr = e as ApiError;
+        setError(apiErr.message || "開啟帳務失敗");
+        clearOpenIdFromUrl();
+      }
+    })();
+
+    const t = window.setTimeout(() => {
+      setHighlightBillId((cur) => (cur === openId ? null : cur));
+    }, 3000);
+    return () => window.clearTimeout(t);
+  }, [searchParams, lastDeepLinkBillId, detailOpen, highlightBillId, fetchBills, openDetail, clearOpenIdFromUrl]);
+
+  // After rows rendered, auto-scroll highlighted row into view.
+  useEffect(() => {
+    if (!highlightBillId) return;
+    const el = document.getElementById(`bill-row-${highlightBillId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [rows, highlightBillId]);
 
   const onRecordPayment = useCallback(async () => {
     if (!selected) return;
@@ -600,7 +645,13 @@ export default function AdminBillingPage() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-b hover:bg-muted/40">
+                  <tr
+                    key={r.id}
+                    id={`bill-row-${r.id}`}
+                    className={`border-b hover:bg-muted/40 ${
+                      highlightBillId === r.id ? "bg-amber-100/60 transition-colors" : ""
+                    }`}
+                  >
                     <td className="py-2 pr-3">
                       {new Date(r.createdAt).toLocaleString()}
                     </td>
@@ -842,7 +893,16 @@ export default function AdminBillingPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+      <Dialog
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) {
+            setSelected(null);
+            clearOpenIdFromUrl();
+          }
+        }}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>帳務明細</DialogTitle>

@@ -897,9 +897,26 @@ export default function AdminAppointmentsPage() {
               <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Button
                   variant="outline"
-                  onClick={() => {
+                  onClick={async () => {
+                    const apptId = selectedAppointment.id;
+                    const existingBillId = selectedAppointment.bill?.id ?? null;
                     handleCloseDetailModal();
-                    router.push(`/admin/billing`);
+
+                    try {
+                      if (existingBillId) {
+                        router.push(`/admin/billing?openId=${encodeURIComponent(existingBillId)}`);
+                        return;
+                      }
+
+                      const ensured = await postJsonWithAuth<{ id: string }>(
+                        `/admin/billing/appointments/ensure`,
+                        { appointmentId: apptId },
+                      );
+                      router.push(`/admin/billing?openId=${encodeURIComponent(ensured.id)}`);
+                    } catch (err) {
+                      const apiErr = err as ApiError;
+                      setError(apiErr.message || "建立帳務失敗");
+                    }
                   }}
                   className="w-full"
                 >
