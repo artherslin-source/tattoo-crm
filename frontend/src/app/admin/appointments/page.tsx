@@ -239,6 +239,13 @@ export default function AdminAppointmentsPage() {
     el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [appointments, highlightAppointmentId]);
 
+  // 點擊查看/定位後，高光約 3 秒後淡出（不控制詳情彈窗）
+  useEffect(() => {
+    if (!highlightAppointmentId) return;
+    const t = window.setTimeout(() => setHighlightAppointmentId(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [highlightAppointmentId]);
+
   // 當篩選條件改變時重新載入資料
   useEffect(() => {
     fetchAppointments();
@@ -308,6 +315,8 @@ export default function AdminAppointmentsPage() {
   const handleViewDetails = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setIsDetailModalOpen(true);
+    // 使用者主動查看時，高光也切換到該筆（約 3 秒後淡出）
+    setHighlightAppointmentId(appointment.id);
   };
 
   const handleCloseDetailModal = () => {

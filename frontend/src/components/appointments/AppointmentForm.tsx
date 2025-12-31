@@ -452,13 +452,16 @@ export default function AppointmentForm({
       
       setSuccess("預約創建成功！");
       
-      // 3秒後執行成功回調或跳轉
+      // 2秒後執行成功回調或跳轉
       setTimeout(() => {
         if (onSubmitSuccess) {
           onSubmitSuccess();
         } else {
           // 若由聯絡轉換（有 contactId），建立成功後留在頁面（不自動跳轉）
-          if (payload.contactId && created?.id) return;
+          if (payload.contactId && created?.id) {
+            router.push(`/admin/contacts?highlightId=${encodeURIComponent(payload.contactId)}`);
+            return;
+          }
           router.push("/admin/appointments");
         }
       }, 2000);

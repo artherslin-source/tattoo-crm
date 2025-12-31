@@ -147,6 +147,7 @@ export default function AdminBillingPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [highlightBillId, setHighlightBillId] = useState<string | null>(null);
   const [lastDeepLinkBillId, setLastDeepLinkBillId] = useState<string | null>(null);
+  const [paymentSubmittedAt, setPaymentSubmittedAt] = useState<number | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newBranchId, setNewBranchId] = useState("");
@@ -224,11 +225,21 @@ export default function AdminBillingPage() {
       setSelected(data);
       setDiscountTotal(String(data.discountTotal ?? 0));
       setDetailOpen(true);
+      // 使用者主動查看時，高光也切換到該筆
+      setHighlightBillId(billId);
+      setPaymentSubmittedAt(null);
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "載入帳務明細失敗");
     }
   }, []);
+
+  // 點擊查看後，高光約 3 秒後淡出
+  useEffect(() => {
+    if (!highlightBillId) return;
+    const t = window.setTimeout(() => setHighlightBillId(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [highlightBillId]);
 
   const clearFocusIdFromUrl = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -290,13 +301,24 @@ export default function AdminBillingPage() {
       });
       setPayAmount("");
       setPayNotes("");
-      await openDetail(selected.id);
       await fetchBills();
+      setPaymentSubmittedAt(Date.now());
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "收款失敗");
     }
   }, [selected, payAmount, payMethod, payNotes, openDetail, fetchBills]);
+
+  // 收款/退款送出成功後：3 秒自動關閉明細視窗回到列表
+  useEffect(() => {
+    if (!paymentSubmittedAt) return;
+    const t = window.setTimeout(() => {
+      setDetailOpen(false);
+      setSelected(null);
+      setPaymentSubmittedAt(null);
+    }, 3000);
+    return () => window.clearTimeout(t);
+  }, [paymentSubmittedAt]);
 
   const onUpdateDiscount = useCallback(async () => {
     if (!selected) return;

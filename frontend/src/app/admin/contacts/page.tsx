@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAccessToken, getJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
 import { getUserRole, isBossRole } from "@/lib/access";
 import { MessageSquare, ArrowLeft } from "lucide-react";
@@ -55,6 +55,7 @@ const STATUS_OPTIONS = [
 
 export default function AdminContactsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const role = getUserRole();
   const isBoss = isBossRole(role);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -65,6 +66,15 @@ export default function AdminContactsPage() {
   const [artists, setArtists] = useState<ArtistOption[]>([]);
   const [ownerDraft, setOwnerDraft] = useState<Record<string, string>>({});
   const [listStatusFilter, setListStatusFilter] = useState<ListStatusFilter>('ACTIVE');
+  const [highlightContactId, setHighlightContactId] = useState<string | null>(null);
+
+  const clearHighlightIdFromUrl = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has("highlightId")) return;
+    params.delete("highlightId");
+    const next = `/admin/contacts${params.toString() ? `?${params.toString()}` : ""}`;
+    router.replace(next);
+  };
 
   useEffect(() => {
     const token = getAccessToken();
@@ -81,6 +91,19 @@ export default function AdminContactsPage() {
       fetchArtists();
     }
   }, [router]);
+
+  // Deep-link highlight: /admin/contacts?highlightId=<contactId>
+  useEffect(() => {
+    const id = searchParams.get("highlightId");
+    if (!id) return;
+    setHighlightContactId(id);
+    const t = window.setTimeout(() => {
+      setHighlightContactId((cur) => (cur === id ? null : cur));
+      clearHighlightIdFromUrl();
+    }, 3000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const fetchContacts = async () => {
     try {
@@ -249,6 +272,14 @@ export default function AdminContactsPage() {
     return c.status === 'PENDING' || c.status === 'CONTACTED';
   });
 
+  // After list rendered, auto-scroll highlighted row into view.
+  useEffect(() => {
+    if (!highlightContactId) return;
+    const el = document.getElementById(`contact-row-${highlightContactId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [filteredContacts, highlightContactId]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-white">
       {/* Header */}
@@ -380,7 +411,13 @@ export default function AdminContactsPage() {
                 const branchArtists = artists.filter((a) => a.branchId === contact.branch.id);
                 const currentOwnerName = contact.ownerArtist?.name || (contact.ownerArtistId ? "（已指派）" : "未指派");
                 return (
-                  <tr key={contact.id} className="border-b border-gray-100 dark:border-gray-700">
+                  <tr
+                    key={contact.id}
+                    id={`contact-row-${contact.id}`}
+                    className={`border-b border-gray-100 dark:border-gray-700 ${
+                      highlightContactId === contact.id ? "bg-amber-100/60 transition-colors" : ""
+                    }`}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{contact.name}</div>
