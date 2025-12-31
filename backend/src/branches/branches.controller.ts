@@ -20,8 +20,8 @@ export class BranchesController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('BOSS', 'BRANCH_MANAGER')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('BOSS')
   async findOne(@Param('id') id: string) {
     return this.branches.findOne(id);
   }

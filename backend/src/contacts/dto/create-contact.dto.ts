@@ -3,5 +3,6 @@ export class CreateContactDto {
   email: string;
   phone?: string;
   branchId: string;
+  ownerArtistId?: string;
   notes?: string;
 }

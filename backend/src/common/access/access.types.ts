@@ -22,7 +22,8 @@ export function mapLegacyRoleToAccessRole(role: string | null | undefined): Acce
   const normalized = role.toUpperCase();
   if (normalized === 'BOSS') return 'BOSS';
   if (normalized === 'ARTIST') return 'ARTIST';
-  if (normalized === 'BRANCH_MANAGER') return 'BOSS';
+  // BRANCH_MANAGER role is deprecated; do not grant access
+  if (normalized === 'BRANCH_MANAGER') return null;
   if (normalized === 'SUPER_ADMIN') return 'BOSS';
   // Legacy role 'ADMIN' exists in some old code paths; treat as BOSS to avoid lockouts.
   if (normalized === 'ADMIN') return 'BOSS';

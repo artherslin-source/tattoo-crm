@@ -5,7 +5,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('admin/diag')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER')
+@Roles('BOSS')
 export class DiagnosticsController {
   constructor() {}
 

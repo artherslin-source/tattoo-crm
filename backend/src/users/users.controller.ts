@@ -55,14 +55,14 @@ export class UsersController {
   }
 
   @Get()
-  @Roles('BOSS', 'BRANCH_MANAGER')
+  @Roles('BOSS')
   async getUsers(@Query() query: GetUsersQuery, @Req() req: any) {
     return this.usersService.getUsers(query, req.user.role, req.user.branchId);
   }
 
   // 財務相關端點
   @Post(':id/topup')
-  @Roles('BOSS', 'BRANCH_MANAGER')
+  @Roles('BOSS')
   async topUp(@Param('id') userId: string, @Body() topUpDto: TopUpDto) {
     if (topUpDto.amount <= 0) {
       throw new Error('Top-up amount must be positive');
@@ -71,7 +71,7 @@ export class UsersController {
   }
 
   @Patch(':id/balance')
-  @Roles('BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN')
+  @Roles('BOSS', 'SUPER_ADMIN')
   async adjustBalance(@Param('id') userId: string, @Body() adjustBalanceDto: AdjustBalanceDto) {
     return this.usersService.updateUserFinancials(userId, {
       balance: adjustBalanceDto.amount,
@@ -79,7 +79,7 @@ export class UsersController {
   }
 
   @Get(':id/financials')
-  @Roles('BOSS', 'BRANCH_MANAGER')
+  @Roles('BOSS')
   async getUserFinancials(@Param('id') userId: string) {
     return this.usersService.me(userId);
   }

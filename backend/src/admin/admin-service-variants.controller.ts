@@ -16,7 +16,7 @@ import { CreateServiceVariantDto, UpdateServiceVariantDto } from './dto/service-
 
 @Controller('admin/service-variants')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER', 'SUPER_ADMIN')
+@Roles('BOSS', 'SUPER_ADMIN')
 export class AdminServiceVariantsController {
   constructor(private readonly variantsService: AdminServiceVariantsService) {}
 

@@ -143,6 +143,7 @@ export class AdminAppointmentsController {
               notes: input.notes || '',
               branchId: input.branchId,
               status: 'PENDING',
+              ownerArtistId: input.artistId,
             },
             select: { id: true },
           });

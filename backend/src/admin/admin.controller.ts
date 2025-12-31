@@ -8,7 +8,7 @@ import { AdminAnalyticsUnifiedService } from './admin-analytics-unified.service'
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BOSS', 'BRANCH_MANAGER')
+@Roles('BOSS')
 export class AdminController {
   constructor(
     private prisma: PrismaService,
@@ -52,12 +52,9 @@ export class AdminController {
       // 構建 where 條件
       const whereCondition: any = {};
       
-      // 優先使用查詢參數中的 branchId（僅 BOSS 可以使用）
+      // 僅 BOSS 可使用 branchId 篩選
       if (userRole === 'BOSS' && queryBranchId && queryBranchId !== 'all') {
         whereCondition.branchId = queryBranchId;
-      } else if (userRole !== 'BOSS') {
-        // BRANCH_MANAGER 使用自己的 branchId
-        whereCondition.branchId = userBranchId;
       }
       // 如果是 BOSS 且 queryBranchId 為 'all' 或未提供，則不過濾分店
 

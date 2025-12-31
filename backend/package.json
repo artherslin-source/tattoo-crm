@@ -18,6 +18,8 @@
     "seed:billing-demo": "npx ts-node scripts/seed-billing-demo.ts --yes",
     "reseed:billing-demo": "npm run reset:domain && npm run seed:billing-demo",
     "recompute:member-total-spent": "npx ts-node scripts/recompute-member-total-spent.ts --yes",
+    "list:admins": "npx ts-node scripts/list-admin-accounts.ts --yes",
+    "disable:branch-managers": "npx ts-node scripts/disable-branch-managers.ts --yes",
     "migrate:orders-to-billing": "npx ts-node scripts/migrate-orders-to-billing.ts",
     "rebuild": "npx ts-node scripts/smart-rebuild.ts",
     "rebuild:dev": "npx ts-node scripts/smart-rebuild.ts -r \"開發環境重建\"",

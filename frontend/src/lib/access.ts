@@ -21,8 +21,9 @@ export function normalizeAccessRole(role: string | null | undefined): AccessRole
   const r = role.toUpperCase();
   if (r === 'BOSS') return 'BOSS';
   if (r === 'ARTIST') return 'ARTIST';
+  // BRANCH_MANAGER role is deprecated; do not grant access
+  if (r === 'BRANCH_MANAGER') return null;
   // legacy admin-ish roles map to BOSS
-  if (r === 'BRANCH_MANAGER') return 'BOSS';
   if (r === 'SUPER_ADMIN') return 'BOSS';
   if (r === 'ADMIN') return 'BOSS';
   return r;

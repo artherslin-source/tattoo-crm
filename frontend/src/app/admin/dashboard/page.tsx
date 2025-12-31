@@ -32,6 +32,20 @@ export default function AdminDashboardPage() {
 
   const fetchDashboardData = useCallback(async (): Promise<DashboardStats> => {
     try {
+      // /admin/stats is now BOSS-only; ARTIST dashboard uses workbench UI without these stats.
+      const rawRole = getUserRole();
+      const normalized = normalizeAccessRole(rawRole);
+      if (normalized !== 'BOSS') {
+        return {
+          totalUsers: 0,
+          totalServices: 0,
+          totalAppointments: 0,
+          todayAppointments: 0,
+          totalRevenue: 0,
+          monthlyRevenue: 0,
+        };
+      }
+
       // 構建查詢參數
       const params = new URLSearchParams();
       if (selectedBranchId && selectedBranchId !== 'all') {
@@ -154,50 +168,93 @@ export default function AdminDashboardPage() {
   }
 
   const role = getUserRole();
-  const quickActions = [
-    {
-      title: "管理服務項目",
-      description: "管理刺青服務和價格",
-      icon: Settings,
-      href: "/admin/services",
-      color: "bg-red-500"
-    },
-    {
-      title: "管理刺青師",
-      description: "管理刺青師資料",
-      icon: UserCheck,
-      href: "/admin/artists",
-      color: "bg-green-500"
-    },
-    {
-      title: "管理會員",
-      description: "查看和管理所有會員資訊",
-      icon: Users,
-      href: "/admin/members",
-      color: "bg-blue-500"
-    },
-    {
-      title: "管理聯絡通知",
-      description: "查看和處理客戶聯絡訊息",
-      icon: MessageSquare,
-      href: "/admin/contacts",
-      color: "bg-indigo-500"
-    },
-    {
-      title: "管理預約",
-      description: "查看和管理所有預約",
-      icon: Calendar,
-      href: "/admin/appointments",
-      color: "bg-purple-500"
-    },
-    {
-      title: "帳務管理",
-      description: "收款、拆帳、查帳（唯一口徑）",
-      icon: DollarSign,
-      href: "/admin/billing",
-      color: "bg-orange-500"
-    }
-  ];
+  const normalizedRole = normalizeAccessRole(role);
+  const isBoss = normalizedRole === 'BOSS';
+  const isArtist = normalizedRole === 'ARTIST';
+
+  type QuickAction = {
+    title: string;
+    description: string;
+    icon: any;
+    href: string;
+    color: string;
+  };
+
+  const quickActions: QuickAction[] = isBoss
+    ? [
+        {
+          title: "管理服務項目",
+          description: "管理刺青服務和價格",
+          icon: Settings,
+          href: "/admin/services",
+          color: "bg-red-500"
+        },
+        {
+          title: "管理刺青師",
+          description: "管理刺青師資料",
+          icon: UserCheck,
+          href: "/admin/artists",
+          color: "bg-green-500"
+        },
+        {
+          title: "管理會員",
+          description: "查看和管理所有會員資訊",
+          icon: Users,
+          href: "/admin/members",
+          color: "bg-blue-500"
+        },
+        {
+          title: "管理聯絡通知",
+          description: "查看和處理客戶聯絡訊息",
+          icon: MessageSquare,
+          href: "/admin/contacts",
+          color: "bg-indigo-500"
+        },
+        {
+          title: "管理預約",
+          description: "查看和管理所有預約",
+          icon: Calendar,
+          href: "/admin/appointments",
+          color: "bg-purple-500"
+        },
+        {
+          title: "帳務管理",
+          description: "收款、拆帳、查帳（唯一口徑）",
+          icon: DollarSign,
+          href: "/admin/billing",
+          color: "bg-orange-500"
+        }
+      ]
+    : [
+        {
+          title: "我的會員",
+          description: "管理屬於我的會員",
+          icon: Users,
+          href: "/admin/members",
+          color: "bg-blue-500"
+        },
+        {
+          title: "我的聯絡",
+          description: "處理指派給我的聯絡",
+          icon: MessageSquare,
+          href: "/admin/contacts",
+          color: "bg-indigo-500"
+        },
+        {
+          title: "我的預約",
+          description: "管理我的預約排程",
+          icon: Calendar,
+          href: "/admin/appointments",
+          color: "bg-purple-500"
+        },
+        {
+          title: "我的帳務",
+          description: "查看我的帳務與收款",
+          icon: DollarSign,
+          href: "/admin/billing",
+          color: "bg-orange-500"
+        }
+      ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-white">
@@ -205,12 +262,12 @@ export default function AdminDashboardPage() {
       <div className="mb-6 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-on-dark dashboard-title">
-            {role === 'BOSS' ? '管理後台' : '分店管理後台'}
+            {isBoss ? '管理後台' : isArtist ? '刺青師工作台' : '管理後台'}
           </h1>
           <p className="mt-2 text-gray-600 dark:text-on-dark-muted dashboard-subtitle">
             歡迎回到管理後台，這裡是您的控制中心
           </p>
-          {role === 'BOSS' && (
+          {isBoss && (
             <div className="mt-4 relative">
               <BranchSelector
                 selectedBranchId={selectedBranchId}

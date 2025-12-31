@@ -50,6 +50,12 @@ export class AuthService {
         console.log(`❌ 用戶不存在: ${input.phone}`);
         throw new UnauthorizedException('User not found');
       }
+
+      // Block disabled accounts (matches JwtStrategy behavior)
+      if (!user.isActive || String(user.status || '').toUpperCase() === 'DISABLED') {
+        console.log(`❌ 帳號已停用: ${input.phone}`);
+        throw new UnauthorizedException('Account disabled');
+      }
       
       console.log(`✅ 找到用戶: ${user.phone}, ID: ${user.id}`);
       
@@ -112,6 +118,10 @@ export class AuthService {
       
       if (!user) {
         throw new UnauthorizedException('User not found');
+      }
+
+      if (!user.isActive || String(user.status || '').toUpperCase() === 'DISABLED') {
+        throw new UnauthorizedException('Account disabled');
       }
       
       // 使用 phone 或 email 作為標識（優先使用 phone）

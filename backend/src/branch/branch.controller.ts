@@ -6,7 +6,7 @@ import { ArtistsService } from '../artists/artists.service';
 
 @Controller('branch')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('BRANCH_MANAGER')
+@Roles('BOSS')
 export class BranchController {
   constructor(
     private readonly artistsService: ArtistsService,
@@ -27,7 +27,7 @@ export class BranchController {
   // 刺青師管理 API - 只顯示該分店的刺青師
   @Get('artists')
   async getArtists(@Req() req: any) {
-    // 分店經理只能看到自己分店的刺青師
+    // 分店專區已下線：僅 BOSS 可用於診斷/管理
     return this.artistsService.getAllArtists(req.user.role, req.user.branchId);
   }
 }

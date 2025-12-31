@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { clearTokens } from "@/lib/api";
+import { getUserRole, isArtistRole } from "@/lib/access";
 
 type Props = {
   open: boolean;
@@ -14,6 +15,27 @@ type Props = {
 export default function Sidebar({ open, onClose }: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const role = getUserRole();
+  const isArtist = isArtistRole(role);
+
+  const navLinks: Array<{ href: string; label: string }> = isArtist
+    ? [
+        { href: "/admin/dashboard", label: "📊 刺青師工作台" },
+        { href: "/admin/members", label: "👥 會員管理" },
+        { href: "/admin/contacts", label: "💬 聯絡管理" },
+        { href: "/admin/appointments", label: "📅 預約管理" },
+        { href: "/admin/billing", label: "💰 帳務管理" },
+      ]
+    : [
+        { href: "/admin/dashboard", label: "📊 儀表板" },
+        { href: "/admin/analytics", label: "📈 統計報表" },
+        { href: "/admin/services", label: "⚙️ 服務管理" },
+        { href: "/admin/artists", label: "🎨 刺青師管理" },
+        { href: "/admin/members", label: "👥 會員管理" },
+        { href: "/admin/contacts", label: "💬 聯絡管理" },
+        { href: "/admin/appointments", label: "📅 預約管理" },
+        { href: "/admin/billing", label: "💰 帳務管理" },
+      ];
 
   const handleLogout = () => {
     clearTokens();
@@ -27,14 +49,11 @@ export default function Sidebar({ open, onClose }: Props) {
         <div>
           <h1 className="brand-logo">彫川紋身 CRM</h1>
           <nav>
-            <Link href="/admin/dashboard" prefetch={true}>📊 儀表板</Link>
-            <Link href="/admin/analytics" prefetch={true}>📈 統計報表</Link>
-            <Link href="/admin/services" prefetch={true}>⚙️ 服務管理</Link>
-            <Link href="/admin/artists" prefetch={true}>🎨 刺青師管理</Link>
-            <Link href="/admin/members" prefetch={true}>👥 會員管理</Link>
-            <Link href="/admin/contacts" prefetch={true}>💬 聯絡管理</Link>
-            <Link href="/admin/appointments" prefetch={true}>📅 預約管理</Link>
-            <Link href="/admin/billing" prefetch={true}>💰 帳務管理</Link>
+            {navLinks.map((l) => (
+              <Link key={l.href} href={l.href} prefetch={true}>
+                {l.label}
+              </Link>
+            ))}
           </nav>
         </div>
         <div className="flex flex-col gap-3">
@@ -67,14 +86,11 @@ export default function Sidebar({ open, onClose }: Props) {
                 <button onClick={onClose} aria-label="關閉" className="text-2xl">✕</button>
               </div>
               <nav className="flex flex-col gap-3">
-                <Link href="/admin/dashboard" onClick={onClose} prefetch={true}>📊 儀表板</Link>
-                <Link href="/admin/analytics" onClick={onClose} prefetch={true}>📈 統計報表</Link>
-                <Link href="/admin/services" onClick={onClose} prefetch={true}>⚙️ 服務管理</Link>
-                <Link href="/admin/artists" onClick={onClose} prefetch={true}>🎨 刺青師管理</Link>
-                <Link href="/admin/members" onClick={onClose} prefetch={true}>👥 會員管理</Link>
-                <Link href="/admin/contacts" onClick={onClose} prefetch={true}>💬 聯絡管理</Link>
-                <Link href="/admin/appointments" onClick={onClose} prefetch={true}>📅 預約管理</Link>
-                <Link href="/admin/billing" onClick={onClose} prefetch={true}>💰 帳務管理</Link>
+                {navLinks.map((l) => (
+                  <Link key={l.href} href={l.href} onClick={onClose} prefetch={true}>
+                    {l.label}
+                  </Link>
+                ))}
               </nav>
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-neutral-700 flex flex-col gap-4">
                 <ThemeToggle />

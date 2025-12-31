@@ -48,6 +48,7 @@ model User {
   customerReminders           CustomerReminder[]
   createdCustomerNotes        CustomerNote[]     @relation("CustomerNoteCreator")
   createdCustomerReminders    CustomerReminder[] @relation("CustomerReminderCreator")
+  contactsOwned               Contact[]          @relation("ContactOwnerArtist")
   // @@index([personId])
 
   @@index([branchId, role, isActive])
@@ -431,6 +432,7 @@ model Contact {
   email     String
   phone     String?
   branchId  String
+  ownerArtistId String?
   notes     String?
   status    String   @default("PENDING") // PENDING, CONTACTED, CONVERTED, CLOSED
   createdAt DateTime @default(now())
@@ -438,7 +440,10 @@ model Contact {
 
   // Relations
   branch       Branch        @relation(fields: [branchId], references: [id])
+  ownerArtist  User?         @relation("ContactOwnerArtist", fields: [ownerArtistId], references: [id])
   appointments Appointment[]
+
+  @@index([ownerArtistId])
 }
 
 // 服務規格模型

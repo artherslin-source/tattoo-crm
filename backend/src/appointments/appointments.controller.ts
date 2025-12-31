@@ -389,7 +389,7 @@ export class AppointmentsController {
   // 管理員專用：查詢所有預約（必須放在 @Get(':id') 之前）
   @Get('all')
   @UseGuards(RolesGuard)
-  @Roles('BOSS', 'BRANCH_MANAGER')
+  @Roles('BOSS')
   async findAllAppointments(@Req() req: any) {
     return this.appointments.findAll(req.user.role, req.user.branchId);
   }
@@ -397,7 +397,7 @@ export class AppointmentsController {
   // 管理員專用：更新預約狀態
   @Patch(':id/status')
   @UseGuards(RolesGuard)
-  @Roles('BOSS', 'BRANCH_MANAGER')
+  @Roles('BOSS')
   async updateStatus(@Param('id') id: string, @Body() body: unknown) {
     const input = UpdateStatusSchema.parse(body);
     return this.appointments.updateStatus(id, input.status);

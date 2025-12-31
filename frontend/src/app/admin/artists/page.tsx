@@ -61,7 +61,7 @@ export default function AdminArtistsPage() {
     const userRole = getUserRole();
     const token = getAccessToken();
     
-    if (!token || !hasAdminAccess(userRole)) {
+    if (!token || !hasAdminAccess(userRole) || !isBossRole(userRole)) {
       router.replace('/profile');
       return;
     }
