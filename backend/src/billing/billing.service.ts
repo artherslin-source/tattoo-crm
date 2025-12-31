@@ -196,10 +196,12 @@ export class BillingService {
 
   async ensureBillForAppointment(actor: AccessActor, appointmentId: string) {
     await this.ensureAppointmentReadable(actor, appointmentId);
-    return this.prisma.$transaction(async (tx) => {
+    // Important: do NOT call getBillByAppointment() inside the transaction, because it uses
+    // the root prisma client (a different connection) and cannot see uncommitted writes.
+    await this.prisma.$transaction(async (tx) => {
       await this.ensureBillInternal(tx, appointmentId, actor.id);
-      return this.getBillByAppointment(actor, appointmentId);
     });
+    return this.getBillByAppointment(actor, appointmentId);
   }
 
   async getBillById(actor: AccessActor, billId: string) {
@@ -358,7 +360,7 @@ export class BillingService {
   ) {
     await this.ensureAppointmentReadable(actor, appointmentId);
 
-    return this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const existing = await tx.appointmentBill.findUnique({ where: { appointmentId } });
       if (!existing) {
         await this.ensureBillInternal(tx as any, appointmentId);
@@ -386,8 +388,8 @@ export class BillingService {
       }
 
       await tx.appointmentBill.update({ where: { appointmentId }, data });
-      return this.getBillByAppointment(actor, appointmentId);
     });
+    return this.getBillByAppointment(actor, appointmentId);
   }
 
   async updateBillById(
