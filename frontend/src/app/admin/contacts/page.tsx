@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getJsonWithAuth, patchJsonWithAuth, ApiError } from "@/lib/api";
+import { getUserRole, isBossRole } from "@/lib/access";
 import { MessageSquare, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,8 @@ interface Contact {
   notes?: string;
   status: string;
   createdAt: string;
+  ownerArtistId?: string | null;
+  ownerArtist?: { id: string; name?: string | null; phone?: string | null } | null;
   branch: {
     id: string;
     name: string;
@@ -22,6 +25,14 @@ interface Contact {
     phone?: string;
   };
 }
+
+type AdminArtistApiRow = {
+  id?: string;
+  user?: { id?: string; name?: string | null } | null;
+  branch?: { id?: string; name?: string | null } | null;
+};
+
+type ArtistOption = { userId: string; name: string; branchId: string; branchName: string };
 
 interface ContactStats {
   total: number;
@@ -40,11 +51,15 @@ const STATUS_OPTIONS = [
 
 export default function AdminContactsPage() {
   const router = useRouter();
+  const role = getUserRole();
+  const isBoss = isBossRole(role);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [stats, setStats] = useState<ContactStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [artists, setArtists] = useState<ArtistOption[]>([]);
+  const [ownerDraft, setOwnerDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const token = getAccessToken();
@@ -56,6 +71,10 @@ export default function AdminContactsPage() {
 
     fetchContacts();
     fetchStats();
+
+    if (isBoss) {
+      fetchArtists();
+    }
   }, [router]);
 
   const fetchContacts = async () => {
@@ -64,11 +83,37 @@ export default function AdminContactsPage() {
       const data = await getJsonWithAuth<Contact[]>('/admin/contacts');
       console.log('Contacts data:', data);
       setContacts(data);
+      setOwnerDraft((prev) => {
+        const next = { ...prev };
+        for (const c of data) {
+          if (next[c.id] === undefined && (c.ownerArtistId || c.ownerArtist?.id)) {
+            next[c.id] = (c.ownerArtistId || c.ownerArtist?.id || "") as string;
+          }
+        }
+        return next;
+      });
     } catch (err) {
       console.error('Failed to fetch contacts:', err);
       setError(`載入聯絡資料失敗: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchArtists = async () => {
+    try {
+      const data = await getJsonWithAuth<AdminArtistApiRow[]>("/admin/artists");
+      const mapped: ArtistOption[] = (data || [])
+        .map((a) => ({
+          userId: String(a.user?.id || a.id || ""),
+          name: String(a.user?.name || "未命名"),
+          branchId: String(a.branch?.id || ""),
+          branchName: String(a.branch?.name || "未分店"),
+        }))
+        .filter((a) => !!a.userId && !!a.branchId);
+      setArtists(mapped);
+    } catch (err) {
+      console.warn("Failed to fetch artists for contact assignment", err);
     }
   };
 
@@ -99,6 +144,23 @@ export default function AdminContactsPage() {
     } catch (err) {
       console.error('Failed to update contact status:', err);
       setError('更新狀態失敗');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const assignOwnerArtist = async (contactId: string) => {
+    const ownerArtistId = ownerDraft[contactId];
+    if (!ownerArtistId) return;
+    setUpdating(contactId);
+    try {
+      await patchJsonWithAuth(`/admin/contacts/${contactId}`, { ownerArtistId });
+      await fetchContacts();
+      await fetchStats();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      console.error('Failed to assign owner artist:', err);
+      setError(apiErr.message || "指派刺青師失敗");
     } finally {
       setUpdating(null);
     }
@@ -256,6 +318,11 @@ export default function AdminContactsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   分店
                 </th>
+                {isBoss && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
+                    指派刺青師
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-secondary-dark uppercase tracking-wider">
                   狀態
                 </th>
@@ -270,6 +337,8 @@ export default function AdminContactsPage() {
             <tbody>
               {contacts.map((contact) => {
                 const statusInfo = getStatusInfo(contact.status);
+                const branchArtists = artists.filter((a) => a.branchId === contact.branch.id);
+                const currentOwnerName = contact.ownerArtist?.name || (contact.ownerArtistId ? "（已指派）" : "未指派");
                 return (
                   <tr key={contact.id} className="border-b border-gray-100 dark:border-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -285,6 +354,44 @@ export default function AdminContactsPage() {
                       <div className="text-sm text-text-primary-light dark:text-text-primary-dark">{contact.branch.name}</div>
                       <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.branch.address}</div>
                     </td>
+                    {isBoss && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="space-y-1">
+                          <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                            目前：{currentOwnerName}
+                            {contact.ownerArtist?.phone ? `（${contact.ownerArtist.phone}）` : ""}
+                          </div>
+                          {branchArtists.length === 0 ? (
+                            <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                              此分店無刺青師可指派
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={ownerDraft[contact.id] ?? ""}
+                                onChange={(e) => setOwnerDraft((prev) => ({ ...prev, [contact.id]: e.target.value }))}
+                                className="text-sm border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 bg-white dark:bg-gray-900"
+                                disabled={updating === contact.id}
+                              >
+                                <option value="">請選擇刺青師</option>
+                                {branchArtists.map((a) => (
+                                  <option key={a.userId} value={a.userId}>
+                                    {a.name}（{a.branchName}）
+                                  </option>
+                                ))}
+                              </select>
+                              <Button
+                                size="sm"
+                                onClick={() => assignOwnerArtist(contact.id)}
+                                disabled={updating === contact.id || !ownerDraft[contact.id]}
+                              >
+                                {updating === contact.id ? "指派中..." : "指派"}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
                         value={contact.status}
