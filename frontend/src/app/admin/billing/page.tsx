@@ -117,6 +117,7 @@ function statusBadge(status: BillStatus) {
 export default function AdminBillingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const highlightStorageKey = "ui.admin.billing.highlightId";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<BillRow[]>([]);
@@ -227,19 +228,15 @@ export default function AdminBillingPage() {
       setDetailOpen(true);
       // 使用者主動查看時，高光也切換到該筆
       setHighlightBillId(billId);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(highlightStorageKey, billId);
+      }
       setPaymentSubmittedAt(null);
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "載入帳務明細失敗");
     }
   }, []);
-
-  // 點擊查看後，高光約 3 秒後淡出
-  useEffect(() => {
-    if (!highlightBillId) return;
-    const t = window.setTimeout(() => setHighlightBillId(null), 3000);
-    return () => window.clearTimeout(t);
-  }, [highlightBillId]);
 
   const clearFocusIdFromUrl = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -253,12 +250,18 @@ export default function AdminBillingPage() {
   // Deep-link support (定位高亮，不自動展開): /admin/billing?highlightId=<id>
   // Back-compat: 若有人仍帶 openId，也只做定位高亮。
   useEffect(() => {
-    const focusId = searchParams.get("highlightId") || searchParams.get("openId");
+    const urlId = searchParams.get("highlightId") || searchParams.get("openId");
+    const storedId =
+      typeof window !== "undefined" ? window.localStorage.getItem(highlightStorageKey) : null;
+    const focusId = urlId || storedId;
     if (!focusId) return;
     if (focusId === lastDeepLinkBillId && highlightBillId === focusId) return;
 
     setLastDeepLinkBillId(focusId);
     setHighlightBillId(focusId);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(highlightStorageKey, focusId);
+    }
 
     (async () => {
       try {
@@ -266,15 +269,11 @@ export default function AdminBillingPage() {
       } catch (e) {
         const apiErr = e as ApiError;
         setError(apiErr.message || "載入帳務清單失敗");
-        clearFocusIdFromUrl();
       }
     })();
 
-    const t = window.setTimeout(() => {
-      setHighlightBillId((cur) => (cur === focusId ? null : cur));
-      clearFocusIdFromUrl();
-    }, 3000);
-    return () => window.clearTimeout(t);
+    // Hybrid：跳轉帶入後立刻清掉 URL（高光仍持續存在）
+    if (urlId) clearFocusIdFromUrl();
   }, [searchParams, lastDeepLinkBillId, highlightBillId, fetchBills, clearFocusIdFromUrl]);
 
   // After rows rendered, auto-scroll highlighted row into view.
@@ -675,6 +674,12 @@ export default function AdminBillingPage() {
                     className={`border-b hover:bg-muted/40 ${
                       highlightBillId === r.id ? "bg-amber-100/60 transition-colors" : ""
                     }`}
+                    onClick={() => {
+                      setHighlightBillId(r.id);
+                      if (typeof window !== "undefined") {
+                        window.localStorage.setItem(highlightStorageKey, r.id);
+                      }
+                    }}
                   >
                     <td className="py-2 pr-3">
                       {new Date(r.createdAt).toLocaleString()}
@@ -693,7 +698,14 @@ export default function AdminBillingPage() {
                     <td className="py-2 pr-3">${formatMoney(r.summary?.dueTotal || 0)}</td>
                     <td className="py-2 pr-3">{statusBadge(r.status)}</td>
                     <td className="py-2 pr-3">
-                      <Button size="sm" variant="outline" onClick={() => openDetail(r.id)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDetail(r.id);
+                        }}
+                      >
                         查看
                       </Button>
                     </td>
@@ -922,6 +934,12 @@ export default function AdminBillingPage() {
         onOpenChange={(open) => {
           setDetailOpen(open);
           if (!open) {
+            if (selected?.id) {
+              setHighlightBillId(selected.id);
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(highlightStorageKey, selected.id);
+              }
+            }
             setSelected(null);
             clearFocusIdFromUrl();
           }

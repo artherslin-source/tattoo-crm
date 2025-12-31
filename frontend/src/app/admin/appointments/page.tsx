@@ -87,6 +87,7 @@ function getAppointmentDurationMin(apt: Appointment): number {
 export default function AdminAppointmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const highlightStorageKey = "ui.admin.appointments.highlightId";
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -215,20 +216,20 @@ export default function AdminAppointmentsPage() {
   }, [router, searchParams]);
 
   useEffect(() => {
-    const focusId = searchParams.get("highlightId") || searchParams.get("openId");
+    const urlId = searchParams.get("highlightId") || searchParams.get("openId");
+    const storedId =
+      typeof window !== "undefined" ? window.localStorage.getItem(highlightStorageKey) : null;
+    const focusId = urlId || storedId;
     if (!focusId) return;
     if (lastDeepLinkOpenId === focusId && highlightAppointmentId === focusId) return;
 
     setLastDeepLinkOpenId(focusId);
     setHighlightAppointmentId(focusId);
-
-    // 不自動展開詳情：只做定位高亮，3 秒後清除並清理 URL
-    const t = window.setTimeout(() => {
-      setHighlightAppointmentId((cur) => (cur === focusId ? null : cur));
-      clearFocusIdFromUrl();
-    }, 3000);
-
-    return () => window.clearTimeout(t);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(highlightStorageKey, focusId);
+    }
+    // Hybrid：跳轉帶入後立刻清掉 URL（高光仍持續存在）
+    if (urlId) clearFocusIdFromUrl();
   }, [searchParams, lastDeepLinkOpenId, highlightAppointmentId, clearFocusIdFromUrl]);
 
   // After list rendered, auto-scroll highlighted row into view.
@@ -238,13 +239,6 @@ export default function AdminAppointmentsPage() {
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [appointments, highlightAppointmentId]);
-
-  // 點擊查看/定位後，高光約 3 秒後淡出（不控制詳情彈窗）
-  useEffect(() => {
-    if (!highlightAppointmentId) return;
-    const t = window.setTimeout(() => setHighlightAppointmentId(null), 3000);
-    return () => window.clearTimeout(t);
-  }, [highlightAppointmentId]);
 
   // 當篩選條件改變時重新載入資料
   useEffect(() => {
@@ -315,11 +309,19 @@ export default function AdminAppointmentsPage() {
   const handleViewDetails = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setIsDetailModalOpen(true);
-    // 使用者主動查看時，高光也切換到該筆（約 3 秒後淡出）
     setHighlightAppointmentId(appointment.id);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(highlightStorageKey, appointment.id);
+    }
   };
 
   const handleCloseDetailModal = () => {
+    if (selectedAppointment?.id) {
+      setHighlightAppointmentId(selectedAppointment.id);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(highlightStorageKey, selectedAppointment.id);
+      }
+    }
     setSelectedAppointment(null);
     setIsDetailModalOpen(false);
     clearFocusIdFromUrl();
@@ -741,6 +743,12 @@ export default function AdminAppointmentsPage() {
             onUpdateStatus={handleUpdateStatus}
             onDelete={handleDelete}
               highlightId={highlightAppointmentId}
+              onRowClick={(appointment) => {
+                setHighlightAppointmentId(appointment.id);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(highlightStorageKey, appointment.id);
+                }
+              }}
           />
 
           {/* Mobile/Tablet Cards */}
@@ -750,6 +758,12 @@ export default function AdminAppointmentsPage() {
             onUpdateStatus={handleUpdateStatus}
             onDelete={handleDelete}
               highlightId={highlightAppointmentId}
+              onRowClick={(appointment) => {
+                setHighlightAppointmentId(appointment.id);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(highlightStorageKey, appointment.id);
+                }
+              }}
           />
         </>
       )}
@@ -817,6 +831,12 @@ export default function AdminAppointmentsPage() {
         onOpenChange={(open) => {
           setIsDetailModalOpen(open);
           if (!open) {
+            if (selectedAppointment?.id) {
+              setHighlightAppointmentId(selectedAppointment.id);
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(highlightStorageKey, selectedAppointment.id);
+              }
+            }
             setSelectedAppointment(null);
             clearFocusIdFromUrl();
           }

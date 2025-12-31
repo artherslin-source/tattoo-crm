@@ -58,6 +58,7 @@ interface AppointmentsCardsProps {
   onUpdateStatus: (appointment: Appointment, status: string) => void;
   onDelete: (appointmentId: string) => void;
   highlightId?: string | null;
+  onRowClick?: (appointment: Appointment) => void;
 }
 
 export default function AppointmentsCards({
@@ -66,6 +67,7 @@ export default function AppointmentsCards({
   onUpdateStatus,
   onDelete,
   highlightId,
+  onRowClick,
 }: AppointmentsCardsProps) {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -162,6 +164,7 @@ export default function AppointmentsCards({
             className={`rounded-lg border border-[var(--line)] bg-[var(--panel)] p-4 text-on-dark shadow-sm ${
               highlightId === appointment.id ? "bg-amber-100/60 transition-colors" : ""
             }`}
+            onClick={() => onRowClick?.(appointment)}
           >
             {/* 平板版 (768px ~ 1023px) - 橫向布局 */}
             <div className="hidden md:block">
@@ -205,7 +208,10 @@ export default function AppointmentsCards({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => onViewDetails(appointment)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewDetails(appointment);
+                    }}
                     className="px-4 min-w-[80px]"
                   >
                     <Eye className="h-3 w-3 mr-1" />
@@ -223,14 +229,20 @@ export default function AppointmentsCards({
                       {appointment.status === 'PENDING' && (
                         <>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CONFIRMED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CONFIRMED');
+                            }}
                             className="text-blue-600 focus:text-blue-600"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             確認預約
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CANCELED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CANCELED');
+                            }}
                             className="text-red-600 focus:text-red-600"
                           >
                             <XCircle className="h-4 w-4 mr-2" />
@@ -241,21 +253,30 @@ export default function AppointmentsCards({
                       {appointment.status === 'CONFIRMED' && (
                         <>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'IN_PROGRESS')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'IN_PROGRESS');
+                            }}
                             className="text-purple-600 focus:text-purple-600"
                           >
                             <Clock className="h-4 w-4 mr-2" />
                             開始進行
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'COMPLETED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'COMPLETED');
+                            }}
                             className="text-green-600 focus:text-green-600"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             標記完成
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CANCELED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CANCELED');
+                            }}
                             className="text-red-600 focus:text-red-600"
                           >
                             <XCircle className="h-4 w-4 mr-2" />
@@ -266,14 +287,20 @@ export default function AppointmentsCards({
                       {appointment.status === 'IN_PROGRESS' && (
                         <>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'COMPLETED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'COMPLETED');
+                            }}
                             className="text-green-600 focus:text-green-600"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             標記完成
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CONFIRMED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CONFIRMED');
+                            }}
                             className="text-blue-600 focus:text-blue-600"
                           >
                             <Clock className="h-4 w-4 mr-2" />
@@ -283,7 +310,10 @@ export default function AppointmentsCards({
                       )}
                       {appointment.status === 'COMPLETED' && (
                         <DropdownMenuItem 
-                          onClick={() => onUpdateStatus(appointment, 'CONFIRMED')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateStatus(appointment, 'CONFIRMED');
+                          }}
                           className="text-blue-600 focus:text-blue-600"
                         >
                           <Clock className="h-4 w-4 mr-2" />
@@ -292,7 +322,10 @@ export default function AppointmentsCards({
                       )}
                       {appointment.status === 'CANCELED' && (
                         <DropdownMenuItem 
-                          onClick={() => onUpdateStatus(appointment, 'PENDING')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateStatus(appointment, 'PENDING');
+                          }}
                           className="text-yellow-600 focus:text-yellow-600"
                         >
                           <Clock className="h-4 w-4 mr-2" />
@@ -300,7 +333,10 @@ export default function AppointmentsCards({
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem 
-                        onClick={() => onDelete(appointment.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(appointment.id);
+                        }}
                         className="text-red-600 focus:text-red-600"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -342,14 +378,20 @@ export default function AppointmentsCards({
                       {appointment.status === 'PENDING' && (
                         <>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CONFIRMED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CONFIRMED');
+                            }}
                             className="text-blue-600 focus:text-blue-600"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             確認預約
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CANCELED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CANCELED');
+                            }}
                             className="text-red-600 focus:text-red-600"
                           >
                             <XCircle className="h-4 w-4 mr-2" />
@@ -360,21 +402,30 @@ export default function AppointmentsCards({
                       {appointment.status === 'CONFIRMED' && (
                         <>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'IN_PROGRESS')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'IN_PROGRESS');
+                            }}
                             className="text-purple-600 focus:text-purple-600"
                           >
                             <Clock className="h-4 w-4 mr-2" />
                             開始進行
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'COMPLETED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'COMPLETED');
+                            }}
                             className="text-green-600 focus:text-green-600"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             標記完成
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CANCELED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CANCELED');
+                            }}
                             className="text-red-600 focus:text-red-600"
                           >
                             <XCircle className="h-4 w-4 mr-2" />
@@ -385,14 +436,20 @@ export default function AppointmentsCards({
                       {appointment.status === 'IN_PROGRESS' && (
                         <>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'COMPLETED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'COMPLETED');
+                            }}
                             className="text-green-600 focus:text-green-600"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             標記完成
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => onUpdateStatus(appointment, 'CONFIRMED')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateStatus(appointment, 'CONFIRMED');
+                            }}
                             className="text-blue-600 focus:text-blue-600"
                           >
                             <Clock className="h-4 w-4 mr-2" />
@@ -402,7 +459,10 @@ export default function AppointmentsCards({
                       )}
                       {appointment.status === 'COMPLETED' && (
                         <DropdownMenuItem 
-                          onClick={() => onUpdateStatus(appointment, 'CONFIRMED')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateStatus(appointment, 'CONFIRMED');
+                          }}
                           className="text-blue-600 focus:text-blue-600"
                         >
                           <Clock className="h-4 w-4 mr-2" />
@@ -411,7 +471,10 @@ export default function AppointmentsCards({
                       )}
                       {appointment.status === 'CANCELED' && (
                         <DropdownMenuItem 
-                          onClick={() => onUpdateStatus(appointment, 'PENDING')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateStatus(appointment, 'PENDING');
+                          }}
                           className="text-yellow-600 focus:text-yellow-600"
                         >
                           <Clock className="h-4 w-4 mr-2" />
@@ -419,7 +482,10 @@ export default function AppointmentsCards({
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem 
-                        onClick={() => onDelete(appointment.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(appointment.id);
+                        }}
                         className="text-red-600 focus:text-red-600"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />

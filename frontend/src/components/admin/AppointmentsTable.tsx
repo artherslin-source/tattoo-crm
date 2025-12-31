@@ -59,6 +59,7 @@ interface AppointmentsTableProps {
   onUpdateStatus: (appointment: Appointment, status: string) => void;
   onDelete: (appointmentId: string) => void;
   highlightId?: string | null;
+  onRowClick?: (appointment: Appointment) => void;
 }
 
 export default function AppointmentsTable({
@@ -67,6 +68,7 @@ export default function AppointmentsTable({
   onUpdateStatus,
   onDelete,
   highlightId,
+  onRowClick,
 }: AppointmentsTableProps) {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -181,6 +183,7 @@ export default function AppointmentsTable({
                   className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
                     highlightId === appointment.id ? "bg-amber-100/60 transition-colors" : ""
                   }`}
+                  onClick={() => onRowClick?.(appointment)}
                 >
                   <td className="px-4 py-3" data-label="預約時間">
                     <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
@@ -268,7 +271,10 @@ export default function AppointmentsTable({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onViewDetails(appointment)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewDetails(appointment);
+                        }}
                         className="px-3"
                       >
                         <Eye className="h-3 w-3 mr-1" />
