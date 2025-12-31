@@ -465,10 +465,12 @@ export default function AppointmentForm({
       console.error('Create appointment error:', err);
       const apiErr = err as ApiError;
       // Duplicate conversion guard (409) – offer deep-link jump to the existing appointment.
-      const maybeId =
-        apiErr.status === 409 && apiErr.data && typeof apiErr.data === "object"
-          ? (apiErr.data as any).existingAppointmentId
-          : undefined;
+      const getExistingAppointmentId = (data: unknown): string | undefined => {
+        if (!data || typeof data !== "object") return undefined;
+        const val = (data as Record<string, unknown>)["existingAppointmentId"];
+        return typeof val === "string" && val ? val : undefined;
+      };
+      const maybeId = apiErr.status === 409 ? getExistingAppointmentId(apiErr.data) : undefined;
       if (apiErr.status === 409 && typeof maybeId === "string" && maybeId) {
         setConflictAppointmentId(maybeId);
         setError(apiErr.message || "此聯絡已轉換為預約");

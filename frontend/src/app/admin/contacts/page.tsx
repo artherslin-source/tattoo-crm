@@ -36,6 +36,8 @@ type AdminArtistApiRow = {
 
 type ArtistOption = { userId: string; name: string; branchId: string; branchName: string };
 
+type ListStatusFilter = 'ACTIVE' | 'CONVERTED' | 'CLOSED' | 'ALL';
+
 interface ContactStats {
   total: number;
   pending: number;
@@ -62,7 +64,7 @@ export default function AdminContactsPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [artists, setArtists] = useState<ArtistOption[]>([]);
   const [ownerDraft, setOwnerDraft] = useState<Record<string, string>>({});
-  const [listStatusFilter, setListStatusFilter] = useState<'ACTIVE' | 'CONVERTED' | 'CLOSED' | 'ALL'>('ACTIVE');
+  const [listStatusFilter, setListStatusFilter] = useState<ListStatusFilter>('ACTIVE');
 
   useEffect(() => {
     const token = getAccessToken();
@@ -333,7 +335,7 @@ export default function AdminContactsPage() {
               <span className="text-sm text-text-muted-light dark:text-text-muted-dark">顯示：</span>
               <select
                 value={listStatusFilter}
-                onChange={(e) => setListStatusFilter(e.target.value as any)}
+                onChange={(e) => setListStatusFilter(e.target.value as ListStatusFilter)}
                 className="text-sm border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 bg-white dark:bg-gray-900"
               >
                 <option value="ACTIVE">進行中（待處理/已聯繫）</option>

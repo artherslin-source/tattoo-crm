@@ -80,7 +80,7 @@ interface VariantSelectorProps {
   isAdmin?: boolean; // 是否為管理後台模式
 }
 
-export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false }: VariantSelectorProps) {
+export function VariantSelector({ service, onClose, onAddToCart, isAdmin: _isAdmin = false }: VariantSelectorProps) {
   const [variants, setVariants] = useState<GroupedVariants>({});
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -186,7 +186,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     };
 
     fetchVariants();
-  }, [service.id]);
+  }, [service.id, service.name]);
 
   // 計算最終價格
   const calculatedPrice = useMemo(() => {
@@ -489,7 +489,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin = false
     }
 
     return price;
-  }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, customAddonPrice, variants, service]);
+  }, [selectedSize, selectedColor, selectedPosition, selectedSide, customAddonPrice, variants, service]);
 
   // 處理加入購物車
   const handleAddToCart = async () => {

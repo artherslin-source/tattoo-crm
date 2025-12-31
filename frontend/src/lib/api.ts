@@ -10,52 +10,6 @@ export class ApiError extends Error {
   }
 }
 
-// 智能檢測 API URL
-function detectApiBase(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    const hostname = window.location.hostname;
-    if (hostname.includes('railway.app')) {
-      // Railway 部署：前端和後端是分開的服務
-      // 前端：tattoo-crm-production.up.railway.app
-      // 後端：tattoo-crm-backend-production.up.railway.app
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (backendUrl) {
-        return backendUrl;
-      }
-      // 如果沒有設定後端 URL，嘗試推測後端 URL
-      // Railway 的後端服務通常有不同的子域名
-      if (hostname.includes('frontend')) {
-        return hostname.replace('frontend', 'backend');
-      } else if (hostname.includes('tattoo-crm-production')) {
-        // 嘗試不同的後端 URL 模式
-        const possibleBackendUrls = [
-          hostname.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
-          hostname.replace('tattoo-crm-production', 'tattoo-crm-production-backend'),
-          hostname.replace('tattoo-crm-production', 'tattoo-crm-backend'),
-          // 如果以上都不行，嘗試添加 -backend 後綴
-          hostname.replace('.up.railway.app', '-backend.up.railway.app'),
-        ];
-        
-        // 返回第一個可能的 URL，讓瀏覽器嘗試
-        return possibleBackendUrls[0];
-      } else {
-        // 如果無法推測，使用同一個域名（可能會有問題）
-        return `https://${hostname}`;
-      }
-    } else {
-      // 其他生產環境
-      return window.location.origin.replace(/:\d+$/, ':4000');
-    }
-  }
-  
-  // 開發環境
-  return "http://localhost:4000";
-}
-
 // 檢查後端服務狀態（帶重試機制）
 export async function checkBackendHealth(): Promise<boolean> {
   try {
