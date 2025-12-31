@@ -72,9 +72,31 @@ export async function checkBackendHealth(): Promise<boolean> {
 export async function detectBackendUrl(): Promise<string> {
   console.log('🔍 detectBackendUrl() called');
   
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    console.log('🔍 Using NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
-    return process.env.NEXT_PUBLIC_API_URL;
+  const normalizeBase = (base: string) => base.replace(/\/+$/, '');
+
+  const probeHealth = async (base: string): Promise<boolean> => {
+    const clean = normalizeBase(base);
+    try {
+      const res = await fetch(`${clean}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(2500),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const envUrlRaw = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (envUrlRaw) {
+    const envUrl = normalizeBase(envUrlRaw);
+    console.log('🔍 Using env backend URL candidate:', envUrl);
+    const ok = await probeHealth(envUrl);
+    if (ok) {
+      console.log('✅ Env backend URL is healthy:', envUrl);
+      return envUrl;
+    }
+    console.warn('⚠️ Env backend URL health check failed; will try to infer a working backend URL.');
   }
   
   if (typeof window === 'undefined' || window.location.hostname === 'localhost') {
@@ -86,31 +108,37 @@ export async function detectBackendUrl(): Promise<string> {
   console.log('🔍 Current hostname:', hostname);
   
   if (hostname.includes('railway.app')) {
-    // 基於 Railway 的常見命名模式，直接返回最可能的後端 URL
-    const backendUrl = 'https://tattoo-crm-production-413f.up.railway.app';
-    console.log('🔍 Using hardcoded backend URL:', backendUrl);
-    
-    // 測試 URL 是否可用
-    try {
-      const response = await fetch(`${backendUrl}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000)
-      });
-      console.log('🔍 Backend health check status:', response.status);
-      
-      if (response.ok) {
-        console.log('✅ Backend URL is working:', backendUrl);
-        return backendUrl;
-      } else {
-        console.warn('⚠️ Backend URL returned status:', response.status);
-        // 即使健康檢查失敗，也返回這個 URL，因為可能是認證問題
-        return backendUrl;
+    // Railway：嘗試用常見命名模式推測後端 URL，並用 /health 探測可用者
+    const current = `https://${hostname}`;
+    const candidatesRaw: string[] = [
+      process.env.NEXT_PUBLIC_API_URL || '',
+      process.env.NEXT_PUBLIC_BACKEND_URL || '',
+      // common: tattoo-crm-production -> tattoo-crm-backend-production
+      current.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
+      // common: frontend -> backend
+      current.replace('frontend', 'backend'),
+      // common suffix: -backend
+      current.replace('.up.railway.app', '-backend.up.railway.app'),
+    ].filter(Boolean);
+
+    const seen = new Set<string>();
+    const candidates = candidatesRaw
+      .map(normalizeBase)
+      .filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
+
+    console.log('🔍 Railway backend URL candidates:', candidates);
+
+    for (const base of candidates) {
+      const ok = await probeHealth(base);
+      console.log('🔍 Probe /health:', { base, ok });
+      if (ok) {
+        console.log('✅ Using inferred healthy backend URL:', base);
+        return base;
       }
-    } catch (error) {
-      console.warn('⚠️ Backend health check failed:', error);
-      // 即使健康檢查失敗，也返回這個 URL
-      return backendUrl;
     }
+
+    console.warn('⚠️ No healthy backend candidate found; falling back to first candidate (may fail).');
+    return candidates[0] ?? current;
   }
   
   console.log('🔍 Using hostname as fallback:', `https://${hostname}`);
@@ -123,13 +151,21 @@ function getApiBaseUrl(): string {
     return "http://localhost:4000";
   }
   
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
+  const normalizeBase = (base: string) => base.replace(/\/+$/, '');
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (envUrl) return normalizeBase(envUrl);
   
   const hostname = window.location.hostname;
   if (hostname.includes('railway.app')) {
-    return 'https://tattoo-crm-production-413f.up.railway.app';
+    const current = `https://${hostname}`;
+    // best-effort inference (sync path; detectBackendUrl() will do real probing)
+    if (hostname.includes('tattoo-crm-production')) {
+      return normalizeBase(current.replace('tattoo-crm-production', 'tattoo-crm-backend-production'));
+    }
+    if (hostname.includes('frontend')) {
+      return normalizeBase(current.replace('frontend', 'backend'));
+    }
+    return normalizeBase(current.replace('.up.railway.app', '-backend.up.railway.app'));
   }
   
   return "http://localhost:4000";
@@ -196,7 +232,7 @@ export function getImageUrl(imagePath: string | null | undefined): string {
   // 在 SSR 環境中，使用環境變數或默認值
   if (typeof window === 'undefined') {
     // SSR 環境
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://tattoo-crm-production-413f.up.railway.app';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
     const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
     return `${backendUrl}${cleanPath}`;
   }
