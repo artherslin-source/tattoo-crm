@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import type { Branch } from "@/types/branch";
@@ -65,6 +65,9 @@ interface Appointment {
     totalDuration: number;
   };
   holdMin?: number;
+  // Extra fields returned by GET /admin/appointments/:id
+  customerNotes?: Array<unknown>;
+  historyServices?: Array<unknown>;
 }
 
 function toLocalDateTimeInputValue(iso: string): string {
@@ -83,6 +86,7 @@ function getAppointmentDurationMin(apt: Appointment): number {
 
 export default function AdminAppointmentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +107,7 @@ export default function AdminAppointmentsPage() {
   // 詳情模態框狀態
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [lastDeepLinkOpenId, setLastDeepLinkOpenId] = useState<string | null>(null);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [rescheduleStartAt, setRescheduleStartAt] = useState<string>("");
   const [rescheduleReason, setRescheduleReason] = useState<string>("");
@@ -197,6 +202,35 @@ export default function AdminAppointmentsPage() {
     fetchOptionsData(); // ✅ 問題1：調用 fetchOptionsData 以載入分店選項
   }, [router, fetchAppointments, fetchOptionsData]);
 
+  // Deep-link support: /admin/appointments?openId=<appointmentId>
+  const clearOpenIdFromUrl = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has("openId")) return;
+    params.delete("openId");
+    const next = `/admin/appointments${params.toString() ? `?${params.toString()}` : ""}`;
+    router.replace(next);
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    const openId = searchParams.get("openId");
+    if (!openId) return;
+    if (lastDeepLinkOpenId === openId && isDetailModalOpen) return;
+
+    (async () => {
+      try {
+        const appt = await getJsonWithAuth(`/admin/appointments/${openId}`) as Appointment;
+        setSelectedAppointment(appt);
+        setIsDetailModalOpen(true);
+        setLastDeepLinkOpenId(openId);
+      } catch (err) {
+        const apiErr = err as ApiError;
+        setError(apiErr.message || "開啟預約詳情失敗");
+        // avoid a broken URL loop
+        clearOpenIdFromUrl();
+      }
+    })();
+  }, [searchParams, lastDeepLinkOpenId, isDetailModalOpen, clearOpenIdFromUrl]);
+
   // 當篩選條件改變時重新載入資料
   useEffect(() => {
     fetchAppointments();
@@ -271,6 +305,7 @@ export default function AdminAppointmentsPage() {
   const handleCloseDetailModal = () => {
     setSelectedAppointment(null);
     setIsDetailModalOpen(false);
+    clearOpenIdFromUrl();
   };
 
   const openRescheduleModal = (appointment: Appointment) => {
@@ -758,7 +793,16 @@ export default function AdminAppointmentsPage() {
       </Dialog>
 
       {/* Appointment Detail Modal */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+      <Dialog
+        open={isDetailModalOpen}
+        onOpenChange={(open) => {
+          setIsDetailModalOpen(open);
+          if (!open) {
+            setSelectedAppointment(null);
+            clearOpenIdFromUrl();
+          }
+        }}
+      >
         <DialogContent className="max-w-full sm:max-w-md">
           <DialogHeader>
             <DialogTitle>預約詳情</DialogTitle>

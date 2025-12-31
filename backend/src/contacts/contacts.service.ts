@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
@@ -132,6 +132,12 @@ export class ContactsService {
             branch: { select: { id: true, name: true } },
           },
         },
+        // Latest appointment reference for deep-linking from CONVERTED contacts.
+        appointments: {
+          select: { id: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -182,7 +188,11 @@ export class ContactsService {
             branch: { select: { id: true, name: true } },
           },
         },
-        appointments: { select: { id: true, artistId: true, startAt: true, status: true } },
+        // Keep a thin appointments list, but order it to make "latest" deterministic.
+        appointments: {
+          select: { id: true, artistId: true, startAt: true, status: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
   }
@@ -269,9 +279,19 @@ export class ContactsService {
     return this.prisma.$transaction(async (tx) => {
       const contact = await tx.contact.findUnique({
         where: { id: contactId },
-        include: { appointments: { select: { artistId: true } } },
+        include: { appointments: { select: { id: true, artistId: true, createdAt: true } } },
       });
       if (!contact) throw new NotFoundException('聯絡不存在');
+
+      const existing = contact.appointments
+        .slice()
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+      if (contact.status === 'CONVERTED' || existing) {
+        throw new ConflictException({
+          message: '此聯絡已轉換為預約，請勿重複轉換',
+          existingAppointmentId: existing?.id,
+        });
+      }
 
       const inferredArtistId = contact.appointments.find((a) => !!a.artistId)?.artistId ?? null;
       const nextOwnerArtistId = contact.ownerArtistId ?? (isBoss(actor) ? inferredArtistId : actor.id);

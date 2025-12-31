@@ -306,25 +306,61 @@ export class AdminAppointmentsService {
         });
       }
 
-      return this.prisma.appointment.create({ 
-        data: {
-          startAt: input.startAt,
-          endAt: input.endAt,
-          userId: input.userId,
-          serviceId: input.serviceId,
-          artistId: input.artistId,
-          branchId: input.branchId,
-          notes: input.notes,
-          contactId: input.contactId,
-          status: "PENDING",
-        },
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          artist: { select: { id: true, name: true } },
-          service: { select: { id: true, name: true, price: true, durationMin: true } },
-          branch: { select: { id: true, name: true } },
-          contact: { select: { id: true, name: true, email: true, phone: true } },
-        },
+      // Contact conversion guard + atomic conversion.
+      return this.prisma.$transaction(async (tx) => {
+        if (input.contactId) {
+          const existing = await tx.appointment.findFirst({
+            where: { contactId: input.contactId },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true },
+          });
+          if (existing) {
+            throw new ConflictException({
+              message: '此聯絡已轉換為預約，請勿重複轉換',
+              existingAppointmentId: existing.id,
+            });
+          }
+        }
+
+        const created = await tx.appointment.create({
+          data: {
+            startAt: input.startAt,
+            endAt: input.endAt,
+            userId: input.userId,
+            serviceId: input.serviceId,
+            artistId: input.artistId,
+            branchId: input.branchId,
+            notes: input.notes,
+            contactId: input.contactId,
+            status: "PENDING",
+          },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            artist: { select: { id: true, name: true } },
+            service: { select: { id: true, name: true, price: true, durationMin: true } },
+            branch: { select: { id: true, name: true } },
+            contact: { select: { id: true, name: true, email: true, phone: true } },
+          },
+        });
+
+        if (input.contactId) {
+          // Mark as converted; ensure owner assignment if missing.
+          const contact = await tx.contact.findUnique({
+            where: { id: input.contactId },
+            select: { id: true, ownerArtistId: true },
+          });
+          if (contact) {
+            await tx.contact.update({
+              where: { id: input.contactId },
+              data: {
+                status: 'CONVERTED',
+                ownerArtistId: contact.ownerArtistId ?? input.artistId,
+              },
+            });
+          }
+        }
+
+        return created;
       });
     } catch (error) {
       console.error('❌ CreateAppointment Error:', error);

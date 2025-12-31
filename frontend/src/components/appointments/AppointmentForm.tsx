@@ -121,6 +121,7 @@ export default function AppointmentForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [conflictAppointmentId, setConflictAppointmentId] = useState<string | null>(null);
   
   const [services, setServices] = useState<Service[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -399,6 +400,7 @@ export default function AppointmentForm({
     setSubmitting(true);
     setError(null);
     setSuccess(null);
+    setConflictAppointmentId(null);
 
     try {
       // 驗證必填欄位
@@ -462,7 +464,17 @@ export default function AppointmentForm({
     } catch (err) {
       console.error('Create appointment error:', err);
       const apiErr = err as ApiError;
-      setError(apiErr.message || "創建預約失敗");
+      // Duplicate conversion guard (409) – offer deep-link jump to the existing appointment.
+      const maybeId =
+        apiErr.status === 409 && apiErr.data && typeof apiErr.data === "object"
+          ? (apiErr.data as any).existingAppointmentId
+          : undefined;
+      if (apiErr.status === 409 && typeof maybeId === "string" && maybeId) {
+        setConflictAppointmentId(maybeId);
+        setError(apiErr.message || "此聯絡已轉換為預約");
+      } else {
+        setError(apiErr.message || "創建預約失敗");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -798,7 +810,18 @@ export default function AppointmentForm({
             {/* 錯誤和成功訊息 */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
-                {error}
+                <div>{error}</div>
+                {conflictAppointmentId && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/admin/appointments?openId=${encodeURIComponent(conflictAppointmentId)}`)}
+                      className="text-sm text-blue-700 hover:text-blue-900 underline"
+                    >
+                      前往該預約
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

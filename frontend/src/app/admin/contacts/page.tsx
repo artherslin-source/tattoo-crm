@@ -18,6 +18,8 @@ interface Contact {
   createdAt: string;
   ownerArtistId?: string | null;
   ownerArtist?: { id: string; name?: string | null; phone?: string | null } | null;
+  // Latest appointment reference (backend returns take:1 for deep-linking)
+  appointments?: Array<{ id: string; createdAt: string }>;
   branch: {
     id: string;
     name: string;
@@ -60,6 +62,7 @@ export default function AdminContactsPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [artists, setArtists] = useState<ArtistOption[]>([]);
   const [ownerDraft, setOwnerDraft] = useState<Record<string, string>>({});
+  const [listStatusFilter, setListStatusFilter] = useState<'ACTIVE' | 'CONVERTED' | 'CLOSED' | 'ALL'>('ACTIVE');
 
   useEffect(() => {
     const token = getAccessToken();
@@ -180,6 +183,15 @@ export default function AdminContactsPage() {
     router.push(`/admin/appointments/new?${params.toString()}`);
   };
 
+  const viewConvertedAppointment = (contact: Contact) => {
+    const apptId = contact.appointments?.[0]?.id;
+    if (!apptId) {
+      setError("此聯絡已轉換，但找不到對應的預約紀錄（可能是舊資料）。");
+      return;
+    }
+    router.push(`/admin/appointments?openId=${encodeURIComponent(apptId)}`);
+  };
+
   const getStatusInfo = (status: string) => {
     return STATUS_OPTIONS.find(option => option.value === status) || STATUS_OPTIONS[0];
   };
@@ -225,6 +237,14 @@ export default function AdminContactsPage() {
       </div>
     );
   }
+
+  const filteredContacts = contacts.filter((c) => {
+    if (listStatusFilter === 'ALL') return true;
+    if (listStatusFilter === 'CONVERTED') return c.status === 'CONVERTED';
+    if (listStatusFilter === 'CLOSED') return c.status === 'CLOSED';
+    // Default: ACTIVE (hide converted/closed to prevent duplicate conversions)
+    return c.status === 'PENDING' || c.status === 'CONTACTED';
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-white">
@@ -307,7 +327,22 @@ export default function AdminContactsPage() {
       {/* 聯絡列表 */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">聯絡列表</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">聯絡列表</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-text-muted-light dark:text-text-muted-dark">顯示：</span>
+              <select
+                value={listStatusFilter}
+                onChange={(e) => setListStatusFilter(e.target.value as any)}
+                className="text-sm border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 bg-white dark:bg-gray-900"
+              >
+                <option value="ACTIVE">進行中（待處理/已聯繫）</option>
+                <option value="CONVERTED">已轉換</option>
+                <option value="CLOSED">已關閉</option>
+                <option value="ALL">全部</option>
+              </select>
+            </div>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
@@ -337,7 +372,7 @@ export default function AdminContactsPage() {
               </tr>
             </thead>
             <tbody>
-              {contacts.map((contact) => {
+              {filteredContacts.map((contact) => {
                 const statusInfo = getStatusInfo(contact.status);
                 const branchArtists = artists.filter((a) => a.branchId === contact.branch.id);
                 const currentOwnerName = contact.ownerArtist?.name || (contact.ownerArtistId ? "（已指派）" : "未指派");
@@ -415,12 +450,21 @@ export default function AdminContactsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => convertToAppointment(contact)}
-                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                        >
-                          轉換為預約
-                        </button>
+                        {contact.status === 'CONVERTED' ? (
+                          <button
+                            onClick={() => viewConvertedAppointment(contact)}
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            查看預約
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => convertToAppointment(contact)}
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            轉換為預約
+                          </button>
+                        )}
                         {contact.notes && (
                           <button
                             onClick={() => alert(`備註：${contact.notes}`)}
@@ -438,7 +482,7 @@ export default function AdminContactsPage() {
           </table>
         </div>
 
-        {contacts.length === 0 && (
+        {filteredContacts.length === 0 && (
           <div className="text-center py-12">
             <div className="text-text-muted-light dark:text-text-muted-dark">目前沒有聯絡資料</div>
           </div>

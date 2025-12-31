@@ -2,9 +2,11 @@ import { fetchWithRetry } from './api-fallback';
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  data?: unknown;
+  constructor(status: number, message: string, data?: unknown) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -357,7 +359,7 @@ async function parseOrThrow(res: Response) {
     const err = await res
       .json()
       .catch(() => ({ message: "Request failed" }));
-    throw new ApiError(res.status, err.message || "Request failed");
+    throw new ApiError(res.status, err.message || "Request failed", err);
   }
   return res.json();
 }
