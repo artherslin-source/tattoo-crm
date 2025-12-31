@@ -104,6 +104,26 @@ export default function AdminBillingPage() {
   const [rows, setRows] = useState<BillRow[]>([]);
   const [userRole, setUserRole] = useState<string>("");
 
+  // Filters / sorting
+  const [filterBranchId, setFilterBranchId] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterBillType, setFilterBillType] = useState<string>("all");
+  const [filterArtistId, setFilterArtistId] = useState<string>("all");
+  const [filterCustomerSearch, setFilterCustomerSearch] = useState<string>("");
+  const [filterStartDate, setFilterStartDate] = useState<string>("");
+  const [filterEndDate, setFilterEndDate] = useState<string>("");
+  const [minBillTotal, setMinBillTotal] = useState<string>("");
+  const [maxBillTotal, setMaxBillTotal] = useState<string>("");
+  const [minPaidTotal, setMinPaidTotal] = useState<string>("");
+  const [maxPaidTotal, setMaxPaidTotal] = useState<string>("");
+  const [minDueTotal, setMinDueTotal] = useState<string>("");
+  const [maxDueTotal, setMaxDueTotal] = useState<string>("");
+  const [sortField, setSortField] = useState<"createdAt" | "billTotal" | "paidTotal" | "dueTotal">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [artists, setArtists] = useState<Array<{ id: string; name: string | null }>>([]);
+
   const [selected, setSelected] = useState<BillDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -132,7 +152,25 @@ export default function AdminBillingPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getJsonWithAuth<BillRow[]>("/admin/billing/bills");
+      const params = new URLSearchParams();
+      if (filterBranchId && filterBranchId !== "all") params.set("branchId", filterBranchId);
+      if (filterStatus && filterStatus !== "all") params.set("status", filterStatus);
+      if (filterBillType && filterBillType !== "all") params.set("billType", filterBillType);
+      if (filterArtistId && filterArtistId !== "all") params.set("artistId", filterArtistId);
+      if (filterCustomerSearch.trim()) params.set("customerSearch", filterCustomerSearch.trim());
+      if (filterStartDate) params.set("startDate", filterStartDate);
+      if (filterEndDate) params.set("endDate", filterEndDate);
+      if (minBillTotal) params.set("minBillTotal", minBillTotal);
+      if (maxBillTotal) params.set("maxBillTotal", maxBillTotal);
+      if (minPaidTotal) params.set("minPaidTotal", minPaidTotal);
+      if (maxPaidTotal) params.set("maxPaidTotal", maxPaidTotal);
+      if (minDueTotal) params.set("minDueTotal", minDueTotal);
+      if (maxDueTotal) params.set("maxDueTotal", maxDueTotal);
+      if (sortField) params.set("sortField", sortField);
+      if (sortOrder) params.set("sortOrder", sortOrder);
+
+      const url = `/admin/billing/bills${params.toString() ? `?${params.toString()}` : ""}`;
+      const data = await getJsonWithAuth<BillRow[]>(url);
       setRows(data);
     } catch (e) {
       const apiErr = e as ApiError;
@@ -140,7 +178,23 @@ export default function AdminBillingPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [
+    filterBranchId,
+    filterStatus,
+    filterBillType,
+    filterArtistId,
+    filterCustomerSearch,
+    filterStartDate,
+    filterEndDate,
+    minBillTotal,
+    maxBillTotal,
+    minPaidTotal,
+    maxPaidTotal,
+    minDueTotal,
+    maxDueTotal,
+    sortField,
+    sortOrder,
+  ]);
 
   const openDetail = useCallback(async (billId: string) => {
     try {
@@ -206,6 +260,28 @@ export default function AdminBillingPage() {
     }
     fetchBills();
   }, [router, fetchBills]);
+
+  useEffect(() => {
+    // load branches/artists for filter dropdowns
+    const run = async () => {
+      try {
+        const [branchesData, artistsData] = await Promise.all([
+          getJsonWithAuth<Array<{ id: string; name: string }>>("/branches"),
+          getJsonWithAuth<Array<Record<string, any>>>("/admin/artists"),
+        ]);
+        setBranches((branchesData || []).map((b) => ({ id: b.id, name: b.name })));
+        setArtists(
+          (artistsData || []).map((a) => ({
+            id: a.id ?? a.user?.id,
+            name: a.name ?? a.user?.name ?? null,
+          })),
+        );
+      } catch (e) {
+        console.warn("Failed to load branches/artists for billing filters", e);
+      }
+    };
+    run();
+  }, []);
 
   const fetchSplitRules = useCallback(async () => {
     try {
@@ -364,6 +440,175 @@ export default function AdminBillingPage() {
         </Card>
       </div>
 
+      {/* Filters / sort */}
+      <Card>
+        <CardHeader>
+          <CardTitle>篩選 / 排序</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">分店</div>
+              <Select value={filterBranchId} onValueChange={setFilterBranchId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部分店" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部分店</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">狀態</div>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部狀態" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部狀態</SelectItem>
+                  <SelectItem value="OPEN">未結清</SelectItem>
+                  <SelectItem value="SETTLED">已結清</SelectItem>
+                  <SelectItem value="VOID">作廢</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">帳單類型</div>
+              <Select value={filterBillType} onValueChange={setFilterBillType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部類型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部類型</SelectItem>
+                  <SelectItem value="APPOINTMENT">預約</SelectItem>
+                  <SelectItem value="WALK_IN">現場</SelectItem>
+                  <SelectItem value="PRODUCT">商品</SelectItem>
+                  <SelectItem value="STORED_VALUE_TOPUP">儲值</SelectItem>
+                  <SelectItem value="OTHER">其他</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">刺青師</div>
+              <Select value={filterArtistId} onValueChange={setFilterArtistId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部刺青師" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部刺青師</SelectItem>
+                  {artists.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name || a.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="md:col-span-2">
+              <div className="text-xs text-muted-foreground mb-1">會員搜尋（姓名/手機）</div>
+              <Input value={filterCustomerSearch} onChange={(e) => setFilterCustomerSearch(e.target.value)} placeholder="輸入姓名或手機..." />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">起始日期</div>
+              <Input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">結束日期</div>
+              <Input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">應收（最小）</div>
+              <Input inputMode="numeric" value={minBillTotal} onChange={(e) => setMinBillTotal(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">應收（最大）</div>
+              <Input inputMode="numeric" value={maxBillTotal} onChange={(e) => setMaxBillTotal(e.target.value)} placeholder="999999" />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">已收（最小）</div>
+              <Input inputMode="numeric" value={minPaidTotal} onChange={(e) => setMinPaidTotal(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">已收（最大）</div>
+              <Input inputMode="numeric" value={maxPaidTotal} onChange={(e) => setMaxPaidTotal(e.target.value)} placeholder="999999" />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">未收（最小）</div>
+              <Input inputMode="numeric" value={minDueTotal} onChange={(e) => setMinDueTotal(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">未收（最大）</div>
+              <Input inputMode="numeric" value={maxDueTotal} onChange={(e) => setMaxDueTotal(e.target.value)} placeholder="999999" />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">排序</div>
+              <Select value={sortField} onValueChange={(v) => setSortField(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="createdAt" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">帳單建立時間</SelectItem>
+                  <SelectItem value="billTotal">應收金額</SelectItem>
+                  <SelectItem value="paidTotal">已收金額</SelectItem>
+                  <SelectItem value="dueTotal">未收金額</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">排序方向</div>
+              <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="desc" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">新 → 舊 / 大 → 小</SelectItem>
+                  <SelectItem value="asc">舊 → 新 / 小 → 大</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="md:col-span-4 flex gap-2">
+              <Button variant="outline" onClick={() => {
+                setFilterBranchId("all");
+                setFilterStatus("all");
+                setFilterBillType("all");
+                setFilterArtistId("all");
+                setFilterCustomerSearch("");
+                setFilterStartDate("");
+                setFilterEndDate("");
+                setMinBillTotal("");
+                setMaxBillTotal("");
+                setMinPaidTotal("");
+                setMaxPaidTotal("");
+                setMinDueTotal("");
+                setMaxDueTotal("");
+                setSortField("createdAt");
+                setSortOrder("desc");
+              }}>
+                清除條件
+              </Button>
+              <Button onClick={fetchBills} disabled={loading}>
+                套用篩選
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>帳務清單</CardTitle>
@@ -374,7 +619,7 @@ export default function AdminBillingPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left border-b">
-                  <th className="py-2 pr-3">預約時間</th>
+                  <th className="py-2 pr-3">帳單建立時間</th>
                   <th className="py-2 pr-3">會員</th>
                   <th className="py-2 pr-3">刺青師</th>
                   <th className="py-2 pr-3">分店</th>
@@ -389,7 +634,7 @@ export default function AdminBillingPage() {
                 {rows.map((r) => (
                   <tr key={r.id} className="border-b hover:bg-muted/40">
                     <td className="py-2 pr-3">
-                      {r.appointment?.startAt ? new Date(r.appointment.startAt).toLocaleString() : "（非預約）"}
+                      {new Date(r.createdAt).toLocaleString()}
                     </td>
                     <td className="py-2 pr-3">
                       {r.customer?.name ||

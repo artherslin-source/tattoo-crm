@@ -81,8 +81,17 @@ export class AdminBillingController {
       artistId: query.artistId,
       customerSearch: query.customerSearch,
       status: query.status,
+      billType: query.billType,
       startDate: query.startDate,
       endDate: query.endDate,
+      sortField: query.sortField,
+      sortOrder: query.sortOrder,
+      minBillTotal: query.minBillTotal,
+      maxBillTotal: query.maxBillTotal,
+      minPaidTotal: query.minPaidTotal,
+      maxPaidTotal: query.maxPaidTotal,
+      minDueTotal: query.minDueTotal,
+      maxDueTotal: query.maxDueTotal,
     });
   }
 

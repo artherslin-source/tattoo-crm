@@ -287,8 +287,17 @@ export class BillingService {
       artistId?: string;
       customerSearch?: string;
       status?: BillStatus | 'all';
+      billType?: string | 'all';
       startDate?: string;
       endDate?: string;
+      sortField?: 'createdAt' | 'billTotal' | 'paidTotal' | 'dueTotal';
+      sortOrder?: 'asc' | 'desc';
+      minBillTotal?: string | number;
+      maxBillTotal?: string | number;
+      minPaidTotal?: string | number;
+      maxPaidTotal?: string | number;
+      minDueTotal?: string | number;
+      maxDueTotal?: string | number;
     },
   ) {
     const where: Prisma.AppointmentBillWhereInput = {};
@@ -301,6 +310,7 @@ export class BillingService {
 
     if (query.artistId && query.artistId !== 'all') where.artistId = query.artistId;
     if (query.status && query.status !== 'all') where.status = query.status as any;
+    if (query.billType && query.billType !== 'all') where.billType = query.billType as any;
 
     if (query.startDate || query.endDate) {
       const start = query.startDate ? new Date(query.startDate) : undefined;
@@ -308,6 +318,21 @@ export class BillingService {
       where.createdAt = {
         ...(start ? { gte: start } : {}),
         ...(end ? { lte: end } : {}),
+      };
+    }
+
+    const toIntOrUndef = (v: unknown) => {
+      if (v === null || v === undefined || v === '') return undefined;
+      const n = typeof v === 'number' ? v : Number(v);
+      if (!Number.isFinite(n)) return undefined;
+      return Math.trunc(n);
+    };
+    const minBillTotal = toIntOrUndef(query.minBillTotal);
+    const maxBillTotal = toIntOrUndef(query.maxBillTotal);
+    if (minBillTotal !== undefined || maxBillTotal !== undefined) {
+      where.billTotal = {
+        ...(minBillTotal !== undefined ? { gte: minBillTotal } : {}),
+        ...(maxBillTotal !== undefined ? { lte: maxBillTotal } : {}),
       };
     }
 
@@ -330,6 +355,7 @@ export class BillingService {
 
     const bills = await this.prisma.appointmentBill.findMany({
       where,
+      // Default stable ordering; we can re-sort in memory for computed fields.
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         appointment: { select: { id: true, startAt: true, endAt: true, status: true } },
@@ -341,7 +367,12 @@ export class BillingService {
       },
     });
 
-    return bills.map((b) => {
+    const minPaidTotal = toIntOrUndef(query.minPaidTotal);
+    const maxPaidTotal = toIntOrUndef(query.maxPaidTotal);
+    const minDueTotal = toIntOrUndef(query.minDueTotal);
+    const maxDueTotal = toIntOrUndef(query.maxDueTotal);
+
+    let rows = bills.map((b) => {
       const paidTotal = b.payments.reduce((s, p) => s + p.amount, 0);
       return {
         ...b,
@@ -351,6 +382,46 @@ export class BillingService {
         },
       };
     });
+
+    // Amount-range filters for computed fields (paid/due)
+    if (minPaidTotal !== undefined) rows = rows.filter((r) => r.summary.paidTotal >= minPaidTotal);
+    if (maxPaidTotal !== undefined) rows = rows.filter((r) => r.summary.paidTotal <= maxPaidTotal);
+    if (minDueTotal !== undefined) rows = rows.filter((r) => r.summary.dueTotal >= minDueTotal);
+    if (maxDueTotal !== undefined) rows = rows.filter((r) => r.summary.dueTotal <= maxDueTotal);
+
+    const sortField = query.sortField ?? 'createdAt';
+    const sortOrder: 'asc' | 'desc' = query.sortOrder === 'asc' ? 'asc' : 'desc';
+    const dir = sortOrder === 'asc' ? 1 : -1;
+
+    rows.sort((a, b) => {
+      let av: number | string = 0;
+      let bv: number | string = 0;
+      switch (sortField) {
+        case 'billTotal':
+          av = a.billTotal;
+          bv = b.billTotal;
+          break;
+        case 'paidTotal':
+          av = a.summary.paidTotal;
+          bv = b.summary.paidTotal;
+          break;
+        case 'dueTotal':
+          av = a.summary.dueTotal;
+          bv = b.summary.dueTotal;
+          break;
+        case 'createdAt':
+        default:
+          av = new Date(a.createdAt).getTime();
+          bv = new Date(b.createdAt).getTime();
+          break;
+      }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      // Tie-breaker
+      return a.id < b.id ? 1 : -1;
+    });
+
+    return rows;
   }
 
   async updateBill(
