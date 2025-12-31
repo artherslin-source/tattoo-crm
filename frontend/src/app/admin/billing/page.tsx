@@ -140,6 +140,7 @@ export default function AdminBillingPage() {
 
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [artists, setArtists] = useState<Array<{ id: string; name: string | null; branchName: string | null }>>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const [selected, setSelected] = useState<BillDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -355,6 +356,26 @@ export default function AdminBillingPage() {
     return { billTotal, paidTotal, dueTotal: billTotal - paidTotal };
   }, [rows]);
 
+  const sortLabel = useMemo(() => {
+    const fieldLabel =
+      sortField === "createdAt"
+        ? "帳單建立時間"
+        : sortField === "billTotal"
+          ? "應收"
+          : sortField === "paidTotal"
+            ? "已收"
+            : "未收";
+    const orderLabel = sortOrder === "desc" ? "新→舊/大→小" : "舊→新/小→大";
+    return `${fieldLabel}（${orderLabel}）`;
+  }, [sortField, sortOrder]);
+
+  const dateRangeLabel = useMemo(() => {
+    if (!filterStartDate && !filterEndDate) return "不限";
+    if (filterStartDate && !filterEndDate) return `${filterStartDate} 起`;
+    if (!filterStartDate && filterEndDate) return `至 ${filterEndDate}`;
+    return `${filterStartDate} ~ ${filterEndDate}`;
+  }, [filterStartDate, filterEndDate]);
+
   const onCreateManualBill = useCallback(async () => {
     const branchId = newBranchId.trim();
     if (!branchId) {
@@ -460,210 +481,106 @@ export default function AdminBillingPage() {
         </Card>
       </div>
 
-      {/* Filters / sort */}
-      <Card>
-        <CardHeader>
-          <CardTitle>篩選 / 排序</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">分店</div>
-              <Select value={filterBranchId} onValueChange={setFilterBranchId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="全部分店" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部分店</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">狀態</div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="全部狀態" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部狀態</SelectItem>
-                  <SelectItem value="OPEN">未結清</SelectItem>
-                  <SelectItem value="SETTLED">已結清</SelectItem>
-                  <SelectItem value="VOID">作廢</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">帳單類型</div>
-              <Select value={filterBillType} onValueChange={setFilterBillType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="全部類型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部類型</SelectItem>
-                  <SelectItem value="APPOINTMENT">預約</SelectItem>
-                  <SelectItem value="WALK_IN">現場</SelectItem>
-                  <SelectItem value="PRODUCT">商品</SelectItem>
-                  <SelectItem value="STORED_VALUE_TOPUP">儲值</SelectItem>
-                  <SelectItem value="OTHER">其他</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">刺青師</div>
-              <Select value={filterArtistId} onValueChange={setFilterArtistId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="全部刺青師" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部刺青師</SelectItem>
-                  {artists.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {(a.name || a.id) + `（${a.branchName || "未分店"}）`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground mb-1">會員搜尋（姓名/手機）</div>
-              <Input value={filterCustomerSearch} onChange={(e) => setFilterCustomerSearch(e.target.value)} placeholder="輸入姓名或手機..." />
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">起始日期</div>
-              <Input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">結束日期</div>
-              <Input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} />
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">應收（最小）</div>
-              <Input inputMode="numeric" value={minBillTotal} onChange={(e) => setMinBillTotal(e.target.value)} placeholder="0" />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">應收（最大）</div>
-              <Input inputMode="numeric" value={maxBillTotal} onChange={(e) => setMaxBillTotal(e.target.value)} placeholder="999999" />
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">已收（最小）</div>
-              <Input inputMode="numeric" value={minPaidTotal} onChange={(e) => setMinPaidTotal(e.target.value)} placeholder="0" />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">已收（最大）</div>
-              <Input inputMode="numeric" value={maxPaidTotal} onChange={(e) => setMaxPaidTotal(e.target.value)} placeholder="999999" />
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">未收（最小）</div>
-              <Input inputMode="numeric" value={minDueTotal} onChange={(e) => setMinDueTotal(e.target.value)} placeholder="0" />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">未收（最大）</div>
-              <Input inputMode="numeric" value={maxDueTotal} onChange={(e) => setMaxDueTotal(e.target.value)} placeholder="999999" />
-            </div>
-
-            {/* Advanced (collapsible) */}
-            <div className="md:col-span-4">
-              <details className="rounded-md border border-gray-200 bg-white px-3 py-2">
-                <summary className="cursor-pointer select-none text-sm font-medium text-gray-700">
-                  進階設定（排序）
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    {sortField === "createdAt" ? "帳單建立時間" : sortField === "billTotal" ? "應收金額" : sortField === "paidTotal" ? "已收金額" : "未收金額"}
-                    {sortOrder === "desc" ? "（新→舊/大→小）" : "（舊→新/小→大）"}
-                  </span>
-                </summary>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">排序</div>
-                    <Select
-                      value={sortField}
-                      onValueChange={(v) => setSortField(isBillSortField(v) ? v : "createdAt")}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="createdAt" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="createdAt">帳單建立時間</SelectItem>
-                        <SelectItem value="billTotal">應收金額</SelectItem>
-                        <SelectItem value="paidTotal">已收金額</SelectItem>
-                        <SelectItem value="dueTotal">未收金額</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">排序方向</div>
-                    <Select
-                      value={sortOrder}
-                      onValueChange={(v) => setSortOrder(isBillSortOrder(v) ? v : "desc")}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="desc" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="desc">新 → 舊 / 大 → 小</SelectItem>
-                        <SelectItem value="asc">舊 → 新 / 小 → 大</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-2 flex items-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSortField("createdAt");
-                        setSortOrder("desc");
-                      }}
-                    >
-                      重置排序
-                    </Button>
-                  </div>
-                </div>
-              </details>
-            </div>
-
-            <div className="md:col-span-4 flex gap-2">
-              <Button variant="outline" onClick={() => {
-                setFilterBranchId("all");
-                setFilterStatus("all");
-                setFilterBillType("all");
-                setFilterArtistId("all");
-                setFilterCustomerSearch("");
-                setFilterStartDate("");
-                setFilterEndDate("");
-                setMinBillTotal("");
-                setMaxBillTotal("");
-                setMinPaidTotal("");
-                setMaxPaidTotal("");
-                setMinDueTotal("");
-                setMaxDueTotal("");
-                setSortField("createdAt");
-                setSortOrder("desc");
-              }}>
-                清除條件
-              </Button>
-              <Button onClick={fetchBills} disabled={loading}>
-                套用篩選
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>帳務清單</CardTitle>
-          <div />
+          <div className="flex items-center gap-2">
+            <div className="hidden lg:flex flex-wrap items-end gap-2">
+              <div className="w-[160px]">
+                <div className="text-[11px] text-muted-foreground mb-1">分店</div>
+                <Select value={filterBranchId} onValueChange={setFilterBranchId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="全部分店" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部分店</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[120px]">
+                <div className="text-[11px] text-muted-foreground mb-1">狀態</div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="全部狀態" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部狀態</SelectItem>
+                    <SelectItem value="OPEN">未結清</SelectItem>
+                    <SelectItem value="SETTLED">已結清</SelectItem>
+                    <SelectItem value="VOID">作廢</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[180px]">
+                <div className="text-[11px] text-muted-foreground mb-1">刺青師</div>
+                <Select value={filterArtistId} onValueChange={setFilterArtistId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="全部刺青師" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部刺青師</SelectItem>
+                    {artists.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {(a.name || a.id) + `（${a.branchName || "未分店"}）`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[140px]">
+                <div className="text-[11px] text-muted-foreground mb-1">起始</div>
+                <Input className="h-9" type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
+              </div>
+              <div className="w-[140px]">
+                <div className="text-[11px] text-muted-foreground mb-1">結束</div>
+                <Input className="h-9" type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} />
+              </div>
+
+              <div className="w-[160px]">
+                <div className="text-[11px] text-muted-foreground mb-1">排序</div>
+                <Select value={sortField} onValueChange={(v) => setSortField(isBillSortField(v) ? v : "createdAt")}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="createdAt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">帳單建立時間</SelectItem>
+                    <SelectItem value="billTotal">應收金額</SelectItem>
+                    <SelectItem value="paidTotal">已收金額</SelectItem>
+                    <SelectItem value="dueTotal">未收金額</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[150px]">
+                <div className="text-[11px] text-muted-foreground mb-1">方向</div>
+                <Select value={sortOrder} onValueChange={(v) => setSortOrder(isBillSortOrder(v) ? v : "desc")}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="desc" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">新→舊 / 大→小</SelectItem>
+                    <SelectItem value="asc">舊→新 / 小→大</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => setFilterOpen(true)}
+              title={`分店：${filterBranchId === "all" ? "全部" : branches.find((b) => b.id === filterBranchId)?.name || filterBranchId}｜狀態：${filterStatus === "all" ? "全部" : filterStatus}｜刺青師：${filterArtistId === "all" ? "全部" : artists.find((a) => a.id === filterArtistId)?.name || filterArtistId}｜日期：${dateRangeLabel}｜排序：${sortLabel}`}
+            >
+              更多篩選
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -719,6 +636,102 @@ export default function AdminBillingPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>篩選 / 排序（更多）</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">帳單類型</div>
+              <Select value={filterBillType} onValueChange={setFilterBillType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部類型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部類型</SelectItem>
+                  <SelectItem value="APPOINTMENT">預約</SelectItem>
+                  <SelectItem value="WALK_IN">現場</SelectItem>
+                  <SelectItem value="PRODUCT">商品</SelectItem>
+                  <SelectItem value="STORED_VALUE_TOPUP">儲值</SelectItem>
+                  <SelectItem value="OTHER">其他</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="md:col-span-3">
+              <div className="text-xs text-muted-foreground mb-1">會員搜尋（姓名/手機）</div>
+              <Input
+                value={filterCustomerSearch}
+                onChange={(e) => setFilterCustomerSearch(e.target.value)}
+                placeholder="輸入姓名或手機..."
+              />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">應收（最小）</div>
+              <Input inputMode="numeric" value={minBillTotal} onChange={(e) => setMinBillTotal(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">應收（最大）</div>
+              <Input inputMode="numeric" value={maxBillTotal} onChange={(e) => setMaxBillTotal(e.target.value)} placeholder="999999" />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">已收（最小）</div>
+              <Input inputMode="numeric" value={minPaidTotal} onChange={(e) => setMinPaidTotal(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">已收（最大）</div>
+              <Input inputMode="numeric" value={maxPaidTotal} onChange={(e) => setMaxPaidTotal(e.target.value)} placeholder="999999" />
+            </div>
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">未收（最小）</div>
+              <Input inputMode="numeric" value={minDueTotal} onChange={(e) => setMinDueTotal(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">未收（最大）</div>
+              <Input inputMode="numeric" value={maxDueTotal} onChange={(e) => setMaxDueTotal(e.target.value)} placeholder="999999" />
+            </div>
+
+            <div className="md:col-span-4 flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFilterBranchId("all");
+                  setFilterStatus("all");
+                  setFilterBillType("all");
+                  setFilterArtistId("all");
+                  setFilterCustomerSearch("");
+                  setFilterStartDate("");
+                  setFilterEndDate("");
+                  setMinBillTotal("");
+                  setMaxBillTotal("");
+                  setMinPaidTotal("");
+                  setMaxPaidTotal("");
+                  setMinDueTotal("");
+                  setMaxDueTotal("");
+                  setSortField("createdAt");
+                  setSortOrder("desc");
+                }}
+              >
+                清除條件
+              </Button>
+              <Button
+                onClick={async () => {
+                  await fetchBills();
+                  setFilterOpen(false);
+                }}
+                disabled={loading}
+              >
+                套用篩選
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl">
