@@ -66,9 +66,10 @@ try {
   console.warn('   錯誤訊息:', error.message);
   // 如果 migrate deploy 失敗，嘗試使用 db push（但不用 force-reset）
   try {
-    console.log('🔄 嘗試使用 db push 同步 schema（不會重置資料）...');
-    run('npx prisma db push', '同步資料庫 Schema（不重置）');
-    console.log('✅ Schema 同步完成（未刪除任何資料）');
+    console.log('🔄 嘗試使用 db push 同步 schema...');
+    console.warn('⚠️ 注意：若 Prisma 判定有破壞性變更，需使用 --accept-data-loss 才能同步。');
+    run('npx prisma db push --accept-data-loss', '同步資料庫 Schema（允許必要的破壞性變更）');
+    console.log('✅ Schema 同步完成');
   } catch (pushError) {
     console.warn('⚠️ Schema 同步也失敗，但服務將繼續啟動');
     console.warn('   錯誤訊息:', pushError.message);
