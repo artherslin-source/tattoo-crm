@@ -341,17 +341,17 @@ export default function HomePage() {
   };
 
   const branchLocked = !!formData.ownerArtistId;
+  // 預約表單的刺青師下拉：使用完整 artists 清單（不要去重），以便像「朱川進」這種跨分店顯示完整選項
   const bookingArtistOptions = useMemo(() => {
-    const list = uniqueArtists
+    return (artists || [])
       .map((a) => ({
-        id: a.user?.id || a.id,
+        id: a.user?.id || a.id, // ownerArtistId 需使用 User.id
         name: a.displayName || a.user?.name || "未命名",
         branchId: a.branchId,
         branchName: a.branch?.name || "未分店",
       }))
       .filter((a) => !!a.id && !!a.branchId);
-    return list;
-  }, [uniqueArtists]);
+  }, [artists]);
 
   const handleArtistSelect = (value: string) => {
     if (!value || value === "none") {
@@ -368,6 +368,18 @@ export default function HomePage() {
       branchId: artist.branchId,
     }));
     if (message) setMessage(null);
+  };
+
+  const prefillBookingArtist = (artist: Artist) => {
+    const ownerArtistId = artist.user?.id || artist.id;
+    const branchId = artist.branchId || artist.branch?.id || "";
+    setFormData((prev) => ({
+      ...prev,
+      ownerArtistId,
+      branchId: branchId || prev.branchId,
+    }));
+    if (message) setMessage(null);
+    scrollToBookingForm();
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -573,7 +585,7 @@ export default function HomePage() {
                           <Button
                             variant="outline"
                             className="flex-1 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
-                            onClick={scrollToBookingForm}
+                            onClick={() => prefillBookingArtist(artist)}
                           >
                             立即預約
                           </Button>
@@ -600,26 +612,31 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <Card className="border-white/10 bg-white/5 text-white">
+                {/* 預約表單：白底黑字（避免 label/選項白字看不清） */}
+                <Card className="border-gray-200 bg-white text-gray-900">
                   <CardContent className="space-y-6 pt-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid gap-6 sm:grid-cols-2">
                         <div>
-                          <Label htmlFor="name">姓名 *</Label>
+                          <Label htmlFor="name" className="text-gray-900">
+                            姓名 *
+                          </Label>
                           <Input
                             id="name"
                             type="text"
                             value={formData.name}
                             onChange={(event) => handleInputChange("name", event.target.value)}
                             placeholder="請輸入您的姓名"
-                            className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
+                            className="bg-white text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
                         </div>
                         <div>
-                          <Label htmlFor="artist">指定刺青師（可選）</Label>
+                          <Label htmlFor="artist" className="text-gray-900">
+                            指定刺青師（可選）
+                          </Label>
                           <Select value={formData.ownerArtistId || "none"} onValueChange={handleArtistSelect}>
-                            <SelectTrigger className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light">
+                            <SelectTrigger className="bg-white text-gray-900 placeholder:text-gray-500">
                               <SelectValue placeholder="不指定，讓我們為您安排" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border border-gray-200">
@@ -635,25 +652,29 @@ export default function HomePage() {
                           </Select>
                         </div>
                         <div>
-                          <Label htmlFor="phone">聯絡電話 *</Label>
+                          <Label htmlFor="phone" className="text-gray-900">
+                            聯絡電話 *
+                          </Label>
                           <Input
                             id="phone"
                             type="tel"
                             value={formData.phone}
                             onChange={(event) => handleInputChange("phone", event.target.value)}
                             placeholder="請輸入您的聯絡電話"
-                            className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light focus:ring-1 focus:ring-yellow-400/50"
+                            className="bg-white text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
                         </div>
                         <div>
-                          <Label htmlFor="branch">指定分店 *</Label>
+                          <Label htmlFor="branch" className="text-gray-900">
+                            指定分店 *
+                          </Label>
                           <Select
                             value={formData.branchId}
                             onValueChange={(value) => handleInputChange("branchId", value)}
                             disabled={branchLocked}
                           >
-                            <SelectTrigger className="bg-white text-gray-900 placeholder:text-gray-500 dark:bg-white/10 dark:text-white dark:placeholder:text-text-muted-light disabled:opacity-70">
+                            <SelectTrigger className="bg-white text-gray-900 placeholder:text-gray-500 disabled:opacity-70">
                               <SelectValue placeholder="請選擇分店" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border border-gray-200">
@@ -671,7 +692,7 @@ export default function HomePage() {
                             </SelectContent>
                           </Select>
                           {branchLocked && (
-                            <p className="mt-1 text-xs text-neutral-300">
+                            <p className="mt-1 text-xs text-gray-600">
                               已指定刺青師，分店將自動鎖定為該刺青師所屬分店。
                             </p>
                           )}
@@ -679,13 +700,15 @@ export default function HomePage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="notes">備註需求</Label>
+                        <Label htmlFor="notes" className="text-gray-900">
+                          備註需求
+                        </Label>
                         <Textarea
                           id="notes"
                           value={formData.notes}
                           onChange={(event) => handleInputChange("notes", event.target.value)}
                           placeholder="請描述您的刺青想法、尺寸或預期預算..."
-                          className="bg-white/10 text-white placeholder:text-text-muted-light"
+                          className="bg-white text-gray-900 placeholder:text-gray-500"
                           rows={4}
                         />
                       </div>
