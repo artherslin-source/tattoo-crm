@@ -5,6 +5,7 @@ import { AccessGuard } from '../common/access/access.guard';
 import { Actor } from '../common/access/actor.decorator';
 import type { AccessActor } from '../common/access/access.types';
 import { z } from 'zod';
+import * as bcrypt from 'bcrypt';
 
 const CreateAppointmentSchema = z.object({
   startAt: z.string().datetime(),
@@ -17,7 +18,7 @@ const CreateAppointmentSchema = z.object({
   // 從聯絡訂單創建預約的欄位
   name: z.string().optional(),
   email: z.string().email().optional(),
-  phone: z.string().optional(),
+  phone: z.string().min(1),
   contactId: z.string().optional(),
 });
 
@@ -77,48 +78,73 @@ export class AdminAppointmentsController {
       
       let userId = input.userId;
       let contactId = input.contactId;
-      
-      // 如果沒有 userId 但有客戶資訊，自動創建用戶和聯絡記錄
-      if (!userId && input.name && input.email) {
-        console.log('🔍 從聯絡訂單創建預約，需要創建用戶');
-        
-        // 查找或創建用戶
-        const existingUser = await this.adminAppointmentsService['prisma'].user.findFirst({
-          where: { email: input.email }
+
+      const prisma = this.adminAppointmentsService['prisma'];
+      const phone = input.phone.trim();
+      const email = input.email?.trim() ? input.email.trim() : undefined;
+
+      // If no userId, resolve by phone first; otherwise auto-create member (email optional)
+      if (!userId) {
+        console.log('🔍 No userId provided; resolving member by phone/name');
+
+        const existingByPhone = await prisma.user.findFirst({
+          where: { phone },
+          select: { id: true },
         });
-        
-        if (existingUser) {
-          userId = existingUser.id;
-          console.log('🔍 找到現有用戶:', userId);
-        } else {
-          // 創建新用戶
-          const newUser = await this.adminAppointmentsService['prisma'].user.create({
+
+        if (existingByPhone) {
+          userId = existingByPhone.id;
+          console.log('🔍 Found existing user by phone:', userId);
+        } else if (email) {
+          const existingByEmail = await prisma.user.findFirst({
+            where: { email },
+            select: { id: true },
+          });
+          if (existingByEmail) {
+            userId = existingByEmail.id;
+            console.log('🔍 Found existing user by email:', userId);
+          }
+        }
+
+        if (!userId) {
+          // Create User + Member (phone required; email optional)
+          const hashedPassword = await bcrypt.hash('temp-password', 12);
+          const createdUser = await prisma.user.create({
             data: {
-              email: input.email,
               name: input.name,
-              phone: input.phone,
+              email: email || undefined,
+              phone,
               role: 'MEMBER',
               branchId: input.branchId,
-              hashedPassword: 'temp-password', // 臨時密碼，用戶需要後續設定
-            }
+              hashedPassword,
+            },
+            select: { id: true },
           });
-          userId = newUser.id;
-          console.log('🔍 創建新用戶:', userId);
+          userId = createdUser.id;
+          console.log('🔍 Created new user:', userId);
+
+          // Ensure Member row exists
+          await prisma.member.create({
+            data: { userId },
+          });
         }
-        
-        // 創建聯絡記錄
-        const newContact = await this.adminAppointmentsService['prisma'].contact.create({
-          data: {
-            name: input.name,
-            email: input.email,
-            phone: input.phone || '',
-            notes: input.notes || '',
-            branchId: input.branchId,
-            status: 'PENDING',
-          }
-        });
-        contactId = newContact.id;
-        console.log('🔍 創建聯絡記錄:', contactId);
+
+        // Create Contact only if email is provided (Contact.email is required in schema)
+        if (!contactId && input.name && email) {
+          const newContact = await prisma.contact.create({
+            data: {
+              name: input.name,
+              email,
+              phone,
+              notes: input.notes || '',
+              branchId: input.branchId,
+              status: 'PENDING',
+            },
+            select: { id: true },
+          });
+          contactId = newContact.id;
+          console.log('🔍 Created contact:', contactId);
+        }
       }
       
       if (!userId) {

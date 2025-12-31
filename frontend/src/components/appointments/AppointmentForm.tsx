@@ -35,6 +35,7 @@ interface Branch {
 }
 
 interface AppointmentFormData {
+  userId: string;
   name: string;
   email: string;
   phone: string;
@@ -46,6 +47,25 @@ interface AppointmentFormData {
   notes: string;
   contactId: string;
 }
+
+type MemberSearchRow = {
+  id: string; // Member.id
+  membershipLevel?: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    email?: string | null;
+    branch?: { id: string; name: string } | null;
+  };
+};
+
+type MembersSearchResponse = {
+  data: MemberSearchRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
 type AppointmentFormInitialData = Partial<AppointmentFormData> & {
   holdMin?: number;
@@ -106,6 +126,7 @@ export default function AppointmentForm({
   const canFetch = useMemo(() => !!token, [token]);
 
   const [formData, setFormData] = useState<AppointmentFormData>({
+    userId: "",
     name: fromContact?.name ?? searchParams.get("name") ?? "",
     email: fromContact?.email ?? searchParams.get("email") ?? "",
     phone: fromContact?.phone ?? searchParams.get("phone") ?? "",
@@ -117,6 +138,12 @@ export default function AppointmentForm({
     startAt: "",
     endAt: "",
   });
+
+  // Existing member picker (optional)
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberSearching, setMemberSearching] = useState(false);
+  const [memberResults, setMemberResults] = useState<MemberSearchRow[]>([]);
+  const [selectedMember, setSelectedMember] = useState<MemberSearchRow | null>(null);
 
   const [appointmentDate, setAppointmentDate] = useState<string>(() => {
     const seed = initialData.startAt || "";
@@ -162,6 +189,57 @@ export default function AppointmentForm({
 
     fetchData();
   }, [canFetch]);
+
+  // Search members (phone/name) for existing member booking
+  useEffect(() => {
+    if (!canFetch) return;
+    if (selectedMember) return; // already selected, avoid background search noise
+    const q = memberSearch.trim();
+    if (!q) {
+      setMemberResults([]);
+      setMemberSearching(false);
+      return;
+    }
+
+    const t = setTimeout(async () => {
+      setMemberSearching(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("search", q);
+        params.set("role", "MEMBER");
+        params.set("page", "1");
+        params.set("pageSize", "10");
+        const res = await getJsonWithAuth<MembersSearchResponse>(`/admin/members?${params.toString()}`);
+        setMemberResults(Array.isArray(res?.data) ? res.data : []);
+      } catch (e) {
+        console.error("Member search failed:", e);
+        setMemberResults([]);
+      } finally {
+        setMemberSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(t);
+  }, [canFetch, memberSearch, selectedMember]);
+
+  const selectMember = (m: MemberSearchRow) => {
+    setSelectedMember(m);
+    setMemberSearch("");
+    setMemberResults([]);
+    setFormData((prev) => ({
+      ...prev,
+      userId: m.user.id,
+      name: m.user.name ?? prev.name,
+      phone: m.user.phone ?? prev.phone,
+      email: (m.user.email ?? "") || prev.email,
+      branchId: prev.artistId ? prev.branchId : (m.user.branch?.id ?? prev.branchId),
+    }));
+  };
+
+  const clearSelectedMember = () => {
+    setSelectedMember(null);
+    setFormData((prev) => ({ ...prev, userId: "" }));
+  };
 
   // 處理輸入變更
   const handleInputChange = (field: string, value: string) => {
@@ -245,7 +323,7 @@ export default function AppointmentForm({
 
     try {
       // 驗證必填欄位
-      if (!formData.name || !formData.email || !formData.serviceId || !formData.artistId || !formData.branchId || !appointmentDate || !timeSlot) {
+      if (!formData.name || !formData.phone || !formData.serviceId || !formData.artistId || !formData.branchId || !appointmentDate || !timeSlot) {
         setError("請填寫所有必填欄位");
         return;
       }
@@ -275,9 +353,10 @@ export default function AppointmentForm({
       const endTime = endTimeRaw > dayEnd ? dayEnd : endTimeRaw;
 
       const payload = {
+        userId: formData.userId || undefined,
         name: formData.name,
-        email: formData.email,
-        phone: formData.phone || undefined,
+        email: formData.email?.trim() ? formData.email.trim() : undefined,
+        phone: formData.phone,
         serviceId: formData.serviceId,
         artistId: formData.artistId,
         branchId: formData.branchId,
@@ -287,7 +366,7 @@ export default function AppointmentForm({
         notes: formData.notes || undefined,
       };
 
-      await postJsonWithAuth("/appointments", payload);
+      await postJsonWithAuth("/admin/appointments", payload);
       
       setSuccess("預約創建成功！");
       
@@ -341,6 +420,70 @@ export default function AppointmentForm({
         {/* 表單 */}
         <div className="bg-white rounded-lg shadow p-8">
           <form onSubmit={handleSubmit} className="space-y-6" data-testid={dataTestId}>
+            {/* Existing member (optional) */}
+            <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium text-text-secondary-light">選擇既有會員（可選）</div>
+                  <div className="text-xs text-text-muted-light">可用手機號碼或姓名搜尋，選取後會自動帶入資料</div>
+                </div>
+                {selectedMember && (
+                  <button
+                    type="button"
+                    onClick={clearSelectedMember}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    取消選擇
+                  </button>
+                )}
+              </div>
+
+              {!selectedMember ? (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    placeholder="輸入手機號碼或姓名..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {memberSearching && (
+                    <div className="mt-2 text-xs text-text-muted-light">搜尋中...</div>
+                  )}
+                  {!!memberResults.length && (
+                    <div className="mt-2 max-h-56 overflow-auto rounded-md border border-gray-200 bg-white">
+                      {memberResults.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => selectMember(m)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0"
+                        >
+                          <div className="text-sm text-gray-900">
+                            {m.user.name || "（未命名）"} ・ {m.user.phone || "（無手機）"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {m.user.branch?.name ? `分店：${m.user.branch.name}` : "分店：未設定"}
+                            {m.membershipLevel ? ` ・ 等級：${m.membershipLevel}` : ""}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-3 rounded-md border border-gray-200 bg-white p-3">
+                  <div className="text-sm text-gray-900">
+                    已選擇：{selectedMember.user.name || "（未命名）"} ・ {selectedMember.user.phone || "（無手機）"}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {selectedMember.user.branch?.name ? `分店：${selectedMember.user.branch.name}` : "分店：未設定"}
+                    {selectedMember.membershipLevel ? ` ・ 等級：${selectedMember.membershipLevel}` : ""}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* 客戶資訊 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -358,7 +501,7 @@ export default function AppointmentForm({
               </div>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-text-secondary-light mb-2">
-                  電子郵件 *
+                  電子郵件
                 </label>
                 <input
                   type="email"
@@ -366,14 +509,13 @@ export default function AppointmentForm({
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                 />
               </div>
             </div>
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-text-secondary-light mb-2">
-                聯絡電話
+                聯絡電話 *
               </label>
               <input
                 type="tel"
@@ -381,6 +523,7 @@ export default function AppointmentForm({
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
 
