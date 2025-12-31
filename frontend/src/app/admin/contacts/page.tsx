@@ -6,7 +6,7 @@ import { getAccessToken, getJsonWithAuth, patchJsonWithAuth, ApiError } from "@/
 import { getUserRole, isBossRole } from "@/lib/access";
 import { MessageSquare, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Contact {
   id: string;
@@ -90,7 +90,7 @@ export default function AdminContactsPage() {
     if (isBoss) {
       fetchArtists();
     }
-  }, [router]);
+  }, [router, isBoss]);
 
   // Deep-link highlight: /admin/contacts?highlightId=<contactId>
   useEffect(() => {
@@ -104,6 +104,14 @@ export default function AdminContactsPage() {
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // After list rendered, auto-scroll highlighted row into view.
+  useEffect(() => {
+    if (!highlightContactId) return;
+    const el = document.getElementById(`contact-row-${highlightContactId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightContactId, contacts, listStatusFilter]);
 
   const fetchContacts = async () => {
     try {
@@ -271,14 +279,6 @@ export default function AdminContactsPage() {
     // Default: ACTIVE (hide converted/closed to prevent duplicate conversions)
     return c.status === 'PENDING' || c.status === 'CONTACTED';
   });
-
-  // After list rendered, auto-scroll highlighted row into view.
-  useEffect(() => {
-    if (!highlightContactId) return;
-    const el = document.getElementById(`contact-row-${highlightContactId}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [filteredContacts, highlightContactId]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 bg-white dark:bg-[var(--bg)] text-gray-900 dark:text-white">
