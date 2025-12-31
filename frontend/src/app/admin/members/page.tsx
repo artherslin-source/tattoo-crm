@@ -130,7 +130,7 @@ export default function AdminMembersPage() {
       password: string;
       phone: string;
       branchId: string;
-      role: 'MEMBER' | 'ADMIN';
+      membershipLevel: string;
     };
   }>({
     isOpen: false,
@@ -139,7 +139,7 @@ export default function AdminMembersPage() {
       password: '',
       phone: '',
       branchId: '',
-      role: 'MEMBER',
+      membershipLevel: '',
     },
   });
 
@@ -305,7 +305,7 @@ export default function AdminMembersPage() {
         password: '',
         phone: '',
         branchId: '',
-        role: 'MEMBER',
+        membershipLevel: '',
       },
     });
   };
@@ -318,7 +318,7 @@ export default function AdminMembersPage() {
         password: '',
         phone: '',
         branchId: '',
-        role: 'MEMBER',
+        membershipLevel: '',
       },
     });
   };
@@ -335,7 +335,7 @@ export default function AdminMembersPage() {
 
   const handleCreateMember = async () => {
     try {
-      const { name, password, phone, branchId, role } = createMemberModal.formData;
+      const { name, password, phone, branchId, membershipLevel } = createMemberModal.formData;
       
       if (!name || !password || !phone || !branchId) {
         setError('請填寫所有必填欄位');
@@ -347,7 +347,8 @@ export default function AdminMembersPage() {
         password,
         phone,
         branchId,
-        role,
+        role: 'MEMBER', // 新增會員一律為「會員」
+        membershipLevel: membershipLevel ? membershipLevel : undefined,
       });
 
       if (currentPage === 1) {
@@ -1031,22 +1032,27 @@ export default function AdminMembersPage() {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:bg-gray-700 dark:text-text-primary-dark"
                   >
                     <option value="">請選擇分店</option>
-                    <option value="cmg9i8wsb0001sbc1oh5vfetl">三重店</option>
-                    <option value="cmg9i8wse0002sbc1rci6gl0c">東港店</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="memberRole" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
-                    角色
+                  <label htmlFor="memberMembershipLevel" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">
+                    會員等級
                   </label>
                   <select
-                    id="memberRole"
-                    value={createMemberModal.formData.role}
-                    onChange={(e) => handleCreateMemberFormChange('role', e.target.value)}
+                    id="memberMembershipLevel"
+                    value={createMemberModal.formData.membershipLevel}
+                    onChange={(e) => handleCreateMemberFormChange('membershipLevel', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:bg-gray-700 dark:text-text-primary-dark"
                   >
-                    <option value="MEMBER">會員</option>
-                    <option value="ADMIN">管理員</option>
+                    <option value="">（未設定）</option>
+                    <option value="Silver">Silver</option>
+                    <option value="Gold">Gold</option>
+                    <option value="Platinum">Platinum</option>
                   </select>
                 </div>
               </div>

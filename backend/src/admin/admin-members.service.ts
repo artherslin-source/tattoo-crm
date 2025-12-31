@@ -369,6 +369,17 @@ export class AdminMembersService {
   }) {
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
+    // Normalize + validate branchId (avoid FK violations)
+    const rawBranchId = (isBoss(actor) ? data.branchId : (actor.branchId ?? data.branchId)) ?? undefined;
+    const branchId = rawBranchId && rawBranchId.trim().length > 0 ? rawBranchId.trim() : undefined;
+
+    if (branchId) {
+      const exists = await this.prisma.branch.findUnique({ where: { id: branchId }, select: { id: true } });
+      if (!exists) {
+        throw new BadRequestException('分店不存在，請重新選擇分店');
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       // 創建 User
       const user = await tx.user.create({
@@ -378,7 +389,7 @@ export class AdminMembersService {
           hashedPassword,
           phone: data.phone,
           role: data.role || 'MEMBER',
-          branchId: isBoss(actor) ? data.branchId : (actor.branchId ?? data.branchId),
+          branchId,
           primaryArtistId: isBoss(actor) ? undefined : actor.id,
         },
       });
