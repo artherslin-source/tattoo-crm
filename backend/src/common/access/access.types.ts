@@ -19,7 +19,8 @@ export function mapLegacyRoleToAccessRole(role: string | null | undefined): Acce
   if (!role) return null;
   // Old system had multiple admin-ish roles. For now we collapse them into BOSS.
   // This makes the RBAC migration non-breaking while we gradually rewrite screens.
-  const normalized = role.toUpperCase();
+  const normalized = role.trim().toUpperCase();
+  if (!normalized) return null;
   if (normalized === 'BOSS') return 'BOSS';
   if (normalized === 'ARTIST') return 'ARTIST';
   // BRANCH_MANAGER role is deprecated; do not grant access
