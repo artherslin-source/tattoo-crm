@@ -159,7 +159,7 @@ export default function HomePage() {
       return;
     }
 
-    fetch(`${getApiBase()}/users/me`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`/api/users/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => setLoggedIn(response.ok))
       .catch(() => setLoggedIn(false));
   }, []);
@@ -167,15 +167,11 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 使用修正的 API Base URL 檢測
-        const apiBase = getApiBase();
-        console.log("使用 API Base URL:", apiBase);
-        
-        // 直接使用 fetch 呼叫後端 API
+        // 使用 same-origin /api rewrites 避免跨網域 CORS 與錯的 backend host
         const [servicesResponse, artistsResponse, branchesResponse] = await Promise.all([
-          fetch(`${apiBase}/services`, { cache: 'no-store' }),
-          fetch(`${apiBase}/artists`, { cache: 'no-store' }),
-          fetch(`${apiBase}/branches/public`, { cache: 'no-store' }),
+          fetch(`/api/services`, { cache: 'no-store' }),
+          fetch(`/api/artists`, { cache: 'no-store' }),
+          fetch(`/api/branches/public`, { cache: 'no-store' }),
         ]);
 
         const [servicesData, artistsData, branchesData] = await Promise.all([

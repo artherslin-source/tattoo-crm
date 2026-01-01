@@ -201,10 +201,9 @@ export function getImageUrl(imagePath: string | null | undefined): string {
     return `${backendUrl}${cleanPath}`;
   }
   
-  // 客戶端環境
-  const backendUrl = getApiBaseUrl();
+  // 客戶端環境：走同網域 `/uploads` rewrites，避免跨網域 CORS / host drift
   const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-  return `${backendUrl}${cleanPath}`;
+  return cleanPath;
 }
 
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {

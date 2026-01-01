@@ -88,8 +88,9 @@ export function appointmentBlocksToRanges(appointments: Array<{ startAt: Date; e
 }
 
 export function defaultBusinessHours(): TimeRange[] {
-  // Default 10:00-20:00
-  return [{ startMin: 10 * 60, endMin: 20 * 60 }];
+  // Default 10:00-22:00
+  // Note: actual branch.businessHours (if configured) will override this default.
+  return [{ startMin: 10 * 60, endMin: 22 * 60 }];
 }
 
 export function parseBranchBusinessHours(businessHours: unknown, weekday: number): TimeRange[] | null {

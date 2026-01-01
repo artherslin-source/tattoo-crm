@@ -95,7 +95,7 @@ export default function AdminAppointmentsPage() {
   
   // 排序和分頁狀態
   const [sortField, setSortField] = useState<string>('startAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // ✅ 預設為升序
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // ✅ 預設為降序（最新預約在最上）
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);

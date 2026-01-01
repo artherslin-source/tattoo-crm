@@ -1,4 +1,4 @@
-import { getApiBase } from "./api";
+// Use same-origin `/api` rewrites to avoid CORS and backend host drift in production.
 
 export interface CartItem {
   id: string;
@@ -42,7 +42,7 @@ export interface Cart {
  * 獲取購物車
  */
 export async function getCart(): Promise<Cart> {
-  const res = await fetch(`${getApiBase()}/cart`, {
+  const res = await fetch(`/api/cart`, {
     credentials: "include", // 重要：發送 session cookie
   });
 
@@ -70,7 +70,7 @@ export async function addToCart(data: {
   notes?: string;
   referenceImages?: string[];
 }): Promise<Cart> {
-  const res = await fetch(`${getApiBase()}/cart/items`, {
+  const res = await fetch(`/api/cart/items`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -102,7 +102,7 @@ export async function updateCartItem(
     referenceImages?: string[];
   }
 ): Promise<Cart> {
-  const res = await fetch(`${getApiBase()}/cart/items/${itemId}`, {
+  const res = await fetch(`/api/cart/items/${itemId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -120,7 +120,7 @@ export async function updateCartItem(
  * 刪除購物車項目
  */
 export async function removeCartItem(itemId: string): Promise<Cart> {
-  const res = await fetch(`${getApiBase()}/cart/items/${itemId}`, {
+  const res = await fetch(`/api/cart/items/${itemId}`, {
     method: "DELETE",
     credentials: "include",
   });
@@ -144,7 +144,7 @@ export async function checkout(data: {
   customerEmail?: string;
   specialRequests?: string;
 }): Promise<{ appointmentId: string }> {
-  const res = await fetch(`${getApiBase()}/cart/checkout`, {
+  const res = await fetch(`/api/cart/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

@@ -180,9 +180,11 @@ export default function AppointmentsTable({
                 <tr
                   key={appointment.id}
                   id={`appt-row-${appointment.id}`}
-                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                    highlightId === appointment.id ? "bg-amber-100/60 transition-colors" : ""
-                  }`}
+                  className={
+                    highlightId === appointment.id
+                      ? "bg-amber-100/60"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }
                   onClick={() => onRowClick?.(appointment)}
                 >
                   <td className="px-4 py-3" data-label="預約時間">
