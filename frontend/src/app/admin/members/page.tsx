@@ -767,7 +767,12 @@ export default function AdminMembersPage() {
       </Card>
 
           {/* Reset Password Dialog */}
-          <Dialog open={resetPasswordModal.isOpen} onOpenChange={handleCloseResetPasswordModal}>
+          <Dialog
+            open={resetPasswordModal.isOpen}
+            onOpenChange={(open) => {
+              if (!open) handleCloseResetPasswordModal();
+            }}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>重設密碼</DialogTitle>
@@ -816,7 +821,12 @@ export default function AdminMembersPage() {
           </Dialog>
 
           {/* Top Up Dialog */}
-          <Dialog open={topUpModal.isOpen} onOpenChange={handleCloseTopUpModal}>
+          <Dialog
+            open={topUpModal.isOpen}
+            onOpenChange={(open) => {
+              if (!open) handleCloseTopUpModal();
+            }}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>儲值</DialogTitle>
@@ -868,7 +878,12 @@ export default function AdminMembersPage() {
           </Dialog>
 
           {/* Spend Dialog */}
-          <Dialog open={spendModal.isOpen} onOpenChange={handleCloseSpendModal}>
+          <Dialog
+            open={spendModal.isOpen}
+            onOpenChange={(open) => {
+              if (!open) handleCloseSpendModal();
+            }}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>消費</DialogTitle>
@@ -921,7 +936,12 @@ export default function AdminMembersPage() {
           </Dialog>
 
           {/* Adjust Balance Dialog */}
-          <Dialog open={adjustBalanceModal.isOpen} onOpenChange={handleCloseAdjustBalanceModal}>
+          <Dialog
+            open={adjustBalanceModal.isOpen}
+            onOpenChange={(open) => {
+              if (!open) handleCloseAdjustBalanceModal();
+            }}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>調整餘額</DialogTitle>
@@ -973,7 +993,12 @@ export default function AdminMembersPage() {
           </Dialog>
 
           {/* Create Member Modal */}
-          <Dialog open={createMemberModal.isOpen} onOpenChange={handleCloseCreateMemberModal}>
+          <Dialog
+            open={createMemberModal.isOpen}
+            onOpenChange={(open) => {
+              if (!open) handleCloseCreateMemberModal();
+            }}
+          >
             <DialogContent className="max-w-full sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>新增會員</DialogTitle>
