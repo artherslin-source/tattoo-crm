@@ -178,7 +178,7 @@ export default function AdminBillingPage() {
   const [ruleArtistId, setRuleArtistId] = useState("");
   const [ruleBranchId, setRuleBranchId] = useState("");
   const [ruleArtistRatePct, setRuleArtistRatePct] = useState("70");
-  const [availableArtists, setAvailableArtists] = useState<Array<{ userId: string; displayName: string; branchId: string }>>([]);
+  const [availableArtists, setAvailableArtists] = useState<Array<{ userId: string; displayName: string; branchId: string; branchName: string | null }>>([]);
 
   const fetchBills = useCallback(async () => {
     try {
@@ -357,6 +357,7 @@ export default function AdminBillingPage() {
               userId: a.user!.id!,
               displayName: a.name || a.user!.name || a.user!.id!,
               branchId: a.branch!.id!,
+              branchName: a.branch!.name || null,
             }))
         );
       } catch (e) {
@@ -411,6 +412,33 @@ export default function AdminBillingPage() {
       setError(apiErr.message || "更新拆帳規則失敗");
     }
   }, [userRole, ruleArtistId, ruleBranchId, ruleArtistRatePct, fetchSplitRules]);
+
+  const onRecomputeAllocations = useCallback(async () => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    if (!confirm("確定要重算所有歷史拆帳？此操作會依目前最新規則覆蓋所有歷史 payment allocations。")) {
+      return;
+    }
+    try {
+      setError(null);
+      setLoading(true);
+      const result = await postJsonWithAuth<{
+        total: number;
+        recomputed: number;
+        skipped: number;
+        errors: number;
+      }>("/admin/billing/payments/recompute-allocations", {});
+      alert(`重算完成！\n總計：${result.total}\n成功：${result.recomputed}\n跳過：${result.skipped}\n錯誤：${result.errors}`);
+      await fetchBills();
+      if (selected) {
+        await openDetail(selected.id);
+      }
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "重算拆帳失敗");
+    } finally {
+      setLoading(false);
+    }
+  }, [userRole, fetchBills, selected, openDetail]);
 
   const totals = useMemo(() => {
     const billTotal = rows.reduce((s, r) => s + r.billTotal, 0);
@@ -1112,7 +1140,7 @@ export default function AdminBillingPage() {
                   <SelectContent>
                     {availableArtists.map((artist) => (
                       <SelectItem key={artist.userId} value={artist.userId}>
-                        {artist.displayName}
+                        {artist.displayName}（{artist.branchName || '無分店'}）
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1121,7 +1149,7 @@ export default function AdminBillingPage() {
               <div className="w-72">
                 <label className="text-xs text-muted-foreground">分店（自動）</label>
                 <Input 
-                  value={ruleBranchId} 
+                  value={availableArtists.find(a => a.userId === ruleArtistId)?.branchName || ''} 
                   readOnly 
                   disabled
                   className="bg-gray-100"
@@ -1132,7 +1160,10 @@ export default function AdminBillingPage() {
                 <label className="text-xs text-muted-foreground">刺青師%</label>
                 <Input value={ruleArtistRatePct} onChange={(e) => setRuleArtistRatePct(e.target.value)} />
               </div>
-              <Button onClick={onUpsertSplitRule}>新增規則</Button>
+              <Button onClick={onUpsertSplitRule}>儲存規則</Button>
+              <Button variant="outline" onClick={onRecomputeAllocations} disabled={loading}>
+                重算拆帳（套用到所有歷史）
+              </Button>
             </div>
 
             <div className="border rounded-md overflow-hidden">

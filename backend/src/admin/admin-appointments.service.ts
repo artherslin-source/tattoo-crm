@@ -131,7 +131,27 @@ export class AdminAppointmentsService {
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
         bill: { select: { id: true, billTotal: true, status: true, billType: true } },
-        // 購物車快照（用於顯示購物車總金額）
+      },
+      select: {
+        id: true,
+        userId: true,
+        serviceId: true,
+        artistId: true,
+        branchId: true,
+        startAt: true,
+        endAt: true,
+        status: true,
+        holdMin: true,
+        notes: true,
+        contactId: true,
+        cartSnapshot: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { id: true, name: true, email: true, phone: true, primaryArtistId: true } },
+        service: { select: { id: true, name: true, price: true, durationMin: true } },
+        artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
+        bill: { select: { id: true, billTotal: true, status: true, billType: true } },
       },
       orderBy,
     });
@@ -140,13 +160,26 @@ export class AdminAppointmentsService {
   async findOne(input: { actor: AccessActor; id: string }) {
     const appointment = await this.prisma.appointment.findFirst({
       where: { id: input.id, ...this.buildScopeWhere(input.actor) },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        serviceId: true,
+        artistId: true,
+        branchId: true,
+        startAt: true,
+        endAt: true,
+        status: true,
+        holdMin: true,
+        notes: true,
+        contactId: true,
+        cartSnapshot: true,
+        createdAt: true,
+        updatedAt: true,
         user: { select: { id: true, name: true, email: true, phone: true, primaryArtistId: true } },
         service: { select: { id: true, name: true, description: true, price: true, durationMin: true } },
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
         bill: { select: { id: true, billTotal: true, status: true, billType: true } },
-        // 購物車快照（用於顯示購物車總金額）
       },
     });
 
