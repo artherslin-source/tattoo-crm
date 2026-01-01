@@ -19,7 +19,9 @@ export class AccessGuard implements CanActivate {
 
     const actor = buildActorFromJwtUser(user);
     if (!actor) {
-      throw new ForbiddenException('Insufficient permissions');
+      throw new ForbiddenException(
+        `Insufficient permissions (role=${String(user.role ?? '') || 'null'}, branchId=${String(user.branchId ?? '') || 'null'})`,
+      );
     }
 
     // ARTIST must be scoped to a branch for this system’s data isolation rules.
