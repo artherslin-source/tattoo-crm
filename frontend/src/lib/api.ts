@@ -13,10 +13,14 @@ export class ApiError extends Error {
 // 檢查後端服務狀態（帶重試機制）
 export async function checkBackendHealth(): Promise<boolean> {
   try {
+    // Browser: prefer same-origin rewrites to avoid CORS noise and cross-service mismatch.
+    if (typeof window !== 'undefined') {
+      const response = await fetchWithRetry(`/api/health/simple`, { method: 'GET' });
+      return response.ok;
+    }
+
     const backendUrl = await detectBackendUrl();
-    const response = await fetchWithRetry(`${backendUrl}/health/simple`, {
-      method: 'GET',
-    });
+    const response = await fetchWithRetry(`${backendUrl}/health/simple`, { method: 'GET' });
     return response.ok;
   } catch (error) {
     console.error('Backend health check failed:', error);
@@ -204,9 +208,15 @@ export function getImageUrl(imagePath: string | null | undefined): string {
 
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
   try {
-    const backendUrl = await detectBackendUrl();
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    const res = await fetchWithRetry(`${backendUrl}${normalizedPath}`, {
+
+    // Browser: same-origin rewrites; Server: direct backend url
+    const url =
+      typeof window !== 'undefined'
+        ? `/api${normalizedPath}`
+        : `${await detectBackendUrl()}${normalizedPath}`;
+
+    const res = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -248,8 +258,9 @@ async function tryRefreshOnce(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
 
-  const backendUrl = await detectBackendUrl();
-  const res = await fetch(`${backendUrl}/auth/refresh`, {
+  const url =
+    typeof window !== 'undefined' ? `/api/auth/refresh` : `${await detectBackendUrl()}/auth/refresh`;
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ refreshToken }),
@@ -277,18 +288,14 @@ async function withAuthFetch(
   headers.set("Content-Type", headers.get("Content-Type") ?? "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  // 對於圖片管理API使用相對路徑，其他API使用絕對路徑
-  const isImageApi = path.includes('/admin/services/images');
-  
-  let url: string;
-  if (isImageApi) {
-    // 使用相對路徑，讓 Next.js rewrite 處理
-    url = path;
-  } else {
-    // 使用動態檢測的後端 URL
-    const backendUrl = await detectBackendUrl();
-    url = `${backendUrl}${path}`;
-  }
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  // Browser: always use same-origin rewrites to avoid CORS and backend URL drift.
+  // Server (SSR): keep using detected backend URL.
+  const url =
+    typeof window !== 'undefined'
+      ? `/api${normalizedPath}`
+      : `${await detectBackendUrl()}${normalizedPath}`;
   
   const res = await fetch(url, {
     ...init,
@@ -373,10 +380,13 @@ export async function postFormDataWithAuth<T>(
   if (token) headers.set("Authorization", `Bearer ${token}`);
   // 不要設置 Content-Type，讓瀏覽器自動設置 multipart/form-data
 
-  // 使用動態檢測的後端 URL
-  const backendUrl = await detectBackendUrl();
-  
-  const res = await fetch(`${backendUrl}${path}`, {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const url =
+    typeof window !== 'undefined'
+      ? `/api${normalizedPath}`
+      : `${await detectBackendUrl()}${normalizedPath}`;
+
+  const res = await fetch(url, {
     method: "POST",
     headers,
     body: formData,

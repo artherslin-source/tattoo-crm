@@ -115,6 +115,14 @@ export class BillingService {
         data: { balance: { increment: amount } },
       });
 
+      // IMPORTANT:
+      // - For ARTIST flows (e.g. member topup in Artist Workbench), returning full bill detail
+      //   may hit strict readability rules and cause the whole topup request to fail (403),
+      //   even though the topup itself succeeded.
+      // - So for non-BOSS we return a minimal payload, and let UI fetch bill detail later if needed.
+      if (!isBoss(actor)) {
+        return { id: bill.id };
+      }
       return this.getBillById(actor, bill.id);
     });
   }
