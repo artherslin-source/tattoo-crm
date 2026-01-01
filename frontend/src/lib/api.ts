@@ -16,7 +16,8 @@ export async function checkBackendHealth(): Promise<boolean> {
     // Browser: prefer same-origin rewrites to avoid CORS noise and cross-service mismatch.
     if (typeof window !== 'undefined') {
       const response = await fetchWithRetry(`/api/health/simple`, { method: 'GET' });
-      return response.ok;
+      if (response.status !== 404) return response.ok;
+      // If rewrites are not active (404), fall back to direct backend probe so login won't be blocked.
     }
 
     const backendUrl = await detectBackendUrl();
