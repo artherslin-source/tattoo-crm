@@ -68,6 +68,14 @@ const UpsertSplitRuleSchema = z.object({
   effectiveFrom: z.string().datetime().optional(),
 });
 
+const RebuildBillsBatchSchema = z.object({
+  appointmentIds: z.array(z.string()).optional(),
+});
+
+const RecomputeAllocationsSchema = z.object({
+  paymentIds: z.array(z.string()).optional(),
+});
+
 @Controller('admin/billing')
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminBillingController {
@@ -240,6 +248,26 @@ export class AdminBillingController {
       startDate: query.startDate,
       endDate: query.endDate,
     });
+  }
+
+  // Rebuild bill from cartSnapshot (BOSS only)
+  @Post('bills/:billId/rebuild-from-cart')
+  async rebuildBillFromCart(@Actor() actor: AccessActor, @Param('billId') billId: string) {
+    return this.billing.rebuildBillFromCartSnapshot(actor, billId);
+  }
+
+  // Batch rebuild bills from cartSnapshot (BOSS only)
+  @Post('bills/rebuild-batch')
+  async rebuildBillsBatch(@Actor() actor: AccessActor, @Body() body: unknown) {
+    const input = RebuildBillsBatchSchema.parse(body);
+    return this.billing.rebuildBillsBatch(actor, { appointmentIds: input.appointmentIds });
+  }
+
+  // Recompute all payment allocations (BOSS only)
+  @Post('payments/recompute-allocations')
+  async recomputeAllocations(@Actor() actor: AccessActor, @Body() body: unknown) {
+    const input = RecomputeAllocationsSchema.parse(body);
+    return this.billing.recomputeAllPaymentAllocations(actor, { paymentIds: input.paymentIds });
   }
 }
 

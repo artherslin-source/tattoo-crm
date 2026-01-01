@@ -162,9 +162,23 @@ async function bootstrap() {
     }
   }
   
-  // 配置靜態文件服務
+  // 配置靜態文件服務（加上更長的 cache 與 404 處理）
   app.useStaticAssets(uploadsPath, {
     prefix: '/uploads/',
+    maxAge: '1d', // 1 天快取
+    setHeaders: (res, path) => {
+      // 所有圖片檔案設定 1 天快取
+      if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(path)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+      }
+    },
+  });
+
+  // 處理 /uploads 404 錯誤（避免 502）
+  app.use('/uploads', (req, res, next) => {
+    if (!res.headersSent) {
+      res.status(404).json({ error: 'File not found', path: req.path });
+    }
   });
   
   // CORS 配置 - 顯式允許 Railway 網域與本地開發

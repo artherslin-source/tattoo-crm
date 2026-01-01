@@ -1145,6 +1145,225 @@ export class BillingService {
       byArtist: Object.values(byArtist).sort((a, b) => b.amount - a.amount),
     };
   }
+
+  /**
+   * 重建帳單金額與明細（依 appointment.cartSnapshot）
+   * 僅限 BOSS 使用，用於修正已建立的帳單
+   */
+  async rebuildBillFromCartSnapshot(actor: AccessActor, billId: string) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('只有 BOSS 可以重建帳單');
+    }
+
+    await this.ensureBillReadable(actor, billId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const bill = await tx.appointmentBill.findUnique({
+        where: { id: billId },
+        include: {
+          appointment: {
+            select: { id: true, cartSnapshot: true, service: { select: { id: true, name: true, price: true } } },
+          },
+          items: true,
+        },
+      });
+
+      if (!bill) throw new NotFoundException('帳單不存在');
+      if (!bill.appointmentId) throw new BadRequestException('此帳單未綁定預約，無法重建');
+      if (!bill.appointment) throw new NotFoundException('預約不存在');
+
+      // 從 cartSnapshot 計算新的金額與明細
+      const cartDerived = this.computeTotalsFromCartSnapshot(bill.appointment.cartSnapshot);
+      if (!cartDerived) {
+        throw new BadRequestException('此預約沒有 cartSnapshot，無法重建帳單');
+      }
+
+      const { listTotal, billTotal, discountTotal, items: derivedItems } = cartDerived;
+
+      // 刪除舊的帳單明細
+      await tx.appointmentBillItem.deleteMany({
+        where: { billId: bill.id },
+      });
+
+      // 建立新的帳單明細
+      await tx.appointmentBillItem.createMany({
+        data: derivedItems.map((it) => ({
+          billId: bill.id,
+          serviceId: it.serviceId ?? null,
+          nameSnapshot: it.nameSnapshot,
+          basePriceSnapshot: it.basePriceSnapshot,
+          finalPriceSnapshot: it.finalPriceSnapshot,
+          variantsSnapshot: it.variantsSnapshot ?? null,
+          notes: it.notes ?? null,
+          sortOrder: it.sortOrder,
+        })),
+      });
+
+      // 更新帳單總金額
+      await tx.appointmentBill.update({
+        where: { id: bill.id },
+        data: {
+          listTotal,
+          billTotal,
+          discountTotal,
+        },
+      });
+
+      // 重新計算帳單狀態
+      const paidTotal = (await tx.payment.aggregate({ where: { billId: bill.id }, _sum: { amount: true } }))._sum.amount || 0;
+      const nextStatus: BillStatus = bill.status === 'VOID' ? 'VOID' : paidTotal >= billTotal ? 'SETTLED' : 'OPEN';
+      if (nextStatus !== bill.status) {
+        await tx.appointmentBill.update({ where: { id: bill.id }, data: { status: nextStatus } });
+      }
+
+      console.log(`✅ 重建帳單 ${billId}：listTotal=${listTotal}, billTotal=${billTotal}, discountTotal=${discountTotal}, items=${derivedItems.length}`);
+
+      return { billId: bill.id, listTotal, billTotal, discountTotal, itemsCount: derivedItems.length };
+    });
+  }
+
+  /**
+   * 批次重建帳單（依條件篩選）
+   * 僅限 BOSS 使用
+   */
+  async rebuildBillsBatch(actor: AccessActor, input?: { appointmentIds?: string[] }) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('只有 BOSS 可以批次重建帳單');
+    }
+
+    // 找出符合條件的帳單：
+    // 1. 有 appointment.cartSnapshot
+    // 2. 有 bill
+    // 3. 金額明顯來自單一 service（例如 billTotal == service.price）
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        id: input?.appointmentIds ? { in: input.appointmentIds } : undefined,
+        cartSnapshot: { not: null },
+        bill: { isNot: null },
+      },
+      select: {
+        id: true,
+        cartSnapshot: true,
+        service: { select: { id: true, name: true, price: true } },
+        bill: { select: { id: true, billTotal: true, items: true } },
+      },
+    });
+
+    const rebuiltBills: string[] = [];
+    const errors: Array<{ appointmentId: string; error: string }> = [];
+
+    for (const appt of appointments) {
+      try {
+        if (!appt.bill) continue;
+
+        // 檢查是否需要重建：bill.items 只有 1 筆且等於 service.price
+        const shouldRebuild =
+          appt.bill.items.length === 1 &&
+          appt.bill.billTotal === appt.service?.price;
+
+        if (shouldRebuild) {
+          await this.rebuildBillFromCartSnapshot(actor, appt.bill.id);
+          rebuiltBills.push(appt.bill.id);
+        }
+      } catch (error) {
+        errors.push({
+          appointmentId: appt.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return {
+      total: appointments.length,
+      rebuilt: rebuiltBills.length,
+      skipped: appointments.length - rebuiltBills.length - errors.length,
+      errors: errors.length,
+      rebuiltBillIds: rebuiltBills,
+      errorDetails: errors,
+    };
+  }
+
+  /**
+   * 批次重算歷史 payment allocations（依最新拆帳規則）
+   * 僅限 BOSS 使用，會覆蓋所有歷史 allocations
+   */
+  async recomputeAllPaymentAllocations(actor: AccessActor, input?: { paymentIds?: string[] }) {
+    if (!isBoss(actor)) {
+      throw new ForbiddenException('只有 BOSS 可以重算拆帳');
+    }
+
+    // 找出所有需要重算的 payments
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        id: input?.paymentIds ? { in: input.paymentIds } : undefined,
+      },
+      include: {
+        bill: {
+          select: { id: true, artistId: true, branchId: true, appointmentId: true },
+        },
+        allocations: true,
+      },
+      orderBy: { paidAt: 'asc' },
+    });
+
+    const recomputed: string[] = [];
+    const skipped: string[] = [];
+    const errors: Array<{ paymentId: string; error: string }> = [];
+
+    for (const payment of payments) {
+      try {
+        // 如果沒有 artistId 或 branchId，無法計算拆帳，跳過
+        if (!payment.bill.artistId || !payment.bill.branchId) {
+          skipped.push(payment.id);
+          continue;
+        }
+
+        // 取得當時的拆帳規則
+        const split = await this.resolveSplitRule(
+          actor,
+          payment.bill.artistId,
+          payment.bill.branchId,
+          payment.paidAt,
+        );
+
+        // 計算新的拆帳金額
+        const artistAmount = roundHalfUp((payment.amount * split.artistRateBps) / 10000);
+        const shopAmount = payment.amount - artistAmount;
+
+        // 刪除舊的 allocations
+        await this.prisma.paymentAllocation.deleteMany({
+          where: { paymentId: payment.id },
+        });
+
+        // 建立新的 allocations
+        await this.prisma.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
+            { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+          ],
+        });
+
+        recomputed.push(payment.id);
+        console.log(`✅ 重算拆帳 Payment ${payment.id}：artist=${artistAmount}, shop=${shopAmount} (${split.artistRateBps / 100}% / ${split.shopRateBps / 100}%)`);
+      } catch (error) {
+        errors.push({
+          paymentId: payment.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        console.error(`❌ 重算拆帳失敗 Payment ${payment.id}:`, error);
+      }
+    }
+
+    return {
+      total: payments.length,
+      recomputed: recomputed.length,
+      skipped: skipped.length,
+      errors: errors.length,
+      recomputedPaymentIds: recomputed,
+      skippedPaymentIds: skipped,
+      errorDetails: errors,
+    };
+  }
 }
 
 

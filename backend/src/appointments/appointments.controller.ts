@@ -200,7 +200,17 @@ export class AppointmentsController {
         }
         
         // 從 contact 複製 cartSnapshot（購物車快照）
-        cartSnapshot = contact.cartSnapshot;
+        // 如果 cartSnapshot 不存在但有 cartTotalPrice，建立最小快照
+        if (contact.cartSnapshot) {
+          cartSnapshot = contact.cartSnapshot;
+        } else if (contact.cartTotalPrice) {
+          cartSnapshot = {
+            items: [],
+            totalPrice: contact.cartTotalPrice,
+            totalDuration: 0,
+          };
+          console.log(`⚠️ Contact ${contactId} 沒有 cartSnapshot，但有 cartTotalPrice=${contact.cartTotalPrice}，建立最小快照`);
+        }
         
         // 從 contact 創建或查找用戶
         if (contact.email) {

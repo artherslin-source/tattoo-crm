@@ -131,6 +131,7 @@ export class AdminAppointmentsService {
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
         bill: { select: { id: true, billTotal: true, status: true, billType: true } },
+        // 購物車快照（用於顯示購物車總金額）
       },
       orderBy,
     });
@@ -145,6 +146,7 @@ export class AdminAppointmentsService {
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
         bill: { select: { id: true, billTotal: true, status: true, billType: true } },
+        // 購物車快照（用於顯示購物車總金額）
       },
     });
 
