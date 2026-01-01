@@ -334,8 +334,8 @@ export default function AdminBillingPage() {
     const run = async () => {
       try {
         const [branchesData, artistsData] = await Promise.all([
-          getJsonWithAuth<Array<{ id: string; name: string }>>("/api/branches"),
-          getJsonWithAuth<AdminArtistApiRow[]>("/api/admin/artists"),
+          getJsonWithAuth<Array<{ id: string; name: string }>>("/branches"),
+          getJsonWithAuth<AdminArtistApiRow[]>("/admin/artists"),
         ]);
         setBranches((branchesData || []).map((b) => ({ id: b.id, name: b.name })));
         
@@ -397,7 +397,7 @@ export default function AdminBillingPage() {
     const bps = Math.round(pct * 100);
     try {
       setError(null);
-      await postJsonWithAuth("/api/admin/billing/split-rules", {
+      await postJsonWithAuth("/admin/billing/split-rules", {
         artistId: ruleArtistId.trim(),
         branchId: ruleBranchId.trim() ? ruleBranchId.trim() : null,
         artistRateBps: bps,
@@ -1046,7 +1046,7 @@ export default function AdminBillingPage() {
                         <th className="py-2 px-3">方式</th>
                         <th className="py-2 px-3">金額</th>
                         <th className="py-2 px-3">收款人</th>
-                        <th className="py-2 px-3">拆帳（刺青師/店家）</th>
+                        <th className="py-2 px-3">拆帳（店家/刺青師）</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1062,7 +1062,7 @@ export default function AdminBillingPage() {
                               {p.recordedBy?.name || "（歷史匯入/未知）"}
                             </td>
                             <td className="py-2 px-3">
-                              ${formatMoney(a)} / ${formatMoney(s)}
+                              ${formatMoney(s)} / ${formatMoney(a)}
                             </td>
                           </tr>
                         );

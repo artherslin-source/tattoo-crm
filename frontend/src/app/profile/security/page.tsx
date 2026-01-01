@@ -39,7 +39,7 @@ export default function ProfileSecurityPage() {
     setError(null);
     setSuccess(null);
     try {
-      await patchJsonWithAuth("/api/users/me/password", {
+      await patchJsonWithAuth("/users/me/password", {
         oldPassword: passwords.current,
         newPassword: passwords.new,
       });

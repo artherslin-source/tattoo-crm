@@ -54,7 +54,7 @@ export default function AdminDashboardPage() {
       if (selectedBranchId && selectedBranchId !== 'all') {
         params.append('branchId', selectedBranchId);
       }
-      const url = `/api/admin/stats${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/admin/stats${params.toString() ? `?${params.toString()}` : ''}`;
       console.log('[Dashboard] Fetching stats from:', url);
       
       const dashboardData = await getJsonWithAuth<{
