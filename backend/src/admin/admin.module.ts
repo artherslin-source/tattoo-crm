@@ -14,6 +14,8 @@ import { AdminCleanupController } from './admin-cleanup.controller';
 import { DiagnosticsController } from './diagnostics.controller';
 import { AdminServiceVariantsController } from './admin-service-variants.controller';
 import { AdminServiceVariantsService } from './admin-service-variants.service';
+import { AdminUsersController } from './admin-users.controller';
+import { AdminUsersService } from './admin-users.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ServicesModule } from '../services/services.module';
 import { BranchesModule } from '../branches/branches.module';
@@ -32,6 +34,7 @@ import { BillingModule } from '../billing/billing.module';
     AdminCleanupController,
     DiagnosticsController,
     AdminServiceVariantsController,
+    AdminUsersController,
   ],
   providers: [
     AdminAppointmentsService,
@@ -39,6 +42,7 @@ import { BillingModule } from '../billing/billing.module';
     AdminMembersService,
     AdminAnalyticsUnifiedService,
     AdminServiceVariantsService,
+    AdminUsersService,
   ],
 })
 export class AdminModule {}
