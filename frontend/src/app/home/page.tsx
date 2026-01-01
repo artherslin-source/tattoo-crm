@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 
 import { Hero } from "@/components/home/Hero";
@@ -73,14 +74,41 @@ type ServiceItem = {
   isPlaceholder?: boolean;
 };
 
-export default function HomePage() {
+// 結帳成功通知組件（處理 URL 參數）
+function CheckoutSuccessHandler({ onMessage }: { onMessage: (msg: { type: "success" | "error" | "warning"; text: string } | null) => void }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("checkout") === "success") {
+      onMessage({ 
+        type: "success", 
+        text: "✅ 預約需求已送出！我們會盡快與您聯絡確認時間" 
+      });
+      
+      // 5秒後清除訊息
+      setTimeout(() => onMessage(null), 5000);
+      
+      // 清除 URL 參數（避免重新整理時重複顯示）
+      window.history.replaceState({}, "", "/home");
+    }
+  }, [searchParams, onMessage]);
+
+  return null;
+}
+
+function HomePageContent({ 
+  message, 
+  setMessage 
+}: { 
+  message: { type: "success" | "error" | "warning"; text: string } | null;
+  setMessage: (msg: { type: "success" | "error" | "warning"; text: string } | null) => void;
+}) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   
@@ -788,5 +816,25 @@ export default function HomePage() {
 
       <StickyCTA onClick={scrollToBookingForm} label="立即預約" />
     </div>
+  );
+}
+
+// 主入口：包裝在 Suspense 內以支援 useSearchParams
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+      <HomePageWithParams />
+    </Suspense>
+  );
+}
+
+function HomePageWithParams() {
+  const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null);
+
+  return (
+    <>
+      <CheckoutSuccessHandler onMessage={setMessage} />
+      <HomePageContent message={message} setMessage={setMessage} />
+    </>
   );
 }

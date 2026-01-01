@@ -298,13 +298,13 @@ export class CartService {
   }
 
   /**
-   * 結帳（將購物車轉成預約）
+   * 結帳（將購物車轉成聯絡管理）
    */
   async checkout(
     dto: CheckoutCartDto,
     userId?: string,
     sessionId?: string,
-  ): Promise<{ appointmentId: string }> {
+  ): Promise<{ contactId: string }> {
     // 獲取購物車
     const cart = await this.prisma.cart.findFirst({
       where: {
@@ -330,17 +330,9 @@ export class CartService {
       throw new BadRequestException('購物車為空');
     }
 
-    // 計算總價和總時長（用於 cartSnapshot / 未來訂單）
+    // 計算總價和總時長（用於 cartSnapshot）
     const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice, 0);
     const totalDuration = cart.items.reduce((sum, item) => sum + item.estimatedDuration, 0);
-
-    // C-flow: 只建立意向（INTENT），不鎖定時間
-    const preferredDateStart = new Date(`${dto.preferredDate}T00:00:00`);
-    if (Number.isNaN(preferredDateStart.getTime())) {
-      throw new BadRequestException('preferredDate 格式錯誤，需為 YYYY-MM-DD');
-    }
-    const startAt = preferredDateStart;
-    const endAt = preferredDateStart; // INTENT placeholder, excluded from conflicts
 
     // 創建購物車快照
     const cartSnapshot = {
@@ -356,45 +348,12 @@ export class CartService {
       })),
       totalPrice,
       totalDuration,
+      preferredDate: dto.preferredDate, // 保存客戶偏好日期
     };
 
-    // 獲取或創建用戶
-    let actualUserId = userId;
-    if (!actualUserId) {
-      // 訪客用戶：創建或查找用戶（優先使用 phone，因為 phone 是唯一欄位）
-      let existingUser = null;
-      if (dto.customerPhone) {
-        existingUser = await this.prisma.user.findUnique({
-          where: { phone: dto.customerPhone },
-        });
-      }
-      
-      // 如果找不到，且提供了 email，嘗試用 email 查找（但 email 可能不是唯一欄位，使用 findFirst）
-      if (!existingUser && dto.customerEmail) {
-        existingUser = await this.prisma.user.findFirst({
-          where: { email: dto.customerEmail },
-        });
-      }
-
-      if (existingUser) {
-        actualUserId = existingUser.id;
-      } else {
-        const newUser = await this.prisma.user.create({
-          data: {
-            phone: dto.customerPhone || null,
-            email: dto.customerEmail || null,
-            hashedPassword: '', // 訪客無密碼
-            name: dto.customerName,
-            role: 'MEMBER',
-          },
-        });
-        actualUserId = newUser.id;
-      }
-    }
-
-    // 處理 artistId：Appointment.artistId 需要的是 User.id，不是 Artist.id
-    // 如果傳入的是 Artist.id，需要轉換為對應的 User.id
-    let actualArtistId: string | undefined = dto.artistId;
+    // 處理 artistId（如果有提供）
+    // 前端可能傳 Artist.id 或 User.id，需要統一轉換為 User.id
+    let preferredArtistUserId: string | undefined = undefined;
     if (dto.artistId) {
       // 先檢查是否為 User.id（直接查詢 User 表）
       const userAsArtist = await this.prisma.user.findUnique({
@@ -404,7 +363,7 @@ export class CartService {
       
       if (userAsArtist && userAsArtist.role === 'ARTIST') {
         // 已經是 User.id，直接使用
-        actualArtistId = dto.artistId;
+        preferredArtistUserId = dto.artistId;
       } else {
         // 可能是 Artist.id，需要轉換為 User.id
         const artist = await this.prisma.artist.findUnique({
@@ -413,41 +372,37 @@ export class CartService {
         });
         
         if (artist) {
-          actualArtistId = artist.userId;
+          preferredArtistUserId = artist.userId;
         } else {
-          // 如果都找不到，可能是無效的 ID，設為 undefined（允許預約沒有指定藝術家）
+          // 如果都找不到，可能是無效的 ID，設為 undefined
           console.warn(`⚠️ 無法找到藝術家 ID: ${dto.artistId}`);
-          actualArtistId = undefined;
+          preferredArtistUserId = undefined;
         }
       }
     }
 
-    // C-flow: INTENT does not lock schedule, so we do NOT do time conflict/availability checks here.
-
-    // 創建預約
-    const appointment = await this.prisma.appointment.create({
+    // 建立 Contact（聯絡管理）
+    const contact = await this.prisma.contact.create({
       data: {
+        name: dto.customerName,
+        phone: dto.customerPhone,
+        email: dto.customerEmail || null,
         branchId: dto.branchId,
-        artistId: actualArtistId,
-        userId: actualUserId,
-        startAt,
-        endAt,
-        status: 'INTENT',
-        holdMin: 150,
-        notes: dto.specialRequests,
-        cartId: cart.id,
+        preferredArtistId: preferredArtistUserId,
+        notes: dto.specialRequests || null,
+        status: 'PENDING',
         cartSnapshot,
+        cartTotalPrice: totalPrice,
       },
     });
 
-    // 更新購物車狀態
-    await this.prisma.cart.update({
-      where: { id: cart.id },
-      data: { status: 'checked_out' },
+    // 清空購物車品項（保留 cart 本體以便客戶繼續購物）
+    await this.prisma.cartItem.deleteMany({
+      where: { cartId: cart.id },
     });
 
     return {
-      appointmentId: appointment.id,
+      contactId: contact.id,
     };
   }
 

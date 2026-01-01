@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCart, checkout, type Cart } from "@/lib/cart-api";
-import { getApiBase } from "@/lib/api";
 
 interface Branch {
   id: string;
@@ -49,8 +48,8 @@ export default function CheckoutPage() {
       try {
         const [cartData, branchesData, artistsData] = await Promise.all([
           getCart(),
-          fetch(`${getApiBase()}/branches/public`).then((res) => res.json()),
-          fetch(`${getApiBase()}/artists`).then((res) => res.json()),
+          fetch(`/api/branches/public`).then((res) => res.json()),
+          fetch(`/api/artists`).then((res) => res.json()),
         ]);
 
         setCart(cartData);
@@ -145,8 +144,8 @@ export default function CheckoutPage() {
         specialRequests: formData.specialRequests,
       });
 
-      // 成功後跳轉到成功頁面（C 路線：此時尚未產生訂單）
-      router.push(`/cart/success?appointmentId=${result.appointmentId}`);
+      // 成功後跳轉回首頁並顯示成功訊息
+      router.push(`/home?checkout=success`);
     } catch (error) {
       console.error("結帳失敗:", error);
       alert(error instanceof Error ? error.message : "結帳失敗，請重試");

@@ -130,3 +130,4 @@ listArtistAccounts()
     process.exit(1);
   });
 
+

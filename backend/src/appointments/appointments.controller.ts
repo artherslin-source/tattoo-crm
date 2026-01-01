@@ -187,16 +187,20 @@ export class AppointmentsController {
       // 處理客戶資訊和 contact
       let userId: string;
       let contactId: string | undefined = input.contactId;
+      let cartSnapshot: any = undefined;
       
       // 如果有 contactId，直接使用
       if (contactId) {
-        // 驗證 contact 存在
+        // 驗證 contact 存在並獲取 cartSnapshot
         const contact = await this.appointments['prisma'].contact.findUnique({
           where: { id: contactId }
         });
         if (!contact) {
           throw new Error('指定的聯絡記錄不存在');
         }
+        
+        // 從 contact 複製 cartSnapshot（購物車快照）
+        cartSnapshot = contact.cartSnapshot;
         
         // 從 contact 創建或查找用戶
         if (contact.email) {
@@ -273,6 +277,7 @@ export class AppointmentsController {
         notes: input.notes,
         branchId,
         contactId: contactId,
+        cartSnapshot: cartSnapshot, // 從 contact 帶入購物車快照
       });
     } catch (error) {
       console.error('Create appointment error:', error);

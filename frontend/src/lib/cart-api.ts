@@ -143,7 +143,7 @@ export async function checkout(data: {
   customerPhone: string;
   customerEmail?: string;
   specialRequests?: string;
-}): Promise<{ appointmentId: string }> {
+}): Promise<{ contactId: string }> {
   const res = await fetch(`/api/cart/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

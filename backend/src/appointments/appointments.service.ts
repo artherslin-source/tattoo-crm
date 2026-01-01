@@ -141,6 +141,7 @@ export class AppointmentsService {
     notes?: string;
     branchId: string;
     contactId?: string;
+    cartSnapshot?: any;
   }) {
     const startAt = input.startAt;
 
@@ -185,6 +186,7 @@ export class AppointmentsService {
         endAt: computedEndAt,
         holdMin,
         status: "PENDING",
+        cartSnapshot: input.cartSnapshot, // 從 contact 帶入購物車快照（忽略時長）
       },
       include: {
         user: { select: { id: true, name: true, email: true } },

@@ -433,8 +433,11 @@ model Contact {
   phone     String?
   branchId  String
   ownerArtistId String?
+  preferredArtistId String? // 客戶偏好的刺青師（購物車結帳時選擇）
   notes     String?
   status    String   @default("PENDING") // PENDING, CONTACTED, CONVERTED, CLOSED
+  cartSnapshot Json? // 購物車結帳時的品項快照（items + totalPrice）
+  cartTotalPrice Int? // 購物車總價（便於列表顯示）
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
