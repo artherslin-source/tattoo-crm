@@ -37,6 +37,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         branchId: true,
         isActive: true,
         status: true,
+        member: { select: { id: true } },
+        artist: { select: { id: true } },
       },
     });
 
@@ -45,10 +47,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Account disabled');
     }
 
+    // Legacy compatibility:
+    // - If DB role is null, infer it from relations to avoid locking out legacy admin accounts.
+    // - If user has member record => treat as MEMBER (will be denied by AccessGuard)
+    // - Else if user has artist record => treat as ARTIST
+    // - Else => treat as BOSS (legacy admin)
+    const inferredRole = user.role
+      ? user.role
+      : user.member
+        ? 'MEMBER'
+        : user.artist
+          ? 'ARTIST'
+          : 'BOSS';
+
     return {
       id: user.id,
       email: user.email ?? user.phone ?? payload.email ?? null,
-      role: user.role ?? null,
+      role: inferredRole ?? null,
       branchId: user.branchId ?? null,
       isActive: user.isActive,
       status: user.status ?? null,
