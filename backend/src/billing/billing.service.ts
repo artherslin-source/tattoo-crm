@@ -305,31 +305,60 @@ export class BillingService {
     return { listTotal, billTotal, discountTotal, items: mapped };
   }
 
+  /**
+   * 取得刺青師的最新拆帳規則（確定性：先分店規則、再全域規則）
+   * @param artistId 刺青師 ID
+   * @param branchId 分店 ID
+   * @returns 拆帳比例 { artistRateBps, shopRateBps }
+   */
+  private async getLatestSplitRule(artistId: string, branchId: string) {
+    const fallback = { artistRateBps: 7000, shopRateBps: 3000 };
+
+    // 先查分店專屬規則（最新一筆）
+    const branchRule = await this.prisma.artistSplitRule.findFirst({
+      where: { artistId, branchId },
+      orderBy: { effectiveFrom: 'desc' },
+    });
+
+    if (branchRule) {
+      const artistRateBps = clampInt(branchRule.artistRateBps, 0, 10000);
+      const shopRateBps = clampInt(branchRule.shopRateBps, 0, 10000);
+      const sum = artistRateBps + shopRateBps;
+      if (sum !== 10000 && sum > 0) {
+        const normalizedArtist = roundHalfUp((artistRateBps / sum) * 10000);
+        return { artistRateBps: normalizedArtist, shopRateBps: 10000 - normalizedArtist };
+      }
+      return { artistRateBps, shopRateBps };
+    }
+
+    // 查不到分店規則，查全域規則（branchId = null）
+    const globalRule = await this.prisma.artistSplitRule.findFirst({
+      where: { artistId, branchId: null },
+      orderBy: { effectiveFrom: 'desc' },
+    });
+
+    if (globalRule) {
+      const artistRateBps = clampInt(globalRule.artistRateBps, 0, 10000);
+      const shopRateBps = clampInt(globalRule.shopRateBps, 0, 10000);
+      const sum = artistRateBps + shopRateBps;
+      if (sum !== 10000 && sum > 0) {
+        const normalizedArtist = roundHalfUp((artistRateBps / sum) * 10000);
+        return { artistRateBps: normalizedArtist, shopRateBps: 10000 - normalizedArtist };
+      }
+      return { artistRateBps, shopRateBps };
+    }
+
+    // 都沒有，回傳預設值
+    return fallback;
+  }
+
   private async resolveSplitRule(actor: AccessActor, artistId: string | null, branchId: string, at: Date) {
     // Default 70/30 if no rule.
     const fallback = { artistRateBps: 7000, shopRateBps: 3000 };
     if (!artistId) return fallback;
 
-    const rules = await this.prisma.artistSplitRule.findMany({
-      where: {
-        artistId,
-        effectiveFrom: { lte: at },
-        OR: [{ branchId: branchId }, { branchId: null }],
-      },
-      orderBy: [{ branchId: 'desc' }, { effectiveFrom: 'desc' }],
-      take: 1,
-    });
-    const rule = rules[0];
-    if (!rule) return fallback;
-    const artistRateBps = clampInt(rule.artistRateBps, 0, 10000);
-    const shopRateBps = clampInt(rule.shopRateBps, 0, 10000);
-    // If not summing to 100%, normalize to keep math predictable.
-    const sum = artistRateBps + shopRateBps;
-    if (sum !== 10000 && sum > 0) {
-      const normalizedArtist = roundHalfUp((artistRateBps / sum) * 10000);
-      return { artistRateBps: normalizedArtist, shopRateBps: 10000 - normalizedArtist };
-    }
-    return { artistRateBps, shopRateBps };
+    // 使用確定性規則選取
+    return this.getLatestSplitRule(artistId, branchId);
   }
 
   private async ensureBillInternal(tx: Prisma.TransactionClient, appointmentId: string, createdById?: string) {
@@ -1102,10 +1131,28 @@ export class BillingService {
     const where: Prisma.ArtistSplitRuleWhereInput = {};
     if (input.artistId) where.artistId = input.artistId;
     if (input.branchId) where.branchId = input.branchId;
-    return this.prisma.artistSplitRule.findMany({
+    
+    const allRules = await this.prisma.artistSplitRule.findMany({
       where,
       orderBy: [{ artistId: 'asc' }, { branchId: 'desc' }, { effectiveFrom: 'desc' }],
       include: { artist: { select: { id: true, name: true } }, branch: { select: { id: true, name: true } } },
+    });
+
+    // 去重：每個 (artistId, branchId) 只回最新一筆
+    const seen = new Map<string, typeof allRules[0]>();
+    for (const rule of allRules) {
+      const key = `${rule.artistId}:${rule.branchId || 'null'}`;
+      if (!seen.has(key)) {
+        seen.set(key, rule);
+      }
+    }
+
+    return Array.from(seen.values()).sort((a, b) => {
+      if (a.artistId < b.artistId) return -1;
+      if (a.artistId > b.artistId) return 1;
+      if (a.branchId && !b.branchId) return -1;
+      if (!a.branchId && b.branchId) return 1;
+      return 0;
     });
   }
 
@@ -1387,36 +1434,8 @@ export class BillingService {
           continue;
         }
 
-        // 取得「目前最新」的拆帳規則（不看 paidAt，直接取最新）
-        // 先找該 artistId + branchId 的最新規則
-        const rules = await this.prisma.artistSplitRule.findMany({
-          where: {
-            artistId: payment.bill.artistId,
-            OR: [
-              { branchId: payment.bill.branchId },
-              { branchId: null }, // global fallback
-            ],
-          },
-          orderBy: [
-            { branchId: 'desc' }, // branch-specific first
-            { effectiveFrom: 'desc' }, // then latest
-          ],
-          take: 1,
-        });
-
-        const rule = rules[0];
-        let split = { artistRateBps: 7000, shopRateBps: 3000 }; // default
-        if (rule) {
-          const artistRateBps = clampInt(rule.artistRateBps, 0, 10000);
-          const shopRateBps = clampInt(rule.shopRateBps, 0, 10000);
-          const sum = artistRateBps + shopRateBps;
-          if (sum !== 10000 && sum > 0) {
-            const normalizedArtist = roundHalfUp((artistRateBps / sum) * 10000);
-            split = { artistRateBps: normalizedArtist, shopRateBps: 10000 - normalizedArtist };
-          } else {
-            split = { artistRateBps, shopRateBps };
-          }
-        }
+        // 取得「目前最新」的拆帳規則（確定性：先分店、再全域）
+        const split = await this.getLatestSplitRule(payment.bill.artistId, payment.bill.branchId);
 
         // 計算新的拆帳金額
         const artistAmount = roundHalfUp((payment.amount * split.artistRateBps) / 10000);

@@ -179,6 +179,8 @@ export default function AdminBillingPage() {
   const [ruleBranchId, setRuleBranchId] = useState("");
   const [ruleArtistRatePct, setRuleArtistRatePct] = useState("70");
   const [availableArtists, setAvailableArtists] = useState<Array<{ userId: string; displayName: string; branchId: string; branchName: string | null }>>([]);
+  const [editingRules, setEditingRules] = useState<Record<string, string>>({});
+  const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
 
   const fetchBills = useCallback(async () => {
     try {
@@ -383,6 +385,15 @@ export default function AdminBillingPage() {
       fetchSplitRules();
     }
   }, [userRole, fetchSplitRules]);
+
+  // Initialize editing rules when splitRules change
+  useEffect(() => {
+    const initial: Record<string, string> = {};
+    splitRules.forEach(r => {
+      initial[r.id] = String(Math.round((r.artistRateBps || 0) / 100));
+    });
+    setEditingRules(initial);
+  }, [splitRules]);
 
   const onUpsertSplitRule = useCallback(async () => {
     if (userRole.toUpperCase() !== "BOSS") return;
@@ -1118,84 +1129,152 @@ export default function AdminBillingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground">
-              新增一筆規則（branchId 會自動帶出）。比例以「刺青師%」輸入，店家% 會自動補成 100%。
-            </div>
-            <div className="flex flex-wrap gap-3 items-end">
-              <div className="w-72">
-                <label className="text-xs text-muted-foreground">刺青師</label>
-                <Select 
-                  value={ruleArtistId} 
-                  onValueChange={(value) => {
-                    setRuleArtistId(value);
-                    // 自動填充 branchId
-                    const selectedArtist = availableArtists.find(a => a.userId === value);
-                    if (selectedArtist) {
-                      setRuleBranchId(selectedArtist.branchId);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="請選擇刺青師" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableArtists.map((artist) => (
-                      <SelectItem key={artist.userId} value={artist.userId}>
-                        {artist.displayName}（{artist.branchName || '無分店'}）
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-72">
-                <label className="text-xs text-muted-foreground">分店（自動）</label>
-                <Input 
-                  value={availableArtists.find(a => a.userId === ruleArtistId)?.branchName || ''} 
-                  readOnly 
-                  disabled
-                  className="bg-gray-100"
-                  placeholder="選擇刺青師後自動帶出" 
-                />
-              </div>
-              <div className="w-32">
-                <label className="text-xs text-muted-foreground">刺青師%</label>
-                <Input value={ruleArtistRatePct} onChange={(e) => setRuleArtistRatePct(e.target.value)} />
-              </div>
-              <Button onClick={onUpsertSplitRule}>儲存規則</Button>
-              <Button variant="outline" onClick={onRecomputeAllocations} disabled={loading}>
-                重算拆帳（套用到所有歷史）
-              </Button>
+              已有規則的刺青師：直接在列表修改比例並儲存。新刺青師：使用下方新增區。
             </div>
 
+            {/* 已有規則的刺青師：列表直接編輯 */}
             <div className="border rounded-md overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left border-b">
+                  <tr className="text-left border-b bg-gray-50">
                     <th className="py-2 px-3">刺青師</th>
                     <th className="py-2 px-3">分店</th>
-                    <th className="py-2 px-3">比例（刺青師/店家）</th>
-                    <th className="py-2 px-3">生效時間</th>
+                    <th className="py-2 px-3">刺青師%</th>
+                    <th className="py-2 px-3">店家%</th>
+                    <th className="py-2 px-3">操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {splitRules.map((r) => (
-                    <tr key={r.id} className="border-b">
-                      <td className="py-2 px-3">{r.artist?.name || r.artistId}</td>
-                      <td className="py-2 px-3">{r.branch?.name || (r.branchId ? r.branchId : "全域")}</td>
-                      <td className="py-2 px-3">
-                        {Math.round((r.artistRateBps || 0) / 100)}% / {Math.round((r.shopRateBps || 0) / 100)}%
-                      </td>
-                      <td className="py-2 px-3">{new Date(r.effectiveFrom).toLocaleString()}</td>
-                    </tr>
-                  ))}
+                  {splitRules.map((r) => {
+                    const editingPct = editingRules[r.id] || String(Math.round((r.artistRateBps || 0) / 100));
+                    const shopPct = 100 - parseFloat(editingPct || "0");
+                    
+                    const handleSave = async () => {
+                      const pct = parseFloat(editingPct);
+                      if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+                        setError("拆帳比例請輸入 0~100 的數字");
+                        return;
+                      }
+                      const bps = Math.round(pct * 100);
+                      try {
+                        setSavingRuleId(r.id);
+                        setError(null);
+                        await postJsonWithAuth("/admin/billing/split-rules", {
+                          artistId: r.artistId,
+                          branchId: r.branchId,
+                          artistRateBps: bps,
+                        });
+                        await fetchSplitRules();
+                      } catch (e) {
+                        const apiErr = e as ApiError;
+                        setError(apiErr.message || "更新拆帳規則失敗");
+                      } finally {
+                        setSavingRuleId(null);
+                      }
+                    };
+
+                    return (
+                      <tr key={r.id} className="border-b hover:bg-gray-50">
+                        <td className="py-2 px-3">{r.artist?.name || r.artistId}</td>
+                        <td className="py-2 px-3">{r.branch?.name || (r.branchId ? r.branchId : "全域")}</td>
+                        <td className="py-2 px-3">
+                          <Input 
+                            type="number"
+                            min="0"
+                            max="100"
+                            className="w-20"
+                            value={editingPct}
+                            onChange={(e) => setEditingRules(prev => ({ ...prev, [r.id]: e.target.value }))}
+                          />
+                        </td>
+                        <td className="py-2 px-3">{shopPct.toFixed(0)}%</td>
+                        <td className="py-2 px-3">
+                          <Button size="sm" onClick={handleSave} disabled={savingRuleId === r.id}>
+                            {savingRuleId === r.id ? "儲存中..." : "儲存"}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {splitRules.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-4 px-3 text-muted-foreground">
+                      <td colSpan={5} className="py-4 px-3 text-center text-muted-foreground">
                         尚未設定任何拆帳規則（預設 70/30）
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* 新增區：只顯示尚未有規則的刺青師 */}
+            <div className="border-t pt-4 space-y-3">
+              <div className="text-sm font-medium">新增刺青師規則</div>
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="w-72">
+                  <label className="text-xs text-muted-foreground">刺青師（尚未有規則）</label>
+                  <Select 
+                    value={ruleArtistId} 
+                    onValueChange={(value) => {
+                      setRuleArtistId(value);
+                      const selectedArtist = availableArtists.find(a => a.userId === value);
+                      if (selectedArtist) {
+                        setRuleBranchId(selectedArtist.branchId);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="請選擇刺青師" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableArtists
+                        .filter(artist => {
+                          // 過濾掉已有規則的刺青師
+                          return !splitRules.some(rule => 
+                            rule.artistId === artist.userId && 
+                            (rule.branchId === artist.branchId || (!rule.branchId && !artist.branchId))
+                          );
+                        })
+                        .map((artist) => (
+                          <SelectItem key={artist.userId} value={artist.userId}>
+                            {artist.displayName}（{artist.branchName || '無分店'}）
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="w-72">
+                  <label className="text-xs text-muted-foreground">分店（自動）</label>
+                  <Input 
+                    value={availableArtists.find(a => a.userId === ruleArtistId)?.branchName || ''} 
+                    readOnly 
+                    disabled
+                    className="bg-gray-100"
+                    placeholder="選擇刺青師後自動帶出" 
+                  />
+                </div>
+                <div className="w-32">
+                  <label className="text-xs text-muted-foreground">刺青師%</label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={ruleArtistRatePct} 
+                    onChange={(e) => setRuleArtistRatePct(e.target.value)} 
+                  />
+                </div>
+                <Button onClick={onUpsertSplitRule}>新增規則</Button>
+              </div>
+            </div>
+
+            {/* 重算拆帳按鈕 */}
+            <div className="border-t pt-4">
+              <Button variant="outline" onClick={onRecomputeAllocations} disabled={loading} className="w-full">
+                重算拆帳（套用到所有歷史）
+              </Button>
+              <div className="text-xs text-muted-foreground mt-2">
+                ⚠️ 此操作會依目前最新規則重新計算所有歷史帳務的拆帳金額，請謹慎使用。
+              </div>
             </div>
           </CardContent>
         </Card>
