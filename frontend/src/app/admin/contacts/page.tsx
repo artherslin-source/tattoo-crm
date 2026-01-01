@@ -125,8 +125,9 @@ export default function AdminContactsPage() {
       setOwnerDraft((prev) => {
         const next = { ...prev };
         for (const c of data) {
-          if (next[c.id] === undefined && (c.ownerArtistId || c.ownerArtist?.id)) {
-            next[c.id] = (c.ownerArtistId || c.ownerArtist?.id || "") as string;
+          if (next[c.id] === undefined) {
+            // 優先使用已指派的 ownerArtistId，其次使用客戶選擇的 preferredArtistId
+            next[c.id] = (c.ownerArtistId || c.preferredArtistId || c.ownerArtist?.id || "") as string;
           }
         }
         return next;
@@ -445,6 +446,9 @@ export default function AdminContactsPage() {
                           <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
                             目前：{currentOwnerName}
                             {contact.ownerArtist?.phone ? `（${contact.ownerArtist.phone}）` : ""}
+                            {!contact.ownerArtistId && contact.preferredArtistId && (
+                              <span className="text-blue-600"> ・ 客戶選擇</span>
+                            )}
                           </div>
                           {branchArtists.length === 0 ? (
                             <div className="text-xs text-text-muted-light dark:text-text-muted-dark">

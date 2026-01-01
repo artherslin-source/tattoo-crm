@@ -5,6 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { postJsonWithAuth, getJsonWithAuth, ApiError, getAccessToken } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 
+// 規格欄位名稱中文對照
+const VARIANT_LABEL_MAP: Record<string, string> = {
+  side: '左右半邊',
+  color: '顏色',
+  design_fee: '設計費',
+  custom_addon: '加購',
+  size: '尺寸',
+  position: '部位',
+  style: '風格',
+  complexity: '複雜度',
+};
+
 interface Service {
   id: string;
   name: string;
@@ -633,7 +645,10 @@ export default function AppointmentForm({
                           <div className="text-sm text-gray-600 mt-1">
                             {Object.entries(item.selectedVariants || {})
                               .filter(([_, value]) => value)
-                              .map(([key, value]) => `${key}: ${value}`)
+                              .map(([key, value]) => {
+                                const label = VARIANT_LABEL_MAP[key] || key;
+                                return `${label}: ${value}`;
+                              })
                               .join(' / ')}
                           </div>
                           {item.notes && (
