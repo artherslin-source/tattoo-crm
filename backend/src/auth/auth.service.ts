@@ -134,6 +134,7 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
+    if (!userId) throw new UnauthorizedException('User not found');
     const user = await this.prisma.user.findUnique({ 
       where: { id: userId },
       include: { branch: true }
