@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
+import { getJsonWithAuth, postJsonWithAuth, deleteJsonWithAuth, ApiError } from "@/lib/api";
 import { hasAdminAccess } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,7 +177,7 @@ export default function AdminBillingPage() {
   const [splitRules, setSplitRules] = useState<SplitRule[]>([]);
   const [ruleArtistId, setRuleArtistId] = useState("");
   const [ruleBranchId, setRuleBranchId] = useState("");
-  const [ruleArtistRatePct, setRuleArtistRatePct] = useState("70");
+  const [ruleArtistRatePct, setRuleArtistRatePct] = useState("50");
   const [availableArtists, setAvailableArtists] = useState<Array<{ userId: string; displayName: string; branchId: string; branchName: string | null }>>([]);
   const [editingRules, setEditingRules] = useState<Record<string, string>>({});
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
@@ -416,13 +416,29 @@ export default function AdminBillingPage() {
       });
       setRuleArtistId("");
       setRuleBranchId("");
-      setRuleArtistRatePct("70");
+      setRuleArtistRatePct("50");
       await fetchSplitRules();
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "更新拆帳規則失敗");
     }
   }, [userRole, ruleArtistId, ruleBranchId, ruleArtistRatePct, fetchSplitRules]);
+
+  const onDeleteSplitRule = useCallback(async (artistId: string, artistName: string) => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    if (!confirm(`確定要刪除「${artistName}」的拆帳規則？\n\n刪除後，該刺青師的拆帳金額將顯示為 0。`)) {
+      return;
+    }
+    try {
+      setError(null);
+      await deleteJsonWithAuth(`/admin/billing/split-rules/${artistId}`);
+      await fetchSplitRules();
+      alert(`已刪除「${artistName}」的拆帳規則。`);
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "刪除拆帳規則失敗");
+    }
+  }, [userRole, fetchSplitRules]);
 
   const onRecomputeAllocations = useCallback(async () => {
     if (userRole.toUpperCase() !== "BOSS") return;
@@ -1138,7 +1154,6 @@ export default function AdminBillingPage() {
                 <thead>
                   <tr className="text-left border-b bg-gray-50">
                     <th className="py-2 px-3">刺青師</th>
-                    <th className="py-2 px-3">分店</th>
                     <th className="py-2 px-3">刺青師%</th>
                     <th className="py-2 px-3">店家%</th>
                     <th className="py-2 px-3">操作</th>
@@ -1176,7 +1191,6 @@ export default function AdminBillingPage() {
                     return (
                       <tr key={r.id} className="border-b hover:bg-gray-50">
                         <td className="py-2 px-3">{r.artist?.name || r.artistId}</td>
-                        <td className="py-2 px-3">{r.branch?.name || (r.branchId ? r.branchId : "全域")}</td>
                         <td className="py-2 px-3">
                           <Input 
                             type="number"
@@ -1188,9 +1202,17 @@ export default function AdminBillingPage() {
                           />
                         </td>
                         <td className="py-2 px-3">{shopPct.toFixed(0)}%</td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-3 space-x-2">
                           <Button size="sm" onClick={handleSave} disabled={savingRuleId === r.id}>
                             {savingRuleId === r.id ? "儲存中..." : "儲存"}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => onDeleteSplitRule(r.artistId, r.artist?.name || r.artistId)}
+                            disabled={savingRuleId === r.id}
+                          >
+                            刪除
                           </Button>
                         </td>
                       </tr>
@@ -1198,8 +1220,8 @@ export default function AdminBillingPage() {
                   })}
                   {splitRules.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-4 px-3 text-center text-muted-foreground">
-                        尚未設定任何拆帳規則（預設 70/30）
+                      <td colSpan={4} className="py-4 px-3 text-center text-muted-foreground">
+                        尚未設定任何拆帳規則（無規則時拆帳金額顯示為 0）
                       </td>
                     </tr>
                   )}
@@ -1229,11 +1251,8 @@ export default function AdminBillingPage() {
                     <SelectContent>
                       {availableArtists
                         .filter(artist => {
-                          // 過濾掉已有規則的刺青師
-                          return !splitRules.some(rule => 
-                            rule.artistId === artist.userId && 
-                            (rule.branchId === artist.branchId || (!rule.branchId && !artist.branchId))
-                          );
+                          // 過濾掉已有規則的刺青師（現在每位刺青師只有一組規則）
+                          return !splitRules.some(rule => rule.artistId === artist.userId);
                         })
                         .map((artist) => (
                           <SelectItem key={artist.userId} value={artist.userId}>

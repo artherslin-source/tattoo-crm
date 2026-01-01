@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 import { AccessGuard } from '../common/access/access.guard';
@@ -236,6 +236,11 @@ export class AdminBillingController {
       artistRateBps: input.artistRateBps,
       effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : undefined,
     });
+  }
+
+  @Delete('split-rules/:artistId')
+  async deleteSplitRule(@Actor() actor: AccessActor, @Param('artistId') artistId: string) {
+    return this.billing.deleteSplitRule(actor, artistId);
   }
 
   // Reports (paidAt based)

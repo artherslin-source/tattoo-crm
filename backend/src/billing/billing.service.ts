@@ -306,59 +306,33 @@ export class BillingService {
   }
 
   /**
-   * 取得刺青師的最新拆帳規則（確定性：先分店規則、再全域規則）
+   * 取得刺青師的最新拆帳規則（每位刺青師一組，不分分店）
    * @param artistId 刺青師 ID
-   * @param branchId 分店 ID
-   * @returns 拆帳比例 { artistRateBps, shopRateBps }
+   * @returns 拆帳比例 { artistRateBps, shopRateBps } 或 null（無規則）
    */
-  private async getLatestSplitRule(artistId: string, branchId: string) {
-    const fallback = { artistRateBps: 7000, shopRateBps: 3000 };
-
-    // 先查分店專屬規則（最新一筆）
-    const branchRule = await this.prisma.artistSplitRule.findFirst({
-      where: { artistId, branchId },
+  private async getLatestSplitRuleByArtist(artistId: string) {
+    // 只查該刺青師最新一筆規則（不分 branchId）
+    const rule = await this.prisma.artistSplitRule.findFirst({
+      where: { artistId },
       orderBy: { effectiveFrom: 'desc' },
     });
 
-    if (branchRule) {
-      const artistRateBps = clampInt(branchRule.artistRateBps, 0, 10000);
-      const shopRateBps = clampInt(branchRule.shopRateBps, 0, 10000);
-      const sum = artistRateBps + shopRateBps;
-      if (sum !== 10000 && sum > 0) {
-        const normalizedArtist = roundHalfUp((artistRateBps / sum) * 10000);
-        return { artistRateBps: normalizedArtist, shopRateBps: 10000 - normalizedArtist };
-      }
-      return { artistRateBps, shopRateBps };
+    if (!rule) return null;
+
+    const artistRateBps = clampInt(rule.artistRateBps, 0, 10000);
+    const shopRateBps = clampInt(rule.shopRateBps, 0, 10000);
+    const sum = artistRateBps + shopRateBps;
+    if (sum !== 10000 && sum > 0) {
+      const normalizedArtist = roundHalfUp((artistRateBps / sum) * 10000);
+      return { artistRateBps: normalizedArtist, shopRateBps: 10000 - normalizedArtist };
     }
-
-    // 查不到分店規則，查全域規則（branchId = null）
-    const globalRule = await this.prisma.artistSplitRule.findFirst({
-      where: { artistId, branchId: null },
-      orderBy: { effectiveFrom: 'desc' },
-    });
-
-    if (globalRule) {
-      const artistRateBps = clampInt(globalRule.artistRateBps, 0, 10000);
-      const shopRateBps = clampInt(globalRule.shopRateBps, 0, 10000);
-      const sum = artistRateBps + shopRateBps;
-      if (sum !== 10000 && sum > 0) {
-        const normalizedArtist = roundHalfUp((artistRateBps / sum) * 10000);
-        return { artistRateBps: normalizedArtist, shopRateBps: 10000 - normalizedArtist };
-      }
-      return { artistRateBps, shopRateBps };
-    }
-
-    // 都沒有，回傳預設值
-    return fallback;
+    return { artistRateBps, shopRateBps };
   }
 
   private async resolveSplitRule(actor: AccessActor, artistId: string | null, branchId: string, at: Date) {
-    // Default 70/30 if no rule.
-    const fallback = { artistRateBps: 7000, shopRateBps: 3000 };
-    if (!artistId) return fallback;
-
-    // 使用確定性規則選取
-    return this.getLatestSplitRule(artistId, branchId);
+    // 無 artistId 或無規則：回傳 null（不再有預設 70/30）
+    if (!artistId) return null;
+    return this.getLatestSplitRuleByArtist(artistId);
   }
 
   private async ensureBillInternal(tx: Prisma.TransactionClient, appointmentId: string, createdById?: string) {
@@ -960,24 +934,34 @@ export class BillingService {
         });
       }
 
-      // If no artist, allocate all to SHOP.
+      // 計算拆帳：無 artistId 或無規則 → allocations 為 0/0
       if (!bill.artistId) {
         await tx.paymentAllocation.createMany({
           data: [
             { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-            { paymentId: payment.id, target: 'SHOP', amount: amount },
+            { paymentId: payment.id, target: 'SHOP', amount: 0 },
           ],
         });
       } else {
         const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
-        const artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
-        const shopAmount = amount - artistAmount;
-        await tx.paymentAllocation.createMany({
-          data: [
-            { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
-            { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
-          ],
-        });
+        if (!split) {
+          // 無規則：allocations 為 0/0
+          await tx.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+              { paymentId: payment.id, target: 'SHOP', amount: 0 },
+            ],
+          });
+        } else {
+          const artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
+          const shopAmount = amount - artistAmount;
+          await tx.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
+              { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+            ],
+          });
+        }
       }
 
       const paidTotal = (await tx.payment.aggregate({ where: { billId: bill.id }, _sum: { amount: true } }))._sum.amount || 0;
@@ -1063,56 +1047,68 @@ export class BillingService {
         });
       }
 
-      // Compute allocations for this payment (hybrid: based on remaining target totals)
+      // Compute allocations for this payment
       const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
-      const targetArtistTotal = roundHalfUp((bill.billTotal * split.artistRateBps) / 10000);
-      const targetShopTotal = bill.billTotal - targetArtistTotal;
+      
+      // 無規則：allocations 為 0/0
+      if (!split) {
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+            { paymentId: payment.id, target: 'SHOP', amount: 0 },
+          ],
+        });
+      } else {
+        // 有規則：hybrid 拆帳邏輯
+        const targetArtistTotal = roundHalfUp((bill.billTotal * split.artistRateBps) / 10000);
+        const targetShopTotal = bill.billTotal - targetArtistTotal;
 
-      const prevAlloc = await tx.paymentAllocation.findMany({
-        where: { payment: { billId: bill.id } },
-        select: { target: true, amount: true },
-      });
+        const prevAlloc = await tx.paymentAllocation.findMany({
+          where: { payment: { billId: bill.id } },
+          select: { target: true, amount: true },
+        });
 
-      const allocatedArtist = prevAlloc.filter((a) => a.target === 'ARTIST').reduce((s, a) => s + a.amount, 0);
-      const allocatedShop = prevAlloc.filter((a) => a.target === 'SHOP').reduce((s, a) => s + a.amount, 0);
+        const allocatedArtist = prevAlloc.filter((a) => a.target === 'ARTIST').reduce((s, a) => s + a.amount, 0);
+        const allocatedShop = prevAlloc.filter((a) => a.target === 'SHOP').reduce((s, a) => s + a.amount, 0);
 
-      let artistAmount = 0;
-      let shopAmount = 0;
+        let artistAmount = 0;
+        let shopAmount = 0;
 
-      if (amount > 0) {
-        const remainingArtist = targetArtistTotal - allocatedArtist;
-        const remainingShop = targetShopTotal - allocatedShop;
-        const totalRemaining = remainingArtist + remainingShop;
-        if (totalRemaining > 0) {
-          artistAmount = roundHalfUp((amount * remainingArtist) / totalRemaining);
-          artistAmount = clampInt(artistAmount, 0, amount);
-          shopAmount = amount - artistAmount;
-          // Clamp to not exceed remaining buckets (final payment absorbs rounding)
-          if (shopAmount > remainingShop) {
-            shopAmount = Math.max(0, remainingShop);
-            artistAmount = amount - shopAmount;
-          }
-          if (artistAmount > remainingArtist) {
-            artistAmount = Math.max(0, remainingArtist);
+        if (amount > 0) {
+          const remainingArtist = targetArtistTotal - allocatedArtist;
+          const remainingShop = targetShopTotal - allocatedShop;
+          const totalRemaining = remainingArtist + remainingShop;
+          if (totalRemaining > 0) {
+            artistAmount = roundHalfUp((amount * remainingArtist) / totalRemaining);
+            artistAmount = clampInt(artistAmount, 0, amount);
+            shopAmount = amount - artistAmount;
+            // Clamp to not exceed remaining buckets (final payment absorbs rounding)
+            if (shopAmount > remainingShop) {
+              shopAmount = Math.max(0, remainingShop);
+              artistAmount = amount - shopAmount;
+            }
+            if (artistAmount > remainingArtist) {
+              artistAmount = Math.max(0, remainingArtist);
+              shopAmount = amount - artistAmount;
+            }
+          } else {
+            // Overpayment: use configured split
+            artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
             shopAmount = amount - artistAmount;
           }
         } else {
-          // Overpayment: use configured split
+          // Refund/chargeback: reverse using configured split (simple & consistent)
           artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
           shopAmount = amount - artistAmount;
         }
-      } else {
-        // Refund/chargeback: reverse using configured split (simple & consistent)
-        artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
-        shopAmount = amount - artistAmount;
-      }
 
-      await tx.paymentAllocation.createMany({
-        data: [
-          { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
-          { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
-        ],
-      });
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
+            { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+          ],
+        });
+      }
 
       // Update bill status based on paid progress
       const paidTotal = (await tx.payment.aggregate({ where: { billId: bill.id }, _sum: { amount: true } }))._sum.amount || 0;
@@ -1164,38 +1160,63 @@ export class BillingService {
     const artistRateBps = clampInt(Math.trunc(input.artistRateBps), 0, 10000);
     const shopRateBps = 10000 - artistRateBps;
     
-    // 先查找同一 artistId + branchId 的最新規則
-    const existing = await this.prisma.artistSplitRule.findFirst({
-      where: {
-        artistId: input.artistId,
-        branchId: input.branchId,
-      },
-      orderBy: { effectiveFrom: 'desc' },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      // 查找該 artistId 的所有規則
+      const allRules = await tx.artistSplitRule.findMany({
+        where: { artistId: input.artistId },
+        orderBy: { effectiveFrom: 'desc' },
+      });
 
-    if (existing) {
-      // 更新既有規則（覆蓋）
-      return this.prisma.artistSplitRule.update({
-        where: { id: existing.id },
+      if (allRules.length === 0) {
+        // 沒有規則，建立新規則（branchId 設為 null，因為現在是 per_artist_only）
+        return tx.artistSplitRule.create({
+          data: {
+            artistId: input.artistId,
+            branchId: null,
+            artistRateBps,
+            shopRateBps,
+            effectiveFrom: input.effectiveFrom ?? new Date(),
+          },
+        });
+      }
+
+      // 有規則：保留最新一筆並更新，刪除其他
+      const latest = allRules[0];
+      const toDelete = allRules.slice(1).map((r) => r.id);
+
+      // 更新最新一筆
+      const updated = await tx.artistSplitRule.update({
+        where: { id: latest.id },
         data: {
           artistRateBps,
           shopRateBps,
+          branchId: null, // 統一設為 null（per_artist_only）
           effectiveFrom: input.effectiveFrom ?? new Date(),
           updatedAt: new Date(),
         },
       });
-    } else {
-      // 建立新規則
-      return this.prisma.artistSplitRule.create({
-        data: {
-          artistId: input.artistId,
-          branchId: input.branchId,
-          artistRateBps,
-          shopRateBps,
-          effectiveFrom: input.effectiveFrom ?? new Date(),
-        },
-      });
-    }
+
+      // 刪除其他舊規則
+      if (toDelete.length > 0) {
+        await tx.artistSplitRule.deleteMany({
+          where: { id: { in: toDelete } },
+        });
+        console.log(`🗑️ 刪除 ${toDelete.length} 筆重複規則（artistId=${input.artistId}）`);
+      }
+
+      return updated;
+    });
+  }
+
+  async deleteSplitRule(actor: AccessActor, artistId: string) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can manage split rules');
+    
+    const deleted = await this.prisma.artistSplitRule.deleteMany({
+      where: { artistId },
+    });
+    
+    console.log(`🗑️ 刪除拆帳規則：artistId=${artistId}，共 ${deleted.count} 筆`);
+    return { artistId, deletedCount: deleted.count };
   }
 
   async getReports(
@@ -1428,23 +1449,43 @@ export class BillingService {
 
     for (const payment of payments) {
       try {
-        // 如果沒有 artistId 或 branchId，無法計算拆帳，跳過
-        if (!payment.bill.artistId || !payment.bill.branchId) {
-          skipped.push(payment.id);
-          continue;
-        }
-
-        // 取得「目前最新」的拆帳規則（確定性：先分店、再全域）
-        const split = await this.getLatestSplitRule(payment.bill.artistId, payment.bill.branchId);
-
-        // 計算新的拆帳金額
-        const artistAmount = roundHalfUp((payment.amount * split.artistRateBps) / 10000);
-        const shopAmount = payment.amount - artistAmount;
-
         // 刪除舊的 allocations
         await this.prisma.paymentAllocation.deleteMany({
           where: { paymentId: payment.id },
         });
+
+        // 如果沒有 artistId，allocations 為 0/0
+        if (!payment.bill.artistId) {
+          await this.prisma.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+              { paymentId: payment.id, target: 'SHOP', amount: 0 },
+            ],
+          });
+          recomputed.push(payment.id);
+          console.log(`✅ 重算拆帳 Payment ${payment.id}：無 artistId → 0/0`);
+          continue;
+        }
+
+        // 取得「目前最新」的拆帳規則（每位刺青師一組）
+        const split = await this.getLatestSplitRuleByArtist(payment.bill.artistId);
+
+        // 無規則：allocations 為 0/0
+        if (!split) {
+          await this.prisma.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+              { paymentId: payment.id, target: 'SHOP', amount: 0 },
+            ],
+          });
+          recomputed.push(payment.id);
+          console.log(`✅ 重算拆帳 Payment ${payment.id}：無規則 → 0/0`);
+          continue;
+        }
+
+        // 計算新的拆帳金額
+        const artistAmount = roundHalfUp((payment.amount * split.artistRateBps) / 10000);
+        const shopAmount = payment.amount - artistAmount;
 
         // 建立新的 allocations
         await this.prisma.paymentAllocation.createMany({
