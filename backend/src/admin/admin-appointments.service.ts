@@ -125,13 +125,6 @@ export class AdminAppointmentsService {
 
     return this.prisma.appointment.findMany({
       where,
-      include: {
-        user: { select: { id: true, name: true, email: true, phone: true, primaryArtistId: true } },
-        service: { select: { id: true, name: true, price: true, durationMin: true } },
-        artist: { select: { id: true, name: true } },
-        branch: { select: { id: true, name: true } },
-        bill: { select: { id: true, billTotal: true, status: true, billType: true } },
-      },
       select: {
         id: true,
         userId: true,
