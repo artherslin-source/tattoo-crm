@@ -33,7 +33,8 @@ export async function detectBackendUrl(): Promise<string> {
   const probeHealth = async (base: string): Promise<boolean> => {
     const clean = normalizeBase(base);
     try {
-      const res = await fetch(`${clean}/health`, {
+      // backend health endpoint is `/health/simple` (avoid false negatives / CORS noise on `/health`)
+      const res = await fetch(`${clean}/health/simple`, {
         method: 'GET',
         signal: AbortSignal.timeout(2500),
       });
@@ -78,7 +79,7 @@ export async function detectBackendUrl(): Promise<string> {
 
     for (const base of candidates) {
       const ok = await probeHealth(base);
-      console.log('🔍 Probe /health:', { base, ok });
+      console.log('🔍 Probe /health/simple:', { base, ok });
       if (ok) {
         console.log('✅ Using inferred healthy backend URL:', base);
         return base;

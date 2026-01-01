@@ -232,11 +232,24 @@ export class BillingService {
         id: billId,
         ...(isBoss(actor) ? {} : { branchId: actor.branchId ?? undefined }),
       },
-      select: { id: true, branchId: true, artistId: true, appointmentId: true },
+      select: {
+        id: true,
+        branchId: true,
+        artistId: true,
+        appointmentId: true,
+        billType: true,
+        createdById: true,
+      },
     });
     if (!bill) throw new ForbiddenException('Insufficient permissions');
     if (isArtist(actor)) {
-      if (!bill.artistId || bill.artistId !== actor.id) throw new ForbiddenException('Insufficient permissions');
+      // Normal bills: artist can only access own bills.
+      if (bill.artistId && bill.artistId === actor.id) return bill;
+
+      // Stored value topups/refunds: bill has no artistId; allow the artist who created it to read it.
+      if (bill.billType === BILL_TYPE_STORED_VALUE_TOPUP && bill.createdById === actor.id) return bill;
+
+      throw new ForbiddenException('Insufficient permissions');
     }
     return bill;
   }
