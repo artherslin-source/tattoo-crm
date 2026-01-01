@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { getApiBase, getAccessToken } from "@/lib/api";
+import { getAccessToken } from "@/lib/api";
 
 interface ServiceVariant {
   id: string;
@@ -135,6 +135,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
   const [adding, setAdding] = useState(false);
   const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(new Set());
   const [batchOperating, setBatchOperating] = useState(false);
+  const [initializing, setInitializing] = useState(false);
 
   useEffect(() => {
     fetchVariants();
@@ -142,7 +143,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
 
   const fetchVariants = async () => {
     try {
-      const response = await fetch(`${getApiBase()}/admin/service-variants/service/${serviceId}`, {
+      const response = await fetch(`/api/admin/service-variants/service/${serviceId}`, {
         headers: {
           Authorization: `Bearer ${getAccessToken()}`,
         },
@@ -164,7 +165,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     console.log(`[VariantManager] 切換規格: ${variantId}, 當前狀態: ${currentActive}, 目標狀態: ${!currentActive}`);
     setUpdating(variantId);
     try {
-      const url = `${getApiBase()}/admin/service-variants/${variantId}`;
+      const url = `/api/admin/service-variants/${variantId}`;
       const newStatus = !currentActive;
       console.log(`[VariantManager] API URL: ${url}`);
       console.log(`[VariantManager] 發送數據:`, { isActive: newStatus });
@@ -212,7 +213,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
 
     setUpdating(editingVariant.id);
     try {
-      const response = await fetch(`${getApiBase()}/admin/service-variants/${editingVariant.id}`, {
+      const response = await fetch(`/api/admin/service-variants/${editingVariant.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -241,7 +242,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
 
     setUpdating(variantId);
     try {
-      const response = await fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+      const response = await fetch(`/api/admin/service-variants/${variantId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${getAccessToken()}`,
@@ -305,7 +306,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     setBatchOperating(true);
     try {
       const promises = Array.from(selectedVariantIds).map((variantId) =>
-        fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+        fetch(`/api/admin/service-variants/${variantId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -349,7 +350,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     setBatchOperating(true);
     try {
       const promises = Array.from(selectedVariantIds).map((variantId) =>
-        fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+        fetch(`/api/admin/service-variants/${variantId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -393,7 +394,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
     setBatchOperating(true);
     try {
       const promises = Array.from(selectedVariantIds).map((variantId) =>
-        fetch(`${getApiBase()}/admin/service-variants/${variantId}`, {
+        fetch(`/api/admin/service-variants/${variantId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${getAccessToken()}`,
@@ -447,7 +448,7 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
 
     setAdding(true);
     try {
-      const response = await fetch(`${getApiBase()}/admin/service-variants`, {
+      const response = await fetch(`/api/admin/service-variants`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -482,6 +483,41 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
       alert("添加規格失敗，請重試");
     } finally {
       setAdding(false);
+    }
+  };
+
+  // 一鍵初始化規格（standard）
+  const handleInitializeStandard = async () => {
+    const hasAny = totalVariants > 0;
+    const ok = hasAny
+      ? confirm(`「一鍵初始化」會刪除並重建此服務的所有規格。\n\n確定要繼續嗎？`)
+      : confirm(`確定要為此服務初始化一套預設規格（standard）嗎？`);
+    if (!ok) return;
+
+    setInitializing(true);
+    try {
+      const res = await fetch(`/api/admin/service-variants/initialize/${serviceId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getAccessToken()}`,
+        },
+        body: JSON.stringify({ template: "standard" }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("初始化規格失敗:", text);
+        alert(`初始化規格失敗: ${res.status} ${res.statusText}`);
+        return;
+      }
+      await fetchVariants();
+      onUpdate();
+      alert("✅ 已初始化規格");
+    } catch (e) {
+      console.error("初始化規格發生錯誤:", e);
+      alert("初始化規格失敗，請稍後再試");
+    } finally {
+      setInitializing(false);
     }
   };
 
@@ -930,8 +966,16 @@ export function VariantManager({ serviceId, serviceName, onClose, onUpdate }: Va
             </div>
           )}
 
-          {/* 新增規格按鈕 */}
-          <div className="mb-6 flex justify-end">
+          {/* 初始化/新增規格按鈕 */}
+          <div className="mb-6 flex justify-end gap-2">
+            <Button
+              onClick={handleInitializeStandard}
+              disabled={initializing}
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            >
+              {initializing ? "初始化中..." : "一鍵初始化規格"}
+            </Button>
             <Button
               onClick={() => setShowAddDialog(true)}
               className="bg-blue-600 hover:bg-blue-700"

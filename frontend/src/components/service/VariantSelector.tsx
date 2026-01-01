@@ -100,7 +100,8 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin: _isAdm
           serviceId: service.id,
           serviceName: service.name
         });
-        const url = `${getApiBase()}/services/${service.id}/variants`;
+        // Use same-origin `/api` rewrites to avoid CORS/404 in production.
+        const url = `/api/services/${service.id}/variants`;
         console.log(`[VariantSelector] API URL: ${url}`);
         
         const response = await fetch(url, {
