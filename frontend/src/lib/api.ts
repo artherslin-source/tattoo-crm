@@ -44,16 +44,7 @@ export async function detectBackendUrl(): Promise<string> {
   };
 
   const envUrlRaw = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-  if (envUrlRaw) {
-    const envUrl = normalizeBase(envUrlRaw);
-    console.log('🔍 Using env backend URL candidate:', envUrl);
-    const ok = await probeHealth(envUrl);
-    if (ok) {
-      console.log('✅ Env backend URL is healthy:', envUrl);
-      return envUrl;
-    }
-    console.warn('⚠️ Env backend URL health check failed; will try to infer a working backend URL.');
-  }
+  const envUrl = envUrlRaw ? normalizeBase(envUrlRaw) : null;
   
   if (typeof window === 'undefined' || window.location.hostname === 'localhost') {
     console.log('🔍 Using localhost for development');
@@ -66,15 +57,16 @@ export async function detectBackendUrl(): Promise<string> {
   if (hostname.includes('railway.app')) {
     // Railway：嘗試用常見命名模式推測後端 URL，並用 /health 探測可用者
     const current = `https://${hostname}`;
+    // 注意：Railway 上 env URL 有機會指到「舊後端/錯的 service」。
+    // 我們把「推測的後端」放前面優先 probe；env URL 只做最後備援。
     const candidatesRaw: string[] = [
-      process.env.NEXT_PUBLIC_API_URL || '',
-      process.env.NEXT_PUBLIC_BACKEND_URL || '',
       // common: tattoo-crm-production -> tattoo-crm-backend-production
       current.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
       // common: frontend -> backend
       current.replace('frontend', 'backend'),
       // common suffix: -backend
       current.replace('.up.railway.app', '-backend.up.railway.app'),
+      ...(envUrl ? [envUrl] : []),
     ].filter(Boolean);
 
     const seen = new Set<string>();
@@ -97,6 +89,16 @@ export async function detectBackendUrl(): Promise<string> {
     return candidates[0] ?? current;
   }
   
+  if (envUrl) {
+    console.log('🔍 Using env backend URL candidate:', envUrl);
+    const ok = await probeHealth(envUrl);
+    if (ok) {
+      console.log('✅ Env backend URL is healthy:', envUrl);
+      return envUrl;
+    }
+    console.warn('⚠️ Env backend URL health check failed; falling back to hostname.');
+  }
+
   console.log('🔍 Using hostname as fallback:', `https://${hostname}`);
   return `https://${hostname}`;
 }
@@ -108,9 +110,6 @@ function getApiBaseUrl(): string {
   }
   
   const normalizeBase = (base: string) => base.replace(/\/+$/, '');
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-  if (envUrl) return normalizeBase(envUrl);
-  
   const hostname = window.location.hostname;
   if (hostname.includes('railway.app')) {
     const current = `https://${hostname}`;
@@ -123,6 +122,9 @@ function getApiBaseUrl(): string {
     }
     return normalizeBase(current.replace('.up.railway.app', '-backend.up.railway.app'));
   }
+
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (envUrl) return normalizeBase(envUrl);
   
   return "http://localhost:4000";
 }
