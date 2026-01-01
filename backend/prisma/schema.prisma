@@ -209,7 +209,7 @@ model AppointmentBill {
   customerId            String?
   artistId              String?
   currency              String     @default("TWD")
-  billType              String     @default("APPOINTMENT") // APPOINTMENT | WALK_IN | OTHER
+  billType              String     @default("APPOINTMENT") // APPOINTMENT | WALK_IN | OTHER | STORED_VALUE_TOPUP | ...
   listTotal             Int
   discountTotal         Int        @default(0)
   billTotal             Int

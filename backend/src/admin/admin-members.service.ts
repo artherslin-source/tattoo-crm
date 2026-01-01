@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { isBoss, type AccessActor } from '../common/access/access.types';
+import { BillingService } from '../billing/billing.service';
 
 @Injectable()
 export class AdminMembersService {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billing: BillingService,
+  ) {
     console.log('🏗️ AdminMembersService constructor called');
   }
 
@@ -528,55 +532,54 @@ export class AdminMembersService {
     });
   }
 
-  async topupUser(actor: AccessActor, memberId: string, amount: number, operatorId: string) {
+  async topupUser(
+    actor: AccessActor,
+    memberId: string,
+    input: { amount: number; method?: string; notes?: string },
+    operatorId: string,
+  ) {
     try {
-      console.log('💰 topupUser called with:', { memberId, amount, operatorId, actor });
+      console.log('💰 topupUser called with:', { memberId, input, operatorId, actor });
       
       // 如果沒有 operatorId，使用預設的管理員 ID
       const finalOperatorId = operatorId || "cmg3lv56u0000sb7u0sx3wmwk";
       
-      return await this.prisma.$transaction(async (tx) => {
-        // 先檢查會員是否存在
-        const existingMember = await tx.member.findUnique({
-          where: { id: memberId },
-          include: { user: true },
-        });
-
-        if (!existingMember) {
-          throw new NotFoundException(`會員不存在: ${memberId}`);
-        }
-
-        console.log('💰 Found member:', existingMember);
-
-        if (!isBoss(actor)) {
-          if (existingMember.user.branchId !== actor.branchId) {
-            throw new ForbiddenException('Cannot topup outside your branch');
-          }
-          if (existingMember.user.primaryArtistId !== actor.id) {
-            throw new ForbiddenException('Cannot topup customer not owned by this artist');
-          }
-        }
-
-        const member = await tx.member.update({
-          where: { id: memberId },
-          data: { balance: { increment: amount } },
-        });
-
-        console.log('💰 Updated member balance:', member);
-
-        await tx.topupHistory.create({
-          data: {
-            memberId,
-            operatorId: finalOperatorId,
-            amount,
-            type: 'TOPUP',
-          },
-        });
-
-        console.log('💰 Created topup history');
-
-        return member;
+      // 先檢查會員是否存在
+      const existingMember = await this.prisma.member.findUnique({
+        where: { id: memberId },
+        include: { user: true },
       });
+
+      if (!existingMember) {
+        throw new NotFoundException(`會員不存在: ${memberId}`);
+      }
+
+      console.log('💰 Found member:', existingMember);
+
+      if (!isBoss(actor)) {
+        if (existingMember.user.branchId !== actor.branchId) {
+          throw new ForbiddenException('Cannot topup outside your branch');
+        }
+        if (existingMember.user.primaryArtistId !== actor.id) {
+          throw new ForbiddenException('Cannot topup customer not owned by this artist');
+        }
+      }
+
+      const amount = Math.trunc(Number(input.amount));
+      if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException('儲值金額必須大於 0');
+
+      // 將儲值納入帳務：建立 STORED_VALUE_TOPUP 帳單 + 付款 + 同步 balance + topupHistory
+      const bill = await this.billing.createStoredValueTopupBill(actor, {
+        customerId: existingMember.userId,
+        amount,
+        method: input.method || 'CASH',
+        branchId: existingMember.user.branchId ?? actor.branchId ?? undefined,
+        notes: input.notes || `會員管理-儲值（operatorId=${finalOperatorId}）`,
+      });
+
+      // Return latest member snapshot for UI refresh (and bill id for traceability)
+      const member = await this.prisma.member.findUnique({ where: { id: memberId } });
+      return { member, bill };
     } catch (error) {
       console.error('💰 topupUser error:', error);
       throw error;

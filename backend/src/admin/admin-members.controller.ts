@@ -109,11 +109,11 @@ export class AdminMembersController {
   @Patch(':id/topup')
   async topupUser(
     @Param('id') id: string,
-    @Body() body: { amount: number },
+    @Body() body: { amount: number; method?: string; notes?: string },
     @Actor() actor: AccessActor
   ) {
     try {
-      console.log('💰 Controller: topupUser called with:', { memberId: id, amount: body.amount, actor });
+      console.log('💰 Controller: topupUser called with:', { memberId: id, body, actor });
 
       const amount = Number(body.amount);
       if (amount <= 0) {
@@ -123,7 +123,7 @@ export class AdminMembersController {
       const operatorId = actor.id;
       console.log('💰 Controller: Calling service.topupUser with:', { id, amount, operatorId, actor });
       
-      const result = await this.service.topupUser(actor, id, amount, operatorId);
+      const result = await this.service.topupUser(actor, id, { amount, method: body.method, notes: body.notes }, operatorId);
       console.log('💰 Controller: topupUser completed successfully');
       return result;
     } catch (error) {

@@ -1,5 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AccessActor } from '../common/access/access.types';
+import { BillingService } from '../billing/billing.service';
 
 interface UpdateUserDto {
   name?: string;
@@ -18,7 +20,10 @@ interface GetUsersQuery {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billing: BillingService,
+  ) {}
 
   async me(userId: string) {
     return this.prisma.user.findUnique({
@@ -260,50 +265,18 @@ export class UsersService {
     });
   }
 
-  async addTopUp(userId: string, amount: number) {
-    return this.prisma.$transaction(async (tx) => {
-      // 確保用戶有 Member 記錄
-      const member = await tx.member.findUnique({
-        where: { userId },
-      });
-
-      if (!member) {
-        // 如果沒有 Member 記錄，創建一個
-        await tx.member.create({
-          data: {
-            userId,
-            totalSpent: 0,
-            balance: amount,
-          },
-        });
-      } else {
-        // 更新餘額
-        await tx.member.update({
-          where: { userId },
-          data: {
-            balance: { increment: amount },
-          },
-        });
-      }
-
-      // 返回用戶和財務資訊
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          member: {
-            select: {
-              totalSpent: true,
-              balance: true,
-              membershipLevel: true,
-            }
-          }
-        },
-      });
-
-      return user;
+  async addTopUp(
+    actor: AccessActor,
+    userId: string,
+    amount: number,
+    opts?: { method?: string; notes?: string },
+  ) {
+    // Delegate to Billing: always create bill + payment + balance update
+    return this.billing.createStoredValueTopupBill(actor, {
+      customerId: userId,
+      amount,
+      method: opts?.method || 'CASH',
+      notes: opts?.notes || 'users.topup',
     });
   }
 

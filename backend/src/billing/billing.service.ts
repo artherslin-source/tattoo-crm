@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, NotFoundException, Injectable 
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { isBoss, isArtist, type AccessActor } from '../common/access/access.types';
+import { BILL_TYPE_STORED_VALUE_TOPUP } from './billing.constants';
 
 type BillStatus = 'OPEN' | 'SETTLED' | 'VOID';
 
@@ -16,6 +17,198 @@ function roundHalfUp(n: number) {
 @Injectable()
 export class BillingService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async createStoredValueTopupBill(
+    actor: AccessActor,
+    input: { customerId: string; amount: number; method: string; notes?: string; branchId?: string },
+  ) {
+    const amount = Math.trunc(input.amount);
+    if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException('amount must be positive integer');
+    const method = input.method.toUpperCase();
+
+    // Only BOSS can topup any branch; non-boss must stay within own branch.
+    if (!isBoss(actor) && input.branchId && actor.branchId && input.branchId !== actor.branchId) {
+      throw new ForbiddenException('Cannot topup outside your branch');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: input.customerId },
+        select: { id: true, name: true, phone: true, branchId: true },
+      });
+      if (!user) throw new NotFoundException('會員不存在');
+
+      const branchId = input.branchId ?? user.branchId ?? actor.branchId ?? null;
+      if (!branchId) throw new BadRequestException('無法判定分店（請提供 branchId 或先為會員指定分店）');
+
+      // ensure member record exists
+      let member = await tx.member.findUnique({ where: { userId: user.id } });
+      if (!member) {
+        member = await tx.member.create({ data: { userId: user.id, totalSpent: 0, balance: 0 } });
+      }
+
+      // Create history first so we can embed id in notes for idempotent backfill.
+      const history = await tx.topupHistory.create({
+        data: {
+          memberId: member.id,
+          operatorId: actor.id,
+          amount,
+          type: 'TOPUP',
+        },
+      });
+
+      const bill = await tx.appointmentBill.create({
+        data: {
+          appointmentId: null,
+          branchId,
+          customerId: user.id,
+          artistId: null,
+          currency: 'TWD',
+          billType: BILL_TYPE_STORED_VALUE_TOPUP,
+          listTotal: amount,
+          discountTotal: 0,
+          billTotal: amount,
+          status: 'SETTLED',
+          voidReason: null,
+          voidedAt: null,
+          customerNameSnapshot: user.name ?? null,
+          customerPhoneSnapshot: user.phone ?? null,
+          createdById: actor.id,
+          items: {
+            create: [
+              {
+                serviceId: null,
+                nameSnapshot: '儲值入金',
+                basePriceSnapshot: amount,
+                finalPriceSnapshot: amount,
+                variantsSnapshot: null,
+                notes: null,
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+      });
+
+      const payment = await tx.payment.create({
+        data: {
+          billId: bill.id,
+          amount,
+          method,
+          paidAt: new Date(),
+          recordedById: actor.id,
+          notes: `${input.notes || '會員儲值'} (topupHistoryId=${history.id})`,
+        },
+      });
+
+      // Topup has no artist split: all SHOP.
+      await tx.paymentAllocation.createMany({
+        data: [
+          { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+          { paymentId: payment.id, target: 'SHOP', amount },
+        ],
+      });
+
+      // Update stored value balance (do NOT touch totalSpent; totalSpent is consumption-only)
+      await tx.member.update({
+        where: { id: member.id },
+        data: { balance: { increment: amount } },
+      });
+
+      return this.getBillById(actor, bill.id);
+    });
+  }
+
+  async refundToStoredValue(actor: AccessActor, billId: string, input: { amount: number; notes?: string }) {
+    await this.ensureBillReadable(actor, billId);
+    const amount = Math.trunc(input.amount);
+    if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException('amount must be positive integer');
+
+    return this.prisma.$transaction(async (tx) => {
+      const sourceBill = await tx.appointmentBill.findUnique({
+        where: { id: billId },
+        select: { id: true, branchId: true, customerId: true },
+      });
+      if (!sourceBill) throw new NotFoundException('帳務不存在');
+      if (!sourceBill.customerId) throw new BadRequestException('此帳務未綁定會員，無法退回儲值');
+
+      const user = await tx.user.findUnique({
+        where: { id: sourceBill.customerId },
+        select: { id: true, name: true, phone: true },
+      });
+      if (!user) throw new NotFoundException('會員不存在');
+
+      const member = await tx.member.findUnique({ where: { userId: user.id } });
+      if (!member) throw new BadRequestException('此會員尚未建立儲值帳戶');
+
+      const history = await tx.topupHistory.create({
+        data: {
+          memberId: member.id,
+          operatorId: actor.id,
+          amount,
+          type: 'TOPUP',
+        },
+      });
+
+      const bill = await tx.appointmentBill.create({
+        data: {
+          appointmentId: null,
+          branchId: sourceBill.branchId,
+          customerId: user.id,
+          artistId: null,
+          currency: 'TWD',
+          billType: BILL_TYPE_STORED_VALUE_TOPUP,
+          listTotal: amount,
+          discountTotal: 0,
+          billTotal: amount,
+          status: 'SETTLED',
+          voidReason: null,
+          voidedAt: null,
+          customerNameSnapshot: user.name ?? null,
+          customerPhoneSnapshot: user.phone ?? null,
+          createdById: actor.id,
+          items: {
+            create: [
+              {
+                serviceId: null,
+                nameSnapshot: '退費轉儲值',
+                basePriceSnapshot: amount,
+                finalPriceSnapshot: amount,
+                variantsSnapshot: null,
+                notes: null,
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+      });
+
+      const payment = await tx.payment.create({
+        data: {
+          billId: bill.id,
+          amount,
+          method: 'OTHER',
+          paidAt: new Date(),
+          recordedById: actor.id,
+          notes: `${input.notes || '退費轉儲值'} (sourceBillId=${sourceBill.id}, topupHistoryId=${history.id})`,
+        },
+      });
+
+      await tx.paymentAllocation.createMany({
+        data: [
+          { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+          { paymentId: payment.id, target: 'SHOP', amount },
+        ],
+      });
+
+      await tx.member.update({
+        where: { id: member.id },
+        data: { balance: { increment: amount } },
+      });
+
+      return this.getBillById(actor, bill.id);
+    });
+  }
 
   private async ensureAppointmentReadable(actor: AccessActor, appointmentId: string) {
     const appt = await this.prisma.appointment.findFirst({
@@ -288,6 +481,7 @@ export class BillingService {
       customerSearch?: string;
       status?: BillStatus | 'all';
       billType?: string | 'all';
+      view?: 'CONSUMPTION' | 'ALL';
       startDate?: string;
       endDate?: string;
       sortField?: 'createdAt' | 'billTotal' | 'paidTotal' | 'dueTotal';
@@ -310,7 +504,12 @@ export class BillingService {
 
     if (query.artistId && query.artistId !== 'all') where.artistId = query.artistId;
     if (query.status && query.status !== 'all') where.status = query.status as any;
-    if (query.billType && query.billType !== 'all') where.billType = query.billType as any;
+    if (query.billType && query.billType !== 'all') {
+      where.billType = query.billType as any;
+    } else if (query.view === 'CONSUMPTION') {
+      // default consumption view: exclude stored-value topups to avoid inflating revenue/spent views
+      where.billType = { not: BILL_TYPE_STORED_VALUE_TOPUP } as any;
+    }
 
     if (query.startDate || query.endDate) {
       const start = query.startDate ? new Date(query.startDate) : undefined;
@@ -596,19 +795,20 @@ export class BillingService {
       const member = bill.customerId
         ? await tx.member.findUnique({ where: { userId: bill.customerId } })
         : null;
+      const countTotalSpent = !!member && bill.billType !== BILL_TYPE_STORED_VALUE_TOPUP;
 
       if (method === 'STORED_VALUE') {
         if (!bill.customerId) throw new BadRequestException('此帳務未綁定會員，無法使用儲值金付款');
         if (!member) throw new BadRequestException('此會員尚未建立儲值帳戶');
         const nextBalance = member.balance - amount;
         if (amount > 0 && nextBalance < 0) throw new BadRequestException('儲值餘額不足');
+        const memberUpdate: Prisma.MemberUpdateInput = {
+          balance: nextBalance,
+          ...(countTotalSpent ? { totalSpent: { increment: amount } } : {}),
+        };
         await tx.member.update({
           where: { userId: bill.customerId },
-          data: {
-            balance: nextBalance,
-            // totalSpent should align with Billing actual received (net): sum of Payment.amount
-            totalSpent: { increment: amount },
-          },
+          data: memberUpdate,
         });
         await tx.topupHistory.create({
           data: {
@@ -632,7 +832,7 @@ export class BillingService {
       });
 
       // For non-stored-value payments, still keep Member.totalSpent in sync with Billing payments.
-      if (method !== 'STORED_VALUE' && member) {
+      if (method !== 'STORED_VALUE' && countTotalSpent && member) {
         await tx.member.update({
           where: { id: member.id },
           data: { totalSpent: { increment: amount } },
@@ -699,18 +899,19 @@ export class BillingService {
       const member = bill.customerId
         ? await tx.member.findUnique({ where: { userId: bill.customerId } })
         : null;
+      const countTotalSpent = !!member && bill.billType !== BILL_TYPE_STORED_VALUE_TOPUP;
 
       if (method === 'STORED_VALUE') {
         if (!member) throw new BadRequestException('此會員尚未建立儲值帳戶');
         const nextBalance = member.balance - amount;
         if (amount > 0 && nextBalance < 0) throw new BadRequestException('儲值餘額不足');
+        const memberUpdate: Prisma.MemberUpdateInput = {
+          balance: nextBalance,
+          ...(countTotalSpent ? { totalSpent: { increment: amount } } : {}),
+        };
         await tx.member.update({
           where: { userId: bill.customerId },
-          data: {
-            balance: nextBalance,
-            // totalSpent should align with Billing actual received (net): sum of Payment.amount
-            totalSpent: { increment: amount },
-          },
+          data: memberUpdate,
         });
         await tx.topupHistory.create({
           data: {
@@ -734,7 +935,7 @@ export class BillingService {
       });
 
       // For non-stored-value payments, still keep Member.totalSpent in sync with Billing payments.
-      if (method !== 'STORED_VALUE' && member) {
+      if (method !== 'STORED_VALUE' && countTotalSpent && member) {
         await tx.member.update({
           where: { id: member.id },
           data: { totalSpent: { increment: amount } },
@@ -836,7 +1037,7 @@ export class BillingService {
 
   async getReports(
     actor: AccessActor,
-    input: { branchId?: string; artistId?: string; startDate?: string; endDate?: string },
+    input: { branchId?: string; artistId?: string; view?: 'CONSUMPTION' | 'ALL'; startDate?: string; endDate?: string },
   ) {
     // BOSS sees all; ARTIST sees own branch + own bills
     const start = input.startDate ? new Date(input.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -849,6 +1050,9 @@ export class BillingService {
     } else {
       billWhere.branchId = actor.branchId ?? undefined;
       billWhere.artistId = actor.id;
+    }
+    if (input.view === 'CONSUMPTION') {
+      billWhere.billType = { not: BILL_TYPE_STORED_VALUE_TOPUP } as any;
     }
 
     const payments = await this.prisma.payment.findMany({

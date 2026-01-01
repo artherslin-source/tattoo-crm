@@ -128,6 +128,7 @@ export default function AdminBillingPage() {
   const [userRole, setUserRole] = useState<string>("");
 
   // Filters / sorting
+  const [viewMode, setViewMode] = useState<"CONSUMPTION" | "ALL">("CONSUMPTION");
   const [filterBranchId, setFilterBranchId] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterBillType, setFilterBillType] = useState<string>("all");
@@ -181,6 +182,8 @@ export default function AdminBillingPage() {
       setLoading(true);
       setError(null);
       const params = new URLSearchParams();
+      // View mode: when not pinning to a specific billType, we can exclude stored-value topups to avoid inflating consumption totals.
+      if (viewMode && filterBillType === "all") params.set("view", viewMode);
       if (filterBranchId && filterBranchId !== "all") params.set("branchId", filterBranchId);
       if (filterStatus && filterStatus !== "all") params.set("status", filterStatus);
       if (filterBillType && filterBillType !== "all") params.set("billType", filterBillType);
@@ -207,6 +210,7 @@ export default function AdminBillingPage() {
       setLoading(false);
     }
   }, [
+    viewMode,
     filterBranchId,
     filterStatus,
     filterBillType,
@@ -697,6 +701,18 @@ export default function AdminBillingPage() {
             <DialogTitle>篩選 / 排序（更多）</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">視角</div>
+              <Select value={viewMode} onValueChange={(v) => setViewMode(v === "ALL" ? "ALL" : "CONSUMPTION")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="消費（不含儲值）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CONSUMPTION">消費（不含儲值）</SelectItem>
+                  <SelectItem value="ALL">全部（含儲值）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <div className="text-xs text-muted-foreground mb-1">帳單類型</div>
               <Select value={filterBillType} onValueChange={setFilterBillType}>

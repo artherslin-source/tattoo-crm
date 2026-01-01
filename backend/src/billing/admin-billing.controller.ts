@@ -48,6 +48,19 @@ const CreateManualBillSchema = z.object({
     .min(1),
 });
 
+const CreateStoredValueTopupSchema = z.object({
+  customerId: z.string().min(1),
+  amount: z.coerce.number().int().min(1),
+  method: z.string().min(1),
+  notes: z.string().optional(),
+  branchId: z.string().optional(),
+});
+
+const RefundToStoredValueSchema = z.object({
+  amount: z.coerce.number().int().min(1),
+  notes: z.string().optional(),
+});
+
 const UpsertSplitRuleSchema = z.object({
   artistId: z.string().min(1),
   branchId: z.string().optional().nullable(),
@@ -82,6 +95,7 @@ export class AdminBillingController {
       customerSearch: query.customerSearch,
       status: query.status,
       billType: query.billType,
+      view: query.view,
       startDate: query.startDate,
       endDate: query.endDate,
       sortField: query.sortField,
@@ -111,6 +125,26 @@ export class AdminBillingController {
       notes: input.notes ?? null,
       items: input.items,
     });
+  }
+
+  // Stored value top-up (always creates bill + payment)
+  @Post('topups')
+  async createStoredValueTopup(@Actor() actor: AccessActor, @Body() body: unknown) {
+    const input = CreateStoredValueTopupSchema.parse(body);
+    return this.billing.createStoredValueTopupBill(actor, {
+      customerId: input.customerId,
+      amount: input.amount,
+      method: input.method,
+      notes: input.notes,
+      branchId: input.branchId,
+    });
+  }
+
+  // Refund to stored value balance: creates a topup bill with notes
+  @Post('bills/:billId/refund-to-stored-value')
+  async refundToStoredValue(@Actor() actor: AccessActor, @Param('billId') billId: string, @Body() body: unknown) {
+    const input = RefundToStoredValueSchema.parse(body);
+    return this.billing.refundToStoredValue(actor, billId, { amount: input.amount, notes: input.notes });
   }
 
   // Create / ensure a bill exists for an appointment, based on cartSnapshot (multi-items)
@@ -202,6 +236,7 @@ export class AdminBillingController {
     return this.billing.getReports(actor, {
       branchId: query.branchId,
       artistId: query.artistId,
+      view: query.view,
       startDate: query.startDate,
       endDate: query.endDate,
     });

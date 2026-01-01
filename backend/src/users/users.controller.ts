@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { BranchGuard } from '../common/guards/branch.guard';
+import { buildActorFromJwtUser } from '../common/access/access.types';
 
 interface UpdateUserDto {
   name?: string;
@@ -22,6 +23,8 @@ interface GetUsersQuery {
 
 interface TopUpDto {
   amount: number;
+  method?: string;
+  notes?: string;
 }
 
 interface AdjustBalanceDto {
@@ -63,11 +66,13 @@ export class UsersController {
   // 財務相關端點
   @Post(':id/topup')
   @Roles('BOSS')
-  async topUp(@Param('id') userId: string, @Body() topUpDto: TopUpDto) {
+  async topUp(@Req() req: any, @Param('id') userId: string, @Body() topUpDto: TopUpDto) {
     if (topUpDto.amount <= 0) {
       throw new Error('Top-up amount must be positive');
     }
-    return this.usersService.addTopUp(userId, topUpDto.amount);
+    const actor = buildActorFromJwtUser({ id: req.user.id, role: req.user.role, branchId: req.user.branchId });
+    if (!actor) throw new Error('Invalid actor');
+    return this.usersService.addTopUp(actor, userId, topUpDto.amount, { method: topUpDto.method, notes: topUpDto.notes });
   }
 
   @Patch(':id/balance')
