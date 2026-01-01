@@ -31,7 +31,7 @@ export class BillingService {
       throw new ForbiddenException('Cannot topup outside your branch');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: input.customerId },
         select: { id: true, name: true, phone: true, branchId: true },
@@ -116,15 +116,17 @@ export class BillingService {
       });
 
       // IMPORTANT:
-      // - For ARTIST flows (e.g. member topup in Artist Workbench), returning full bill detail
-      //   may hit strict readability rules and cause the whole topup request to fail (403),
-      //   even though the topup itself succeeded.
-      // - So for non-BOSS we return a minimal payload, and let UI fetch bill detail later if needed.
-      if (!isBoss(actor)) {
-        return { id: bill.id };
-      }
-      return this.getBillById(actor, bill.id);
+      // Don't call this.getBillById() inside the transaction.
+      // It uses this.prisma (a separate client/connection), which may not see uncommitted data yet,
+      // causing false 403 ("Insufficient permissions") even though the bill was just created.
+      return { billId: bill.id };
     });
+
+    // Non-boss: return minimal payload; UI can fetch detail later if needed.
+    if (!isBoss(actor)) return { id: created.billId };
+
+    // Boss: fetch full detail AFTER the transaction commits.
+    return this.getBillById(actor, created.billId);
   }
 
   async refundToStoredValue(actor: AccessActor, billId: string, input: { amount: number; notes?: string }) {
@@ -132,7 +134,7 @@ export class BillingService {
     const amount = Math.trunc(input.amount);
     if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException('amount must be positive integer');
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       const sourceBill = await tx.appointmentBill.findUnique({
         where: { id: billId },
         select: { id: true, branchId: true, customerId: true },
@@ -214,8 +216,12 @@ export class BillingService {
         data: { balance: { increment: amount } },
       });
 
-      return this.getBillById(actor, bill.id);
+      return { billId: bill.id };
     });
+
+    // Same reason as createStoredValueTopupBill(): fetch detail after commit.
+    if (!isBoss(actor)) return { id: created.billId };
+    return this.getBillById(actor, created.billId);
   }
 
   private async ensureAppointmentReadable(actor: AccessActor, appointmentId: string) {
