@@ -17,6 +17,9 @@ interface Contact {
   status: string;
   createdAt: string;
   ownerArtistId?: string | null;
+  preferredArtistId?: string | null;
+  cartSnapshot?: unknown | null;
+  cartTotalPrice?: number | null;
   ownerArtist?: { id: string; name?: string | null; phone?: string | null } | null;
   // Latest appointment reference (backend returns take:1 for deep-linking)
   appointments?: Array<{ id: string; createdAt: string }>;
@@ -424,6 +427,11 @@ export default function AdminContactsPage() {
                         <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.email || "-"}</div>
                         {contact.phone && (
                           <div className="text-sm text-text-muted-light dark:text-text-muted-dark">{contact.phone}</div>
+                        )}
+                        {contact.cartTotalPrice && (
+                          <div className="text-sm text-blue-600 font-medium mt-1">
+                            購物車: NT$ {contact.cartTotalPrice.toLocaleString()}
+                          </div>
                         )}
                       </div>
                     </td>

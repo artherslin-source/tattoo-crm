@@ -56,6 +56,23 @@ type ContactDetail = {
   notes?: string | null;
   branch?: { id: string; name: string } | null;
   ownerArtistId?: string | null;
+  preferredArtistId?: string | null;
+  cartSnapshot?: {
+    items: Array<{
+      serviceId: string;
+      serviceName: string;
+      selectedVariants: Record<string, string>;
+      basePrice: number;
+      finalPrice: number;
+      estimatedDuration: number;
+      notes?: string;
+      referenceImages?: string[];
+    }>;
+    totalPrice: number;
+    totalDuration: number;
+    preferredDate?: string;
+  } | null;
+  cartTotalPrice?: number | null;
   ownerArtist?: { id: string; branchId?: string | null; branch?: { id: string; name: string } | null } | null;
 };
 
@@ -144,6 +161,7 @@ export default function AppointmentForm({
 
   const [lockedByOwner, setLockedByOwner] = useState(false);
   const [lockedOwnerArtistId, setLockedOwnerArtistId] = useState<string>("");
+  const [cartSnapshot, setCartSnapshot] = useState<ContactDetail['cartSnapshot'] | null>(null);
 
   const [formData, setFormData] = useState<AppointmentFormData>({
     userId: "",
@@ -219,6 +237,9 @@ export default function AppointmentForm({
       try {
         const c = await getJsonWithAuth<ContactDetail>(`/admin/contacts/${contactIdParam}`);
 
+        // 保存購物車快照
+        setCartSnapshot(c.cartSnapshot || null);
+
         // Always keep contactId so backend can link appointment -> contact.
         setFormData((prev) => ({
           ...prev,
@@ -227,9 +248,17 @@ export default function AppointmentForm({
           email: (c.email ?? prev.email) as string,
           phone: (c.phone ?? prev.phone) as string,
           notes: (c.notes ?? prev.notes) as string,
+          // 從購物車快照預填第一個服務
+          serviceId: c.cartSnapshot?.items?.[0]?.serviceId || prev.serviceId,
           // Keep branchId as-is for now; if ownerArtist exists we'll override to owner's branch once we can resolve it.
         }));
 
+        // 預填預約日期（從購物車快照）
+        if (c.cartSnapshot?.preferredDate) {
+          setAppointmentDate(c.cartSnapshot.preferredDate);
+        }
+
+        // 優先使用 ownerArtistId，其次 preferredArtistId
         if (c.ownerArtistId) {
           setLockedOwnerArtistId(c.ownerArtistId);
 
@@ -243,6 +272,12 @@ export default function AppointmentForm({
             ...prev,
             artistId: c.ownerArtistId as string,
             branchId: ownerBranchId || prev.branchId,
+          }));
+        } else if (c.preferredArtistId) {
+          // 客戶在結帳時選擇的刺青師
+          setFormData((prev) => ({
+            ...prev,
+            artistId: c.preferredArtistId as string,
           }));
         }
       } catch (e) {
@@ -582,6 +617,54 @@ export default function AppointmentForm({
                 </div>
               )}
             </div>
+
+            {/* 購物車內容顯示 */}
+            {cartSnapshot && cartSnapshot.items && cartSnapshot.items.length > 0 && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  購物車內容 ({cartSnapshot.items.length} 項)
+                </label>
+                <div className="border rounded-md divide-y">
+                  {cartSnapshot.items.map((item, index) => (
+                    <div key={index} className="p-3 space-y-2 bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{item.serviceName}</div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {Object.entries(item.selectedVariants || {})
+                              .filter(([_, value]) => value)
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join(' / ')}
+                          </div>
+                          {item.notes && (
+                            <div className="text-sm text-gray-500 mt-1">備註: {item.notes}</div>
+                          )}
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="font-semibold text-blue-600">
+                            NT$ {item.finalPrice.toLocaleString()}
+                          </div>
+                          {item.basePrice !== item.finalPrice && (
+                            <div className="text-xs text-gray-500 line-through">
+                              NT$ {item.basePrice.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="p-3 bg-blue-50 flex justify-between items-center">
+                    <span className="font-semibold text-gray-900">總計</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      NT$ {cartSnapshot.totalPrice.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">
+                  ℹ️ 此為客戶結帳時的購物車內容，預約完成後將依此建立帳單
+                </p>
+              </div>
+            )}
 
             {/* 客戶資訊 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
