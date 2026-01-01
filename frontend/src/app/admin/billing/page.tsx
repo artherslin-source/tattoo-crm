@@ -26,6 +26,8 @@ function isBillSortOrder(v: string): v is BillSortOrder {
 interface BillSummary {
   paidTotal: number;
   dueTotal: number;
+  artistAmount?: number;
+  shopAmount?: number;
 }
 
 interface BillRow {
@@ -176,6 +178,7 @@ export default function AdminBillingPage() {
   const [ruleArtistId, setRuleArtistId] = useState("");
   const [ruleBranchId, setRuleBranchId] = useState("");
   const [ruleArtistRatePct, setRuleArtistRatePct] = useState("70");
+  const [availableArtists, setAvailableArtists] = useState<Array<{ userId: string; displayName: string; branchId: string }>>([]);
 
   const fetchBills = useCallback(async () => {
     try {
@@ -331,18 +334,30 @@ export default function AdminBillingPage() {
     const run = async () => {
       try {
         const [branchesData, artistsData] = await Promise.all([
-          getJsonWithAuth<Array<{ id: string; name: string }>>("/branches"),
-          getJsonWithAuth<AdminArtistApiRow[]>("/admin/artists"),
+          getJsonWithAuth<Array<{ id: string; name: string }>>("/api/branches"),
+          getJsonWithAuth<AdminArtistApiRow[]>("/api/admin/artists"),
         ]);
         setBranches((branchesData || []).map((b) => ({ id: b.id, name: b.name })));
-        setArtists(
+        
+        const mappedArtists = (artistsData || [])
+          .map((a) => ({
+            id: a.id ?? a.user?.id ?? "",
+            name: a.name ?? a.user?.name ?? null,
+            branchName: a.branch?.name ?? null,
+          }))
+          .filter((a) => !!a.id);
+        
+        setArtists(mappedArtists);
+        
+        // 同時設置 availableArtists 供拆賬規則下拉選單使用
+        setAvailableArtists(
           (artistsData || [])
+            .filter((a) => a.user?.id && a.branch?.id)
             .map((a) => ({
-              id: a.id ?? a.user?.id ?? "",
-              name: a.name ?? a.user?.name ?? null,
-              branchName: a.branch?.name ?? null,
+              userId: a.user!.id!,
+              displayName: a.name || a.user!.name || a.user!.id!,
+              branchId: a.branch!.id!,
             }))
-            .filter((a) => !!a.id),
         );
       } catch (e) {
         console.warn("Failed to load branches/artists for billing filters", e);
@@ -371,7 +386,7 @@ export default function AdminBillingPage() {
   const onUpsertSplitRule = useCallback(async () => {
     if (userRole.toUpperCase() !== "BOSS") return;
     if (!ruleArtistId.trim()) {
-      setError("請輸入 artistId（User.id）");
+      setError("請選擇刺青師");
       return;
     }
     const pct = parseFloat(ruleArtistRatePct);
@@ -382,7 +397,7 @@ export default function AdminBillingPage() {
     const bps = Math.round(pct * 100);
     try {
       setError(null);
-      await postJsonWithAuth("/admin/billing/split-rules", {
+      await postJsonWithAuth("/api/admin/billing/split-rules", {
         artistId: ruleArtistId.trim(),
         branchId: ruleBranchId.trim() ? ruleBranchId.trim() : null,
         artistRateBps: bps,
@@ -633,6 +648,8 @@ export default function AdminBillingPage() {
                   <th className="py-2 pr-3">應收</th>
                   <th className="py-2 pr-3">已收</th>
                   <th className="py-2 pr-3">未收</th>
+                  <th className="py-2 pr-3">店家</th>
+                  <th className="py-2 pr-3">刺青師</th>
                   <th className="py-2 pr-3">狀態</th>
                   <th className="py-2 pr-3">操作</th>
                 </tr>
@@ -667,6 +684,8 @@ export default function AdminBillingPage() {
                     <td className="py-2 pr-3">${formatMoney(r.billTotal)}</td>
                     <td className="py-2 pr-3">${formatMoney(r.summary?.paidTotal || 0)}</td>
                     <td className="py-2 pr-3">${formatMoney(r.summary?.dueTotal || 0)}</td>
+                    <td className="py-2 pr-3">${formatMoney(r.summary?.shopAmount || 0)}</td>
+                    <td className="py-2 pr-3">${formatMoney(r.summary?.artistAmount || 0)}</td>
                     <td className="py-2 pr-3">{statusBadge(r.status)}</td>
                     <td className="py-2 pr-3">
                       <Button
@@ -684,7 +703,7 @@ export default function AdminBillingPage() {
                 ))}
                 {rows.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={9} className="py-6 text-center text-muted-foreground">
+                    <td colSpan={11} className="py-6 text-center text-muted-foreground">
                       目前沒有帳務資料（請先在預約完成後建立帳務）
                     </td>
                   </tr>
@@ -1071,16 +1090,43 @@ export default function AdminBillingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground">
-              新增一筆規則（branchId 留空表示全域）。比例以「刺青師%」輸入，店家% 會自動補成 100%。
+              新增一筆規則（branchId 會自動帶出）。比例以「刺青師%」輸入，店家% 會自動補成 100%。
             </div>
             <div className="flex flex-wrap gap-3 items-end">
               <div className="w-72">
-                <label className="text-xs text-muted-foreground">artistId（User.id）</label>
-                <Input value={ruleArtistId} onChange={(e) => setRuleArtistId(e.target.value)} placeholder="cm..." />
+                <label className="text-xs text-muted-foreground">刺青師</label>
+                <Select 
+                  value={ruleArtistId} 
+                  onValueChange={(value) => {
+                    setRuleArtistId(value);
+                    // 自動填充 branchId
+                    const selectedArtist = availableArtists.find(a => a.userId === value);
+                    if (selectedArtist) {
+                      setRuleBranchId(selectedArtist.branchId);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="請選擇刺青師" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableArtists.map((artist) => (
+                      <SelectItem key={artist.userId} value={artist.userId}>
+                        {artist.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="w-72">
-                <label className="text-xs text-muted-foreground">branchId（可選）</label>
-                <Input value={ruleBranchId} onChange={(e) => setRuleBranchId(e.target.value)} placeholder="cm... 或留空" />
+                <label className="text-xs text-muted-foreground">分店（自動）</label>
+                <Input 
+                  value={ruleBranchId} 
+                  readOnly 
+                  disabled
+                  className="bg-gray-100"
+                  placeholder="選擇刺青師後自動帶出" 
+                />
               </div>
               <div className="w-32">
                 <label className="text-xs text-muted-foreground">刺青師%</label>

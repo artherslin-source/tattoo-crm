@@ -7,18 +7,50 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Shield, Key, Smartphone, AlertTriangle } from "lucide-react";
+import { patchJsonWithAuth } from "@/lib/api";
 
 export default function ProfileSecurityPage() {
   const [changing, setChanging] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [passwords, setPasswords] = useState({
     current: "",
     new: "",
     confirm: "",
   });
 
-  const handleChangePassword = () => {
-    // TODO: 實現密碼修改
-    console.log("修改密碼:", passwords);
+  const handleChangePassword = async () => {
+    // 驗證
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      setError("請填寫所有欄位");
+      return;
+    }
+    if (passwords.new !== passwords.confirm) {
+      setError("新密碼與確認密碼不符");
+      return;
+    }
+    if (passwords.new.length < 6) {
+      setError("新密碼至少需要 6 個字元");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await patchJsonWithAuth("/api/users/me/password", {
+        oldPassword: passwords.current,
+        newPassword: passwords.new,
+      });
+      setSuccess("密碼修改成功");
+      setChanging(false);
+      setPasswords({ current: "", new: "", confirm: "" });
+    } catch (err: any) {
+      setError(err?.message || "密碼修改失敗");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,10 +72,24 @@ export default function ProfileSecurityPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-800 text-sm">
+              {success}
+            </div>
+          )}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm">
+              {error}
+            </div>
+          )}
           {!changing ? (
             <Button
               variant="outline"
-              onClick={() => setChanging(true)}
+              onClick={() => {
+                setChanging(true);
+                setError(null);
+                setSuccess(null);
+              }}
             >
               修改密碼
             </Button>
@@ -57,6 +103,7 @@ export default function ProfileSecurityPage() {
                   value={passwords.current}
                   onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
                   placeholder="請輸入目前密碼"
+                  disabled={loading}
                 />
               </div>
               <div>
@@ -67,6 +114,7 @@ export default function ProfileSecurityPage() {
                   value={passwords.new}
                   onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                   placeholder="請輸入新密碼"
+                  disabled={loading}
                 />
               </div>
               <div>
@@ -77,6 +125,7 @@ export default function ProfileSecurityPage() {
                   value={passwords.confirm}
                   onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                   placeholder="請再次輸入新密碼"
+                  disabled={loading}
                 />
               </div>
               <div className="flex gap-2">
@@ -85,15 +134,19 @@ export default function ProfileSecurityPage() {
                   onClick={() => {
                     setChanging(false);
                     setPasswords({ current: "", new: "", confirm: "" });
+                    setError(null);
+                    setSuccess(null);
                   }}
+                  disabled={loading}
                 >
                   取消
                 </Button>
                 <Button
                   onClick={handleChangePassword}
                   className="bg-blue-600 hover:bg-blue-700"
+                  disabled={loading}
                 >
-                  確認修改
+                  {loading ? "處理中..." : "確認修改"}
                 </Button>
               </div>
             </>

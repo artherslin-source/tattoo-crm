@@ -589,7 +589,12 @@ export class BillingService {
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
-        payments: { select: { amount: true } },
+        payments: { 
+          select: { 
+            amount: true,
+            allocations: { select: { target: true, amount: true } },
+          } 
+        },
       },
     });
 
@@ -600,11 +605,27 @@ export class BillingService {
 
     let rows = bills.map((b) => {
       const paidTotal = b.payments.reduce((s, p) => s + p.amount, 0);
+      
+      // 計算拆賬金額
+      let artistAmount = 0;
+      let shopAmount = 0;
+      for (const payment of b.payments) {
+        for (const alloc of payment.allocations) {
+          if (alloc.target === 'ARTIST') {
+            artistAmount += alloc.amount;
+          } else if (alloc.target === 'SHOP') {
+            shopAmount += alloc.amount;
+          }
+        }
+      }
+      
       return {
         ...b,
         summary: {
           paidTotal,
           dueTotal: b.billTotal - paidTotal,
+          artistAmount,
+          shopAmount,
         },
       };
     });

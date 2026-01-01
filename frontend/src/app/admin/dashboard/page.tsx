@@ -35,7 +35,10 @@ export default function AdminDashboardPage() {
       // /admin/stats is now BOSS-only; ARTIST dashboard uses workbench UI without these stats.
       const rawRole = getUserRole();
       const normalized = normalizeAccessRole(rawRole);
+      console.log('[Dashboard] User role:', { rawRole, normalized });
+      
       if (normalized !== 'BOSS') {
+        console.log('[Dashboard] Not BOSS, returning zero stats');
         return {
           totalUsers: 0,
           totalServices: 0,
@@ -51,7 +54,8 @@ export default function AdminDashboardPage() {
       if (selectedBranchId && selectedBranchId !== 'all') {
         params.append('branchId', selectedBranchId);
       }
-      const url = `/admin/stats${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/api/admin/stats${params.toString() ? `?${params.toString()}` : ''}`;
+      console.log('[Dashboard] Fetching stats from:', url);
       
       const dashboardData = await getJsonWithAuth<{
         users?: { total: number };
@@ -59,6 +63,8 @@ export default function AdminDashboardPage() {
         appointments?: { total: number; today: number };
         revenue?: { total: number; monthly: number };
       }>(url);
+      
+      console.log('[Dashboard] Stats received:', dashboardData);
 
       return {
         totalUsers: dashboardData.users?.total || 0,
@@ -69,7 +75,7 @@ export default function AdminDashboardPage() {
         monthlyRevenue: dashboardData.revenue?.monthly || 0,
       };
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
+      console.error('[Dashboard] Failed to fetch dashboard data:', err);
       return {
         totalUsers: 0,
         totalServices: 0,

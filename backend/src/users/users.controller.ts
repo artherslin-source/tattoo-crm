@@ -5,6 +5,7 @@ import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { BranchGuard } from '../common/guards/branch.guard';
 import { buildActorFromJwtUser } from '../common/access/access.types';
+import { AuthService } from '../auth/auth.service';
 
 interface UpdateUserDto {
   name?: string;
@@ -12,6 +13,11 @@ interface UpdateUserDto {
   avatarUrl?: string;
   bio?: string; // 刺青師介紹
   photoUrl?: string; // 刺青師照片
+}
+
+interface ChangePasswordDto {
+  oldPassword: string;
+  newPassword: string;
 }
 
 interface GetUsersQuery {
@@ -35,7 +41,10 @@ interface AdjustBalanceDto {
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Get('me')
   async me(@Req() req: any) {
@@ -55,6 +64,11 @@ export class UsersController {
   @Patch('me')
   async updateMe(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.updateMe(req.user.id, updateUserDto);
+  }
+
+  @Patch('me/password')
+  async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, dto.oldPassword, dto.newPassword);
   }
 
   @Get()

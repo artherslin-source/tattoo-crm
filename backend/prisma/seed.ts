@@ -22,10 +22,10 @@ async function main() {
   await prisma.appointmentBillItem.deleteMany();
   await prisma.appointmentBill.deleteMany();
   await prisma.completedService.deleteMany();
-  await prisma.appointment.deleteMany();
+    await prisma.appointment.deleteMany();
   await prisma.contact.deleteMany();
   await prisma.topupHistory.deleteMany();
-  await prisma.member.deleteMany();
+    await prisma.member.deleteMany();
   await prisma.user.deleteMany({ where: { role: 'MEMBER' } });
 
   // 2) Ensure at least one admin exists (for local dev convenience)
@@ -33,11 +33,11 @@ async function main() {
   const existingAdmin = await prisma.user.findFirst({ where: { role: { in: ['BOSS', 'SUPER_ADMIN', 'BRANCH_MANAGER'] } } });
   if (!existingAdmin && !PROTECT_REAL_DATA) {
     await prisma.user.create({
-      data: {
-        email: 'admin@test.com',
-        hashedPassword,
-        name: 'Super Admin',
-        role: 'BOSS',
+    data: {
+      email: 'admin@test.com',
+      hashedPassword,
+      name: 'Super Admin',
+      role: 'BOSS',
         phone: '0988666888',
       },
     });
@@ -126,7 +126,7 @@ async function main() {
     const endAt = new Date(startAt.getTime() + (service.durationMin || 120) * 60_000);
 
     const appointment = await prisma.appointment.create({
-      data: {
+        data: {
         branchId: branch.id,
         userId: m.userId,
         artistId: artist.id,
@@ -137,12 +137,12 @@ async function main() {
         status: faker.helpers.arrayElement(['CONFIRMED', 'COMPLETED', 'PENDING']) as any,
         notes: faker.lorem.sentence(),
         holdMin: 150,
-      },
-    });
+        },
+      });
 
     const billTotal = service.price;
     const bill = await prisma.appointmentBill.create({
-      data: {
+        data: {
         appointmentId: appointment.id,
         branchId: branch.id,
         customerId: m.userId,
@@ -167,20 +167,20 @@ async function main() {
             },
           ],
         },
-      },
-    });
+        },
+      });
 
     const payAmount = i % 3 === 0 ? Math.round(billTotal * 0.3) : billTotal;
     const payment = await prisma.payment.create({
-      data: {
+        data: {
         billId: bill.id,
         amount: payAmount,
         method: faker.helpers.arrayElement(['CASH', 'CARD', 'TRANSFER']),
         paidAt: faker.date.between({ from: startAt, to: new Date(startAt.getTime() + 10 * 86400_000) }),
         recordedById: admin.id,
         notes: null,
-      },
-    });
+        },
+      });
     const artistAmount = Math.round(payAmount * 0.7);
     const shopAmount = payAmount - artistAmount;
     await prisma.paymentAllocation.createMany({
@@ -199,7 +199,7 @@ async function main() {
     const amount = faker.number.int({ min: 3000, max: 30000 });
 
     const bill = await prisma.appointmentBill.create({
-      data: {
+        data: { 
         appointmentId: null,
         branchId: branch.id,
         customerId: null,
@@ -226,19 +226,19 @@ async function main() {
             },
           ],
         },
-      },
-    });
-
+        },
+      });
+      
     const payment = await prisma.payment.create({
-      data: {
+          data: {
         billId: bill.id,
-        amount,
+            amount,
         method: 'CASH',
         paidAt: new Date(),
         recordedById: admin.id,
         notes: null,
-      },
-    });
+          },
+        });
     const artistAmount = Math.round(amount * 0.7);
     await prisma.paymentAllocation.createMany({
       data: [

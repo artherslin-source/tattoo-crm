@@ -911,6 +911,15 @@ export default function AdminAppointmentsPage() {
                     <span className="text-text-muted-light dark:text-text-muted-dark">服務價格:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.service?.price ? formatCurrency(selectedAppointment.service.price) : 'N/A'}</span>
                   </div>
+                  {/* 顯示購物車總額（如果有） */}
+                  {selectedAppointment.cartSnapshot?.totalPrice && (
+                    <div>
+                      <span className="text-text-muted-light dark:text-text-muted-dark">購物車總額:</span>
+                      <span className="ml-2 font-semibold text-blue-600">
+                        {formatCurrency(selectedAppointment.cartSnapshot.totalPrice)}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <span className="text-text-muted-light dark:text-text-muted-dark">刺青師:</span>
                     <span className="ml-2 font-medium">{selectedAppointment.artist?.name || '未分配'}</span>
