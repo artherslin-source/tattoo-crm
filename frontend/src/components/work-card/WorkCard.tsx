@@ -38,7 +38,7 @@ export function WorkCard({
   return (
     <article className="group relative rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_24px_rgba(0,0,0,.35)] transition hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(0,0,0,.45)] sm:rounded-3xl">
       {selectable && (
-        <label className="absolute left-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] bg-[#0F1216]/90 backdrop-blur-md shadow-lg sm:left-4 sm:top-4 sm:h-9 sm:w-9">
+        <label className="absolute left-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] bg-[#B76E79]/90 backdrop-blur-md shadow-lg sm:left-4 sm:top-4 sm:h-9 sm:w-9">
           <input
             type="checkbox"
             checked={selected}
@@ -70,7 +70,7 @@ export function WorkCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/10 opacity-0 transition group-hover:opacity-100" />
 
         {(onEdit || onDelete || onCopyLink) && (
-          <div className="absolute top-2 right-2 flex translate-y-0 gap-1.5 opacity-100 transition sm:top-4 sm:right-4 sm:gap-2 lg:opacity-0 lg:translate-y-2 lg:group-hover:translate-y-0 lg:group-hover:opacity-100">
+          <div className="absolute top-2 right-2 flex translate-y-0 gap-1.5 opacity-100 transition sm:top-4 sm:right-4 sm:gap-2 xl:opacity-0 xl:translate-y-2 xl:group-hover:translate-y-0 xl:group-hover:opacity-100">
             {onEdit && (
               <button
                 type="button"
@@ -108,7 +108,7 @@ export function WorkCard({
       <div className="space-y-2 px-3 pb-3 pt-3 sm:space-y-3 sm:px-5 sm:pb-5 sm:pt-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="flex-1 text-sm font-semibold text-[var(--text)] line-clamp-1 sm:text-base">{item.title}</h3>
-          <span className="flex-shrink-0 rounded-full bg-[#1A1405] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand)] sm:px-3 sm:py-1 sm:text-xs">
+          <span className="flex-shrink-0 rounded-full bg-[#A85F69] px-2 py-0.5 text-[10px] font-semibold text-white sm:px-3 sm:py-1 sm:text-xs">
             {statusLabel}
           </span>
         </div>
