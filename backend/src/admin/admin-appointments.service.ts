@@ -11,8 +11,7 @@ export class AdminAppointmentsService {
     private readonly billing: BillingService,
   ) {}
 
-  // Policy: reschedule up to 2 times, must be >=24h before start
-  private rescheduleCutoffMs = 24 * 60 * 60 * 1000;
+  // Policy: reschedule up to 2 times, no time restriction (removed 24h cutoff)
   private rescheduleMaxCount = 2;
   private cancelCutoffMs = 24 * 60 * 60 * 1000;
   private maxHoldMin = 24 * 60; // 24h cap
@@ -528,10 +527,7 @@ export class AdminAppointmentsService {
       throw new BadRequestException('此預約狀態不可改期');
     }
 
-    const now = Date.now();
-    if (appointment.startAt.getTime() - now < this.rescheduleCutoffMs) {
-      throw new BadRequestException('改期需提前 24 小時以上');
-    }
+    // Removed 24-hour advance notice requirement - allow rescheduling anytime
     if ((appointment.rescheduleCount ?? 0) >= this.rescheduleMaxCount) {
       throw new BadRequestException(`最多可改期 ${this.rescheduleMaxCount} 次`);
     }
