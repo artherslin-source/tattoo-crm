@@ -480,7 +480,7 @@ export default function AdminDashboardPage() {
                   您今日的預約安排
                 </CardDescription>
               </div>
-              <Link href="/admin/appointments">
+              <Link href="/admin/calendar">
                 <Button variant="outline" size="sm">
                   <Eye className="mr-2 h-4 w-4" />
                   查看全部
