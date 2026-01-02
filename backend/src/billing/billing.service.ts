@@ -244,7 +244,16 @@ export class BillingService {
     const bill = await this.prisma.appointmentBill.findFirst({
       where: {
         id: billId,
-        ...(isBoss(actor) ? {} : { branchId: actor.branchId ?? undefined }),
+        ...(isBoss(actor)
+          ? {}
+          : isArtist(actor)
+            ? {
+                OR: [
+                  { artistId: actor.id },
+                  { billType: BILL_TYPE_STORED_VALUE_TOPUP, createdById: actor.id },
+                ],
+              }
+            : { branchId: actor.branchId ?? undefined }),
       },
       select: {
         id: true,
@@ -256,15 +265,6 @@ export class BillingService {
       },
     });
     if (!bill) throw new ForbiddenException('Insufficient permissions');
-    if (isArtist(actor)) {
-      // Normal bills: artist can only access own bills.
-      if (bill.artistId && bill.artistId === actor.id) return bill;
-
-      // Stored value topups/refunds: bill has no artistId; allow the artist who created it to read it.
-      if (bill.billType === BILL_TYPE_STORED_VALUE_TOPUP && bill.createdById === actor.id) return bill;
-
-      throw new ForbiddenException('Insufficient permissions');
-    }
     return bill;
   }
 
@@ -572,11 +572,18 @@ export class BillingService {
 
     if (isBoss(actor)) {
       if (query.branchId && query.branchId !== 'all') where.branchId = query.branchId;
+      if (query.artistId && query.artistId !== 'all') where.artistId = query.artistId;
+    } else if (isArtist(actor)) {
+      // ARTIST: only see bills where artistId = actor.id OR (stored value topup created by actor)
+      where.OR = [
+        { artistId: actor.id },
+        { billType: BILL_TYPE_STORED_VALUE_TOPUP, createdById: actor.id },
+      ];
     } else {
+      // Other roles: scope by branch
       where.branchId = actor.branchId ?? undefined;
+      if (query.artistId && query.artistId !== 'all') where.artistId = query.artistId;
     }
-
-    if (query.artistId && query.artistId !== 'all') where.artistId = query.artistId;
     if (query.status && query.status !== 'all') where.status = query.status as any;
     if (query.billType && query.billType !== 'all') {
       where.billType = query.billType as any;

@@ -32,13 +32,33 @@ export class AdminMembersService {
 
       // Scope rules:
       // - BOSS: can view all
-      // - ARTIST: only own branch + own customers (primaryArtistId)
+      // - ARTIST: assignment-first (primaryArtistId=actor.id), fallback to history if no assignments exist
       if (!filters?.actor) throw new BadRequestException('actor is required');
       if (!isBoss(filters.actor)) {
-        userWhere.branchId = filters.actor.branchId;
-        userWhere.primaryArtistId = filters.actor.id;
-        // ARTIST only manages customers (members)
-        userWhere.role = 'MEMBER';
+        // Check if there are any assigned members for this artist
+        const hasAssignedMembers = await this.prisma.user.count({
+          where: {
+            role: 'MEMBER',
+            branchId: filters.actor.branchId,
+            primaryArtistId: filters.actor.id,
+          },
+        });
+
+        if (hasAssignedMembers > 0) {
+          // Has assignments: use assignment-based scoping
+          userWhere.branchId = filters.actor.branchId;
+          userWhere.primaryArtistId = filters.actor.id;
+          userWhere.role = 'MEMBER';
+        } else {
+          // No assignments: fallback to history-based scoping
+          userWhere.branchId = filters.actor.branchId;
+          userWhere.role = 'MEMBER';
+          userWhere.OR = [
+            { appointments: { some: { artistId: filters.actor.id } } },
+            { completedServices: { some: { artistId: filters.actor.id } } },
+            { appointmentBills: { some: { artistId: filters.actor.id } } },
+          ];
+        }
       }
 
       // 搜尋條件
