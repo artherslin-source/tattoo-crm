@@ -263,6 +263,77 @@ export class ArtistController {
     return this.artistService.addPortfolioItem(artistId, data);
   }
 
+  @Post("portfolio/:id")
+  @UseInterceptors(FileInterceptor('image', {
+    storage: diskStorage({
+      destination: (req, file, callback) => {
+        const uploadPath = join(process.cwd(), 'uploads', 'portfolio');
+        if (!existsSync(uploadPath)) {
+          mkdirSync(uploadPath, { recursive: true });
+        }
+        callback(null, uploadPath);
+      },
+      filename: (req, file, callback) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        const filename = `${uniqueSuffix}${ext}`;
+        callback(null, filename);
+      },
+    }),
+    fileFilter: (req, file, callback) => {
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        return callback(new Error('只允許上傳圖片文件'), false);
+      }
+      callback(null, true);
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB
+    },
+  }))
+  async updatePortfolioItemWithUpload(
+    @Param('id') portfolioId: string,
+    @Body() body: {
+      title: string;
+      description?: string;
+      tags: string;
+    },
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req
+  ) {
+    const artistId = req.user.id;
+    
+    console.log('DEBUG updatePortfolioItemWithUpload body:', body);
+    console.log('DEBUG updatePortfolioItemWithUpload file:', file);
+    
+    // 解析 tags 字符串為數組
+    let tags: string[] = [];
+    try {
+      tags = JSON.parse(body.tags || '[]');
+    } catch (e) {
+      tags = [];
+    }
+    
+    const data: {
+      title?: string;
+      description?: string;
+      imageUrl?: string;
+      tags?: string[];
+    } = {
+      title: body.title || '',
+      description: body.description || '',
+      tags,
+    };
+    
+    // 只有在有上傳新圖片時才更新 imageUrl
+    if (file) {
+      data.imageUrl = `/uploads/portfolio/${file.filename}`;
+    }
+    
+    console.log('DEBUG updatePortfolioItemWithUpload data:', data);
+    
+    return this.artistService.updatePortfolioItem(portfolioId, data, artistId);
+  }
+
   @Patch("portfolio/:id")
   async updatePortfolioItem(
     @Param('id') portfolioId: string,
