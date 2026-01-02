@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
-import { getApiBase } from "@/lib/api";
 import Image from "next/image";
 
 interface ArtistPhotoUploadProps {
@@ -74,8 +73,8 @@ export function ArtistPhotoUpload({
       const formData = new FormData();
       formData.append('photo', file);
 
-      const backendUrl = getApiBase();
-      const uploadUrl = `${backendUrl}/admin/artists/upload-photo`;
+      // 使用同網域 /api rewrites，避免跨網域 CORS / host drift
+      const uploadUrl = `/api/admin/artists/upload-photo`;
       
       console.log('📤 開始上傳刺青師照片:', {
         url: uploadUrl,
@@ -97,6 +96,7 @@ export function ArtistPhotoUpload({
         },
         body: formData,
         signal: controller.signal,
+        credentials: "include",
       });
       
       clearTimeout(timeoutId);
@@ -170,11 +170,11 @@ export function ArtistPhotoUpload({
   // 優先顯示：預覽 > 新上傳的URL > 原有的URL
   const displayUrl = preview || uploadedUrl || currentPhotoUrl;
   
-  // 構建圖片URL：如果是 base64 data URL 或完整 HTTP URL，直接使用；否則拼接後端URL
-  const imageUrl = displayUrl 
-    ? (displayUrl.startsWith('http') || displayUrl.startsWith('data:') 
-        ? displayUrl 
-        : `${getApiBase()}${displayUrl}`)
+  // 構建圖片URL：優先走同網域 `/uploads/*` rewrites，避免 Next Image remotePatterns / CORS 問題
+  const imageUrl = displayUrl
+    ? (displayUrl.startsWith('http') || displayUrl.startsWith('data:')
+        ? displayUrl
+        : (displayUrl.startsWith('/') ? displayUrl : `/${displayUrl}`))
     : null;
 
   return (

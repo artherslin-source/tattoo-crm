@@ -58,7 +58,7 @@ export default function Sidebar({ open, onClose }: Props) {
         </div>
         <div className="flex flex-col gap-3">
           <ThemeToggle />
-          <Link href="/admin/profile" className="text-sm">👤 個人資料</Link>
+          <Link href="/profile" className="text-sm">👤 個人資料</Link>
           <button onClick={handleLogout} className="text-sm text-red-500 hover:underline">🚪 登出</button>
         </div>
       </aside>
@@ -94,7 +94,7 @@ export default function Sidebar({ open, onClose }: Props) {
               </nav>
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-neutral-700 flex flex-col gap-4">
                 <ThemeToggle />
-                <Link href="/admin/profile" onClick={onClose} className="text-sm">👤 個人資料</Link>
+                <Link href="/profile" onClick={onClose} className="text-sm">👤 個人資料</Link>
                 <button onClick={handleLogout} className="text-sm text-red-500 hover:underline">🚪 登出</button>
               </div>
             </div>
