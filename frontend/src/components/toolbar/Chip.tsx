@@ -21,9 +21,9 @@ export function Chip({ active, disabled, children, onClick, icon, className }: C
       disabled={disabled}
       className={cn(
         "px-2.5 h-8 rounded-full text-xs transition-colors whitespace-nowrap border flex items-center gap-1.5 flex-shrink-0",
-        "border-[var(--line)] bg-gray-800 text-white hover:border-[var(--accent)]/40 hover:bg-gray-700",
+        "border-[var(--line)] bg-amber-800 text-white hover:border-[var(--accent)]/40 hover:bg-amber-700",
         "sm:px-3 sm:h-9 sm:text-sm sm:gap-2",
-        active && "border-[var(--brand)]/60 bg-gray-900 text-white shadow-[0_6px_14px_rgba(0,0,0,.25)]",
+        active && "border-[var(--brand)]/60 bg-amber-900 text-white shadow-[0_6px_14px_rgba(0,0,0,.25)]",
         disabled && "opacity-60 cursor-not-allowed",
         className
       )}
