@@ -124,9 +124,8 @@ export default function LoginPage() {
       </div>
 
       {/* 玻璃卡片 */}
-      <div className="auth-card" role="dialog" aria-labelledby="authTitle">
+      <div className="auth-card" role="dialog">
         <div className="auth-logo login-logo">🌀 彫川紋身 CRM</div>
-        <h2 id="authTitle" className="auth-subtitle">登入管理後台</h2>
 
         {error && (
           <div className="mb-4 text-sm text-red-300 bg-red-500/20 border border-red-500/30 rounded-lg p-3" role="alert">
