@@ -118,7 +118,7 @@ export default function Navbar() {
 
                 {userRole === 'ARTIST' && (
                   <button
-                    onClick={() => router.push('/artist/dashboard')}
+                    onClick={() => router.push('/admin/dashboard')}
                     className={`${responsiveButtonBase} border border-transparent bg-green-600 text-white hover:bg-green-700 focus:ring-green-500`}
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +262,7 @@ export default function Navbar() {
                     {userRole === 'ARTIST' && (
                       <button
                         type="button"
-                        onClick={handleMobileNavigation(() => router.push('/artist/dashboard'))}
+                        onClick={handleMobileNavigation(() => router.push('/admin/dashboard'))}
                         className={`${mobileActionBase} border-white/20 bg-white/10 text-white focus-visible:ring-white/60`}
                       >
                         <span className="flex flex-col text-sm font-medium">
