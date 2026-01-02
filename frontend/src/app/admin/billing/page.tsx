@@ -343,7 +343,7 @@ export default function AdminBillingPage() {
         
         const mappedArtists = (artistsData || [])
           .map((a) => ({
-            id: a.id ?? a.user?.id ?? "",
+            id: a.user?.id ?? a.id ?? "",
             name: a.name ?? a.user?.name ?? null,
             branchName: a.branch?.name ?? null,
           }))
@@ -637,7 +637,7 @@ export default function AdminBillingPage() {
                     <SelectItem value="all">全部刺青師</SelectItem>
                     {artists.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
-                        {(a.name || a.id) + `（${a.branchName || "未分店"}）`}
+                        {(a.name || a.id) + `（${a.branchName || "無分店"}）`}
                       </SelectItem>
                     ))}
                   </SelectContent>
