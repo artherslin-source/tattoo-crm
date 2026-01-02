@@ -12,7 +12,13 @@ async function bootstrap() {
     return this.toString();
   };
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: true,
+  });
+  
+  // 增加請求主體大小限制（支援照片上傳）
+  app.use(require('express').json({ limit: '50mb' }));
+  app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
   
   // 信任反向代理（Railway 使用代理）
   if (process.env.NODE_ENV === 'production') {
