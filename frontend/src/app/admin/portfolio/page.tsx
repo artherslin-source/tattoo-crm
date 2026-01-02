@@ -1,30 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-// This page is deprecated. Redirect to /admin/portfolio
-function ArtistPortfolioRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/admin/portfolio");
-  }, [router]);
-
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-text-muted-light">正在跳轉...</p>
-      </div>
-    </div>
-  );
-}
-
-export default ArtistPortfolioRedirect;
-
-/* Original implementation below - moved to /admin/portfolio */
-/*
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -110,10 +85,10 @@ const getStatusLabel = (status?: string) => {
   }
 };
 
-function ArtistPortfolioContentOld() {
+function AdminArtistPortfolioContent() {
   const searchParams = useSearchParams();
   const artistId = searchParams.get("artistId");
-  const isAdminView = !!artistId; // 如果是管理員查看模式（有 artistId 參數）
+  const isAdminView = !!artistId;
 
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,7 +140,6 @@ function ArtistPortfolioContentOld() {
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
-      // 如果有 artistId 參數，使用管理員 API 獲取指定刺青師的作品
       const endpoint = artistId 
         ? `/admin/artists/${artistId}/portfolio`
         : "/artist/portfolio";
@@ -764,7 +738,7 @@ function ArtistPortfolioContentOld() {
   );
 }
 
-function ArtistPortfolioOld() {
+export default function AdminArtistPortfolioPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen w-full overflow-x-hidden bg-[var(--bg)] text-[var(--text)] flex items-center justify-center">
@@ -774,8 +748,8 @@ function ArtistPortfolioOld() {
         </div>
       </div>
     }>
-      <ArtistPortfolioContentOld />
+      <AdminArtistPortfolioContent />
     </Suspense>
   );
 }
-*/
+

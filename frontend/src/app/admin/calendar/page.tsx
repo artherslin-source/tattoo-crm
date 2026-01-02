@@ -1,28 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-// This page is deprecated. Redirect to /admin/calendar
-export default function ArtistCalendarRedirectPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/admin/calendar");
-  }, [router]);
-
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-text-muted-light">正在跳轉...</p>
-      </div>
-    </div>
-  );
-}
-
-/* Original implementation below - moved to /admin/calendar */
-/*
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +31,7 @@ function addDays(d: Date, days: number): Date {
   return x;
 }
 
-function ArtistCalendarPageOld() {
+export default function AdminArtistCalendarPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +46,7 @@ function ArtistCalendarPageOld() {
     const token = getAccessToken();
     const role = getUserRole();
     if (!token || !isArtistRole(role)) {
-      router.replace("/login?redirect=/artist/calendar");
+      router.replace("/login?redirect=/admin/calendar");
       return false;
     }
     return true;
@@ -144,4 +121,4 @@ function ArtistCalendarPageOld() {
     </div>
   );
 }
-*/
+

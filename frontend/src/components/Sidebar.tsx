@@ -21,6 +21,8 @@ export default function Sidebar({ open, onClose }: Props) {
   const navLinks: Array<{ href: string; label: string }> = isArtist
     ? [
         { href: "/admin/dashboard", label: "📊 刺青師工作台" },
+        { href: "/admin/calendar", label: "📆 週行程日曆" },
+        { href: "/admin/portfolio", label: "🖼️ 作品管理" },
         { href: "/admin/members", label: "👥 會員管理" },
         { href: "/admin/contacts", label: "💬 聯絡管理" },
         { href: "/admin/appointments", label: "📅 預約管理" },
