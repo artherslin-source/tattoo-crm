@@ -379,7 +379,11 @@ export default function ArtistWeekCalendar(props: {
     <div className="space-y-3">
       {toast ? <div className="text-sm text-gray-700">{toast}</div> : null}
 
-      <div className="rounded-lg border border-gray-200 bg-white p-2">
+      <div
+        className="rounded-lg border border-gray-200 bg-white p-2"
+        // react-big-calendar 需要固定高度，否則 Month/Agenda 會被壓扁只剩標題列
+        style={{ height: "min(720px, calc(100vh - 260px))", minHeight: 520 }}
+      >
         <DragAndDropCalendar
           localizer={localizer}
           date={view === "week" ? weekStart : currentDate}
