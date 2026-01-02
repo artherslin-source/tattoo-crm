@@ -181,13 +181,13 @@ export default function ArtistWeekCalendar(props: {
     setScheduleSubmitting(true);
     try {
       if (scheduleInitial.mode === "confirm") {
-        await postJsonWithAuth(`/admin/appointments/${scheduleInitial.appointmentId}/confirm-schedule`, {
+        await postJsonWithAuth(`/artist/appointments/${scheduleInitial.appointmentId}/confirm-schedule`, {
           startAt: input.startAt.toISOString(),
           holdMin: input.holdMin,
           reason: input.reason,
         });
       } else {
-        await patchJsonWithAuth(`/admin/appointments/${scheduleInitial.appointmentId}/reschedule`, {
+        await postJsonWithAuth(`/artist/appointments/${scheduleInitial.appointmentId}/reschedule`, {
           startAt: input.startAt.toISOString(),
           holdMin: input.holdMin,
           reason: input.reason,

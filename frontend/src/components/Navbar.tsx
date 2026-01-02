@@ -49,6 +49,11 @@ export default function Navbar() {
     return null;
   }
 
+  // 如果是刺青師後台頁面，不顯示導航列（避免與 ArtistLayout 側欄重疊）
+  if (pathname.startsWith('/artist')) {
+    return null;
+  }
+
   const handleReservationClick = () => {
     if (pathname === "/home") {
       document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" });

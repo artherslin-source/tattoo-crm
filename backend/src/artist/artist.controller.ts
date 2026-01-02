@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, Query, UseInterceptors, UploadedFile, BadRequestException } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ArtistService } from "./artist.service";
+import { AdminAppointmentsService } from "../admin/admin-appointments.service";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -12,7 +13,10 @@ import { extname, join } from "path";
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('ARTIST')
 export class ArtistController {
-  constructor(private readonly artistService: ArtistService) {}
+  constructor(
+    private readonly artistService: ArtistService,
+    private readonly adminAppointmentsService: AdminAppointmentsService,
+  ) {}
 
   // 1. 首頁 Dashboard
   @Get("dashboard")
@@ -111,6 +115,65 @@ export class ArtistController {
       artistId,
       appointmentId,
       preferredDate: body.preferredDate,
+      holdMin: body.holdMin,
+      reason: body.reason,
+    });
+  }
+
+  // 確認 INTENT 預約的正式時間（不計入改期次數）
+  @Post("appointments/:id/confirm-schedule")
+  async confirmSchedule(
+    @Param('id') appointmentId: string,
+    @Body() body: { startAt: string; holdMin?: number; reason?: string },
+    @Req() req
+  ) {
+    const actor = req.user;
+    if (!body?.startAt) {
+      throw new BadRequestException('startAt is required');
+    }
+    return this.adminAppointmentsService.confirmSchedule({
+      actor,
+      id: appointmentId,
+      startAt: new Date(body.startAt),
+      holdMin: body.holdMin,
+      reason: body.reason,
+    });
+  }
+
+  // 改期預約（計入改期次數）
+  @Post("appointments/:id/reschedule")
+  async reschedule(
+    @Param('id') appointmentId: string,
+    @Body() body: { startAt: string; endAt?: string; holdMin?: number; reason?: string },
+    @Req() req
+  ) {
+    const actor = req.user;
+    if (!body?.startAt) {
+      throw new BadRequestException('startAt is required');
+    }
+    
+    const startAt = new Date(body.startAt);
+    let endAt: Date;
+    
+    if (body.endAt) {
+      endAt = new Date(body.endAt);
+    } else if (body.holdMin) {
+      // 如果提供 holdMin，根據 startAt + holdMin 計算 endAt
+      endAt = new Date(startAt.getTime() + body.holdMin * 60000);
+    } else {
+      // 預設 150 分鐘
+      endAt = new Date(startAt.getTime() + 150 * 60000);
+    }
+    
+    if (startAt >= endAt) {
+      throw new BadRequestException('endAt must be after startAt');
+    }
+    
+    return this.adminAppointmentsService.reschedule({
+      actor,
+      id: appointmentId,
+      startAt,
+      endAt,
       holdMin: body.holdMin,
       reason: body.reason,
     });
