@@ -20,7 +20,11 @@ const nextConfig: NextConfig = {
 
     // 生產環境：重寫到 Railway 後端服務
     // 注意：管理後台所有 /api 與 /uploads 都應該走同網域 rewrites，避免跨網域 CORS 與 host drift
-    const backendUrl = "https://tattoo-crm-backend-production.up.railway.app";
+    // Railway 上不同專案/服務的 hostname 可能會變，優先用環境變數控制，避免寫死導致 Application not found
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "https://tattoo-crm-production-413f.up.railway.app";
     return [
       { source: "/api/:path*", destination: `${backendUrl}/:path*` },
       { source: "/uploads/:path*", destination: `${backendUrl}/uploads/:path*` },
