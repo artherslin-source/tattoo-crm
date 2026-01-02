@@ -1154,17 +1154,27 @@ export default function AdminBillingPage() {
                 <thead>
                   <tr className="text-left border-b bg-gray-50">
                     <th className="py-2 px-3">刺青師</th>
-                    <th className="py-2 px-3">刺青師%</th>
                     <th className="py-2 px-3">店家%</th>
+                    <th className="py-2 px-3">刺青師%</th>
                     <th className="py-2 px-3">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {splitRules.map((r) => {
-                    const editingPct = editingRules[r.id] || String(Math.round((r.artistRateBps || 0) / 100));
-                    const shopPct = 100 - parseFloat(editingPct || "0");
+                    const rawEditingPct = editingRules[r.id];
+                    const editingPct = rawEditingPct !== undefined ? rawEditingPct : String(Math.round((r.artistRateBps || 0) / 100));
+                    const editingPctNum = parseFloat(editingPct || "0");
+                    const shopPct = Number.isFinite(editingPctNum) && editingPct.trim() !== "" ? 100 - editingPctNum : null;
+                    
+                    // 從 artists state 查找分店名
+                    const artistInfo = artists.find(a => a.id === r.artistId);
+                    const branchLabel = artistInfo?.branchName || "無分店";
                     
                     const handleSave = async () => {
+                      if (!editingPct || editingPct.trim() === "") {
+                        setError("請輸入刺青師%");
+                        return;
+                      }
                       const pct = parseFloat(editingPct);
                       if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
                         setError("拆帳比例請輸入 0~100 的數字");
@@ -1191,9 +1201,9 @@ export default function AdminBillingPage() {
                     return (
                       <tr key={r.id} className="border-b hover:bg-gray-50">
                         <td className="py-2 px-3">
-                          {r.artist?.name || r.artistId}
-                          {r.branch?.name && `（${r.branch.name}）`}
+                          {r.artist?.name || r.artistId}（{branchLabel}）
                         </td>
+                        <td className="py-2 px-3">{shopPct !== null ? `${shopPct.toFixed(0)}%` : "—"}</td>
                         <td className="py-2 px-3">
                           <Input 
                             type="number"
@@ -1204,7 +1214,6 @@ export default function AdminBillingPage() {
                             onChange={(e) => setEditingRules(prev => ({ ...prev, [r.id]: e.target.value }))}
                           />
                         </td>
-                        <td className="py-2 px-3">{shopPct.toFixed(0)}%</td>
                         <td className="py-2 px-3 space-x-2">
                           <Button size="sm" onClick={handleSave} disabled={savingRuleId === r.id}>
                             {savingRuleId === r.id ? "儲存中..." : "儲存"}
