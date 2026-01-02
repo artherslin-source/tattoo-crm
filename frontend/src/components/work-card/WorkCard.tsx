@@ -70,7 +70,7 @@ export function WorkCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/10 opacity-0 transition group-hover:opacity-100" />
 
         {(onEdit || onDelete || onCopyLink) && (
-          <div className="absolute top-2 right-2 flex translate-y-2 gap-1.5 opacity-0 transition group-hover:translate-y-0 group-hover:opacity-100 sm:top-4 sm:right-4 sm:gap-2">
+          <div className="absolute top-2 right-2 flex translate-y-0 gap-1.5 opacity-100 transition sm:top-4 sm:right-4 sm:gap-2 lg:opacity-0 lg:translate-y-2 lg:group-hover:translate-y-0 lg:group-hover:opacity-100">
             {onEdit && (
               <button
                 type="button"

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   deleteJsonWithAuth,
-  getApiBase,
+  getImageUrl,
   getJsonWithAuth,
   postFormDataWithAuth,
 } from "@/lib/api";
@@ -115,10 +115,25 @@ function AdminArtistPortfolioContent() {
   const [deleteInput, setDeleteInput] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPortfolio();
   }, [artistId]);
+
+  // Cleanup image preview URL when image changes or component unmounts
+  useEffect(() => {
+    if (formData.image) {
+      const url = URL.createObjectURL(formData.image);
+      setImagePreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+        setImagePreviewUrl(null);
+      };
+    } else {
+      setImagePreviewUrl(null);
+    }
+  }, [formData.image]);
 
   useEffect(() => {
     const handler = window.setTimeout(() => setDebouncedSearch(searchInput), 300);
@@ -144,10 +159,9 @@ function AdminArtistPortfolioContent() {
         ? `/admin/artists/${artistId}/portfolio`
         : "/artist/portfolio";
       const data = await getJsonWithAuth<PortfolioItem[]>(endpoint);
-      const apiBase = getApiBase();
       const normalized = data.map((item) => ({
         ...item,
-        imageUrl: item.imageUrl?.startsWith("http") ? item.imageUrl : `${apiBase}${item.imageUrl}`,
+        imageUrl: getImageUrl(item.imageUrl),
         status: getStatusLabel(item.status),
       }));
       setPortfolioItems(normalized);
@@ -559,21 +573,27 @@ function AdminArtistPortfolioContent() {
 
                   <div className="space-y-4">
                     <span className="text-sm font-medium text-[var(--text)]">{editingItem ? "更換圖片" : "上傳圖片 *"}</span>
-                    <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line)] bg-[#0F1216] px-4 py-8 text-center transition hover:border-[var(--accent)]/40 sm:gap-4 sm:px-6 sm:py-10">
+                    <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-100 px-4 py-8 text-center transition hover:border-[var(--accent)]/40 sm:gap-4 sm:px-6 sm:py-10 cursor-pointer">
                       <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                      {formData.image ? (
-                        <>
-                          <ImageIcon className="h-10 w-10 text-[var(--muted)] sm:h-12 sm:w-12" />
-                          <div className="space-y-1 text-sm">
-                            <p className="text-[var(--text)] break-words px-2">{formData.image.name}</p>
-                            <p className="text-[var(--muted)]/70">檔案大小 {(formData.image.size / 1024 / 1024).toFixed(2)} MB</p>
+                      {formData.image && imagePreviewUrl ? (
+                        <div className="space-y-3 w-full">
+                          <div className="relative w-full aspect-[4/5] max-w-xs mx-auto rounded-xl overflow-hidden">
+                            <img 
+                              src={imagePreviewUrl} 
+                              alt="預覽圖片" 
+                              className="w-full h-full object-cover"
+                            />
                           </div>
-                        </>
+                          <div className="space-y-1 text-sm">
+                            <p className="text-gray-900 break-words px-2 font-medium">{formData.image.name}</p>
+                            <p className="text-gray-600">檔案大小 {(formData.image.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                        </div>
                       ) : (
                         <>
-                          <Camera className="h-10 w-10 text-[var(--muted)] sm:h-12 sm:w-12" />
-                          <p className="text-sm text-[var(--muted)] px-2">點擊選擇圖片或拖放到這裡</p>
-                          <p className="text-xs text-[var(--muted)]/70">支援 JPG、PNG，最大 5MB</p>
+                          <Camera className="h-10 w-10 text-gray-500 sm:h-12 sm:w-12" />
+                          <p className="text-sm text-gray-700 px-2">點擊選擇圖片或拖放到這裡</p>
+                          <p className="text-xs text-gray-500">支援 JPG、PNG，最大 5MB</p>
                         </>
                       )}
                     </label>
