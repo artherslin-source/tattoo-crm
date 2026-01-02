@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import moment from "moment";
 import { Calendar as RBCalendar, momentLocalizer } from "react-big-calendar";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
@@ -137,6 +137,8 @@ export default function ArtistWeekCalendar(props: {
   onWeekStartChange?: (next: Date) => void;
 }) {
   const { weekStart, businessHours, appointments, onRefresh, onWeekStartChange } = props;
+  const [view, setView] = useState<"month" | "week" | "day" | "agenda">("week");
+  const [currentDate, setCurrentDate] = useState<Date>(() => weekStart);
   const [toast, setToast] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleSubmitting, setScheduleSubmitting] = useState(false);
@@ -348,17 +350,29 @@ export default function ArtistWeekCalendar(props: {
     >;
   }, []);
 
-  const handleNavigate = (nextDate: unknown) => {
-    if (!onWeekStartChange) return;
-    const d = nextDate instanceof Date ? nextDate : new Date(String(nextDate));
-    if (Number.isNaN(d.getTime())) return;
-    // Align to Monday of the week
+  useEffect(() => {
+    setCurrentDate(weekStart);
+  }, [weekStart]);
+
+  const alignToMonday = (d: Date) => {
     const day = d.getDay(); // 0=Sun
     const diff = (day + 6) % 7;
     const monday = new Date(d);
     monday.setHours(0, 0, 0, 0);
     monday.setDate(monday.getDate() - diff);
-    onWeekStartChange(monday);
+    return monday;
+  };
+
+  const handleNavigate = (nextDate: unknown) => {
+    const d = nextDate instanceof Date ? nextDate : new Date(String(nextDate));
+    if (Number.isNaN(d.getTime())) return;
+    if (view === "week") {
+      const monday = alignToMonday(d);
+      setCurrentDate(monday);
+      onWeekStartChange?.(monday);
+      return;
+    }
+    setCurrentDate(d);
   };
 
   return (
@@ -368,8 +382,18 @@ export default function ArtistWeekCalendar(props: {
       <div className="rounded-lg border border-gray-200 bg-white p-2">
         <DragAndDropCalendar
           localizer={localizer}
-          date={weekStart}
-          view="week"
+          date={view === "week" ? weekStart : currentDate}
+          view={view}
+          onView={(v) => {
+            const next = String(v) as "month" | "week" | "day" | "agenda";
+            setView(next);
+            if (next === "week") {
+              const monday = alignToMonday(currentDate);
+              setCurrentDate(monday);
+              onWeekStartChange?.(monday);
+            }
+          }}
+          views={["month", "week", "day", "agenda"]}
           events={events}
           startAccessor="start"
           endAccessor="end"
