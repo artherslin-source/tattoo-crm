@@ -38,7 +38,7 @@ export function WorkCard({
   return (
     <article className="group relative rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_8px_24px_rgba(0,0,0,.35)] transition hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(0,0,0,.45)] sm:rounded-3xl">
       {selectable && (
-        <label className="absolute left-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] bg-[#B76E79]/90 backdrop-blur-md shadow-lg sm:left-4 sm:top-4 sm:h-9 sm:w-9">
+        <label className="absolute left-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)]/60 bg-[#B76E79]/60 backdrop-blur-md shadow-lg sm:left-4 sm:top-4 sm:h-9 sm:w-9">
           <input
             type="checkbox"
             checked={selected}
