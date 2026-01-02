@@ -55,8 +55,8 @@ export class AdminMembersService {
           userWhere.role = 'MEMBER';
           userWhere.OR = [
             { appointments: { some: { artistId: filters.actor.id } } },
-            { completedServices: { some: { artistId: filters.actor.id } } },
-            { appointmentBills: { some: { artistId: filters.actor.id } } },
+            { completedServicesAsCustomer: { some: { artistId: filters.actor.id } } },
+            { appointmentBillsAsCustomer: { some: { artistId: filters.actor.id } } },
           ];
         }
       }
