@@ -13,7 +13,27 @@ async function bootstrap() {
   };
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    bodyParser: true,
+    bodyParser: false, // 關閉內建 bodyParser，我們手動配置
+  });
+  
+  // CORS 配置必須在所有中間件之前
+  app.enableCors({
+    origin: true, // 允許所有來源（Railway 環境）
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Cache-Control',
+      'X-Requested-With',
+      'Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+    ],
+    exposedHeaders: ['Content-Length', 'Content-Type'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
   
   // 增加請求主體大小限制（支援照片上傳）
@@ -185,18 +205,6 @@ async function bootstrap() {
     if (!res.headersSent) {
       res.status(404).json({ error: 'File not found', path: req.path });
     }
-  });
-  
-  // CORS 配置 - 顯式允許 Railway 網域與本地開發
-  // 生產環境快速解法：反射請求來源（等同允許所有合法來源）
-  // 若需更嚴格控制，可改回白名單陣列
-  app.enableCors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Cache-Control'],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
   });
   
   // 在生產環境中，確保所有服務項目的圖片文件都存在並正確匹配

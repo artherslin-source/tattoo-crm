@@ -84,6 +84,11 @@ export function ArtistPhotoUpload({
       });
 
       const token = localStorage.getItem("accessToken");
+      
+      // 創建一個帶超時的 fetch 請求
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超時
+      
       const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
@@ -91,7 +96,10 @@ export function ArtistPhotoUpload({
           // 不要設置 Content-Type，讓瀏覽器自動設置 multipart/form-data boundary
         },
         body: formData,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       console.log('📥 上傳響應:', {
         status: response.status,
@@ -139,7 +147,11 @@ export function ArtistPhotoUpload({
       }
     } catch (error) {
       console.error('❌ 照片上傳錯誤:', error);
-      alert(error instanceof Error ? error.message : '照片上傳失敗，請重試');
+      if (error instanceof Error && error.name === 'AbortError') {
+        alert('上傳超時，請確認網路連線或嘗試上傳較小的圖片');
+      } else {
+        alert(error instanceof Error ? error.message : '照片上傳失敗，請重試');
+      }
       setPreview(null);
     } finally {
       setUploading(false);
