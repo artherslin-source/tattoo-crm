@@ -1190,7 +1190,10 @@ export default function AdminBillingPage() {
 
                     return (
                       <tr key={r.id} className="border-b hover:bg-gray-50">
-                        <td className="py-2 px-3">{r.artist?.name || r.artistId}</td>
+                        <td className="py-2 px-3">
+                          {r.artist?.name || r.artistId}
+                          {r.branch?.name && `（${r.branch.name}）`}
+                        </td>
                         <td className="py-2 px-3">
                           <Input 
                             type="number"

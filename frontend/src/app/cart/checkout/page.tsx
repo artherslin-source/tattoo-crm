@@ -127,11 +127,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (availableArtists.length > 0 && !formData.artistId) {
-      alert("請選擇刺青師");
-      return;
-    }
-
     setSubmitting(true);
     try {
       const result = await checkout({
@@ -218,9 +213,6 @@ export default function CheckoutPage() {
                     <Label className="flex items-center gap-1">
                       <Sparkles className="h-4 w-4" />
                       指定刺青師
-                      {availableArtists.length > 0 && (
-                        <span className="text-red-500">*</span>
-                      )}
                     </Label>
                     <Select
                       value={formData.artistId}
@@ -249,11 +241,9 @@ export default function CheckoutPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {formData.branchId && availableArtists.length === 0 && (
-                      <p className="mt-2 text-sm text-gray-500">
-                        此分店暫無刺青師，客服將於預約後協助安排。
-                      </p>
-                    )}
+                    <p className="mt-2 text-sm text-gray-500">
+                      您可以指定刺青師，或由客服協助安排。
+                    </p>
                   </div>
 
                   {/* 預約日期（C 路線：只送意向日期，不鎖時段） */}
