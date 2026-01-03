@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Money } from "@/components/Money";
 
 interface BillPayment {
   id: string;
@@ -175,19 +176,19 @@ export default function ProfilePaymentsPage() {
                     <div>
                       <div className="text-sm text-gray-600">帳單金額</div>
                       <div className="text-xl font-bold text-gray-900">
-                        NT$ {bill.billTotal.toLocaleString()}
+                        <Money amount={bill.billTotal} className="w-full" amountClassName="tabular-nums text-right" />
                       </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">已付</div>
                       <div className="text-xl font-bold text-blue-600">
-                        NT$ {bill.summary.paidTotal.toLocaleString()}
+                        <Money amount={bill.summary.paidTotal} className="w-full" amountClassName="tabular-nums text-right" />
                       </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">未付</div>
                       <div className="text-xl font-bold text-gray-900">
-                        NT$ {Math.max(0, bill.summary.dueTotal).toLocaleString()}
+                        <Money amount={Math.max(0, bill.summary.dueTotal)} className="w-full" amountClassName="tabular-nums text-right" />
                       </div>
                     </div>
                   </div>
@@ -215,7 +216,8 @@ export default function ProfilePaymentsPage() {
                                 </div>
                               </div>
                               <div className={`text-sm font-semibold ${p.amount >= 0 ? "text-green-700" : "text-red-700"}`}>
-                                {p.amount >= 0 ? "+" : "-"}NT$ {Math.abs(p.amount).toLocaleString()}
+                                {p.amount >= 0 ? "+" : "-"}
+                                <Money amount={Math.abs(p.amount)} className="ml-1" amountClassName="tabular-nums" />
                               </div>
                             </div>
                           ))}

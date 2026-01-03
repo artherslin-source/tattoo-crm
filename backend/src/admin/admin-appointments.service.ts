@@ -144,6 +144,13 @@ export class AdminAppointmentsService {
         artist: { select: { id: true, name: true } },
         branch: { select: { id: true, name: true } },
         bill: { select: { id: true, billTotal: true, status: true, billType: true } },
+        contact: {
+          select: {
+            id: true,
+            cartSnapshot: true,
+            cartTotalPrice: true,
+          },
+        },
       },
       orderBy,
     });

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, CheckCircle, XCircle, Clock, Eye, Trash2 } from "lucide-react";
+import { formatMoney } from "@/lib/money";
 
 interface Appointment {
   id: string;
@@ -13,6 +14,11 @@ interface Appointment {
   notes: string | null;
   createdAt: string;
   contactId?: string | null;
+  contact?: {
+    id: string;
+    cartSnapshot?: any | null;
+    cartTotalPrice?: number | null;
+  } | null;
   user: {
     id: string;
     name: string | null;
@@ -149,10 +155,7 @@ export default function AppointmentsCards({
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('zh-TW', {
-      style: 'currency',
-      currency: 'TWD',
-    }).format(amount);
+    return `$${formatMoney(amount)}`;
   };
 
   const getPreferredAmount = (appointment: Appointment): number | null => {
@@ -175,6 +178,10 @@ export default function AppointmentsCards({
       return Number.isFinite(n) ? n : null;
     }
     return null;
+  };
+
+  const getEffectiveCartSnapshot = (appointment: Appointment): any | null => {
+    return (appointment.cartSnapshot as any) ?? (appointment.contact?.cartSnapshot ?? null);
   };
 
   return (
@@ -215,10 +222,20 @@ export default function AppointmentsCards({
                   </div>
                   <div className="text-sm text-on-dark-subtle">
                     <div>{appointment.user?.name || '未設定'} ({appointment.user?.phone || 'N/A'})</div>
-                    {appointment.cartSnapshot && (appointment.cartSnapshot.items.length > 0 || !!appointment.cartSnapshot.totalPrice) ? (
-                      appointment.cartSnapshot.items.length > 0 ? (
+                    {(() => {
+                      const snap: any = getEffectiveCartSnapshot(appointment);
+                      const hasSnap = !!snap;
+                      const hasItems = Array.isArray(snap?.items) && snap.items.length > 0;
+                      const hasTotal = typeof snap?.totalPrice === "number" && snap.totalPrice > 0;
+                      return hasSnap && (hasItems || hasTotal);
+                    })() ? (
+                      (() => {
+                        const snap: any = getEffectiveCartSnapshot(appointment);
+                        return Array.isArray(snap?.items) && snap.items.length > 0;
+                      })() ? (
                         (() => {
-                          const item = appointment.cartSnapshot!.items[0];
+                          const snap: any = getEffectiveCartSnapshot(appointment);
+                          const item = snap.items[0];
                           const selectedVariants = (item.selectedVariants || {}) as Record<string, unknown>;
                           const color = typeof selectedVariants.color === "string" ? selectedVariants.color : null;
                           const designFee = toMoney(selectedVariants.design_fee);
@@ -243,7 +260,12 @@ export default function AppointmentsCards({
                         })()
                       ) : (
                         <div className="text-xs text-blue-400">
-                          購物車：{formatCurrency(appointment.cartSnapshot.totalPrice || 0)}
+                          購物車：
+                          {(() => {
+                            const snap: any = getEffectiveCartSnapshot(appointment);
+                            const total = typeof snap?.totalPrice === "number" ? snap.totalPrice : appointment.contact?.cartTotalPrice;
+                            return typeof total === "number" ? formatCurrency(total) : "—";
+                          })()}
                         </div>
                       )
                     ) : (

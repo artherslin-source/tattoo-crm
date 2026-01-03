@@ -17,6 +17,8 @@ import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
 import AppointmentForm from "@/components/appointments/AppointmentForm";
 import { hasAdminAccess } from "@/lib/access";
+import { Money } from "@/components/Money";
+import { formatMoney } from "@/lib/money";
 
 interface Appointment {
   id: string;
@@ -586,10 +588,7 @@ export default function AdminAppointmentsPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('zh-TW', {
-      style: 'currency',
-      currency: 'TWD',
-    }).format(amount);
+    return `$${formatMoney(amount)}`;
   };
 
   const effectiveDetailCart = useMemo(() => {
@@ -1012,7 +1011,7 @@ export default function AdminAppointmentsPage() {
                                   {serviceTitle}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {formatCurrency(servicePrice)}
+                                  <Money amount={servicePrice} className="w-full" amountClassName="tabular-nums text-right" />
                                 </div>
 
                                 {variants.length > 0 ? (
@@ -1031,13 +1030,17 @@ export default function AdminAppointmentsPage() {
                                 {customAddon !== null ? (
                                   <>
                                     <div className="text-xs text-gray-600 dark:text-gray-300">加購價</div>
-                                    <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(customAddon)}</div>
+                                    <div className="text-xs font-medium text-gray-900 dark:text-white">
+                                      <Money amount={customAddon} className="w-full" amountClassName="tabular-nums text-right" />
+                                    </div>
                                   </>
                                 ) : null}
                                 {designFee !== null ? (
                                   <>
                                     <div className="text-xs text-gray-600 dark:text-gray-300">設計費</div>
-                                    <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(designFee)}</div>
+                                    <div className="text-xs font-medium text-gray-900 dark:text-white">
+                                      <Money amount={designFee} className="w-full" amountClassName="tabular-nums text-right" />
+                                    </div>
                                   </>
                                 ) : null}
 
@@ -1060,7 +1063,9 @@ export default function AdminAppointmentsPage() {
                       </div>
                       <div>
                         <span className="text-text-muted-light dark:text-text-muted-dark">服務價格:</span>
-                        <span className="ml-2 font-medium">{selectedAppointment.service?.price ? formatCurrency(selectedAppointment.service.price) : 'N/A'}</span>
+                        <span className="ml-2 font-medium">
+                          {selectedAppointment.service?.price ? `$${formatMoney(selectedAppointment.service.price)}` : 'N/A'}
+                        </span>
                       </div>
                     </>
                   )}
@@ -1069,7 +1074,7 @@ export default function AdminAppointmentsPage() {
                     <div>
                       <span className="text-text-muted-light dark:text-text-muted-dark">購物車總額:</span>
                       <span className="ml-2 font-semibold text-blue-600">
-                        {formatCurrency(effectiveDetailCart.totalPrice)}
+                        <Money amount={effectiveDetailCart.totalPrice} amountClassName="tabular-nums" />
                       </span>
                     </div>
                   )}

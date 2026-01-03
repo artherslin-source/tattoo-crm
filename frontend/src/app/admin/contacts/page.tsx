@@ -8,6 +8,8 @@ import { MessageSquare, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Money } from "@/components/Money";
+import { formatMoney } from "@/lib/money";
 
 interface Contact {
   id: string;
@@ -267,7 +269,7 @@ export default function AdminContactsPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD" }).format(amount);
+    return `$${formatMoney(amount)}`;
   };
 
   const normalizeCartSnapshot = (raw: unknown, cartTotalPrice?: number | null): CartSnapshot => {
@@ -503,7 +505,7 @@ export default function AdminContactsPage() {
                         )}
                         {contact.cartTotalPrice && (
                           <div className="text-sm text-blue-600 font-medium mt-1">
-                            購物車: NT$ {contact.cartTotalPrice.toLocaleString()}
+                            購物車: ${formatMoney(contact.cartTotalPrice)}
                           </div>
                         )}
                       </div>
@@ -650,7 +652,9 @@ export default function AdminContactsPage() {
                   {typeof snap.totalPrice === "number" ? (
                     <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/40">
                       <div className="text-sm text-text-muted-light dark:text-text-muted-dark">購物車總額</div>
-                      <div className="text-xl font-bold text-blue-600">{formatCurrency(snap.totalPrice)}</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        <Money amount={snap.totalPrice} className="w-full" amountClassName="tabular-nums text-right" />
+                      </div>
                     </div>
                   ) : null}
 
@@ -690,7 +694,7 @@ export default function AdminContactsPage() {
                                   {serviceTitle}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {formatCurrency(servicePrice)}
+                                  <Money amount={servicePrice} className="w-full" amountClassName="tabular-nums text-right" />
                                 </div>
 
                                 {variants.length > 0 ? (
@@ -709,13 +713,17 @@ export default function AdminContactsPage() {
                                 {customAddon !== null ? (
                                   <>
                                     <div className="text-xs text-gray-600 dark:text-gray-300">加購價</div>
-                                    <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(customAddon)}</div>
+                                    <div className="text-xs font-medium text-gray-900 dark:text-white">
+                                      <Money amount={customAddon} className="w-full" amountClassName="tabular-nums text-right" />
+                                    </div>
                                   </>
                                 ) : null}
                                 {designFee !== null ? (
                                   <>
                                     <div className="text-xs text-gray-600 dark:text-gray-300">設計費</div>
-                                    <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(designFee)}</div>
+                                    <div className="text-xs font-medium text-gray-900 dark:text-white">
+                                      <Money amount={designFee} className="w-full" amountClassName="tabular-nums text-right" />
+                                    </div>
                                   </>
                                 ) : null}
 
