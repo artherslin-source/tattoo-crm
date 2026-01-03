@@ -675,7 +675,8 @@ export default function AdminContactsPage() {
                             .filter(([k, v]) => k !== "design_fee" && k !== "custom_addon")
                             .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "");
 
-                          const basePrice = typeof it.basePrice === "number" ? it.basePrice : null;
+                          const rawFinal = typeof it.finalPrice === "number" ? it.finalPrice : (typeof it.basePrice === "number" ? it.basePrice : 0);
+                          const servicePrice = Math.max(0, rawFinal - (designFee ?? 0) - (customAddon ?? 0));
                           return (
                             <div
                               key={`${it.serviceId || "item"}-${idx}`}
@@ -721,7 +722,7 @@ export default function AdminContactsPage() {
                                   ) : null}
                                 </div>
                                 <div className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
-                                  {basePrice !== null ? formatCurrency(basePrice) : "—"}
+                                  {formatCurrency(servicePrice)}
                                 </div>
                               </div>
                             </div>
