@@ -13,6 +13,7 @@ import { Users, ArrowLeft, Plus } from "lucide-react";
 import MembersToolbar from "@/components/admin/MembersToolbar";
 import MembersTable from "@/components/admin/MembersTable";
 import MembersCards from "@/components/admin/MembersCards";
+import { formatMembershipLevel } from "@/lib/membership";
 
 interface Member {
   id: string;
@@ -1075,9 +1076,10 @@ export default function AdminMembersPage() {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:bg-gray-700 dark:text-text-primary-dark"
                   >
                     <option value="">（未設定）</option>
-                    <option value="Silver">Silver</option>
-                    <option value="Gold">Gold</option>
-                    <option value="Platinum">Platinum</option>
+                    <option value="Bronze">{formatMembershipLevel("Bronze")}</option>
+                    <option value="Silver">{formatMembershipLevel("Silver")}</option>
+                    <option value="Gold">{formatMembershipLevel("Gold")}</option>
+                    <option value="Platinum">{formatMembershipLevel("Platinum")}</option>
                   </select>
                 </div>
               </div>

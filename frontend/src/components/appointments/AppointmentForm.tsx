@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { postJsonWithAuth, getJsonWithAuth, ApiError, getAccessToken } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
+import { formatMembershipLevel } from "@/lib/membership";
 
 // 規格欄位名稱中文對照
 const VARIANT_LABEL_MAP: Record<string, string> = {
@@ -610,7 +611,7 @@ export default function AppointmentForm({
                           </div>
                           <div className="text-xs text-gray-500">
                             {m.user.branch?.name ? `分店：${m.user.branch.name}` : "分店：未設定"}
-                            {m.membershipLevel ? ` ・ 等級：${m.membershipLevel}` : ""}
+                            {m.membershipLevel ? ` ・ 等級：${formatMembershipLevel(m.membershipLevel)}` : ""}
                           </div>
                         </button>
                       ))}
@@ -624,7 +625,7 @@ export default function AppointmentForm({
                   </div>
                   <div className="text-xs text-gray-500">
                     {selectedMember.user.branch?.name ? `分店：${selectedMember.user.branch.name}` : "分店：未設定"}
-                    {selectedMember.membershipLevel ? ` ・ 等級：${selectedMember.membershipLevel}` : ""}
+                    {selectedMember.membershipLevel ? ` ・ 等級：${formatMembershipLevel(selectedMember.membershipLevel)}` : ""}
                   </div>
                 </div>
               )}

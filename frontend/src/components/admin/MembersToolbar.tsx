@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { formatMembershipLevel } from "@/lib/membership";
 
 interface Branch {
   id: string;
@@ -96,10 +97,10 @@ export default function MembersToolbar({
               </SelectTrigger>
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部等級</SelectItem>
-                <SelectItem value="Bronze">Bronze</SelectItem>
-                <SelectItem value="Silver">Silver</SelectItem>
-                <SelectItem value="Gold">Gold</SelectItem>
-                <SelectItem value="Platinum">Platinum</SelectItem>
+                <SelectItem value="Bronze">{formatMembershipLevel("Bronze")}</SelectItem>
+                <SelectItem value="Silver">{formatMembershipLevel("Silver")}</SelectItem>
+                <SelectItem value="Gold">{formatMembershipLevel("Gold")}</SelectItem>
+                <SelectItem value="Platinum">{formatMembershipLevel("Platinum")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -202,10 +203,10 @@ export default function MembersToolbar({
               </SelectTrigger>
               <SelectContent className="bg-white/85">
                 <SelectItem value="all">全部等級</SelectItem>
-                <SelectItem value="Bronze">Bronze</SelectItem>
-                <SelectItem value="Silver">Silver</SelectItem>
-                <SelectItem value="Gold">Gold</SelectItem>
-                <SelectItem value="Platinum">Platinum</SelectItem>
+                <SelectItem value="Bronze">{formatMembershipLevel("Bronze")}</SelectItem>
+                <SelectItem value="Silver">{formatMembershipLevel("Silver")}</SelectItem>
+                <SelectItem value="Gold">{formatMembershipLevel("Gold")}</SelectItem>
+                <SelectItem value="Platinum">{formatMembershipLevel("Platinum")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -348,10 +349,10 @@ export default function MembersToolbar({
                   </SelectTrigger>
                   <SelectContent className="bg-white/85">
                     <SelectItem value="all">全部等級</SelectItem>
-                    <SelectItem value="Bronze">Bronze</SelectItem>
-                    <SelectItem value="Silver">Silver</SelectItem>
-                    <SelectItem value="Gold">Gold</SelectItem>
-                    <SelectItem value="Platinum">Platinum</SelectItem>
+                    <SelectItem value="Bronze">{formatMembershipLevel("Bronze")}</SelectItem>
+                    <SelectItem value="Silver">{formatMembershipLevel("Silver")}</SelectItem>
+                    <SelectItem value="Gold">{formatMembershipLevel("Gold")}</SelectItem>
+                    <SelectItem value="Platinum">{formatMembershipLevel("Platinum")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

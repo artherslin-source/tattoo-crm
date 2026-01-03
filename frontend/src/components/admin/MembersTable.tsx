@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, DollarSign, ShoppingCart, Wallet, History, Key, Trash2 } from "lucide-react";
 import { hasAdminAccess } from "@/lib/access";
+import { formatMembershipLevel } from "@/lib/membership";
 
 interface Member {
   id: string;
@@ -122,7 +123,7 @@ export default function MembersTable({
 
                 <td className="px-4 py-3 lg:table-cell hidden" data-label="會員等級">
                   <span className={`rounded-full px-2 py-0.5 text-xs ${getLevelBadgeClass(member.membershipLevel)}`}>
-                    {member.membershipLevel || '未設定'}
+                    {formatMembershipLevel(member.membershipLevel)}
                   </span>
                 </td>
 
