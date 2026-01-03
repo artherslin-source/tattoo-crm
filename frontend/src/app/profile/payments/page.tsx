@@ -42,6 +42,20 @@ const statusColors: Record<string, string> = {
   VOID: "bg-gray-100 text-gray-800",
 };
 
+const statusLabels: Record<string, string> = {
+  OPEN: "未結清",
+  SETTLED: "已結清",
+  VOID: "作廢",
+};
+
+const paymentMethodLabels: Record<string, string> = {
+  CASH: "現金",
+  CARD: "刷卡",
+  TRANSFER: "轉帳",
+  STORED_VALUE: "儲值金",
+  OTHER: "其他",
+};
+
 export default function ProfilePaymentsPage() {
   const [bills, setBills] = useState<BillRow[]>([]);
   const [expandedBillIds, setExpandedBillIds] = useState<Record<string, boolean>>({});
@@ -107,6 +121,7 @@ export default function ProfilePaymentsPage() {
           {bills.map((bill) => {
             const expanded = !!expandedBillIds[bill.id];
             const statusColor = statusColors[bill.status] || "bg-gray-100 text-gray-800";
+            const statusLabel = statusLabels[bill.status] || bill.status;
             const billTypeLabel = billTypeLabels[bill.billType] || bill.billType;
             return (
               <Card key={bill.id}>
@@ -133,7 +148,7 @@ export default function ProfilePaymentsPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Badge className={statusColor}>{bill.status}</Badge>
+                      <Badge className={statusColor}>{statusLabel}</Badge>
                       <Button
                         variant="outline"
                         size="sm"
@@ -195,7 +210,7 @@ export default function ProfilePaymentsPage() {
                                   {formatDateTime(p.paidAt)}
                                 </div>
                                 <div className="text-xs text-gray-600 mt-1">
-                                  方式：{p.method}
+                                  方式：{paymentMethodLabels[p.method] || p.method}
                                   {p.notes ? `｜備註：${p.notes}` : ""}
                                 </div>
                               </div>
