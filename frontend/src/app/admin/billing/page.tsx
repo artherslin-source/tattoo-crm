@@ -543,7 +543,8 @@ export default function AdminBillingPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(objectUrl);
+      // Delay revocation to avoid occasional truncated downloads on some browsers
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "下載 Excel 失敗");

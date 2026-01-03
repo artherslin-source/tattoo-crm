@@ -120,7 +120,7 @@ export class AdminBillingController {
 
   // Export bills as .xlsx (BOSS only)
   @Get('bills/export.xlsx')
-  async exportBillsXlsx(@Actor() actor: AccessActor, @Query() query: any, @Res({ passthrough: true }) res: Response) {
+  async exportBillsXlsx(@Actor() actor: AccessActor, @Query() query: any, @Res() res: Response) {
     const buf = await this.billing.exportBillsXlsx(actor, {
       branchId: query.branchId,
       artistId: query.artistId,
@@ -147,7 +147,10 @@ export class AdminBillingController {
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);
-    return buf;
+    res.setHeader('Content-Length', String(buf.length));
+    res.setHeader('Cache-Control', 'no-store');
+    // IMPORTANT: use res.send(Buffer) to avoid Nest/Express JSON-serializing Buffer into { type: 'Buffer', data: [...] }
+    res.status(200).send(buf);
   }
 
   // Create non-appointment / manual bill
