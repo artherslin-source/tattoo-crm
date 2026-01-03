@@ -467,6 +467,34 @@ export default function AdminBillingPage() {
     }
   }, [userRole, fetchBills, selected, openDetail]);
 
+  const onSyncBillsFromCart = useCallback(async () => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    if (!confirm("確定要同步「應收金額=購物車總額」嗎？\n\n此操作會批次重建所有不一致的帳單（已收不變、未收會跟著調整）。")) {
+      return;
+    }
+    try {
+      setError(null);
+      setLoading(true);
+      const result = await postJsonWithAuth<{
+        total: number;
+        rebuilt: number;
+        skipped: number;
+        errors: number;
+        rebuiltBillIds?: string[];
+      }>("/admin/billing/bills/rebuild-batch", {});
+      alert(`同步完成！\n掃描：${result.total}\n已更新：${result.rebuilt}\n跳過：${result.skipped}\n錯誤：${result.errors}`);
+      await fetchBills();
+      if (selected) {
+        await openDetail(selected.id);
+      }
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "同步購物車金額失敗");
+    } finally {
+      setLoading(false);
+    }
+  }, [userRole, fetchBills, selected, openDetail]);
+
   const totals = useMemo(() => {
     const billTotal = rows.reduce((s, r) => s + r.billTotal, 0);
     const paidTotal = rows.reduce((s, r) => s + (r.summary?.paidTotal || 0), 0);
@@ -558,6 +586,11 @@ export default function AdminBillingPage() {
         <div className="flex gap-2">
           {userRole.toUpperCase() === "BOSS" && (
             <Button onClick={() => setCreateOpen(true)}>新增非預約帳單</Button>
+          )}
+          {userRole.toUpperCase() === "BOSS" && (
+            <Button variant="outline" onClick={onSyncBillsFromCart} disabled={loading}>
+              同步購物車金額（回填不一致）
+            </Button>
           )}
           <Button variant="outline" onClick={fetchBills} disabled={loading}>
             {loading ? "載入中..." : "重新整理"}
