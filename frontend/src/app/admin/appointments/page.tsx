@@ -84,6 +84,13 @@ function getAppointmentDurationMin(apt: Appointment): number {
   return Number.isFinite(diff) && diff > 0 ? Math.round(diff) : 60;
 }
 
+const cartVariantKeyLabels: Record<string, string> = {
+  side: "左右半邊",
+  color: "顏色",
+  design_fee: "設計費",
+  custom_addon: "加購",
+};
+
 export default function AdminAppointmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -582,6 +589,24 @@ export default function AdminAppointmentsPage() {
     }).format(amount);
   };
 
+  const formatCartVariantValue = (v: unknown) => {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "number") return formatCurrency(v);
+    if (typeof v === "string") {
+      const trimmed = v.trim();
+      // 如果是純數字字串（設計費/加購常見），也用金額格式
+      if (/^-?\d+(\.\d+)?$/.test(trimmed)) return formatCurrency(Number(trimmed));
+      return trimmed;
+    }
+    if (typeof v === "boolean") return v ? "是" : "否";
+    if (Array.isArray(v)) return v.map((x) => String(x)).join("、");
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -877,10 +902,6 @@ export default function AdminAppointmentsPage() {
                     <span className="text-text-muted-light dark:text-text-muted-dark">結束時間:</span>
                     <span className="ml-2 font-medium">{formatDate(selectedAppointment.endAt)}</span>
                   </div>
-                      <div>
-                    <span className="text-text-muted-light dark:text-text-muted-dark">服務時長:</span>
-                    <span className="ml-2 font-medium">{selectedAppointment.service?.durationMin || 'N/A'} 分鐘</span>
-                        </div>
                         </div>
                       </div>
 
@@ -903,14 +924,66 @@ export default function AdminAppointmentsPage() {
               <div className="space-y-2">
                 <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">服務資訊</h4>
                 <div className="space-y-1 text-sm">
-                  <div>
-                    <span className="text-text-muted-light dark:text-text-muted-dark">服務項目:</span>
-                    <span className="ml-2 font-medium">{selectedAppointment.service?.name || '未設定'}</span>
-                  </div>
-                  <div>
-                    <span className="text-text-muted-light dark:text-text-muted-dark">服務價格:</span>
-                    <span className="ml-2 font-medium">{selectedAppointment.service?.price ? formatCurrency(selectedAppointment.service.price) : 'N/A'}</span>
-                  </div>
+                  {selectedAppointment.cartSnapshot?.items?.length ? (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        購物車項目（{selectedAppointment.cartSnapshot.items.length} 項）
+                      </div>
+                      <div className="space-y-2">
+                        {selectedAppointment.cartSnapshot.items.map((it, idx) => {
+                          const variants = it.selectedVariants && typeof it.selectedVariants === "object"
+                            ? Object.entries(it.selectedVariants as Record<string, unknown>)
+                                .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+                            : [];
+                          return (
+                            <div
+                              key={`${it.serviceId || "item"}-${idx}`}
+                              className="rounded-md border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-700 dark:bg-gray-800/40"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="font-medium text-gray-900 dark:text-white">
+                                    {it.serviceName || "服務"}
+                                  </div>
+                                  {variants.length > 0 && (
+                                    <div className="mt-1 text-xs text-gray-700 dark:text-gray-200 space-y-0.5">
+                                      {variants.map(([k, v]) => (
+                                        <div key={k}>
+                                          <span className="text-gray-600 dark:text-gray-300">
+                                            {cartVariantKeyLabels[k] || k}：
+                                          </span>
+                                          <span className="ml-1">{formatCartVariantValue(v) || "—"}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {it.notes ? (
+                                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                                      備註：{it.notes}
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <div className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                                  {formatCurrency(it.finalPrice ?? it.basePrice ?? 0)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="text-text-muted-light dark:text-text-muted-dark">服務項目:</span>
+                        <span className="ml-2 font-medium">{selectedAppointment.service?.name || '未設定'}</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted-light dark:text-text-muted-dark">服務價格:</span>
+                        <span className="ml-2 font-medium">{selectedAppointment.service?.price ? formatCurrency(selectedAppointment.service.price) : 'N/A'}</span>
+                      </div>
+                    </>
+                  )}
                   {/* 顯示購物車總額（如果有） */}
                   {selectedAppointment.cartSnapshot?.totalPrice && (
                     <div>
