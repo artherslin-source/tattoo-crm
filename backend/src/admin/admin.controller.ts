@@ -31,7 +31,7 @@ export class AdminController {
   @Get('stats')
   async getStats(@Req() req: any, @Query('branchId') queryBranchId?: string) {
     // 使用快取
-    const cacheKey = `dashboard:stats:${req.user.role}:${queryBranchId || req.user.branchId || 'all'}`;
+    const cacheKey = `dashboard:stats:v2:${req.user.role}:${queryBranchId || req.user.branchId || 'all'}`;
     
     return this.cacheService.getOrSet(
       cacheKey,
@@ -143,9 +143,18 @@ export class AdminController {
       // 4. 營收統計
       (async () => {
         try {
+          // 定義：歷史累計所有「已收款項」
+          // - 只計入正向收款（amount > 0），排除退款/沖帳
+          // - 排除作廢帳單（bill.status != VOID）
+          // - 分店篩選以帳單的 branchId 為準
+          const billFilter: any = {
+            status: { not: 'VOID' },
+            ...(whereCondition.branchId ? { branchId: whereCondition.branchId } : {}),
+          };
+
           const paymentWhere: any = {
-            paidAt: { not: null },
-            ...(whereCondition.branchId ? { bill: { branchId: whereCondition.branchId } } : {}),
+            amount: { gt: 0 },
+            bill: { is: billFilter },
           };
 
           const totalRevenue = await this.prisma.payment.aggregate({
