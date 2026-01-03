@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Money } from "@/components/Money";
+import { buildBillItemBreakdown } from "@/lib/billing-breakdown";
 
 type BillStatus = "OPEN" | "SETTLED" | "VOID";
 type BillSortField = "createdAt" | "billTotal" | "paidTotal" | "dueTotal";
@@ -1171,6 +1173,54 @@ export default function AdminBillingPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              <div>
+                <div className="font-medium mb-2">購物車拆分明細</div>
+                {selected.items.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">無可用的購物車明細（items 為空）。</div>
+                ) : (
+                  <div className="space-y-3">
+                    {selected.items.map((it) => {
+                      const bd = buildBillItemBreakdown({
+                        nameSnapshot: it.nameSnapshot,
+                        finalPriceSnapshot: it.finalPriceSnapshot,
+                        variantsSnapshot: it.variantsSnapshot,
+                      });
+                      return (
+                        <div key={`breakdown-${it.id}`} className="rounded-md border border-gray-200 bg-white p-3">
+                          <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-1">
+                            <div className="font-medium text-gray-900">{bd.serviceName}</div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              <Money amount={bd.finalPrice} className="w-full" amountClassName="tabular-nums text-right" />
+                            </div>
+
+                            <div className="text-xs text-gray-600 pl-0.5">服務價</div>
+                            <div className="text-xs font-medium text-gray-900">
+                              <Money amount={bd.servicePrice} className="w-full" amountClassName="tabular-nums text-right" />
+                            </div>
+
+                            {bd.addons.map((a) => (
+                              <div key={`${it.id}-${a.key}`} className="contents">
+                                <div className="text-xs text-gray-600 pl-0.5">{a.label}</div>
+                                <div className="text-xs font-medium text-gray-900">
+                                  <Money amount={a.amount} className="w-full" amountClassName="tabular-nums text-right" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <div className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-sm font-medium text-gray-900">購物車總額</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        <Money amount={selected.billTotal} className="w-full" amountClassName="tabular-nums text-right" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
