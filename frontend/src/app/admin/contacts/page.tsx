@@ -673,6 +673,7 @@ export default function AdminContactsPage() {
                           const customAddon = toMoney(selectedVariants.custom_addon);
                           const variants = Object.entries(selectedVariants)
                             .filter(([k, v]) => k !== "design_fee" && k !== "custom_addon")
+                            .filter(([k]) => k !== "color") // 標題已含顏色，避免重複
                             .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "");
 
                           const rawFinal = typeof it.finalPrice === "number" ? it.finalPrice : (typeof it.basePrice === "number" ? it.basePrice : 0);

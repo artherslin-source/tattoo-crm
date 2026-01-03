@@ -234,9 +234,9 @@ export default function AppointmentsCards({
                                 {formatCurrency(servicePrice)}
                               </div>
                               <div className="text-xs text-blue-400">
-                                {customAddon !== null ? `加購價${new Intl.NumberFormat('zh-TW').format(customAddon)}` : ""}
+                                {customAddon !== null ? `加購價${formatCurrency(customAddon)}` : ""}
                                 {customAddon !== null && designFee !== null ? " " : ""}
-                                {designFee !== null ? `設計費${new Intl.NumberFormat('zh-TW').format(designFee)}` : ""}
+                                {designFee !== null ? `設計費${formatCurrency(designFee)}` : ""}
                               </div>
                             </div>
                           );

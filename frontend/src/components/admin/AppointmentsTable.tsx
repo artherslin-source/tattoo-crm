@@ -239,9 +239,6 @@ export default function AppointmentsTable({
                   <td className="px-4 py-3" data-label="服務項目">
                     {appointment.cartSnapshot && (appointment.cartSnapshot.items.length > 0 || !!appointment.cartSnapshot.totalPrice) ? (
                       <div className="text-sm">
-                        <div className="font-medium text-blue-600 mb-1">
-                          購物車{appointment.cartSnapshot.items.length > 0 ? ` (${appointment.cartSnapshot.items.length} 項)` : ""}
-                        </div>
                         {appointment.cartSnapshot.items.length > 0 ? (
                           (() => {
                             const item = appointment.cartSnapshot!.items[0];
@@ -260,16 +257,20 @@ export default function AppointmentsTable({
                                   {formatCurrency(servicePrice)}
                                 </div>
                                 <div className="text-xs text-blue-600">
-                                  {customAddon !== null ? `加購價${new Intl.NumberFormat('zh-TW').format(customAddon)}` : ""}
+                                  {customAddon !== null ? `加購價${formatCurrency(customAddon)}` : ""}
                                   {customAddon !== null && designFee !== null ? " " : ""}
-                                  {designFee !== null ? `設計費${new Intl.NumberFormat('zh-TW').format(designFee)}` : ""}
+                                  {designFee !== null ? `設計費${formatCurrency(designFee)}` : ""}
                                 </div>
                               </div>
                             );
                           })()
                         ) : (
-                          <div className="text-xs text-blue-600 mt-1">
-                            {typeof appointment.cartSnapshot.totalPrice === "number" ? formatCurrency(appointment.cartSnapshot.totalPrice) : "—"}
+                          <div className="space-y-0.5">
+                            <div className="text-sm text-gray-900 dark:text-white">購物車</div>
+                            <div className="text-sm font-semibold text-gray-900 dark:text-white">—</div>
+                            <div className="text-xs text-blue-600">
+                              {typeof appointment.cartSnapshot.totalPrice === "number" ? formatCurrency(appointment.cartSnapshot.totalPrice) : "—"}
+                            </div>
                           </div>
                         )}
                       </div>
