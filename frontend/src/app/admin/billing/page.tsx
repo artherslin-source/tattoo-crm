@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getJsonWithAuth, postJsonWithAuth, deleteJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getJsonWithAuth, postJsonWithAuth, deleteJsonWithAuth, ApiError } from "@/lib/api";
 import { hasAdminAccess } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,6 +181,7 @@ export default function AdminBillingPage() {
   const [availableArtists, setAvailableArtists] = useState<Array<{ userId: string; displayName: string; branchId: string; branchName: string | null }>>([]);
   const [editingRules, setEditingRules] = useState<Record<string, string>>({});
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const fetchBills = useCallback(async () => {
     try {
@@ -495,6 +496,80 @@ export default function AdminBillingPage() {
     }
   }, [userRole, fetchBills, selected, openDetail]);
 
+  const onExportBillsXlsx = useCallback(async () => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    try {
+      setError(null);
+      setExporting(true);
+
+      const params = new URLSearchParams();
+      if (viewMode && filterBillType === "all") params.set("view", viewMode);
+      if (filterBranchId && filterBranchId !== "all") params.set("branchId", filterBranchId);
+      if (filterStatus && filterStatus !== "all") params.set("status", filterStatus);
+      if (filterBillType && filterBillType !== "all") params.set("billType", filterBillType);
+      if (filterArtistId && filterArtistId !== "all") params.set("artistId", filterArtistId);
+      if (filterCustomerSearch.trim()) params.set("customerSearch", filterCustomerSearch.trim());
+      if (filterStartDate) params.set("startDate", filterStartDate);
+      if (filterEndDate) params.set("endDate", filterEndDate);
+      if (minBillTotal) params.set("minBillTotal", minBillTotal);
+      if (maxBillTotal) params.set("maxBillTotal", maxBillTotal);
+      if (minPaidTotal) params.set("minPaidTotal", minPaidTotal);
+      if (maxPaidTotal) params.set("maxPaidTotal", maxPaidTotal);
+      if (minDueTotal) params.set("minDueTotal", minDueTotal);
+      if (maxDueTotal) params.set("maxDueTotal", maxDueTotal);
+      if (sortField) params.set("sortField", sortField);
+      if (sortOrder) params.set("sortOrder", sortOrder);
+
+      const url = `/api/admin/billing/bills/export.xlsx${params.toString() ? `?${params.toString()}` : ""}`;
+      const token = getAccessToken();
+      const res = await fetch(url, {
+        method: "GET",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new ApiError(text || `下載失敗 (${res.status})`, res.status);
+      }
+
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get("content-disposition") || "";
+      const match = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+      const filename = match?.[1] || "billing.xlsx";
+
+      const a = document.createElement("a");
+      const objectUrl = URL.createObjectURL(blob);
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "下載 Excel 失敗");
+    } finally {
+      setExporting(false);
+    }
+  }, [
+    userRole,
+    viewMode,
+    filterBillType,
+    filterBranchId,
+    filterStatus,
+    filterArtistId,
+    filterCustomerSearch,
+    filterStartDate,
+    filterEndDate,
+    minBillTotal,
+    maxBillTotal,
+    minPaidTotal,
+    maxPaidTotal,
+    minDueTotal,
+    maxDueTotal,
+    sortField,
+    sortOrder,
+  ]);
+
   const totals = useMemo(() => {
     const billTotal = rows.reduce((s, r) => s + r.billTotal, 0);
     const paidTotal = rows.reduce((s, r) => s + (r.summary?.paidTotal || 0), 0);
@@ -590,6 +665,11 @@ export default function AdminBillingPage() {
           {userRole.toUpperCase() === "BOSS" && (
             <Button variant="outline" onClick={onSyncBillsFromCart} disabled={loading}>
               同步購物車金額（回填不一致）
+            </Button>
+          )}
+          {userRole.toUpperCase() === "BOSS" && (
+            <Button variant="outline" onClick={onExportBillsXlsx} disabled={loading || exporting}>
+              {exporting ? "下載中..." : "下載 Excel"}
             </Button>
           )}
           <Button variant="outline" onClick={fetchBills} disabled={loading}>

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { isBoss, isArtist, type AccessActor } from '../common/access/access.types';
 import { BILL_TYPE_STORED_VALUE_TOPUP } from './billing.constants';
+import * as ExcelJS from 'exceljs';
 
 type BillStatus = 'OPEN' | 'SETTLED' | 'VOID';
 
@@ -780,6 +781,95 @@ export class BillingService {
     });
 
     return rows;
+  }
+
+  async exportBillsXlsx(
+    actor: AccessActor,
+    query: {
+      branchId?: string;
+      artistId?: string;
+      customerSearch?: string;
+      status?: BillStatus | 'all';
+      billType?: string | 'all';
+      view?: 'CONSUMPTION' | 'ALL';
+      startDate?: string;
+      endDate?: string;
+      sortField?: 'createdAt' | 'billTotal' | 'paidTotal' | 'dueTotal';
+      sortOrder?: 'asc' | 'desc';
+      minBillTotal?: string | number;
+      maxBillTotal?: string | number;
+      minPaidTotal?: string | number;
+      maxPaidTotal?: string | number;
+      minDueTotal?: string | number;
+      maxDueTotal?: string | number;
+    },
+  ): Promise<Buffer> {
+    if (!isBoss(actor)) throw new ForbiddenException('只有 BOSS 可以匯出');
+
+    const rows = await this.listBills(actor, query);
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'tattoo-crm';
+    wb.created = new Date();
+    const ws = wb.addWorksheet('帳務清單');
+
+    ws.columns = [
+      { header: '帳單建立時間', key: 'createdAt', width: 20 },
+      { header: '會員', key: 'customer', width: 22 },
+      { header: '刺青師', key: 'artist', width: 14 },
+      { header: '分店', key: 'branch', width: 12 },
+      { header: '應收', key: 'billTotal', width: 10, style: { numFmt: '#,##0' } },
+      { header: '已收', key: 'paidTotal', width: 10, style: { numFmt: '#,##0' } },
+      { header: '未收', key: 'dueTotal', width: 10, style: { numFmt: '#,##0' } },
+      { header: '店家', key: 'shopAmount', width: 10, style: { numFmt: '#,##0' } },
+      { header: '刺青師', key: 'artistAmount', width: 10, style: { numFmt: '#,##0' } },
+      { header: '狀態', key: 'status', width: 10 },
+      { header: '帳單ID', key: 'id', width: 28 },
+    ];
+
+    ws.getRow(1).font = { bold: true };
+
+    const fmtDateTime = (d: any) => {
+      try {
+        const dt = d instanceof Date ? d : new Date(d);
+        if (Number.isNaN(dt.getTime())) return '';
+        return dt.toLocaleString('zh-TW', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+      } catch {
+        return '';
+      }
+    };
+
+    for (const r of rows as any[]) {
+      const customerName = r.customer?.name ?? r.customerNameSnapshot ?? '';
+      const customerPhone = r.customer?.phone ?? r.customerPhoneSnapshot ?? '';
+      const customer = [customerName, customerPhone].filter(Boolean).join(' ');
+
+      ws.addRow({
+        createdAt: fmtDateTime(r.createdAt),
+        customer,
+        artist: r.artist?.name ?? '',
+        branch: r.branch?.name ?? '',
+        billTotal: r.billTotal ?? 0,
+        paidTotal: r.summary?.paidTotal ?? 0,
+        dueTotal: r.summary?.dueTotal ?? 0,
+        shopAmount: r.summary?.shopAmount ?? 0,
+        artistAmount: r.summary?.artistAmount ?? 0,
+        status: r.status ?? '',
+        id: r.id,
+      });
+    }
+
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const buf: any = await wb.xlsx.writeBuffer();
+    return Buffer.isBuffer(buf) ? buf : Buffer.from(buf);
   }
 
   async updateBill(

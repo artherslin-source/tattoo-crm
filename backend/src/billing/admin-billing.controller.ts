@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, BadRequestException, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 import { AccessGuard } from '../common/access/access.guard';
 import { Actor } from '../common/access/actor.decorator';
 import type { AccessActor } from '../common/access/access.types';
 import { BillingService } from './billing.service';
+import type { Response } from 'express';
 
 const EnsureBillSchema = z.object({
   appointmentId: z.string().min(1),
@@ -115,6 +116,38 @@ export class AdminBillingController {
       minDueTotal: query.minDueTotal,
       maxDueTotal: query.maxDueTotal,
     });
+  }
+
+  // Export bills as .xlsx (BOSS only)
+  @Get('bills/export.xlsx')
+  async exportBillsXlsx(@Actor() actor: AccessActor, @Query() query: any, @Res({ passthrough: true }) res: Response) {
+    const buf = await this.billing.exportBillsXlsx(actor, {
+      branchId: query.branchId,
+      artistId: query.artistId,
+      customerSearch: query.customerSearch,
+      status: query.status,
+      billType: query.billType,
+      view: query.view,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      sortField: query.sortField,
+      sortOrder: query.sortOrder,
+      minBillTotal: query.minBillTotal,
+      maxBillTotal: query.maxBillTotal,
+      minPaidTotal: query.minPaidTotal,
+      maxPaidTotal: query.maxPaidTotal,
+      minDueTotal: query.minDueTotal,
+      maxDueTotal: query.maxDueTotal,
+    });
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const filename = `billing_${ts}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);
+    return buf;
   }
 
   // Create non-appointment / manual bill
