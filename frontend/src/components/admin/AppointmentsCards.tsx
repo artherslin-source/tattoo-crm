@@ -165,6 +165,18 @@ export default function AppointmentsCards({
     return null;
   };
 
+  const toMoney = (v: unknown): number | null => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const trimmed = v.trim();
+      if (!trimmed) return null;
+      const n = Number(trimmed);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
   return (
     <div className="xl:hidden">
       <div className="space-y-4">
@@ -204,9 +216,36 @@ export default function AppointmentsCards({
                   <div className="text-sm text-on-dark-subtle">
                     <div>{appointment.user?.name || '未設定'} ({appointment.user?.phone || 'N/A'})</div>
                     {appointment.cartSnapshot && (appointment.cartSnapshot.items.length > 0 || !!appointment.cartSnapshot.totalPrice) ? (
-                      <div className="text-xs text-blue-400">
-                        購物車{appointment.cartSnapshot.items.length > 0 ? ` (${appointment.cartSnapshot.items.length} 項)` : ""}：{formatCurrency(appointment.cartSnapshot.totalPrice || 0)}
-                      </div>
+                      appointment.cartSnapshot.items.length > 0 ? (
+                        (() => {
+                          const item = appointment.cartSnapshot!.items[0];
+                          const selectedVariants = (item.selectedVariants || {}) as Record<string, unknown>;
+                          const color = typeof selectedVariants.color === "string" ? selectedVariants.color : null;
+                          const designFee = toMoney(selectedVariants.design_fee);
+                          const customAddon = toMoney(selectedVariants.custom_addon);
+                          const rawFinal = typeof item.finalPrice === "number" ? item.finalPrice : (typeof item.basePrice === "number" ? item.basePrice : 0);
+                          const servicePrice = Math.max(0, rawFinal - (designFee ?? 0) - (customAddon ?? 0));
+                          return (
+                            <div className="space-y-0.5">
+                              <div className="text-sm">
+                                {(item.serviceName || "服務")}{color ? `-${color}` : ""}
+                              </div>
+                              <div className="text-sm font-semibold text-on-dark">
+                                {formatCurrency(servicePrice)}
+                              </div>
+                              <div className="text-xs text-blue-400">
+                                {customAddon !== null ? `加購價${new Intl.NumberFormat('zh-TW').format(customAddon)}` : ""}
+                                {customAddon !== null && designFee !== null ? " " : ""}
+                                {designFee !== null ? `設計費${new Intl.NumberFormat('zh-TW').format(designFee)}` : ""}
+                              </div>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div className="text-xs text-blue-400">
+                          購物車：{formatCurrency(appointment.cartSnapshot.totalPrice || 0)}
+                        </div>
+                      )
                     ) : (
                       <div>
                         {appointment.service?.name || '未設定'} -{" "}

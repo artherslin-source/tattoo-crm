@@ -999,53 +999,52 @@ export default function AdminAppointmentsPage() {
                             .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "");
                           const rawFinal = typeof it.finalPrice === "number" ? it.finalPrice : (typeof it.basePrice === "number" ? it.basePrice : 0);
                           const servicePrice = Math.max(0, rawFinal - (designFee ?? 0) - (customAddon ?? 0));
+                          const color = typeof selectedVariants.color === "string" ? selectedVariants.color : null;
+                          const serviceTitle = `${it.serviceName || "服務"}${color ? `-${color}` : ""}`;
                           return (
                             <div
                               key={`${it.serviceId || "item"}-${idx}`}
                               className="rounded-md border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-700 dark:bg-gray-800/40"
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="font-medium text-gray-900 dark:text-white">
-                                    {it.serviceName || "服務"}
-                                  </div>
-                                  {variants.length > 0 && (
-                                    <div className="mt-1 text-xs text-gray-700 dark:text-gray-200 space-y-0.5">
-                                      {variants.map(([k, v]) => (
-                                        <div key={k}>
-                                          <span className="text-gray-600 dark:text-gray-300">
-                                            {cartVariantKeyLabels[k] || k}：
-                                          </span>
-                                          <span className="ml-1">{formatCartVariantValue(v) || "—"}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                  {(designFee || customAddon) && (
-                                    <div className="mt-2 text-xs text-gray-700 dark:text-gray-200 space-y-0.5">
-                                      {designFee ? (
-                                        <div className="flex justify-between gap-2">
-                                          <span className="text-gray-600 dark:text-gray-300">設計費</span>
-                                          <span className="font-medium">{formatCurrency(designFee)}</span>
-                                        </div>
-                                      ) : null}
-                                      {customAddon ? (
-                                        <div className="flex justify-between gap-2">
-                                          <span className="text-gray-600 dark:text-gray-300">加購</span>
-                                          <span className="font-medium">{formatCurrency(customAddon)}</span>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  )}
-                                  {it.notes ? (
-                                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                                      備註：{it.notes}
-                                    </div>
-                                  ) : null}
+                              <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {serviceTitle}
                                 </div>
-                                <div className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
                                   {formatCurrency(servicePrice)}
                                 </div>
+
+                                {variants.length > 0 ? (
+                                  <div className="col-span-2 text-xs text-gray-700 dark:text-gray-200 space-y-0.5">
+                                    {variants.map(([k, v]) => (
+                                      <div key={k}>
+                                        <span className="text-gray-600 dark:text-gray-300">
+                                          {cartVariantKeyLabels[k] || k}：
+                                        </span>
+                                        <span className="ml-1">{formatCartVariantValue(v) || "—"}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+
+                                {customAddon !== null ? (
+                                  <>
+                                    <div className="text-xs text-gray-600 dark:text-gray-300">加購價</div>
+                                    <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(customAddon)}</div>
+                                  </>
+                                ) : null}
+                                {designFee !== null ? (
+                                  <>
+                                    <div className="text-xs text-gray-600 dark:text-gray-300">設計費</div>
+                                    <div className="text-xs font-medium text-gray-900 dark:text-white">{formatCurrency(designFee)}</div>
+                                  </>
+                                ) : null}
+
+                                {it.notes ? (
+                                  <div className="col-span-2 text-xs text-gray-600 dark:text-gray-300">
+                                    備註：{it.notes}
+                                  </div>
+                                ) : null}
                               </div>
                             </div>
                           );
