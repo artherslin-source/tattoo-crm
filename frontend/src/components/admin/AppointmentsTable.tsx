@@ -249,7 +249,7 @@ export default function AppointmentsTable({
                           </div>
                         )}
                         {typeof appointment.cartSnapshot.totalPrice === "number" && (
-                          <div className="text-xs text-blue-700 font-semibold mt-1">
+                          <div className="text-xs text-blue-600 mt-1">
                             {formatCurrency(appointment.cartSnapshot.totalPrice)}
                           </div>
                         )}

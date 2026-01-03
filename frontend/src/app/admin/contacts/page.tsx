@@ -294,6 +294,18 @@ export default function AdminContactsPage() {
     }
   };
 
+  const toMoney = (v: unknown): number | null => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const trimmed = v.trim();
+      if (!trimmed) return null;
+      const n = Number(trimmed);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('zh-TW', {
       year: 'numeric',
@@ -653,11 +665,17 @@ export default function AdminContactsPage() {
                       </div>
                       <div className="space-y-2">
                         {snap.items.map((it, idx) => {
-                          const variants = it.selectedVariants && typeof it.selectedVariants === "object"
-                            ? Object.entries(it.selectedVariants as Record<string, unknown>)
-                                .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "")
-                            : [];
-                          const price = typeof it.finalPrice === "number" ? it.finalPrice : (typeof it.basePrice === "number" ? it.basePrice : 0);
+                          const selectedVariants =
+                            it.selectedVariants && typeof it.selectedVariants === "object"
+                              ? (it.selectedVariants as Record<string, unknown>)
+                              : {};
+                          const designFee = toMoney(selectedVariants.design_fee);
+                          const customAddon = toMoney(selectedVariants.custom_addon);
+                          const variants = Object.entries(selectedVariants)
+                            .filter(([k, v]) => k !== "design_fee" && k !== "custom_addon")
+                            .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "");
+
+                          const basePrice = typeof it.basePrice === "number" ? it.basePrice : null;
                           return (
                             <div
                               key={`${it.serviceId || "item"}-${idx}`}
@@ -680,6 +698,22 @@ export default function AdminContactsPage() {
                                       ))}
                                     </div>
                                   )}
+                                  {(designFee || customAddon) && (
+                                    <div className="mt-2 text-xs text-gray-700 dark:text-gray-200 space-y-0.5">
+                                      {designFee ? (
+                                        <div className="flex justify-between gap-2">
+                                          <span className="text-gray-600 dark:text-gray-300">設計費</span>
+                                          <span className="font-medium">{formatCurrency(designFee)}</span>
+                                        </div>
+                                      ) : null}
+                                      {customAddon ? (
+                                        <div className="flex justify-between gap-2">
+                                          <span className="text-gray-600 dark:text-gray-300">加購</span>
+                                          <span className="font-medium">{formatCurrency(customAddon)}</span>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  )}
                                   {it.notes ? (
                                     <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
                                       備註：{it.notes}
@@ -687,7 +721,7 @@ export default function AdminContactsPage() {
                                   ) : null}
                                 </div>
                                 <div className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
-                                  {formatCurrency(price)}
+                                  {basePrice !== null ? formatCurrency(basePrice) : "—"}
                                 </div>
                               </div>
                             </div>

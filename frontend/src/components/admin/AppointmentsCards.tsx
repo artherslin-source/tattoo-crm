@@ -204,8 +204,8 @@ export default function AppointmentsCards({
                   <div className="text-sm text-on-dark-subtle">
                     <div>{appointment.user?.name || '未設定'} ({appointment.user?.phone || 'N/A'})</div>
                     {appointment.cartSnapshot && (appointment.cartSnapshot.items.length > 0 || !!appointment.cartSnapshot.totalPrice) ? (
-                      <div className="text-blue-400">
-                        購物車{appointment.cartSnapshot.items.length > 0 ? ` (${appointment.cartSnapshot.items.length} 項)` : ""} - {formatCurrency(appointment.cartSnapshot.totalPrice || 0)}
+                      <div className="text-xs text-blue-400">
+                        購物車{appointment.cartSnapshot.items.length > 0 ? ` (${appointment.cartSnapshot.items.length} 項)` : ""}：{formatCurrency(appointment.cartSnapshot.totalPrice || 0)}
                       </div>
                     ) : (
                       <div>

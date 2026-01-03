@@ -652,6 +652,18 @@ export default function AdminAppointmentsPage() {
     }
   };
 
+  const toMoney = (v: unknown): number | null => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const trimmed = v.trim();
+      if (!trimmed) return null;
+      const n = Number(trimmed);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -976,10 +988,16 @@ export default function AdminAppointmentsPage() {
                       </div>
                       <div className="space-y-2">
                         {effectiveDetailCart.itemsSnap.items.map((it: any, idx: number) => {
-                          const variants = it.selectedVariants && typeof it.selectedVariants === "object"
-                            ? Object.entries(it.selectedVariants as Record<string, unknown>)
-                                .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "")
-                            : [];
+                          const selectedVariants =
+                            it.selectedVariants && typeof it.selectedVariants === "object"
+                              ? (it.selectedVariants as Record<string, unknown>)
+                              : {};
+                          const designFee = toMoney(selectedVariants.design_fee);
+                          const customAddon = toMoney(selectedVariants.custom_addon);
+                          const variants = Object.entries(selectedVariants)
+                            .filter(([k, v]) => k !== "design_fee" && k !== "custom_addon")
+                            .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "");
+                          const basePrice = typeof it.basePrice === "number" ? it.basePrice : null;
                           return (
                             <div
                               key={`${it.serviceId || "item"}-${idx}`}
@@ -1002,6 +1020,22 @@ export default function AdminAppointmentsPage() {
                                       ))}
                                     </div>
                                   )}
+                                  {(designFee || customAddon) && (
+                                    <div className="mt-2 text-xs text-gray-700 dark:text-gray-200 space-y-0.5">
+                                      {designFee ? (
+                                        <div className="flex justify-between gap-2">
+                                          <span className="text-gray-600 dark:text-gray-300">設計費</span>
+                                          <span className="font-medium">{formatCurrency(designFee)}</span>
+                                        </div>
+                                      ) : null}
+                                      {customAddon ? (
+                                        <div className="flex justify-between gap-2">
+                                          <span className="text-gray-600 dark:text-gray-300">加購</span>
+                                          <span className="font-medium">{formatCurrency(customAddon)}</span>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  )}
                                   {it.notes ? (
                                     <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
                                       備註：{it.notes}
@@ -1009,7 +1043,7 @@ export default function AdminAppointmentsPage() {
                                   ) : null}
                                 </div>
                                 <div className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
-                                  {formatCurrency(it.finalPrice ?? it.basePrice ?? 0)}
+                                  {basePrice !== null ? formatCurrency(basePrice) : "—"}
                                 </div>
                               </div>
                             </div>
