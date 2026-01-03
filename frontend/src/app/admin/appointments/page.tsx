@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
@@ -25,6 +25,7 @@ interface Appointment {
   status: 'INTENT' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'NO_SHOW';
   notes: string | null;
   createdAt: string;
+  contactId?: string | null;
   user: {
     id: string;
     name: string | null;
@@ -117,6 +118,8 @@ export default function AdminAppointmentsPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [lastDeepLinkOpenId, setLastDeepLinkOpenId] = useState<string | null>(null);
   const [highlightAppointmentId, setHighlightAppointmentId] = useState<string | null>(null);
+  const [detailContactCartSnapshot, setDetailContactCartSnapshot] = useState<any>(null);
+  const [detailContactCartTotalPrice, setDetailContactCartTotalPrice] = useState<number | null>(null);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [rescheduleStartAt, setRescheduleStartAt] = useState<string>("");
   const [rescheduleReason, setRescheduleReason] = useState<string>("");
@@ -589,6 +592,48 @@ export default function AdminAppointmentsPage() {
     }).format(amount);
   };
 
+  const effectiveDetailCart = useMemo(() => {
+    const appt = selectedAppointment;
+    const apptSnap: any = appt?.cartSnapshot;
+    const contactSnap: any = detailContactCartSnapshot;
+    const itemsSnap =
+      Array.isArray(apptSnap?.items) && apptSnap.items.length > 0
+        ? apptSnap
+        : (Array.isArray(contactSnap?.items) && contactSnap.items.length > 0 ? contactSnap : null);
+    const totalPrice =
+      typeof apptSnap?.totalPrice === "number"
+        ? apptSnap.totalPrice
+        : (typeof contactSnap?.totalPrice === "number" ? contactSnap.totalPrice : detailContactCartTotalPrice);
+    return { itemsSnap, totalPrice };
+  }, [selectedAppointment, detailContactCartSnapshot, detailContactCartTotalPrice]);
+
+  useEffect(() => {
+    // Detail cart fallback: if appointment has no usable cartSnapshot items, try loading from contact
+    async function fetchContactCartFallback() {
+      const appt = selectedAppointment;
+      if (!isDetailModalOpen || !appt) return;
+
+      // reset on every open/appointment change
+      setDetailContactCartSnapshot(null);
+      setDetailContactCartTotalPrice(null);
+
+      const hasItems = Array.isArray(appt.cartSnapshot?.items) && appt.cartSnapshot.items.length > 0;
+      if (hasItems) return;
+      if (!appt.contactId) return;
+
+      try {
+        const contact = await getJsonWithAuth<any>(`/admin/contacts/${encodeURIComponent(appt.contactId)}`);
+        if (contact?.cartSnapshot) setDetailContactCartSnapshot(contact.cartSnapshot);
+        if (typeof contact?.cartTotalPrice === "number") setDetailContactCartTotalPrice(contact.cartTotalPrice);
+      } catch (e) {
+        // silent: fallback is best-effort for historical data display
+        console.warn("Failed to fetch contact cart fallback", e);
+      }
+    }
+    fetchContactCartFallback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDetailModalOpen, selectedAppointment?.id]);
+
   const formatCartVariantValue = (v: unknown) => {
     if (v === null || v === undefined) return "";
     if (typeof v === "number") return formatCurrency(v);
@@ -924,13 +969,13 @@ export default function AdminAppointmentsPage() {
               <div className="space-y-2">
                 <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">服務資訊</h4>
                 <div className="space-y-1 text-sm">
-                  {selectedAppointment.cartSnapshot?.items?.length ? (
+                  {effectiveDetailCart.itemsSnap?.items?.length ? (
                     <div className="space-y-2">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        購物車項目（{selectedAppointment.cartSnapshot.items.length} 項）
+                        購物車項目（{effectiveDetailCart.itemsSnap.items.length} 項）
                       </div>
                       <div className="space-y-2">
-                        {selectedAppointment.cartSnapshot.items.map((it, idx) => {
+                        {effectiveDetailCart.itemsSnap.items.map((it: any, idx: number) => {
                           const variants = it.selectedVariants && typeof it.selectedVariants === "object"
                             ? Object.entries(it.selectedVariants as Record<string, unknown>)
                                 .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "")
@@ -985,11 +1030,11 @@ export default function AdminAppointmentsPage() {
                     </>
                   )}
                   {/* 顯示購物車總額（如果有） */}
-                  {selectedAppointment.cartSnapshot?.totalPrice && (
+                  {typeof effectiveDetailCart.totalPrice === "number" && effectiveDetailCart.totalPrice > 0 && (
                     <div>
                       <span className="text-text-muted-light dark:text-text-muted-dark">購物車總額:</span>
                       <span className="ml-2 font-semibold text-blue-600">
-                        {formatCurrency(selectedAppointment.cartSnapshot.totalPrice)}
+                        {formatCurrency(effectiveDetailCart.totalPrice)}
                       </span>
                     </div>
                   )}

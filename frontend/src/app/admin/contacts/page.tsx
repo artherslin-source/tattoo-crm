@@ -7,6 +7,7 @@ import { getUserRole, isBossRole } from "@/lib/access";
 import { MessageSquare, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Contact {
   id: string;
@@ -30,6 +31,18 @@ interface Contact {
     phone?: string;
   };
 }
+
+type CartSnapshot = {
+  items: Array<{
+    serviceId?: string;
+    serviceName?: string;
+    selectedVariants?: Record<string, unknown>;
+    basePrice?: number;
+    finalPrice?: number;
+    notes?: string;
+  }>;
+  totalPrice?: number;
+};
 
 type AdminArtistApiRow = {
   id?: string;
@@ -56,6 +69,13 @@ const STATUS_OPTIONS = [
   { value: 'CLOSED', label: '已取消', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' },
 ];
 
+const cartVariantKeyLabels: Record<string, string> = {
+  side: "左右半邊",
+  color: "顏色",
+  design_fee: "設計費",
+  custom_addon: "加購",
+};
+
 export default function AdminContactsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,6 +90,18 @@ export default function AdminContactsPage() {
   const [ownerDraft, setOwnerDraft] = useState<Record<string, string>>({});
   const [listStatusFilter, setListStatusFilter] = useState<ListStatusFilter>('ACTIVE');
   const [highlightContactId, setHighlightContactId] = useState<string | null>(null);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [cartModalContact, setCartModalContact] = useState<Contact | null>(null);
+
+  const openCartModal = (contact: Contact) => {
+    setCartModalContact(contact);
+    setCartModalOpen(true);
+  };
+
+  const closeCartModal = () => {
+    setCartModalOpen(false);
+    setCartModalContact(null);
+  };
 
   const clearHighlightIdFromUrl = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -232,6 +264,34 @@ export default function AdminContactsPage() {
 
   const getStatusInfo = (status: string) => {
     return STATUS_OPTIONS.find(option => option.value === status) || STATUS_OPTIONS[0];
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD" }).format(amount);
+  };
+
+  const normalizeCartSnapshot = (raw: unknown, cartTotalPrice?: number | null): CartSnapshot => {
+    const snap: any = raw && typeof raw === "object" ? raw : null;
+    const items = Array.isArray(snap?.items) ? snap.items : [];
+    const totalPrice = typeof snap?.totalPrice === "number" ? snap.totalPrice : (typeof cartTotalPrice === "number" ? cartTotalPrice : undefined);
+    return { items, totalPrice };
+  };
+
+  const formatCartVariantValue = (v: unknown) => {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "number") return formatCurrency(v);
+    if (typeof v === "string") {
+      const trimmed = v.trim();
+      if (/^-?\d+(\.\d+)?$/.test(trimmed)) return formatCurrency(Number(trimmed));
+      return trimmed;
+    }
+    if (typeof v === "boolean") return v ? "是" : "否";
+    if (Array.isArray(v)) return v.map((x) => String(x)).join("、");
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -502,6 +562,17 @@ export default function AdminContactsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
+                        <button
+                          onClick={() => openCartModal(contact)}
+                          disabled={!contact.cartSnapshot && !contact.cartTotalPrice}
+                          className={`${
+                            !contact.cartSnapshot && !contact.cartTotalPrice
+                              ? "text-gray-400 cursor-not-allowed"
+                              : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white"
+                          }`}
+                        >
+                          購物車資訊
+                        </button>
                         {contact.status === 'CONVERTED' ? (
                           <button
                             onClick={() => viewConvertedAppointment(contact)}
@@ -540,6 +611,103 @@ export default function AdminContactsPage() {
           </div>
         )}
       </div>
+
+      {/* 購物車資訊彈窗 */}
+      <Dialog open={cartModalOpen} onOpenChange={(open) => (open ? setCartModalOpen(true) : closeCartModal())}>
+        <DialogContent className="max-w-full sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>購物車資訊</DialogTitle>
+          </DialogHeader>
+          {cartModalContact ? (
+            (() => {
+              const snap = normalizeCartSnapshot(cartModalContact.cartSnapshot, cartModalContact.cartTotalPrice);
+              return (
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-700 dark:text-gray-200">
+                    <div>
+                      <span className="text-text-muted-light dark:text-text-muted-dark">客戶：</span>
+                      <span className="font-medium">{cartModalContact.name}</span>
+                      {cartModalContact.phone ? <span className="ml-2 text-text-muted-light dark:text-text-muted-dark">{cartModalContact.phone}</span> : null}
+                    </div>
+                    <div className="mt-1">
+                      <span className="text-text-muted-light dark:text-text-muted-dark">分店：</span>
+                      <span className="font-medium">{cartModalContact.branch?.name || "—"}</span>
+                    </div>
+                  </div>
+
+                  {typeof snap.totalPrice === "number" ? (
+                    <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/40">
+                      <div className="text-sm text-text-muted-light dark:text-text-muted-dark">購物車總額</div>
+                      <div className="text-xl font-bold text-blue-600">{formatCurrency(snap.totalPrice)}</div>
+                    </div>
+                  ) : null}
+
+                  {snap.items.length === 0 ? (
+                    <div className="text-sm text-text-muted-light dark:text-text-muted-dark">
+                      此聯絡目前沒有可用的購物車品項明細（可能只有總額或是舊資料）。
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        購物車項目（{snap.items.length} 項）
+                      </div>
+                      <div className="space-y-2">
+                        {snap.items.map((it, idx) => {
+                          const variants = it.selectedVariants && typeof it.selectedVariants === "object"
+                            ? Object.entries(it.selectedVariants as Record<string, unknown>)
+                                .filter(([_, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+                            : [];
+                          const price = typeof it.finalPrice === "number" ? it.finalPrice : (typeof it.basePrice === "number" ? it.basePrice : 0);
+                          return (
+                            <div
+                              key={`${it.serviceId || "item"}-${idx}`}
+                              className="rounded-md border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="font-medium text-gray-900 dark:text-white">
+                                    {it.serviceName || "服務"}
+                                  </div>
+                                  {variants.length > 0 && (
+                                    <div className="mt-1 text-xs text-gray-700 dark:text-gray-200 space-y-0.5">
+                                      {variants.map(([k, v]) => (
+                                        <div key={k}>
+                                          <span className="text-gray-600 dark:text-gray-300">
+                                            {cartVariantKeyLabels[k] || k}：
+                                          </span>
+                                          <span className="ml-1">{formatCartVariantValue(v) || "—"}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {it.notes ? (
+                                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                                      備註：{it.notes}
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <div className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                                  {formatCurrency(price)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button variant="outline" onClick={closeCartModal}>
+                      關閉
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -12,6 +12,7 @@ interface Appointment {
   status: 'INTENT' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'NO_SHOW';
   notes: string | null;
   createdAt: string;
+  contactId?: string | null;
   user: {
     id: string;
     name: string | null;
@@ -142,6 +143,16 @@ export default function AppointmentsTable({
     }).format(amount);
   };
 
+  const getPreferredAmount = (appointment: Appointment): number | null => {
+    const cartTotal = appointment.cartSnapshot?.totalPrice;
+    if (typeof cartTotal === "number" && cartTotal > 0) return cartTotal;
+    const billTotal = appointment.bill?.billTotal;
+    if (typeof billTotal === "number" && billTotal > 0) return billTotal;
+    const servicePrice = appointment.service?.price;
+    if (typeof servicePrice === "number" && servicePrice > 0) return servicePrice;
+    return null;
+  };
+
   return (
     <div className="hidden xl:block">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -214,30 +225,34 @@ export default function AppointmentsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3" data-label="服務項目">
-                    {appointment.cartSnapshot && appointment.cartSnapshot.items.length > 0 ? (
+                    {appointment.cartSnapshot && (appointment.cartSnapshot.items.length > 0 || !!appointment.cartSnapshot.totalPrice) ? (
                       <div className="text-sm">
                         <div className="font-medium text-blue-600 mb-1">
-                          購物車 ({appointment.cartSnapshot.items.length} 項)
+                          購物車{appointment.cartSnapshot.items.length > 0 ? ` (${appointment.cartSnapshot.items.length} 項)` : ""}
                         </div>
-                        <div className="text-xs text-text-muted-light dark:text-text-muted-dark space-y-0.5">
-                          {appointment.cartSnapshot.items.slice(0, 2).map((item, idx) => {
-                            const color = item.selectedVariants.color as string | undefined;
-                            return (
-                              <div key={idx}>
-                                {item.serviceName}
-                                {color && (
-                                  <span className="text-blue-600 ml-1">({color})</span>
-                                )}
-                              </div>
-                            );
-                          })}
-                          {appointment.cartSnapshot.items.length > 2 && (
-                            <div className="text-gray-500">+ {appointment.cartSnapshot.items.length - 2} 項...</div>
-                          )}
-                        </div>
-                        <div className="text-xs text-blue-700 font-semibold mt-1">
-                          {formatCurrency(appointment.cartSnapshot.totalPrice)}
-                        </div>
+                        {appointment.cartSnapshot.items.length > 0 && (
+                          <div className="text-xs text-text-muted-light dark:text-text-muted-dark space-y-0.5">
+                            {appointment.cartSnapshot.items.slice(0, 2).map((item, idx) => {
+                              const color = item.selectedVariants.color as string | undefined;
+                              return (
+                                <div key={idx}>
+                                  {item.serviceName}
+                                  {color && (
+                                    <span className="text-blue-600 ml-1">({color})</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {appointment.cartSnapshot.items.length > 2 && (
+                              <div className="text-gray-500">+ {appointment.cartSnapshot.items.length - 2} 項...</div>
+                            )}
+                          </div>
+                        )}
+                        {typeof appointment.cartSnapshot.totalPrice === "number" && (
+                          <div className="text-xs text-blue-700 font-semibold mt-1">
+                            {formatCurrency(appointment.cartSnapshot.totalPrice)}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div>
@@ -245,7 +260,7 @@ export default function AppointmentsTable({
                           {appointment.service?.name || '未設定'}
                         </div>
                         <div className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                          {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}
+                          {getPreferredAmount(appointment) !== null ? formatCurrency(getPreferredAmount(appointment) as number) : 'N/A'}
                         </div>
                       </div>
                     )}

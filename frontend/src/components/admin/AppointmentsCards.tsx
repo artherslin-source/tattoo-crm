@@ -12,6 +12,7 @@ interface Appointment {
   status: 'INTENT' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'NO_SHOW';
   notes: string | null;
   createdAt: string;
+  contactId?: string | null;
   user: {
     id: string;
     name: string | null;
@@ -154,6 +155,16 @@ export default function AppointmentsCards({
     }).format(amount);
   };
 
+  const getPreferredAmount = (appointment: Appointment): number | null => {
+    const cartTotal = appointment.cartSnapshot?.totalPrice;
+    if (typeof cartTotal === "number" && cartTotal > 0) return cartTotal;
+    const billTotal = appointment.bill?.billTotal;
+    if (typeof billTotal === "number" && billTotal > 0) return billTotal;
+    const servicePrice = appointment.service?.price;
+    if (typeof servicePrice === "number" && servicePrice > 0) return servicePrice;
+    return null;
+  };
+
   return (
     <div className="xl:hidden">
       <div className="space-y-4">
@@ -192,12 +203,15 @@ export default function AppointmentsCards({
                   </div>
                   <div className="text-sm text-on-dark-subtle">
                     <div>{appointment.user?.name || '未設定'} ({appointment.user?.phone || 'N/A'})</div>
-                    {appointment.cartSnapshot && appointment.cartSnapshot.items.length > 0 ? (
+                    {appointment.cartSnapshot && (appointment.cartSnapshot.items.length > 0 || !!appointment.cartSnapshot.totalPrice) ? (
                       <div className="text-blue-400">
-                        購物車 ({appointment.cartSnapshot.items.length} 項) - {formatCurrency(appointment.cartSnapshot.totalPrice)}
+                        購物車{appointment.cartSnapshot.items.length > 0 ? ` (${appointment.cartSnapshot.items.length} 項)` : ""} - {formatCurrency(appointment.cartSnapshot.totalPrice || 0)}
                       </div>
                     ) : (
-                      <div>{appointment.service?.name || '未設定'} - {appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}</div>
+                      <div>
+                        {appointment.service?.name || '未設定'} -{" "}
+                        {getPreferredAmount(appointment) !== null ? formatCurrency(getPreferredAmount(appointment) as number) : 'N/A'}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -548,7 +562,9 @@ export default function AppointmentsCards({
                         </div>
                         <div className="flex justify-between">
                           <span>服務價格:</span>
-                          <span className="font-medium">{appointment.service?.price ? formatCurrency(appointment.service.price) : 'N/A'}</span>
+                          <span className="font-medium">
+                            {getPreferredAmount(appointment) !== null ? formatCurrency(getPreferredAmount(appointment) as number) : 'N/A'}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span>服務時長:</span>
