@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AccessGuard } from '../common/access/access.guard';
 import { Actor } from '../common/access/actor.decorator';
@@ -78,6 +78,32 @@ export class AdminUsersController {
           expectedResult: '應被拒絕訪問（403 或重定向）',
         },
       ],
+    };
+  }
+
+  /**
+   * 批次重設所有會員（MEMBER）的登入資料：
+   * - phone：確保為純數字 10~15 碼且唯一（若原本格式不符，會產生新的 099xxxxxxxx）
+   * - password：重設為 12345678
+   *
+   * 僅限 BOSS 使用
+   *
+   * @example
+   * POST /admin/users/members/reset-login
+   */
+  @Post('members/reset-login')
+  async resetMembersLogin(@Actor() actor: AccessActor, @Body() _body: unknown) {
+    if (!isBoss(actor)) {
+      throw new Error('只有 BOSS 可以執行批次重設會員登入');
+    }
+
+    console.log(`🔐 BOSS ${actor.id} 觸發批次重設會員登入`);
+    const result = await this.adminUsersService.resetMembersLogin();
+
+    return {
+      ...result,
+      message: '批次重設完成',
+      note: '測試資料用途：此操作會重設所有 MEMBER 的密碼為 12345678，並修正 phone 為可登入格式。',
     };
   }
 }
