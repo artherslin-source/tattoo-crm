@@ -25,6 +25,53 @@ export class UsersService {
     private readonly billing: BillingService,
   ) {}
 
+  async listMyBills(userId: string) {
+    const bills = await this.prisma.appointmentBill.findMany({
+      where: {
+        customerId: userId,
+        status: { not: 'VOID' },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      include: {
+        branch: { select: { id: true, name: true } },
+        artist: { select: { id: true, name: true } },
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            nameSnapshot: true,
+            basePriceSnapshot: true,
+            finalPriceSnapshot: true,
+            variantsSnapshot: true,
+            notes: true,
+            sortOrder: true,
+          },
+        },
+        payments: {
+          orderBy: { paidAt: 'asc' },
+          select: {
+            id: true,
+            amount: true,
+            method: true,
+            paidAt: true,
+            notes: true,
+          },
+        },
+      },
+    });
+
+    return bills.map((b) => {
+      const paidTotal = b.payments.reduce((sum, p) => sum + p.amount, 0);
+      return {
+        ...b,
+        summary: {
+          paidTotal,
+          dueTotal: b.billTotal - paidTotal,
+        },
+      };
+    });
+  }
+
   async me(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },

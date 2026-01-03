@@ -4,35 +4,47 @@ import { useEffect, useState } from "react";
 import { getJsonWithAuth } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Download, Calendar } from "lucide-react";
+import { CreditCard, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface Payment {
+interface BillPayment {
   id: string;
   amount: number;
-  paymentDate: string;
-  paymentMethod: string;
-  status: string;
-  type: string;
-  orderId: string;
+  method: string;
+  paidAt: string;
+  notes?: string | null;
 }
 
-const paymentTypeLabels: Record<string, string> = {
-  DEPOSIT: "訂金",
-  FINAL: "尾款",
-  FULL: "全額付款",
-  INSTALLMENT: "分期付款",
+interface BillRow {
+  id: string;
+  billType: string;
+  status: "OPEN" | "SETTLED" | "VOID" | string;
+  currency: string;
+  billTotal: number;
+  discountTotal: number;
+  createdAt: string;
+  branch: { id: string; name: string } | null;
+  artist: { id: string; name: string | null } | null;
+  payments: BillPayment[];
+  summary: { paidTotal: number; dueTotal: number };
+}
+
+const billTypeLabels: Record<string, string> = {
+  APPOINTMENT: "預約",
+  WALK_IN: "現場",
+  OTHER: "其他",
+  STORED_VALUE_TOPUP: "儲值",
 };
 
 const statusColors: Record<string, string> = {
-  PENDING: "bg-yellow-100 text-yellow-800",
-  COMPLETED: "bg-green-100 text-green-800",
-  FAILED: "bg-red-100 text-red-800",
-  REFUNDED: "bg-gray-100 text-gray-800",
+  OPEN: "bg-yellow-100 text-yellow-800",
+  SETTLED: "bg-green-100 text-green-800",
+  VOID: "bg-gray-100 text-gray-800",
 };
 
 export default function ProfilePaymentsPage() {
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [bills, setBills] = useState<BillRow[]>([]);
+  const [expandedBillIds, setExpandedBillIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,15 +53,28 @@ export default function ProfilePaymentsPage() {
 
   const fetchPayments = async () => {
     try {
-      // TODO: 實現付款記錄 API
-      // const data = await getJsonWithAuth("/payments/my");
-      // setPayments(data || []);
-      setPayments([]);
+      const data = await getJsonWithAuth<BillRow[]>("/users/me/bills");
+      setBills(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("獲取付款記錄失敗:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleExpanded = (billId: string) => {
+    setExpandedBillIds((prev) => ({ ...prev, [billId]: !prev[billId] }));
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("zh-TW", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   if (loading) {
@@ -67,7 +92,7 @@ export default function ProfilePaymentsPage() {
         <p className="text-gray-600">查看您的付款明細和收據</p>
       </div>
 
-      {payments.length === 0 ? (
+      {bills.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -79,42 +104,114 @@ export default function ProfilePaymentsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {payments.map((payment) => (
-            <Card key={payment.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">
-                      {paymentTypeLabels[payment.type]}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        {new Date(payment.paymentDate).toLocaleDateString("zh-TW")}
-                      </span>
+          {bills.map((bill) => {
+            const expanded = !!expandedBillIds[bill.id];
+            const statusColor = statusColors[bill.status] || "bg-gray-100 text-gray-800";
+            const billTypeLabel = billTypeLabels[bill.billType] || bill.billType;
+            return (
+              <Card key={bill.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg truncate">
+                        {billTypeLabel}
+                      </CardTitle>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-gray-600">
+                            {formatDateTime(bill.createdAt)}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          分店：{bill.branch?.name || "—"}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          刺青師：{bill.artist?.name || "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Badge className={statusColor}>{bill.status}</Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleExpanded(bill.id)}
+                      >
+                        {expanded ? (
+                          <>
+                            <ChevronUp className="h-4 w-4 mr-2" />
+                            收合
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4 mr-2" />
+                            明細
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
-                  <Badge className={statusColors[payment.status]}>
-                    {payment.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-gray-600">付款金額</div>
-                    <div className="text-2xl font-bold text-blue-600">
-                      NT$ {payment.amount.toLocaleString()}
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <div className="text-sm text-gray-600">帳單金額</div>
+                      <div className="text-xl font-bold text-gray-900">
+                        NT$ {bill.billTotal.toLocaleString()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">已付</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        NT$ {bill.summary.paidTotal.toLocaleString()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">未付</div>
+                      <div className="text-xl font-bold text-gray-900">
+                        NT$ {Math.max(0, bill.summary.dueTotal).toLocaleString()}
+                      </div>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    下載收據
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  {expanded && (
+                    <div className="rounded-md border border-gray-200">
+                      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50 text-sm font-medium text-gray-900">
+                        付款明細
+                      </div>
+                      {bill.payments.length === 0 ? (
+                        <div className="px-4 py-4 text-sm text-gray-600">
+                          尚無付款紀錄
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-200">
+                          {bill.payments.map((p) => (
+                            <div key={p.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-sm text-gray-900">
+                                  {formatDateTime(p.paidAt)}
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  方式：{p.method}
+                                  {p.notes ? `｜備註：${p.notes}` : ""}
+                                </div>
+                              </div>
+                              <div className={`text-sm font-semibold ${p.amount >= 0 ? "text-green-700" : "text-red-700"}`}>
+                                {p.amount >= 0 ? "+" : "-"}NT$ {Math.abs(p.amount).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -61,6 +61,12 @@ export class UsersController {
     return this.usersService.me(req.user.id);
   }
 
+  @Get('me/bills')
+  @Roles('MEMBER')
+  async myBills(@Req() req: any) {
+    return this.usersService.listMyBills(req.user.id);
+  }
+
   @Patch('me')
   async updateMe(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.updateMe(req.user.id, updateUserDto);
