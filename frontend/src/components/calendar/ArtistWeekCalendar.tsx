@@ -491,7 +491,7 @@ export default function ArtistWeekCalendar(props: {
       <Dialog open={navOpen} onOpenChange={setNavOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>查看預約</DialogTitle>
+            <DialogTitle>預約概要</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <div className="text-sm text-text-secondary-light">{navTitle}</div>
