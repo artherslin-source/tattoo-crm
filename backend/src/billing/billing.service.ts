@@ -15,6 +15,28 @@ function roundHalfUp(n: number) {
   return Math.round(n);
 }
 
+function sumAddonMoneyFromVariantsSnapshot(v: any): number {
+  if (!v || typeof v !== 'object') return 0;
+  const NON_MONEY_KEYS = new Set([
+    'side',
+    'color',
+    'size',
+    'position',
+    'style',
+    'complexity',
+    'technique',
+  ]);
+  let sum = 0;
+  for (const [k, raw] of Object.entries(v)) {
+    if (NON_MONEY_KEYS.has(k)) continue;
+    const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+    if (!Number.isFinite(n)) continue;
+    if (n <= 0) continue;
+    sum += Math.round(n);
+  }
+  return sum;
+}
+
 @Injectable()
 export class BillingService {
   constructor(private readonly prisma: PrismaService) {}
@@ -287,14 +309,16 @@ export class BillingService {
     if (!Array.isArray(items) || items.length === 0) return null;
 
     const mapped = items.map((it: any, idx: number) => {
-      const base = Number(it?.basePrice ?? it?.finalPrice ?? 0);
-      const final = Number(it?.finalPrice ?? it?.basePrice ?? 0);
+      const variantsSnapshot = it?.selectedVariants ?? it?.variants ?? null;
+      const addon = sumAddonMoneyFromVariantsSnapshot(variantsSnapshot);
+      const base = Number(it?.basePrice ?? it?.finalPrice ?? 0) + addon;
+      const final = Number(it?.finalPrice ?? it?.basePrice ?? 0) + addon;
       return {
         serviceId: it?.serviceId ?? null,
         nameSnapshot: String(it?.serviceName ?? it?.name ?? '服務'),
         basePriceSnapshot: Math.max(0, Math.trunc(base)),
         finalPriceSnapshot: Math.max(0, Math.trunc(final)),
-        variantsSnapshot: it?.selectedVariants ?? it?.variants ?? null,
+        variantsSnapshot,
         notes: it?.notes ?? null,
         sortOrder: idx,
       };

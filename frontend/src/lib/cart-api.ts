@@ -13,6 +13,7 @@ export interface CartItem {
     position?: string;
     side?: string;
     design_fee?: number;
+    custom_addon?: number;
     style?: string;
     complexity?: string;
   };
@@ -66,6 +67,7 @@ export async function addToCart(data: {
     design_fee?: number;
     style?: string;
     complexity?: string;
+    custom_addon?: number;
   };
   notes?: string;
   referenceImages?: string[];

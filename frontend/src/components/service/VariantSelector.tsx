@@ -783,7 +783,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin: _isAdm
               </div>
               <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                 <Info className="h-3 w-3" />
-                設計費另計，不計入總價
+                有輸入設計費時計入購物車總金額
               </p>
             </div>
           )}

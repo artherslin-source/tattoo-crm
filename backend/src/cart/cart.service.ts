@@ -8,6 +8,19 @@ import { CheckoutCartDto } from './dto/checkout-cart.dto';
 export class CartService {
   constructor(private prisma: PrismaService) {}
 
+  private getAddonTotal(selectedVariants: any): number {
+    const v = selectedVariants && typeof selectedVariants === 'object' ? selectedVariants : {};
+    const candidates = [v.design_fee, v.custom_addon];
+    let sum = 0;
+    for (const raw of candidates) {
+      const n = typeof raw === 'number' ? raw : Number(raw);
+      if (!Number.isFinite(n)) continue;
+      if (n <= 0) continue;
+      sum += Math.round(n);
+    }
+    return sum;
+  }
+
   /**
    * 獲取或創建購物車
    */
@@ -262,7 +275,7 @@ export class CartService {
     }
 
     // 計算總價和總時長
-    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice, 0);
+    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice + this.getAddonTotal(item.selectedVariants), 0);
     const totalDuration = cart.items.reduce((sum, item) => sum + item.estimatedDuration, 0);
 
     // 轉換為響應格式
@@ -331,7 +344,7 @@ export class CartService {
     }
 
     // 計算總價和總時長（用於 cartSnapshot）
-    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice, 0);
+    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice + this.getAddonTotal(item.selectedVariants), 0);
     const totalDuration = cart.items.reduce((sum, item) => sum + item.estimatedDuration, 0);
 
     // 創建購物車快照

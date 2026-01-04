@@ -177,6 +177,16 @@ export default function CartPage() {
                               </span>
                             </div>
                           )}
+                          {item.selectedVariants.custom_addon && item.selectedVariants.custom_addon > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                加購
+                              </Badge>
+                              <span className="text-sm font-medium text-gray-700">
+                                NT$ {item.selectedVariants.custom_addon.toLocaleString()}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* 備註 */}
