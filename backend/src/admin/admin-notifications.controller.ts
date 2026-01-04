@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards, ForbiddenException, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, UseGuards, ForbiddenException, Query, Param } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 import { AccessGuard } from '../common/access/access.guard';
@@ -94,6 +94,74 @@ export class AdminNotificationsController {
       .slice(0, limit);
 
     return list;
+  }
+
+  @Get('announcements/:dedupKey/receipts')
+  async getAnnouncementReceipts(@Actor() actor: AccessActor, @Param('dedupKey') dedupKey: string) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can view announcement receipts');
+    if (!dedupKey?.startsWith('boss-announcement:')) {
+      throw new ForbiddenException('Invalid dedupKey');
+    }
+
+    const rows = await this.prisma.notification.findMany({
+      where: {
+        type: 'SYSTEM',
+        data: { path: ['kind'], equals: 'BOSS_ANNOUNCEMENT' },
+        AND: [
+          {
+            data: { path: ['dedupKey'], equals: dedupKey },
+          },
+        ],
+      },
+      orderBy: [{ isRead: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        userId: true,
+        isRead: true,
+        createdAt: true,
+        data: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            branch: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => {
+      const data = (r.data && typeof r.data === 'object' ? (r.data as any) : {}) as any;
+      const readAt = typeof data?.readAt === 'string' ? data.readAt : null;
+      return {
+        artistId: r.userId,
+        artistName: r.user?.name ?? null,
+        branchName: r.user?.branch?.name ?? null,
+        isRead: r.isRead,
+        readAt,
+      };
+    });
+  }
+
+  @Delete('announcements/:dedupKey')
+  async deleteAnnouncement(@Actor() actor: AccessActor, @Param('dedupKey') dedupKey: string) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can delete announcements');
+    if (!dedupKey?.startsWith('boss-announcement:')) {
+      throw new ForbiddenException('Invalid dedupKey');
+    }
+
+    const res = await this.prisma.notification.deleteMany({
+      where: {
+        type: 'SYSTEM',
+        data: { path: ['kind'], equals: 'BOSS_ANNOUNCEMENT' },
+        AND: [
+          {
+            data: { path: ['dedupKey'], equals: dedupKey },
+          },
+        ],
+      },
+    });
+
+    return { deletedCount: res.count };
   }
 
   @Post('broadcast')

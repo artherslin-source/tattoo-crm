@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
 import { getUserRole, isBossRole } from "@/lib/access";
 import { useRouter } from "next/navigation";
+import { deleteJsonWithAuth } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,14 @@ type AnnouncementHistoryRow = {
   recipientCount: number;
 };
 
+type AnnouncementReceiptRow = {
+  artistId: string;
+  artistName: string | null;
+  branchName: string | null;
+  isRead: boolean;
+  readAt: string | null;
+};
+
 export default function AdminNotificationsPage() {
   const router = useRouter();
   const role = getUserRole();
@@ -81,6 +90,10 @@ export default function AdminNotificationsPage() {
   const [announcementHistory, setAnnouncementHistory] = useState<AnnouncementHistoryRow[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<AnnouncementHistoryRow | null>(null);
+  const [receiptsOpen, setReceiptsOpen] = useState(false);
+  const [receipts, setReceipts] = useState<AnnouncementReceiptRow[]>([]);
+  const [receiptsLoading, setReceiptsLoading] = useState(false);
+  const [deletingAnnouncement, setDeletingAnnouncement] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -258,6 +271,41 @@ export default function AdminNotificationsPage() {
       setAnnouncementHistory([]);
     } finally {
       setLoadingHistory(false);
+    }
+  };
+
+  const fetchReceipts = async (dedupKey: string) => {
+    try {
+      setReceiptsLoading(true);
+      const data = await getJsonWithAuth<AnnouncementReceiptRow[]>(
+        `/admin/notifications/announcements/${encodeURIComponent(dedupKey)}/receipts`,
+      );
+      setReceipts(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn("Failed to fetch announcement receipts", e);
+      setReceipts([]);
+      alert("載入已讀回條失敗");
+    } finally {
+      setReceiptsLoading(false);
+    }
+  };
+
+  const deleteAnnouncement = async (dedupKey: string) => {
+    if (!confirm("確定要刪除此公告？刪除後所有刺青師端也會一起移除。")) return;
+    try {
+      setDeletingAnnouncement(true);
+      await deleteJsonWithAuth<{ deletedCount: number }>(
+        `/admin/notifications/announcements/${encodeURIComponent(dedupKey)}`,
+      );
+      setSelectedHistory(null);
+      setReceiptsOpen(false);
+      await fetchAnnouncementHistory();
+      alert("已刪除公告");
+    } catch (e) {
+      console.error("Failed to delete announcement", e);
+      alert("刪除公告失敗");
+    } finally {
+      setDeletingAnnouncement(false);
     }
   };
 
@@ -506,8 +554,83 @@ export default function AdminNotificationsPage() {
                       <div className="font-semibold text-text-primary-light">{selectedHistory.title}</div>
                       <div className="mt-2 whitespace-pre-wrap text-text-secondary-light">{selectedHistory.message}</div>
                     </div>
-                    <div className="flex justify-end">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          setReceiptsOpen(true);
+                          await fetchReceipts(selectedHistory.dedupKey);
+                        }}
+                      >
+                        查看已讀回條
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => deleteAnnouncement(selectedHistory.dedupKey)}
+                        disabled={deletingAnnouncement}
+                      >
+                        {deletingAnnouncement ? "刪除中..." : "刪除公告"}
+                      </Button>
                       <Button variant="outline" onClick={() => setSelectedHistory(null)}>
+                        關閉
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={receiptsOpen} onOpenChange={setReceiptsOpen}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>已讀回條</DialogTitle>
+                </DialogHeader>
+                {receiptsLoading ? (
+                  <div className="text-sm text-text-muted-light">載入中...</div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-sm text-text-muted-light">
+                      已讀 {receipts.filter((r) => r.isRead).length} / 未讀 {receipts.filter((r) => !r.isRead).length}
+                    </div>
+                    <div className="overflow-auto border border-gray-200 dark:border-neutral-700 rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-neutral-800">
+                          <tr>
+                            <th className="text-left p-2">分店</th>
+                            <th className="text-left p-2">刺青師</th>
+                            <th className="text-left p-2">狀態</th>
+                            <th className="text-left p-2">已讀時間</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {receipts.map((r) => (
+                            <tr key={r.artistId} className="border-t border-gray-200 dark:border-neutral-700">
+                              <td className="p-2">{r.branchName || "—"}</td>
+                              <td className="p-2">{r.artistName || r.artistId}</td>
+                              <td className="p-2">
+                                {r.isRead ? (
+                                  <Badge className="bg-green-100 text-green-800">已讀</Badge>
+                                ) : (
+                                  <Badge className="bg-gray-100 text-text-primary-light">未讀</Badge>
+                                )}
+                              </td>
+                              <td className="p-2">{r.readAt ? new Date(r.readAt).toLocaleString("zh-TW") : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      {selectedHistory && (
+                        <Button
+                          variant="destructive"
+                          onClick={() => deleteAnnouncement(selectedHistory.dedupKey)}
+                          disabled={deletingAnnouncement}
+                        >
+                          {deletingAnnouncement ? "刪除中..." : "刪除公告"}
+                        </Button>
+                      )}
+                      <Button variant="outline" onClick={() => setReceiptsOpen(false)}>
                         關閉
                       </Button>
                     </div>

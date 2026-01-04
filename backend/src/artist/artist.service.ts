@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class ArtistService {
@@ -698,9 +699,23 @@ export class ArtistService {
       throw new NotFoundException('通知不存在或您沒有權限修改此通知');
     }
 
+    const existingData =
+      notification.data && typeof notification.data === 'object'
+        ? (notification.data as Record<string, unknown>)
+        : {};
+
+    // Ensure we only stamp readAt once.
+    const nextData =
+      notification.isRead && typeof (existingData as any).readAt === 'string'
+        ? existingData
+        : { ...existingData, readAt: new Date().toISOString() };
+
     return this.prisma.notification.update({
       where: { id: notificationId },
-      data: { isRead: true },
+      data: {
+        isRead: true,
+        data: nextData as unknown as Prisma.InputJsonValue,
+      },
     });
   }
 }
