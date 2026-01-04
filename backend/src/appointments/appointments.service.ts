@@ -1,17 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { computeAvailableSlots, dayBounds } from './availability.util';
+import { parseHHmm } from './availability.util';
 
 @Injectable()
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
   private maxHoldMin = 24 * 60; // 24h cap
 
-  private clampEndToSameDay(startAt: Date, endAt: Date): Date {
-    const dayEnd = new Date(startAt);
-    dayEnd.setHours(23, 59, 0, 0);
-    return endAt > dayEnd ? dayEnd : endAt;
-  }
+  // Note: booking can cross day now (e.g. 23:00 -> 02:00).
 
   private parsePreferredDateToLocalStart(preferredDate: string): Date {
     // preferredDate: YYYY-MM-DD, interpret as local day start to avoid timezone surprises
@@ -96,6 +93,13 @@ export class AppointmentsService {
       });
     }
 
+    const artistUser = await this.prisma.user.findUnique({
+      where: { id: input.artistId },
+      select: { id: true, bookingLatestStartTime: true },
+    });
+    const cutoff = (artistUser?.bookingLatestStartTime || '21:00').trim() || '21:00';
+    const cutoffMin = parseHHmm(cutoff);
+
     // Artist availability: specificDate overrides weekday; blocks are included via isBlocked=true.
     const availability = await this.prisma.artistAvailability.findMany({
       where: {
@@ -120,7 +124,7 @@ export class AppointmentsService {
       select: { startAt: true, endAt: true },
     });
 
-    return computeAvailableSlots({
+    const out = computeAvailableSlots({
       branchBusinessHours: branch?.businessHours ?? null,
       weekday,
       durationMin: input.durationMin,
@@ -129,6 +133,15 @@ export class AppointmentsService {
       appointmentBlocks: appts,
       date: input.date,
     });
+    // Apply latest-start cutoff (compare within-day HH:mm)
+    out.slots = out.slots.filter((hhmm) => {
+      try {
+        return parseHHmm(hhmm) <= cutoffMin;
+      } catch {
+        return false;
+      }
+    });
+    return out;
   }
 
   async create(input: {
@@ -158,7 +171,21 @@ export class AppointmentsService {
       throw new BadRequestException('保留時間不可超過 24 小時');
     }
 
-    const computedEndAt = this.clampEndToSameDay(startAt, new Date(startAt.getTime() + holdMin * 60000));
+    const computedEndAt = new Date(startAt.getTime() + holdMin * 60000);
+
+    // Enforce artist latest-start cutoff (defense in depth)
+    if (input.artistId) {
+      const artistUser = await this.prisma.user.findUnique({
+        where: { id: input.artistId },
+        select: { id: true, bookingLatestStartTime: true },
+      });
+      const cutoff = (artistUser?.bookingLatestStartTime || '21:00').trim() || '21:00';
+      const cutoffMin = parseHHmm(cutoff);
+      const startMin = startAt.getHours() * 60 + startAt.getMinutes();
+      if (startMin > cutoffMin) {
+        throw new BadRequestException(`開始時間不可晚於 ${cutoff}`);
+      }
+    }
 
     // V2: 檢查時間衝突（以 artistId 為主；未指定 artistId 則只做 branch-level 允許）
     if (input.artistId) {

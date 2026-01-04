@@ -67,6 +67,9 @@ export function buildSlotStarts(ranges: TimeRange[], durationMin: number, stepMi
   for (const r of merged) {
     let t = r.startMin;
     while (t + durationMin <= r.endMin) {
+      // Only return start times for the selected day (00:00-23:59),
+      // but allow duration to spill into the next day when endMin > 24h.
+      if (t >= 24 * 60) break;
       out.push(formatHHmm(t));
       t += stepMin;
     }
@@ -104,11 +107,19 @@ export function parseBranchBusinessHours(businessHours: unknown, weekday: number
     if (Array.isArray(direct)) {
       return direct
         .filter((x: any) => x?.start && x?.end)
-        .map((x: any) => ({ startMin: parseHHmm(x.start), endMin: parseHHmm(x.end) }));
+        .map((x: any) => {
+          const startMin = parseHHmm(x.start);
+          let endMin = parseHHmm(x.end);
+          if (endMin < startMin) endMin += 24 * 60;
+          return { startMin, endMin };
+        });
     }
     const days = anyBH?.days?.[weekday];
     if (days?.open && days?.close) {
-      return [{ startMin: parseHHmm(days.open), endMin: parseHHmm(days.close) }];
+      const startMin = parseHHmm(days.open);
+      let endMin = parseHHmm(days.close);
+      if (endMin < startMin) endMin += 24 * 60;
+      return [{ startMin, endMin }];
     }
     return null;
   } catch {
@@ -123,7 +134,11 @@ export function availabilityToRanges(records: Array<{ startTime: string; endTime
   const available: TimeRange[] = [];
   const blocked: TimeRange[] = [];
   for (const r of records) {
-    const range = { startMin: parseHHmm(r.startTime), endMin: parseHHmm(r.endTime) };
+    const startMin = parseHHmm(r.startTime);
+    let endMin = parseHHmm(r.endTime);
+    // Cross-day support: 18:00-02:00 means end is on next day.
+    if (endMin < startMin) endMin += 24 * 60;
+    const range = { startMin, endMin };
     if (r.isBlocked) blocked.push(range);
     else available.push(range);
   }

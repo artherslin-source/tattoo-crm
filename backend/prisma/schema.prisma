@@ -19,6 +19,8 @@ model User {
   role                        String?
   // personId        String?  // 多帳號對應同一真人（跨分店排程互斥）
   branchId                    String?
+  // ARTIST：可自行設定「最晚可預約開始時間」（HH:mm，例如 21:00、23:30）。null 代表預設 21:00。
+  bookingLatestStartTime      String?
   // 顧客主責刺青師（用於資料範圍：ARTIST 只能看自己顧客）
   primaryArtistId             String?
   isActive                    Boolean            @default(true)

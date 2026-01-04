@@ -13,6 +13,7 @@ interface UpdateUserDto {
   avatarUrl?: string;
   bio?: string; // 刺青師介紹
   photoUrl?: string; // 刺青師照片
+  bookingLatestStartTime?: string; // ARTIST：最晚可預約開始時間（HH:mm）
 }
 
 interface ChangePasswordDto {

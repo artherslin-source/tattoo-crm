@@ -9,6 +9,7 @@ interface UpdateUserDto {
   avatarUrl?: string;
   bio?: string; // 刺青師介紹
   photoUrl?: string; // 刺青師照片
+  bookingLatestStartTime?: string; // ARTIST：最晚可預約開始時間（HH:mm）
 }
 
 interface GetUsersQuery {
@@ -82,6 +83,7 @@ export class UsersService {
         phone: true,
         role: true,
         branchId: true,
+        bookingLatestStartTime: true,
         branch: {
           select: {
             id: true,
@@ -204,6 +206,23 @@ export class UsersService {
     }
     if (updateUserDto.avatarUrl !== undefined) updateData.avatarUrl = updateUserDto.avatarUrl;
 
+    if (updateUserDto.bookingLatestStartTime !== undefined) {
+      const v = String(updateUserDto.bookingLatestStartTime || '').trim();
+      if (v === '') {
+        updateData.bookingLatestStartTime = null;
+      } else {
+        // HH:mm validation (00:00-23:59)
+        if (!/^\d{2}:\d{2}$/.test(v)) {
+          throw new BadRequestException('bookingLatestStartTime must be HH:mm');
+        }
+        const [hh, mm] = v.split(':').map((x) => Number(x));
+        if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+          throw new BadRequestException('bookingLatestStartTime invalid');
+        }
+        updateData.bookingLatestStartTime = v;
+      }
+    }
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: updateData,
@@ -214,6 +233,7 @@ export class UsersService {
         phone: true,
         role: true,
         branchId: true,
+        bookingLatestStartTime: true,
         createdAt: true,
         lastLogin: true,
         status: true,
