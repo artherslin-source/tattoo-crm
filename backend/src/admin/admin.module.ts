@@ -20,9 +20,11 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ServicesModule } from '../services/services.module';
 import { BranchesModule } from '../branches/branches.module';
 import { BillingModule } from '../billing/billing.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { AdminNotificationsController } from './admin-notifications.controller';
 
 @Module({
-  imports: [PrismaModule, BillingModule, ServicesModule, BranchesModule],
+  imports: [PrismaModule, BillingModule, ServicesModule, BranchesModule, NotificationsModule],
   controllers: [
     AdminController, 
     AdminServicesController, 
@@ -35,6 +37,7 @@ import { BillingModule } from '../billing/billing.module';
     DiagnosticsController,
     AdminServiceVariantsController,
     AdminUsersController,
+    AdminNotificationsController,
   ],
   providers: [
     AdminAppointmentsService,

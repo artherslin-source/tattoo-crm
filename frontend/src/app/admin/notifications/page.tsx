@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getJsonWithAuth, patchJsonWithAuth } from "@/lib/api";
+import { getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
+import { getUserRole, isBossRole } from "@/lib/access";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Bell,
   BellRing,
@@ -33,15 +39,64 @@ interface Notification {
   };
 }
 
+type BranchOption = { id: string; name: string };
+type AdminArtistApiRow = {
+  id?: string;
+  user?: { id?: string; name?: string | null; isActive?: boolean | null } | null;
+  branch?: { id?: string; name?: string | null } | null;
+};
+type ArtistOption = { userId: string; name: string; branchId: string; branchName: string };
+
 export default function AdminNotificationsPage() {
+  const role = getUserRole();
+  const isBoss = isBossRole(role);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [markingAsRead, setMarkingAsRead] = useState<string | null>(null);
+  const [announceOpen, setAnnounceOpen] = useState(false);
+  const [announceScope, setAnnounceScope] = useState<"ALL_ARTISTS" | "BRANCH_ARTISTS" | "SINGLE_ARTIST">("ALL_ARTISTS");
+  const [announceBranchId, setAnnounceBranchId] = useState<string>("");
+  const [announceArtistId, setAnnounceArtistId] = useState<string>("");
+  const [announceTitle, setAnnounceTitle] = useState<string>("");
+  const [announceMessage, setAnnounceMessage] = useState<string>("");
+  const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [artists, setArtists] = useState<ArtistOption[]>([]);
 
   useEffect(() => {
     fetchNotifications();
+    if (isBoss) {
+      fetchAnnouncementTargets();
+    }
   }, []);
+
+  const fetchAnnouncementTargets = async () => {
+    try {
+      const [branchData, artistData] = await Promise.all([
+        getJsonWithAuth<BranchOption[]>("/admin/artists/branches"),
+        getJsonWithAuth<AdminArtistApiRow[]>("/admin/artists"),
+      ]);
+
+      setBranches(
+        (Array.isArray(branchData) ? branchData : [])
+          .map((b) => ({ id: String((b as any).id || ""), name: String((b as any).name || "") }))
+          .filter((b) => !!b.id),
+      );
+
+      const mapped: ArtistOption[] = (Array.isArray(artistData) ? artistData : [])
+        .map((a) => ({
+          userId: String(a.user?.id || a.id || ""),
+          name: String(a.user?.name || "未命名"),
+          branchId: String(a.branch?.id || ""),
+          branchName: String(a.branch?.name || "未分店"),
+        }))
+        .filter((a) => !!a.userId && !!a.branchId);
+      setArtists(mapped);
+    } catch (e) {
+      console.warn("Failed to fetch announcement targets", e);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -176,6 +231,44 @@ export default function AdminNotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+  const sendAnnouncement = async () => {
+    if (!announceTitle.trim() || !announceMessage.trim()) {
+      alert("請輸入公告標題與內容");
+      return;
+    }
+    if (announceScope === "BRANCH_ARTISTS" && !announceBranchId) {
+      alert("請選擇分店");
+      return;
+    }
+    if (announceScope === "SINGLE_ARTIST" && !announceArtistId) {
+      alert("請選擇刺青師");
+      return;
+    }
+
+    try {
+      setSendingAnnouncement(true);
+      const res = await postJsonWithAuth<{ createdCount: number }>(`/admin/notifications/broadcast`, {
+        scope: announceScope,
+        branchId: announceScope === "BRANCH_ARTISTS" ? announceBranchId : undefined,
+        artistId: announceScope === "SINGLE_ARTIST" ? announceArtistId : undefined,
+        title: announceTitle.trim(),
+        message: announceMessage.trim(),
+      });
+      alert(`已發送公告（建立 ${res?.createdCount ?? 0} 則通知）`);
+      setAnnounceOpen(false);
+      setAnnounceTitle("");
+      setAnnounceMessage("");
+      setAnnounceScope("ALL_ARTISTS");
+      setAnnounceBranchId("");
+      setAnnounceArtistId("");
+    } catch (e) {
+      console.error("Failed to send announcement", e);
+      alert("發送公告失敗");
+    } finally {
+      setSendingAnnouncement(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -209,12 +302,105 @@ export default function AdminNotificationsPage() {
           <p className="text-text-muted-light mt-2">您有 {unreadCount} 則未讀通知</p>
         </div>
 
-        {unreadCount > 0 && (
-          <Button onClick={markAllAsRead} variant="outline" className="mt-4 sm:mt-0">
-            <CheckCircle className="mr-2 h-4 w-4" />
-            全部標記為已讀
-          </Button>
-        )}
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-2">
+          {isBoss && (
+            <>
+              <Button onClick={() => setAnnounceOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <BellRing className="mr-2 h-4 w-4" />
+                發送系統公告
+              </Button>
+              <Dialog open={announceOpen} onOpenChange={setAnnounceOpen}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>發送系統公告（BOSS）</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>範圍</Label>
+                      <Select value={announceScope} onValueChange={(v: any) => setAnnounceScope(v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="選擇範圍" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL_ARTISTS">群發所有 ARTIST</SelectItem>
+                          <SelectItem value="BRANCH_ARTISTS">針對分店的 ARTIST</SelectItem>
+                          <SelectItem value="SINGLE_ARTIST">針對單一 ARTIST</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {announceScope === "BRANCH_ARTISTS" && (
+                      <div className="space-y-2">
+                        <Label>分店</Label>
+                        <Select value={announceBranchId} onValueChange={setAnnounceBranchId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="選擇分店" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {branches.map((b) => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {announceScope === "SINGLE_ARTIST" && (
+                      <div className="space-y-2">
+                        <Label>刺青師</Label>
+                        <Select value={announceArtistId} onValueChange={setAnnounceArtistId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="選擇刺青師" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {artists.map((a) => (
+                              <SelectItem key={a.userId} value={a.userId}>
+                                {a.name}（{a.branchName}）
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>標題</Label>
+                      <Input value={announceTitle} onChange={(e) => setAnnounceTitle(e.target.value)} placeholder="公告標題" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>內容</Label>
+                      <Textarea
+                        value={announceMessage}
+                        onChange={(e) => setAnnounceMessage(e.target.value)}
+                        placeholder="公告內容"
+                        rows={5}
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setAnnounceOpen(false)} disabled={sendingAnnouncement}>
+                        取消
+                      </Button>
+                      <Button onClick={sendAnnouncement} disabled={sendingAnnouncement}>
+                        {sendingAnnouncement ? "發送中..." : "發送"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+
+          {unreadCount > 0 && (
+            <Button onClick={markAllAsRead} variant="outline">
+              <CheckCircle className="mr-2 h-4 w-4" />
+              全部標記為已讀
+            </Button>
+          )}
+        </div>
       </div>
 
       {notifications.length === 0 ? (
