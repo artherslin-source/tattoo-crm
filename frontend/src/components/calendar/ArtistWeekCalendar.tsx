@@ -149,6 +149,7 @@ export default function ArtistWeekCalendar(props: {
   // ensure week starts on Monday in moment localizer
   useMemo(() => {
     try {
+      moment.locale("zh-tw");
       moment.updateLocale(moment.locale(), { week: { dow: 1 } });
     } catch {}
     return null;
@@ -411,10 +412,33 @@ export default function ArtistWeekCalendar(props: {
           timeslots={1}
           min={minTime}
           max={maxTime}
+          // Ensure cross-day events (e.g. 23:30 -> 02:00) render in the time grid in week/day views.
+          showMultiDayTimes
           toolbar
           popup
           selectable={false}
           eventPropGetter={eventPropGetter}
+          messages={{
+            today: "今天",
+            previous: "上一個",
+            next: "下一個",
+            month: "月",
+            week: "週",
+            day: "日",
+            agenda: "列表",
+            date: "日期",
+            time: "時間",
+            event: "事件",
+            noEventsInRange: "此區間沒有事件",
+            showMore: (total) => `還有 ${total} 筆`,
+          }}
+          formats={{
+            timeGutterFormat: "HH:mm",
+            eventTimeRangeFormat: ({ start, end }, culture, l) =>
+              `${l?.format(start, "HH:mm", culture)}–${l?.format(end, "HH:mm", culture)}`,
+            agendaTimeRangeFormat: ({ start, end }, culture, l) =>
+              `${l?.format(start, "YYYY/MM/DD HH:mm", culture)}–${l?.format(end, "YYYY/MM/DD HH:mm", culture)}`,
+          }}
         />
       </div>
 
