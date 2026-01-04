@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
 import { getUserRole, isBossRole } from "@/lib/access";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ interface Notification {
     customerName?: string;
     serviceName?: string;
     appointmentTime?: string;
+    contactId?: string;
+    contactName?: string;
   };
 }
 
@@ -48,6 +51,7 @@ type AdminArtistApiRow = {
 type ArtistOption = { userId: string; name: string; branchId: string; branchName: string };
 
 export default function AdminNotificationsPage() {
+  const router = useRouter();
   const role = getUserRole();
   const isBoss = isBossRole(role);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -230,6 +234,11 @@ export default function AdminNotificationsPage() {
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const hasAnyContactLink = useMemo(
+    () => notifications.some((n) => !!(n as any)?.data?.contactId),
+    [notifications],
+  );
 
   const sendAnnouncement = async () => {
     if (!announceTitle.trim() || !announceMessage.trim()) {
@@ -437,6 +446,35 @@ export default function AdminNotificationsPage() {
                     </div>
 
                     <p className="text-text-secondary-light mb-3">{notification.message}</p>
+
+                    {(notification.data?.contactId || notification.data?.appointmentId) && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {notification.data?.contactId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              router.push(`/admin/contacts?highlightId=${encodeURIComponent(notification.data!.contactId!)}`)
+                            }
+                          >
+                            查看聯絡
+                          </Button>
+                        )}
+                        {notification.data?.appointmentId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              router.push(
+                                `/admin/appointments?openId=${encodeURIComponent(notification.data!.appointmentId!)}`,
+                              )
+                            }
+                          >
+                            查看預約
+                          </Button>
+                        )}
+                      </div>
+                    )}
 
                     {notification.type === "APPOINTMENT" && notification.data && (
                       <div className="bg-white rounded-lg p-3 mb-3">

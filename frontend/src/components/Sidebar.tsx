@@ -27,6 +27,7 @@ export default function Sidebar({ open, onClose }: Props) {
         { href: "/admin/contacts", label: "💬 聯絡管理" },
         { href: "/admin/appointments", label: "📅 預約管理" },
         { href: "/admin/billing", label: "💰 帳務管理" },
+        { href: "/admin/notifications", label: "🔔 通知中心" },
       ]
     : [
         { href: "/admin/dashboard", label: "📊 儀表板" },
@@ -37,6 +38,7 @@ export default function Sidebar({ open, onClose }: Props) {
         { href: "/admin/contacts", label: "💬 聯絡管理" },
         { href: "/admin/appointments", label: "📅 預約管理" },
         { href: "/admin/billing", label: "💰 帳務管理" },
+        { href: "/admin/notifications", label: "🔔 通知中心" },
       ];
 
   const handleLogout = () => {
