@@ -6,6 +6,9 @@ import { Calendar as RBCalendar, momentLocalizer } from "react-big-calendar";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import { patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import ScheduleModal, { type ScheduleModalInitial } from "./ScheduleModal";
+import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export type CalendarAppointment = {
   id: string;
@@ -138,6 +141,7 @@ export default function ArtistWeekCalendar(props: {
   onRefresh: () => Promise<void>;
   onWeekStartChange?: (next: Date) => void;
 }) {
+  const router = useRouter();
   const { weekStart, businessHours, appointments, onRefresh, onWeekStartChange } = props;
   const [view, setView] = useState<"month" | "week" | "day" | "agenda">("week");
   const [currentDate, setCurrentDate] = useState<Date>(() => weekStart);
@@ -145,6 +149,10 @@ export default function ArtistWeekCalendar(props: {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleSubmitting, setScheduleSubmitting] = useState(false);
   const [scheduleInitial, setScheduleInitial] = useState<ScheduleModalInitial | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [navAppointmentId, setNavAppointmentId] = useState<string | null>(null);
+  const [navTitle, setNavTitle] = useState<string>("");
+  const [navTimeRange, setNavTimeRange] = useState<string>("");
 
   // ensure week starts on Monday in moment localizer
   useMemo(() => {
@@ -378,6 +386,28 @@ export default function ArtistWeekCalendar(props: {
     setCurrentDate(d);
   };
 
+  const handleSelectEvent = (evt: unknown) => {
+    try {
+      const e = evt as CalendarEvent;
+      const appointmentId = e?.resource?.appointmentId;
+      if (!appointmentId) return;
+      setNavAppointmentId(appointmentId);
+      setNavTitle(e.title || "預約");
+      const startStr = e.start instanceof Date ? e.start.toLocaleString("zh-TW") : "";
+      const endStr = e.end instanceof Date ? e.end.toLocaleString("zh-TW") : "";
+      setNavTimeRange(startStr && endStr ? `${startStr} → ${endStr}` : "");
+      setNavOpen(true);
+    } catch {
+      // ignore
+    }
+  };
+
+  const goToAppointment = () => {
+    if (!navAppointmentId) return;
+    setNavOpen(false);
+    router.push(`/admin/appointments?highlightId=${encodeURIComponent(navAppointmentId)}`);
+  };
+
   return (
     <div className="space-y-3">
       {toast ? <div className="text-sm text-gray-700">{toast}</div> : null}
@@ -407,6 +437,7 @@ export default function ArtistWeekCalendar(props: {
           titleAccessor="title"
           draggableAccessor={draggableAccessor}
           onEventDrop={handleEventDrop}
+          onSelectEvent={handleSelectEvent}
           onNavigate={handleNavigate}
           step={30}
           timeslots={1}
@@ -456,6 +487,26 @@ export default function ArtistWeekCalendar(props: {
         submitting={scheduleSubmitting}
         onSubmit={submitSchedule}
       />
+
+      <Dialog open={navOpen} onOpenChange={setNavOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>查看預約</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <div className="text-sm text-text-secondary-light">{navTitle}</div>
+            {navTimeRange ? <div className="text-xs text-text-muted-light">{navTimeRange}</div> : null}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setNavOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={goToAppointment} disabled={!navAppointmentId}>
+                查看預約
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
