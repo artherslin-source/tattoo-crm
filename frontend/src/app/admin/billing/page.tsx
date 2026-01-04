@@ -1187,27 +1187,52 @@ export default function AdminBillingPage() {
                         finalPriceSnapshot: it.finalPriceSnapshot,
                         variantsSnapshot: it.variantsSnapshot,
                       });
+                      const colorLabel = `顏色-${bd.color || "未設定"}`;
                       return (
                         <div key={`breakdown-${it.id}`} className="rounded-md border border-gray-200 bg-white p-3">
-                          <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-1">
+                          <div className="space-y-2">
+                            {/* 1) 服務名稱：不顯示金額 */}
                             <div className="font-medium text-gray-900">{bd.serviceName}</div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              <Money amount={bd.finalPrice} className="w-full" amountClassName="tabular-nums text-right" />
+
+                            {/* 2) 顏色-XX：顯示服務價（不含附加） */}
+                            <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
+                              <div className="text-xs text-gray-600">{colorLabel}</div>
+                              <div className="text-xs font-medium text-gray-900">
+                                <Money amount={bd.servicePrice} className="w-full" amountClassName="tabular-nums text-right" />
+                              </div>
                             </div>
 
-                            <div className="text-xs text-gray-600 pl-0.5">服務價</div>
-                            <div className="text-xs font-medium text-gray-900">
-                              <Money amount={bd.servicePrice} className="w-full" amountClassName="tabular-nums text-right" />
-                            </div>
-
-                            {bd.addons.map((a) => (
-                              <div key={`${it.id}-${a.key}`} className="contents">
-                                <div className="text-xs text-gray-600 pl-0.5">{a.label}</div>
+                            {/* 3) 加購：顯示金額（若存在） */}
+                            {bd.customAddon > 0 ? (
+                              <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
+                                <div className="text-xs text-gray-600">加購</div>
                                 <div className="text-xs font-medium text-gray-900">
-                                  <Money amount={a.amount} className="w-full" amountClassName="tabular-nums text-right" />
+                                  <Money amount={bd.customAddon} className="w-full" amountClassName="tabular-nums text-right" />
                                 </div>
                               </div>
-                            ))}
+                            ) : null}
+
+                            {/* 設計費：只有存在才顯示 */}
+                            {bd.designFee > 0 ? (
+                              <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
+                                <div className="text-xs text-gray-600">設計費</div>
+                                <div className="text-xs font-medium text-gray-900">
+                                  <Money amount={bd.designFee} className="w-full" amountClassName="tabular-nums text-right" />
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {/* 其他附加：可擴充（不包含設計費/加購/顏色等） */}
+                            {bd.addons
+                              .filter((a) => a.key !== "custom_addon" && a.key !== "design_fee")
+                              .map((a) => (
+                                <div key={`${it.id}-${a.key}`} className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
+                                  <div className="text-xs text-gray-600">{a.label}</div>
+                                  <div className="text-xs font-medium text-gray-900">
+                                    <Money amount={a.amount} className="w-full" amountClassName="tabular-nums text-right" />
+                                  </div>
+                                </div>
+                              ))}
                           </div>
                         </div>
                       );

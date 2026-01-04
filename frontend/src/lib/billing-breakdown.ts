@@ -6,10 +6,13 @@ export type BillingAddon = {
 
 export type BillingItemBreakdown = {
   serviceName: string;
+  color: string | null;
   finalPrice: number;
   servicePrice: number;
   addons: BillingAddon[];
   addonsTotal: number;
+  designFee: number;
+  customAddon: number;
 };
 
 const KNOWN_ADDON_LABELS: Record<string, string> = {
@@ -40,19 +43,42 @@ function toMoney(v: unknown): number | null {
   return null;
 }
 
+function normalizeColor(v: unknown): string | null {
+  if (typeof v === "string") {
+    const t = v.trim();
+    return t ? t : null;
+  }
+  return null;
+}
+
+function stripColorSuffix(name: string, color: string | null): string {
+  if (!color) return name;
+  const suffix = `-${color}`;
+  return name.endsWith(suffix) ? name.slice(0, -suffix.length) : name;
+}
+
 export function buildBillItemBreakdown(input: {
   nameSnapshot?: string | null;
   finalPriceSnapshot?: number | null;
   variantsSnapshot?: unknown;
 }): BillingItemBreakdown {
-  const serviceName = input.nameSnapshot || "服務";
+  const rawName = input.nameSnapshot || "服務";
   const finalPrice = typeof input.finalPriceSnapshot === "number" && Number.isFinite(input.finalPriceSnapshot) ? Math.round(input.finalPriceSnapshot) : 0;
 
   const variants = input.variantsSnapshot && typeof input.variantsSnapshot === "object" ? (input.variantsSnapshot as Record<string, unknown>) : {};
+  const color = normalizeColor(variants.color);
+  const serviceName = stripColorSuffix(rawName, color);
 
   const addons: BillingAddon[] = [];
+  const designFee = toMoney(variants.design_fee) ?? 0;
+  const customAddon = toMoney(variants.custom_addon) ?? 0;
+
+  if (customAddon > 0) addons.push({ key: "custom_addon", label: KNOWN_ADDON_LABELS.custom_addon, amount: customAddon });
+  if (designFee > 0) addons.push({ key: "design_fee", label: KNOWN_ADDON_LABELS.design_fee, amount: designFee });
+
   for (const [key, raw] of Object.entries(variants)) {
     if (NON_MONEY_KEYS.has(key)) continue;
+    if (key === "design_fee" || key === "custom_addon") continue;
     const amt = toMoney(raw);
     if (amt === null) continue;
     if (amt <= 0) continue;
@@ -67,7 +93,7 @@ export function buildBillItemBreakdown(input: {
   const addonsTotal = addons.reduce((s, a) => s + a.amount, 0);
   const servicePrice = Math.max(0, finalPrice - addonsTotal);
 
-  return { serviceName, finalPrice, servicePrice, addons, addonsTotal };
+  return { serviceName, color, finalPrice, servicePrice, addons, addonsTotal, designFee, customAddon };
 }
 
 
