@@ -3,10 +3,41 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
 import { isBoss, type AccessActor } from '../common/access/access.types';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ContactsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
+
+  private async notifyOwnerAssigned(input: {
+    contactId: string;
+    contactName: string;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
+    branchId?: string | null;
+    newOwnerArtistId: string;
+  }) {
+    const dedupKey = `contact-assigned:${input.contactId}:${input.newOwnerArtistId}`;
+    const displayContact = input.contactPhone || input.contactEmail || input.contactId;
+    await this.notifications.createForUser({
+      userId: input.newOwnerArtistId,
+      type: 'SYSTEM',
+      title: '聯絡指派',
+      message: `你被指派新的聯絡：${input.contactName}（${displayContact}）`,
+      dedupKey,
+      data: {
+        kind: 'CONTACT_ASSIGNED',
+        contactId: input.contactId,
+        contactName: input.contactName,
+        phone: input.contactPhone ?? undefined,
+        email: input.contactEmail ?? undefined,
+        branchId: input.branchId ?? undefined,
+      },
+    });
+  }
 
   async createPublic(createContactDto: CreateContactDto) {
     // Public endpoint: allow creating a lead/contact with optional owner assignment (user-selected artist).
@@ -43,7 +74,7 @@ export class ContactsService {
       throw new Error('指定的分店不存在');
     }
 
-    return this.prisma.contact.create({
+    const created = await this.prisma.contact.create({
       data: safeDto,
       include: {
         branch: {
@@ -56,6 +87,19 @@ export class ContactsService {
         },
       },
     });
+
+    if (created.ownerArtistId) {
+      await this.notifyOwnerAssigned({
+        contactId: created.id,
+        contactName: created.name,
+        contactPhone: created.phone ?? null,
+        contactEmail: created.email ?? null,
+        branchId: created.branchId ?? null,
+        newOwnerArtistId: created.ownerArtistId,
+      });
+    }
+
+    return created;
   }
 
   private async ensureContactReadable(actor: AccessActor, contactId: string) {
@@ -98,7 +142,7 @@ export class ContactsService {
         }
       }
       
-      return this.prisma.contact.create({
+      const created = await this.prisma.contact.create({
         data: createContactDto,
         include: {
           branch: {
@@ -111,6 +155,19 @@ export class ContactsService {
           },
         },
       });
+
+      if (created.ownerArtistId) {
+        await this.notifyOwnerAssigned({
+          contactId: created.id,
+          contactName: created.name,
+          contactPhone: created.phone ?? null,
+          contactEmail: created.email ?? null,
+          branchId: created.branchId ?? null,
+          newOwnerArtistId: created.ownerArtistId,
+        });
+      }
+
+      return created;
     } catch (error) {
       console.error('ContactsService.create error:', error);
       throw error;
@@ -223,7 +280,22 @@ export class ContactsService {
       delete (data as any).ownerArtistId;
     }
 
-    return this.prisma.contact.update({
+    const before =
+      isBoss(actor) && (data as any).ownerArtistId !== undefined
+        ? await this.prisma.contact.findUnique({
+            where: { id },
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              branchId: true,
+              ownerArtistId: true,
+            },
+          })
+        : null;
+
+    const updated = await this.prisma.contact.update({
       where: { id },
       data,
       include: {
@@ -246,6 +318,20 @@ export class ContactsService {
         },
       },
     });
+
+    // Only BOSS can assign; generate notification when assignment changes to a new non-null owner.
+    if (before && before.ownerArtistId !== updated.ownerArtistId && updated.ownerArtistId) {
+      await this.notifyOwnerAssigned({
+        contactId: updated.id,
+        contactName: updated.name,
+        contactPhone: (updated as any).phone ?? before.phone ?? null,
+        contactEmail: (updated as any).email ?? before.email ?? null,
+        branchId: (updated as any).branchId ?? before.branchId ?? null,
+        newOwnerArtistId: updated.ownerArtistId,
+      });
+    }
+
+    return updated;
   }
 
   async remove(actor: AccessActor, id: string) {
