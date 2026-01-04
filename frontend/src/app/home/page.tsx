@@ -154,6 +154,7 @@ function HomePageContent({
       design_fee?: number;
       style?: string;
       complexity?: string;
+      custom_addon?: number;
     },
     notes: string
   ) => {

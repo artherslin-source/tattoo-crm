@@ -480,8 +480,11 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin: _isAdm
       }
     }
 
-    // 設計費另計，不計入總價
-    // 設計費將在後端或結帳時單獨處理
+    // 設計費：計入總價（購物車總金額會包含）
+    if (designFee > 0) {
+      price += designFee;
+      console.log(`💰 設計費: +NT$ ${designFee}`);
+    }
 
     // 增出範圍與細膩度加購：計入總價
     if (customAddonPrice > 0) {
@@ -490,7 +493,7 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin: _isAdm
     }
 
     return price;
-  }, [selectedSize, selectedColor, selectedPosition, selectedSide, customAddonPrice, variants, service]);
+  }, [selectedSize, selectedColor, selectedPosition, selectedSide, designFee, customAddonPrice, variants, service]);
 
   // 處理加入購物車
   const handleAddToCart = async () => {
