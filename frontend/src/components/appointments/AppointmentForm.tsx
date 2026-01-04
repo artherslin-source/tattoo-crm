@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { postJsonWithAuth, getJsonWithAuth, patchJsonWithAuth, ApiError, getAccessToken } from "@/lib/api";
+import { postJsonWithAuth, getJsonWithAuth, ApiError, getAccessToken } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { formatMembershipLevel } from "@/lib/membership";
-import { getUserRole, isArtistRole } from "@/lib/access";
 
 // 規格欄位名稱中文對照
 const VARIANT_LABEL_MAP: Record<string, string> = {
@@ -121,17 +120,12 @@ interface AppointmentFormProps {
   title?: string;
   description?: string;
   'data-testid'?: string;
+  availabilityRefreshKey?: number;
 }
 
 interface AvailabilityResponse {
   slots: string[];
 }
-
-type MeResponse = {
-  id: string;
-  role?: string | null;
-  bookingLatestStartTime?: string | null;
-};
 
 function useAccessToken() {
   const [token, setToken] = useState<string | null>(null);
@@ -149,13 +143,12 @@ export default function AppointmentForm({
   onCancel,
   title = "創建新預約",
   description = "為客戶創建新的預約",
-  'data-testid': dataTestId
+  'data-testid': dataTestId,
+  availabilityRefreshKey,
 }: AppointmentFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = useAccessToken();
-  const role = getUserRole();
-  const isArtist = isArtistRole(role);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,21 +168,6 @@ export default function AppointmentForm({
   });
 
   const canFetch = useMemo(() => !!token, [token]);
-
-  // ARTIST configurable latest booking start time (HH:mm). null => default 21:00.
-  const [latestStartTime, setLatestStartTime] = useState<string>("21:00");
-  const [savingLatestStartTime, setSavingLatestStartTime] = useState(false);
-
-  const timeOptions = useMemo(() => {
-    // 30-min increments: 00:00 - 23:30
-    const out: string[] = [];
-    for (let m = 0; m < 24 * 60; m += 30) {
-      const hh = String(Math.floor(m / 60)).padStart(2, "0");
-      const mm = String(m % 60).padStart(2, "0");
-      out.push(`${hh}:${mm}`);
-    }
-    return out;
-  }, []);
 
   const contactIdParam = useMemo(() => {
     const from = (fromContact?.contactId as string | undefined) || "";
@@ -264,42 +242,6 @@ export default function AppointmentForm({
 
     fetchData();
   }, [canFetch]);
-
-  // Load my bookingLatestStartTime for ARTIST (used as the default cutoff for this artist)
-  useEffect(() => {
-    const run = async () => {
-      if (!canFetch) return;
-      if (!isArtist) return;
-      try {
-        const me = await getJsonWithAuth<MeResponse>("/users/me");
-        const v = typeof me?.bookingLatestStartTime === "string" ? me.bookingLatestStartTime : null;
-        setLatestStartTime(v && /^\d{2}:\d{2}$/.test(v) ? v : "21:00");
-      } catch (e) {
-        console.warn("Failed to load /users/me", e);
-      }
-    };
-    run();
-  }, [canFetch, isArtist]);
-
-  const saveLatestStartTime = async () => {
-    try {
-      setSavingLatestStartTime(true);
-      await patchJsonWithAuth("/users/me", { bookingLatestStartTime: latestStartTime });
-      setSuccess("最晚可預約開始時間已更新");
-      // Slots are already filtered by backend; re-fetch by nudging date dependency (simplest: just clear and let effect run)
-      // The availability effect depends on artist/date/service/duration; no explicit dependency on cutoff needed.
-      // Reloading the current slots provides immediate feedback.
-      if (appointmentDate) {
-        setAvailableSlots([]);
-        setTimeSlot("");
-      }
-    } catch (e) {
-      console.error("Failed to save bookingLatestStartTime", e);
-      setError("更新最晚開始時間失敗");
-    } finally {
-      setSavingLatestStartTime(false);
-    }
-  };
 
   // If coming from a Contact, fetch the latest contact detail and apply ownerArtist lock rules.
   useEffect(() => {
@@ -485,7 +427,16 @@ export default function AppointmentForm({
       }
     };
     run();
-  }, [canFetch, formData.branchId, formData.artistId, appointmentDate, formData.serviceId, durationMin, timeSlot]);
+  }, [
+    canFetch,
+    formData.branchId,
+    formData.artistId,
+    appointmentDate,
+    formData.serviceId,
+    durationMin,
+    timeSlot,
+    availabilityRefreshKey,
+  ]);
 
   // Derive startAt/endAt (datetime-local strings) from date + slot + duration
   useEffect(() => {
@@ -881,41 +832,6 @@ export default function AppointmentForm({
                 系統會用「保留時間」計算結束時間並避免撞單；可支援跨夜（例如 23:00→02:00）。
               </p>
             </div>
-
-            {/* ARTIST：個人最晚可預約開始時間設定 */}
-            {isArtist && (
-              <div className="rounded-md border border-purple-200 bg-purple-50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-medium text-text-secondary-light">最晚可預約開始時間（個人設定）</div>
-                    <div className="text-xs text-text-muted-light mt-1">
-                      影響「可選時段」上限。預設為 21:00，可設定為任意時段（跨夜由保留時間決定）。
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={saveLatestStartTime}
-                    disabled={savingLatestStartTime}
-                    className="px-3 py-1.5 rounded-md bg-purple-600 text-white text-sm hover:bg-purple-700 disabled:opacity-60"
-                  >
-                    {savingLatestStartTime ? "儲存中..." : "儲存"}
-                  </button>
-                </div>
-                <div className="mt-3 max-w-xs">
-                  <select
-                    value={latestStartTime}
-                    onChange={(e) => setLatestStartTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-purple-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    {timeOptions.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
 
             {/* 時間 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

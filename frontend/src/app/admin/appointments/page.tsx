@@ -16,7 +16,7 @@ import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
 import AppointmentForm from "@/components/appointments/AppointmentForm";
-import { hasAdminAccess } from "@/lib/access";
+import { hasAdminAccess, isArtistRole } from "@/lib/access";
 import { Money } from "@/components/Money";
 import { formatMoney } from "@/lib/money";
 
@@ -98,6 +98,11 @@ export default function AdminAppointmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightStorageKey = "ui.admin.appointments.highlightId";
+  const role = getUserRole();
+  const isArtist = isArtistRole(role);
+  const [bookingLatestStartTime, setBookingLatestStartTime] = useState<string>("21:00");
+  const [savingBookingLatestStartTime, setSavingBookingLatestStartTime] = useState(false);
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,7 +209,7 @@ export default function AdminAppointmentsPage() {
   }, []);
 
   useEffect(() => {
-    const userRole = getUserRole();
+    const userRole = role;
     const token = getAccessToken();
     
     if (!token || !hasAdminAccess(userRole)) {
@@ -214,7 +219,47 @@ export default function AdminAppointmentsPage() {
 
     fetchAppointments();
     fetchOptionsData(); // ✅ 問題1：調用 fetchOptionsData 以載入分店選項
-  }, [router, fetchAppointments, fetchOptionsData]);
+  }, [router, fetchAppointments, fetchOptionsData, role]);
+
+  // ARTIST only: load & edit latest start time setting (HH:mm)
+  const timeOptions = useMemo(() => {
+    const out: string[] = [];
+    for (let m = 0; m < 24 * 60; m += 30) {
+      const hh = String(Math.floor(m / 60)).padStart(2, "0");
+      const mm = String(m % 60).padStart(2, "0");
+      out.push(`${hh}:${mm}`);
+    }
+    return out;
+  }, []);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!isArtist) return;
+      try {
+        const me = await getJsonWithAuth<{ bookingLatestStartTime?: string | null }>("/users/me");
+        const v = typeof me?.bookingLatestStartTime === "string" ? me.bookingLatestStartTime : null;
+        setBookingLatestStartTime(v && /^\d{2}:\d{2}$/.test(v) ? v : "21:00");
+      } catch (e) {
+        console.warn("Failed to load /users/me for bookingLatestStartTime", e);
+      }
+    };
+    run();
+  }, [isArtist]);
+
+  const saveBookingLatestStartTime = async () => {
+    try {
+      setSavingBookingLatestStartTime(true);
+      await patchJsonWithAuth("/users/me", { bookingLatestStartTime: bookingLatestStartTime });
+      setSuccessMessage("最晚可預約開始時間已更新");
+      // Trigger slots refetch inside AppointmentForm (if modal is open)
+      setAvailabilityRefreshKey((x) => x + 1);
+    } catch (e) {
+      console.error("Failed to save bookingLatestStartTime", e);
+      setError("更新最晚開始時間失敗");
+    } finally {
+      setSavingBookingLatestStartTime(false);
+    }
+  };
 
   // Deep-link support (定位高亮，不自動展開): /admin/appointments?highlightId=<id>
   // Back-compat: 若有人仍帶 openId，也只做定位高亮。
@@ -689,6 +734,35 @@ export default function AdminAppointmentsPage() {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {isArtist && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 py-2">
+                <div className="text-xs text-text-muted-light">
+                  最晚可預約開始時間
+                  <div className="text-[11px] text-text-muted-light mt-0.5">
+                    提示：只是上限；實際最晚仍受可用時段/保留時間影響（例：150 分鐘且營業到 22:00 → 最晚 19:30）
+                  </div>
+                </div>
+                <select
+                  value={bookingLatestStartTime}
+                  onChange={(e) => setBookingLatestStartTime(e.target.value)}
+                  className="w-full sm:w-auto px-2 py-1 border border-purple-200 rounded-md bg-white"
+                >
+                  {timeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  onClick={saveBookingLatestStartTime}
+                  disabled={savingBookingLatestStartTime}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {savingBookingLatestStartTime ? "儲存中..." : "儲存"}
+                </Button>
+              </div>
+            )}
             <Button
               onClick={handleOpenCreateAppointmentModal}
               className="flex w-full items-center justify-center space-x-2 sm:w-auto"
@@ -902,6 +976,7 @@ export default function AdminAppointmentsPage() {
             title="新增預約"
             description="為客戶創建新的預約"
             data-testid="modal-appointment-form"
+            availabilityRefreshKey={availabilityRefreshKey}
           />
         </DialogContent>
       </Dialog>
