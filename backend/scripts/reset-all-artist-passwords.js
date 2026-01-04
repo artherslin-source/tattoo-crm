@@ -133,3 +133,4 @@ resetAllArtistPasswords()
     process.exit(1);
   });
 
+

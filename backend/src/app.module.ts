@@ -18,6 +18,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { HealthModule } from './health/health.module';
 import { CartModule } from './cart/cart.module';
 import { BillingModule } from './billing/billing.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BillingModule } from './billing/billing.module';
     HealthModule,
     CartModule,
     BillingModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
