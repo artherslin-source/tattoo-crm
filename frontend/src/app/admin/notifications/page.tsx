@@ -50,6 +50,17 @@ type AdminArtistApiRow = {
 };
 type ArtistOption = { userId: string; name: string; branchId: string; branchName: string };
 
+type AnnouncementHistoryRow = {
+  dedupKey: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  scope?: "ALL_ARTISTS" | "BRANCH_ARTISTS" | "SINGLE_ARTIST" | string;
+  branchId?: string;
+  artistId?: string;
+  recipientCount: number;
+};
+
 export default function AdminNotificationsPage() {
   const router = useRouter();
   const role = getUserRole();
@@ -67,11 +78,15 @@ export default function AdminNotificationsPage() {
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [artists, setArtists] = useState<ArtistOption[]>([]);
+  const [announcementHistory, setAnnouncementHistory] = useState<AnnouncementHistoryRow[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedHistory, setSelectedHistory] = useState<AnnouncementHistoryRow | null>(null);
 
   useEffect(() => {
     fetchNotifications();
     if (isBoss) {
       fetchAnnouncementTargets();
+      fetchAnnouncementHistory();
     }
   }, []);
 
@@ -233,6 +248,32 @@ export default function AdminNotificationsPage() {
     }
   };
 
+  const fetchAnnouncementHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const data = await getJsonWithAuth<AnnouncementHistoryRow[]>("/admin/notifications/announcements?limit=50");
+      setAnnouncementHistory(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn("Failed to fetch announcement history", e);
+      setAnnouncementHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const formatScopeLabel = (row: AnnouncementHistoryRow) => {
+    if (row.scope === "ALL_ARTISTS") return "所有 ARTIST";
+    if (row.scope === "BRANCH_ARTISTS") {
+      const b = branches.find((x) => x.id === row.branchId);
+      return `分店：${b?.name || row.branchId || "未知"}`;
+    }
+    if (row.scope === "SINGLE_ARTIST") {
+      const a = artists.find((x) => x.userId === row.artistId);
+      return `刺青師：${a ? `${a.name}（${a.branchName}）` : row.artistId || "未知"}`;
+    }
+    return row.scope ? String(row.scope) : "未知";
+  };
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const hasAnyContactLink = useMemo(
@@ -270,6 +311,8 @@ export default function AdminNotificationsPage() {
       setAnnounceScope("ALL_ARTISTS");
       setAnnounceBranchId("");
       setAnnounceArtistId("");
+      // Refresh history so BOSS can see it immediately
+      fetchAnnouncementHistory();
     } catch (e) {
       console.error("Failed to send announcement", e);
       alert("發送公告失敗");
@@ -411,6 +454,70 @@ export default function AdminNotificationsPage() {
           )}
         </div>
       </div>
+
+      {isBoss && (
+        <Card>
+          <CardHeader>
+            <CardTitle>歷史系統公告</CardTitle>
+            <CardDescription>查看過去發送的公告（含範圍與送達數量）</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingHistory ? (
+              <div className="text-sm text-text-muted-light">載入中...</div>
+            ) : announcementHistory.length === 0 ? (
+              <div className="text-sm text-text-muted-light">尚無公告紀錄</div>
+            ) : (
+              <div className="space-y-2">
+                {announcementHistory.map((row) => (
+                  <button
+                    key={row.dedupKey}
+                    className="w-full text-left rounded-lg border border-gray-200 dark:border-neutral-700 p-3 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
+                    onClick={() => setSelectedHistory(row)}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="font-medium text-text-primary-light truncate">{row.title}</div>
+                        <div className="text-sm text-text-muted-light truncate">{row.message}</div>
+                        <div className="mt-1 text-xs text-text-muted-light">
+                          {new Date(row.createdAt).toLocaleString("zh-TW")} · {formatScopeLabel(row)}
+                        </div>
+                      </div>
+                      <div className="text-sm text-text-primary-light whitespace-nowrap">
+                        送達 {row.recipientCount}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <Dialog open={!!selectedHistory} onOpenChange={(open) => (!open ? setSelectedHistory(null) : null)}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>公告詳情</DialogTitle>
+                </DialogHeader>
+                {selectedHistory && (
+                  <div className="space-y-3">
+                    <div className="text-sm text-text-muted-light">
+                      {new Date(selectedHistory.createdAt).toLocaleString("zh-TW")} · {formatScopeLabel(selectedHistory)} · 送達{" "}
+                      {selectedHistory.recipientCount}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-text-primary-light">{selectedHistory.title}</div>
+                      <div className="mt-2 whitespace-pre-wrap text-text-secondary-light">{selectedHistory.message}</div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button variant="outline" onClick={() => setSelectedHistory(null)}>
+                        關閉
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+      )}
 
       {notifications.length === 0 ? (
         <Card>
