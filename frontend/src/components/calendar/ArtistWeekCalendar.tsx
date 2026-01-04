@@ -42,6 +42,8 @@ type CalendarEvent = {
 function parseHHmm(time: string): number {
   const [hh, mm] = time.split(":").map((x) => parseInt(x, 10));
   if (!Number.isFinite(hh) || !Number.isFinite(mm)) throw new Error("Invalid time");
+  // Guard: treat 24:00 as 23:59 to avoid react-big-calendar maxTime crossing into next day.
+  if (hh === 24 && mm === 0) return 23 * 60 + 59;
   return hh * 60 + mm;
 }
 

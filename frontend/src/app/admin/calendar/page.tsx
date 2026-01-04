@@ -95,13 +95,14 @@ export default function AdminArtistCalendarPage() {
     // Force 24h display; this is only for calendar viewport, not for booking rules.
     return {
       days: {
-        "0": { open: "00:00", close: "24:00" },
-        "1": { open: "00:00", close: "24:00" },
-        "2": { open: "00:00", close: "24:00" },
-        "3": { open: "00:00", close: "24:00" },
-        "4": { open: "00:00", close: "24:00" },
-        "5": { open: "00:00", close: "24:00" },
-        "6": { open: "00:00", close: "24:00" },
+        // Use 23:59 instead of 24:00 to avoid react-big-calendar time axis crossing to next day.
+        "0": { open: "00:00", close: "23:59" },
+        "1": { open: "00:00", close: "23:59" },
+        "2": { open: "00:00", close: "23:59" },
+        "3": { open: "00:00", close: "23:59" },
+        "4": { open: "00:00", close: "23:59" },
+        "5": { open: "00:00", close: "23:59" },
+        "6": { open: "00:00", close: "23:59" },
       },
     };
   }, [branch?.businessHours, show24h]);
