@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { computeAvailableSlots, dayBounds } from './availability.util';
-import { parseHHmm } from './availability.util';
+import {
+  parseHHmm,
+  subtractRanges,
+  buildSlotStarts,
+  availabilityToRanges,
+  appointmentBlocksToRanges,
+} from './availability.util';
 
 @Injectable()
 export class AppointmentsService {
@@ -95,8 +101,45 @@ export class AppointmentsService {
 
     const artistUser = await this.prisma.user.findUnique({
       where: { id: input.artistId },
-      select: { id: true, bookingLatestStartTime: true },
+      select: { id: true, bookingLatestStartTime: true, booking24hEnabled: true },
     });
+
+    // 24h mode (full override): ignore branch hours + availability available ranges.
+    // Keep: blocks (isBlocked=true) and appointment conflicts.
+    if (artistUser?.booking24hEnabled) {
+      // Artist blocks: specificDate overrides weekday; only isBlocked=true is relevant in 24h mode.
+      const blocks = await this.prisma.artistAvailability.findMany({
+        where: {
+          artistId: input.artistId,
+          isBlocked: true,
+          OR: [
+            { specificDate: { gte: start, lt: end } },
+            { specificDate: null, weekday },
+          ],
+        },
+        select: { startTime: true, endTime: true, isBlocked: true },
+      });
+      const appts = await this.prisma.appointment.findMany({
+        where: {
+          branchId: input.branchId,
+          artistId: input.artistId,
+          status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+          startAt: { lt: end },
+          endAt: { gt: start },
+        },
+        select: { startAt: true, endAt: true },
+      });
+
+      // Base: whole day; extend end to allow late starts with cross-day duration.
+      const base = [{ startMin: 0, endMin: 24 * 60 + input.durationMin }];
+      const { blocked } = availabilityToRanges(blocks);
+      const afterBlocked = subtractRanges(base, blocked);
+      const appointmentRanges = appointmentBlocksToRanges(appts, input.date);
+      const rangesAfterAppointments = subtractRanges(afterBlocked, appointmentRanges);
+      const slots = buildSlotStarts(rangesAfterAppointments, input.durationMin, stepMin);
+      return { slots };
+    }
+
     const cutoff = (artistUser?.bookingLatestStartTime || '21:00').trim() || '21:00';
     const cutoffMin = parseHHmm(cutoff);
 
@@ -177,13 +220,16 @@ export class AppointmentsService {
     if (input.artistId) {
       const artistUser = await this.prisma.user.findUnique({
         where: { id: input.artistId },
-        select: { id: true, bookingLatestStartTime: true },
+        select: { id: true, bookingLatestStartTime: true, booking24hEnabled: true },
       });
-      const cutoff = (artistUser?.bookingLatestStartTime || '21:00').trim() || '21:00';
-      const cutoffMin = parseHHmm(cutoff);
-      const startMin = startAt.getHours() * 60 + startAt.getMinutes();
-      if (startMin > cutoffMin) {
-        throw new BadRequestException(`開始時間不可晚於 ${cutoff}`);
+      // In 24h mode, do not apply latest-start cutoff.
+      if (!artistUser?.booking24hEnabled) {
+        const cutoff = (artistUser?.bookingLatestStartTime || '21:00').trim() || '21:00';
+        const cutoffMin = parseHHmm(cutoff);
+        const startMin = startAt.getHours() * 60 + startAt.getMinutes();
+        if (startMin > cutoffMin) {
+          throw new BadRequestException(`開始時間不可晚於 ${cutoff}`);
+        }
       }
     }
 

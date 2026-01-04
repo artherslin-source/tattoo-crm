@@ -10,6 +10,7 @@ interface UpdateUserDto {
   bio?: string; // 刺青師介紹
   photoUrl?: string; // 刺青師照片
   bookingLatestStartTime?: string; // ARTIST：最晚可預約開始時間（HH:mm）
+  booking24hEnabled?: boolean; // ARTIST：啟動 24 小時制
 }
 
 interface GetUsersQuery {
@@ -84,6 +85,7 @@ export class UsersService {
         role: true,
         branchId: true,
         bookingLatestStartTime: true,
+        booking24hEnabled: true,
         branch: {
           select: {
             id: true,
@@ -206,6 +208,10 @@ export class UsersService {
     }
     if (updateUserDto.avatarUrl !== undefined) updateData.avatarUrl = updateUserDto.avatarUrl;
 
+    if (updateUserDto.booking24hEnabled !== undefined) {
+      updateData.booking24hEnabled = !!updateUserDto.booking24hEnabled;
+    }
+
     if (updateUserDto.bookingLatestStartTime !== undefined) {
       const v = String(updateUserDto.bookingLatestStartTime || '').trim();
       if (v === '') {
@@ -234,6 +240,7 @@ export class UsersService {
         role: true,
         branchId: true,
         bookingLatestStartTime: true,
+        booking24hEnabled: true,
         createdAt: true,
         lastLogin: true,
         status: true,

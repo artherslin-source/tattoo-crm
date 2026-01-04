@@ -14,6 +14,7 @@ interface UpdateUserDto {
   bio?: string; // 刺青師介紹
   photoUrl?: string; // 刺青師照片
   bookingLatestStartTime?: string; // ARTIST：最晚可預約開始時間（HH:mm）
+  booking24hEnabled?: boolean; // ARTIST：啟動 24 小時制
 }
 
 interface ChangePasswordDto {

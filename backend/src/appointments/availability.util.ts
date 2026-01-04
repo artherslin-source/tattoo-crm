@@ -85,7 +85,10 @@ export function appointmentBlocksToRanges(appointments: Array<{ startAt: Date; e
   const { start } = dayBounds(date);
   return appointments.map((apt) => {
     const startMin = Math.max(0, Math.floor((apt.startAt.getTime() - start.getTime()) / 60000));
-    const endMin = Math.min(24 * 60, Math.ceil((apt.endAt.getTime() - start.getTime()) / 60000));
+    const rawEnd = Math.ceil((apt.endAt.getTime() - start.getTime()) / 60000);
+    // Allow cross-day blocks (e.g. 23:00 -> next day 02:00) to fully mask slots.
+    // Cap to 48h for safety (we don't support >24h hold anyway).
+    const endMin = Math.min(48 * 60, Math.max(0, rawEnd));
     return { startMin, endMin };
   });
 }

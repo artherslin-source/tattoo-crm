@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getJsonWithAuth, ApiError } from "@/lib/api";
 import { getAccessToken, getUserRole, isArtistRole } from "@/lib/access";
 import ArtistWeekCalendar, { type CalendarAppointment } from "@/components/calendar/ArtistWeekCalendar";
+import { Switch } from "@/components/ui/switch";
 
 type BranchBusinessHoursResponse = {
   branch: {
@@ -35,6 +36,8 @@ export default function AdminArtistCalendarPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [booking24hEnabled, setBooking24hEnabled] = useState(false);
+  const [show24h, setShow24h] = useState(false);
 
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMonday(new Date()));
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
@@ -57,6 +60,11 @@ export default function AdminArtistCalendarPage() {
     setBranch(data.branch);
   }, []);
 
+  const fetchMe = useCallback(async () => {
+    const me = (await getJsonWithAuth("/users/me")) as { booking24hEnabled?: boolean | null };
+    setBooking24hEnabled(!!me?.booking24hEnabled);
+  }, []);
+
   const fetchAppointments = useCallback(
     async (rangeStart: Date, rangeEnd: Date) => {
       const params = new URLSearchParams();
@@ -73,14 +81,30 @@ export default function AdminArtistCalendarPage() {
     if (!ensureAuthorized()) return;
     setLoading(true);
     try {
-      await Promise.all([fetchBusinessHours(), fetchAppointments(weekStart, weekEnd)]);
+      await Promise.all([fetchBusinessHours(), fetchAppointments(weekStart, weekEnd), fetchMe()]);
     } catch (e) {
       const err = e as ApiError;
       setError(err?.message || "載入行程失敗");
     } finally {
       setLoading(false);
     }
-  }, [ensureAuthorized, fetchAppointments, fetchBusinessHours, weekEnd, weekStart]);
+  }, [ensureAuthorized, fetchAppointments, fetchBusinessHours, fetchMe, weekEnd, weekStart]);
+
+  const calendarBusinessHours = useMemo(() => {
+    if (!show24h) return branch?.businessHours ?? null;
+    // Force 24h display; this is only for calendar viewport, not for booking rules.
+    return {
+      days: {
+        "0": { open: "00:00", close: "24:00" },
+        "1": { open: "00:00", close: "24:00" },
+        "2": { open: "00:00", close: "24:00" },
+        "3": { open: "00:00", close: "24:00" },
+        "4": { open: "00:00", close: "24:00" },
+        "5": { open: "00:00", close: "24:00" },
+        "6": { open: "00:00", close: "24:00" },
+      },
+    };
+  }, [branch?.businessHours, show24h]);
 
   useEffect(() => {
     refresh();
@@ -92,6 +116,15 @@ export default function AdminArtistCalendarPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">週行程日曆</CardTitle>
           <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 rounded-md border px-2 py-1">
+              <Switch checked={show24h} onCheckedChange={(v) => setShow24h(!!v)} />
+              <span className="text-xs text-text-muted-light">顯示 24 小時</span>
+              {booking24hEnabled ? (
+                <span className="text-[11px] text-purple-700 bg-purple-50 border border-purple-200 rounded px-1.5 py-0.5">
+                  已啟用 24h 預約
+                </span>
+              ) : null}
+            </div>
             <Button variant="outline" onClick={() => setWeekStart((d) => addDays(d, -7))}>
               上一週
             </Button>
@@ -111,7 +144,7 @@ export default function AdminArtistCalendarPage() {
           <ArtistWeekCalendar
             loading={loading}
             weekStart={weekStart}
-            businessHours={branch?.businessHours ?? null}
+            businessHours={calendarBusinessHours}
             appointments={appointments}
             onRefresh={refresh}
             onWeekStartChange={(next) => setWeekStart(next)}

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Calendar, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import AppointmentsToolbar from "@/components/admin/AppointmentsToolbar";
 import AppointmentsTable from "@/components/admin/AppointmentsTable";
 import AppointmentsCards from "@/components/admin/AppointmentsCards";
@@ -100,8 +101,8 @@ export default function AdminAppointmentsPage() {
   const highlightStorageKey = "ui.admin.appointments.highlightId";
   const role = getUserRole();
   const isArtist = isArtistRole(role);
-  const [bookingLatestStartTime, setBookingLatestStartTime] = useState<string>("21:00");
-  const [savingBookingLatestStartTime, setSavingBookingLatestStartTime] = useState(false);
+  const [booking24hEnabled, setBooking24hEnabled] = useState(false);
+  const [savingBooking24hEnabled, setSavingBooking24hEnabled] = useState(false);
   const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -221,43 +222,31 @@ export default function AdminAppointmentsPage() {
     fetchOptionsData(); // ✅ 問題1：調用 fetchOptionsData 以載入分店選項
   }, [router, fetchAppointments, fetchOptionsData, role]);
 
-  // ARTIST only: load & edit latest start time setting (HH:mm)
-  const timeOptions = useMemo(() => {
-    const out: string[] = [];
-    for (let m = 0; m < 24 * 60; m += 30) {
-      const hh = String(Math.floor(m / 60)).padStart(2, "0");
-      const mm = String(m % 60).padStart(2, "0");
-      out.push(`${hh}:${mm}`);
-    }
-    return out;
-  }, []);
-
   useEffect(() => {
     const run = async () => {
       if (!isArtist) return;
       try {
-        const me = await getJsonWithAuth<{ bookingLatestStartTime?: string | null }>("/users/me");
-        const v = typeof me?.bookingLatestStartTime === "string" ? me.bookingLatestStartTime : null;
-        setBookingLatestStartTime(v && /^\d{2}:\d{2}$/.test(v) ? v : "21:00");
+        const me = await getJsonWithAuth<{ booking24hEnabled?: boolean | null }>("/users/me");
+        setBooking24hEnabled(!!me?.booking24hEnabled);
       } catch (e) {
-        console.warn("Failed to load /users/me for bookingLatestStartTime", e);
+        console.warn("Failed to load /users/me for booking24hEnabled", e);
       }
     };
     run();
   }, [isArtist]);
 
-  const saveBookingLatestStartTime = async () => {
+  const saveBooking24hEnabled = async () => {
     try {
-      setSavingBookingLatestStartTime(true);
-      await patchJsonWithAuth("/users/me", { bookingLatestStartTime: bookingLatestStartTime });
-      setSuccessMessage("最晚可預約開始時間已更新");
+      setSavingBooking24hEnabled(true);
+      await patchJsonWithAuth("/users/me", { booking24hEnabled });
+      setSuccessMessage("24 小時制設定已更新");
       // Trigger slots refetch inside AppointmentForm (if modal is open)
       setAvailabilityRefreshKey((x) => x + 1);
     } catch (e) {
-      console.error("Failed to save bookingLatestStartTime", e);
-      setError("更新最晚開始時間失敗");
+      console.error("Failed to save booking24hEnabled", e);
+      setError("更新 24 小時制失敗");
     } finally {
-      setSavingBookingLatestStartTime(false);
+      setSavingBooking24hEnabled(false);
     }
   };
 
@@ -737,29 +726,22 @@ export default function AdminAppointmentsPage() {
             {isArtist && (
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 py-2">
                 <div className="text-xs text-text-muted-light">
-                  最晚可預約開始時間
+                  啟動 24 小時制
                   <div className="text-[11px] text-text-muted-light mt-0.5">
-                    提示：只是上限；實際最晚仍受可用時段/保留時間影響（例：150 分鐘且營業到 22:00 → 最晚 19:30）
+                    開啟後：新增預約時段顯示 00:00–23:30，不受分店營業時間/排班可用段限制；仍會套用封鎖與撞單。
                   </div>
                 </div>
-                <select
-                  value={bookingLatestStartTime}
-                  onChange={(e) => setBookingLatestStartTime(e.target.value)}
-                  className="w-full sm:w-auto px-2 py-1 border border-purple-200 rounded-md bg-white"
-                >
-                  {timeOptions.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <Switch checked={booking24hEnabled} onCheckedChange={(v) => setBooking24hEnabled(!!v)} />
+                  <span className="text-xs text-text-muted-light">{booking24hEnabled ? "已開啟" : "未開啟"}</span>
+                </div>
                 <Button
                   type="button"
-                  onClick={saveBookingLatestStartTime}
-                  disabled={savingBookingLatestStartTime}
+                  onClick={saveBooking24hEnabled}
+                  disabled={savingBooking24hEnabled}
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
-                  {savingBookingLatestStartTime ? "儲存中..." : "儲存"}
+                  {savingBooking24hEnabled ? "儲存中..." : "儲存"}
                 </Button>
               </div>
             )}
