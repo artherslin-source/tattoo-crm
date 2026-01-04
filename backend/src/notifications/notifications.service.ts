@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type NotificationType = 'APPOINTMENT' | 'MESSAGE' | 'SYSTEM';
@@ -35,9 +36,13 @@ export interface BroadcastAnnouncementInput {
 export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
-  private withDedup(data: Record<string, unknown> | null | undefined, dedupKey?: string) {
-    if (!dedupKey) return data ?? undefined;
-    return { ...(data ?? {}), dedupKey };
+  private withDedup(
+    data: Record<string, unknown> | null | undefined,
+    dedupKey?: string,
+  ): Prisma.InputJsonValue | undefined {
+    const next = dedupKey ? { ...(data ?? {}), dedupKey } : (data ?? undefined);
+    // Prisma Json expects InputJsonValue; our payloads are plain JSON objects.
+    return (next as unknown as Prisma.InputJsonValue) ?? undefined;
   }
 
   async existsByDedupKey(userId: string, dedupKey: string): Promise<boolean> {
@@ -69,7 +74,7 @@ export class NotificationsService {
         title: input.title,
         message: input.message,
         type: input.type,
-        data: data ?? undefined,
+        data,
       },
       select: { id: true },
     });
@@ -105,7 +110,7 @@ export class NotificationsService {
         title: input.title,
         message: input.message,
         type: 'SYSTEM',
-        data: data ?? undefined,
+        data,
       })),
     });
 
