@@ -90,6 +90,14 @@ interface SplitRule {
   branch?: { id: string; name: string } | null;
 }
 
+type MeResponse = {
+  id: string;
+  name: string | null;
+  role: string | null;
+  branchId: string | null;
+  branch?: { id: string; name: string } | null;
+};
+
 type AdminArtistApiRow = {
   id?: string;
   name?: string | null;
@@ -132,6 +140,7 @@ export default function AdminBillingPage() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<BillRow[]>([]);
   const [userRole, setUserRole] = useState<string>("");
+  const [me, setMe] = useState<MeResponse | null>(null);
 
   // Filters / sorting
   const [viewMode, setViewMode] = useState<"CONSUMPTION" | "ALL">("CONSUMPTION");
@@ -335,6 +344,44 @@ export default function AdminBillingPage() {
     }
     fetchBills();
   }, [router, fetchBills]);
+
+  useEffect(() => {
+    // For ARTIST autofill in manual-bill dialog.
+    const role = userRole.toUpperCase();
+    if (role !== "ARTIST") return;
+    (async () => {
+      try {
+        const data = await getJsonWithAuth<MeResponse>("/auth/me");
+        setMe(data);
+      } catch (e) {
+        // Don't block the page; manual bill still works (backend enforces actor scope).
+        console.warn("Failed to load /auth/me", e);
+      }
+    })();
+  }, [userRole]);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    const role = userRole.toUpperCase();
+    if (role !== "ARTIST") return;
+    if (!me?.id) return;
+    if (me.branchId) setNewBranchId(me.branchId);
+    setNewArtistId(me.id);
+  }, [createOpen, userRole, me]);
+
+  const lockedBranchLabel = useMemo(() => {
+    if (userRole.toUpperCase() !== "ARTIST") return null;
+    const branch =
+      branches.find((b) => b.id === newBranchId) ||
+      (me?.branchId ? { id: me.branchId, name: me.branch?.name || me.branchId } : null);
+    return branch?.name || null;
+  }, [userRole, branches, newBranchId, me]);
+
+  const lockedArtistLabel = useMemo(() => {
+    if (userRole.toUpperCase() !== "ARTIST") return null;
+    const artist = artists.find((a) => a.id === newArtistId);
+    return artist?.name || me?.name || null;
+  }, [userRole, artists, newArtistId, me]);
 
   useEffect(() => {
     // load branches/artists for filter dropdowns
@@ -609,7 +656,7 @@ export default function AdminBillingPage() {
   const onCreateManualBill = useCallback(async () => {
     const branchId = newBranchId.trim();
     if (!branchId) {
-      setError("請輸入 branchId（分店 ID）");
+      setError("請選擇分店");
       return;
     }
     const items = newItems
@@ -669,7 +716,7 @@ export default function AdminBillingPage() {
           <p className="text-sm text-muted-foreground">以帳務為唯一口徑（可含預約帳、非預約帳）</p>
         </div>
         <div className="flex gap-2">
-          {userRole.toUpperCase() === "BOSS" && (
+          {hasAdminAccess(userRole) && (
             <Button onClick={() => setCreateOpen(true)}>新增非預約帳單</Button>
           )}
           {userRole.toUpperCase() === "BOSS" && (
@@ -1016,8 +1063,19 @@ export default function AdminBillingPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground">分店 ID（branchId）</label>
-                <Input value={newBranchId} onChange={(e) => setNewBranchId(e.target.value)} placeholder="cmhec2wnk0001ogb6s1jmvvdc" />
+                <label className="text-xs text-muted-foreground">分店</label>
+                <Select value={newBranchId} onValueChange={setNewBranchId} disabled={userRole.toUpperCase() === "ARTIST"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={userRole.toUpperCase() === "ARTIST" ? (lockedBranchLabel || "已帶入") : "請選擇分店"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">類型</label>
@@ -1040,8 +1098,20 @@ export default function AdminBillingPage() {
                 <Input value={newCustomerPhone} onChange={(e) => setNewCustomerPhone(e.target.value)} placeholder="0912345678" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">刺青師 User.id（可空）</label>
-                <Input value={newArtistId} onChange={(e) => setNewArtistId(e.target.value)} placeholder="cmhec2wp8001oogb6a5nyp47n" />
+                <label className="text-xs text-muted-foreground">刺青師（可空）</label>
+                <Select value={newArtistId || "none"} onValueChange={(v) => setNewArtistId(v === "none" ? "" : v)} disabled={userRole.toUpperCase() === "ARTIST"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={userRole.toUpperCase() === "ARTIST" ? (lockedArtistLabel || "已帶入") : "不指定"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">不指定</SelectItem>
+                    {artists.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {(a.name || a.id) + `（${a.branchName || "無分店"}）`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

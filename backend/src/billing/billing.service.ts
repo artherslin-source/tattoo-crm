@@ -1013,8 +1013,13 @@ export class BillingService {
       notes?: string | null;
     },
   ) {
-    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can create manual bills');
-    if (!input.branchId) throw new BadRequestException('branchId is required');
+    if (!isBoss(actor) && !isArtist(actor)) throw new ForbiddenException('Only BOSS/ARTIST can create manual bills');
+
+    // ARTIST: force scope to own branch & self (ignore any client-provided values)
+    const branchId = isArtist(actor) ? actor.branchId ?? null : input.branchId;
+    const artistId = isArtist(actor) ? actor.id : input.artistId ?? null;
+
+    if (!branchId) throw new BadRequestException('branchId is required');
     if (!Array.isArray(input.items) || input.items.length === 0) {
       throw new BadRequestException('items is required');
     }
@@ -1038,9 +1043,9 @@ export class BillingService {
     const bill = await this.prisma.appointmentBill.create({
       data: {
         appointmentId: null,
-        branchId: input.branchId,
+        branchId,
         customerId: input.customerId ?? null,
-        artistId: input.artistId ?? null,
+        artistId,
         currency: input.currency ?? 'TWD',
         billType: input.billType || 'WALK_IN',
         customerNameSnapshot: input.customerNameSnapshot ?? null,
