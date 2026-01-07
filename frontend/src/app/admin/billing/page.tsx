@@ -1446,7 +1446,7 @@ export default function AdminBillingPage() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>編輯帳單（BOSS）</DialogTitle>
           </DialogHeader>
@@ -1763,25 +1763,27 @@ export default function AdminBillingPage() {
                         return (
                           <tr key={p.id || `pnew-${idx}`} className="border-b">
                             <td className="py-2 px-3">
-                              <Select
+                              {/* Use native select here to avoid Radix portal/popover positioning issues inside Dialog+table (esp. mobile/iPad). */}
+                              <select
+                                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 value={p.method}
-                                onValueChange={(v) =>
+                                onChange={(e) =>
                                   setEditDraft((d) =>
-                                    d ? { ...d, payments: d.payments.map((x, i) => (i === idx ? { ...x, method: v } : x)) } : d,
+                                    d
+                                      ? {
+                                          ...d,
+                                          payments: d.payments.map((x, i) => (i === idx ? { ...x, method: e.target.value } : x)),
+                                        }
+                                      : d,
                                   )
                                 }
                               >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {paymentMethods.map((m) => (
-                                    <SelectItem key={m.value} value={m.value}>
-                                      {m.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                {paymentMethods.map((m) => (
+                                  <option key={m.value} value={m.value}>
+                                    {m.label}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                             <td className="py-2 px-3">
                               <Input
