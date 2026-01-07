@@ -367,10 +367,11 @@ export class BillingService {
       });
 
       // Header update
-      const billPatch: Prisma.AppointmentBillUpdateInput = {};
-      if (input.bill?.branchId !== undefined) billPatch.branchId = input.bill.branchId;
-      if (input.bill?.customerId !== undefined) billPatch.customerId = input.bill.customerId;
-      if (input.bill?.artistId !== undefined) billPatch.artistId = input.bill.artistId;
+      // Use UncheckedUpdateInput to allow updating scalar FK fields directly (branchId/customerId/artistId).
+      const billPatch: Prisma.AppointmentBillUncheckedUpdateInput = {};
+      if (input.bill?.branchId !== undefined) (billPatch as any).branchId = input.bill.branchId;
+      if (input.bill?.customerId !== undefined) (billPatch as any).customerId = input.bill.customerId;
+      if (input.bill?.artistId !== undefined) (billPatch as any).artistId = input.bill.artistId;
       if (input.bill?.billType !== undefined) billPatch.billType = input.bill.billType;
       if (input.bill?.customerNameSnapshot !== undefined) billPatch.customerNameSnapshot = input.bill.customerNameSnapshot;
       if (input.bill?.customerPhoneSnapshot !== undefined) billPatch.customerPhoneSnapshot = input.bill.customerPhoneSnapshot;

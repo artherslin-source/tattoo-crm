@@ -287,10 +287,14 @@ export class AdminBillingController {
   @Put('bills/:billId/full')
   async fullEditById(@Actor() actor: AccessActor, @Param('billId') billId: string, @Body() body: unknown) {
     const input = FullEditBillSchema.parse(body);
+    const payments = input.payments?.map((p) => ({
+      ...p,
+      paidAt: p.paidAt ? new Date(p.paidAt) : undefined,
+    }));
     return this.billing.updateBillFull(actor, billId, {
       bill: input.bill,
       items: input.items,
-      payments: input.payments,
+      payments,
       recomputeAllocations: input.recomputeAllocations,
     });
   }
