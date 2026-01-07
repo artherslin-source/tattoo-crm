@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getAccessToken, getJsonWithAuth, postJsonWithAuth, deleteJsonWithAuth, ApiError } from "@/lib/api";
+import { getAccessToken, getJsonWithAuth, postJsonWithAuth, putJsonWithAuth, deleteJsonWithAuth, ApiError } from "@/lib/api";
 import { hasAdminAccess } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,6 +177,45 @@ export default function AdminBillingPage() {
   const [newArtistId, setNewArtistId] = useState("");
   const [newItems, setNewItems] = useState<Array<{ name: string; amount: string }>>([{ name: "刺青服務", amount: "" }]);
 
+  // BOSS: full edit / hard delete
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editBillId, setEditBillId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{
+    branchId: string;
+    artistId: string; // empty means null
+    customerId: string; // empty means null
+    customerNameSnapshot: string;
+    customerPhoneSnapshot: string;
+    billType: string;
+    status: BillStatus;
+    voidReason: string;
+    discountTotal: string; // keep as string for input
+    recomputeAllocations: boolean;
+    items: Array<{
+      id?: string;
+      nameSnapshot: string;
+      basePriceSnapshot: string;
+      finalPriceSnapshot: string;
+      notes: string;
+      sortOrder: number;
+    }>;
+    payments: Array<{
+      id?: string;
+      amount: string;
+      method: string;
+      paidAtLocal: string;
+      notes: string;
+      artistAmount: string;
+      shopAmount: string;
+    }>;
+  } | null>(null);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBillId, setDeleteBillId] = useState<string | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState<string>("CASH");
   const [payNotes, setPayNotes] = useState("");
@@ -263,6 +302,161 @@ export default function AdminBillingPage() {
       setError(apiErr.message || "載入帳務明細失敗");
     }
   }, []);
+
+  const openEdit = useCallback(
+    async (billId: string) => {
+      if (userRole.toUpperCase() !== "BOSS") return;
+      try {
+        setError(null);
+        setEditLoading(true);
+        const data = await getJsonWithAuth<BillDetail>(`/admin/billing/bills/${billId}`);
+        setEditBillId(billId);
+        setEditDraft({
+          branchId: data.branch?.id || "",
+          artistId: data.artist?.id || "",
+          customerId: data.customer?.id || "",
+          customerNameSnapshot: data.customerNameSnapshot || "",
+          customerPhoneSnapshot: data.customerPhoneSnapshot || "",
+          billType: data.billType || "WALK_IN",
+          status: data.status,
+          voidReason: "",
+          discountTotal: String(data.discountTotal ?? 0),
+          recomputeAllocations: false,
+          items: (data.items || []).map((it, idx) => ({
+            id: it.id,
+            nameSnapshot: it.nameSnapshot,
+            basePriceSnapshot: String(it.basePriceSnapshot ?? 0),
+            finalPriceSnapshot: String(it.finalPriceSnapshot ?? 0),
+            notes: it.notes || "",
+            sortOrder: idx,
+          })),
+          payments: (data.payments || []).map((p) => {
+            const a = p.allocations.find((x) => x.target === "ARTIST")?.amount ?? 0;
+            const s = p.allocations.find((x) => x.target === "SHOP")?.amount ?? 0;
+            const dt = new Date(p.paidAt);
+            const pad = (n: number) => String(n).padStart(2, "0");
+            const paidAtLocal = Number.isNaN(dt.getTime())
+              ? ""
+              : `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+            return {
+              id: p.id,
+              amount: String(p.amount),
+              method: p.method || "CASH",
+              paidAtLocal,
+              notes: p.notes || "",
+              artistAmount: String(a),
+              shopAmount: String(s),
+            };
+          }),
+        });
+        setEditOpen(true);
+      } catch (e) {
+        const apiErr = e as ApiError;
+        setError(apiErr.message || "載入帳務資料（編輯）失敗");
+      } finally {
+        setEditLoading(false);
+      }
+    },
+    [userRole],
+  );
+
+  const onSaveEdit = useCallback(async () => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    if (!editBillId || !editDraft) return;
+    try {
+      setError(null);
+      setEditLoading(true);
+
+      const toIntOrZero = (v: string) => {
+        const n = parseInt(String(v || "0"), 10);
+        return Number.isFinite(n) ? n : 0;
+      };
+
+      const payload = {
+        bill: {
+          branchId: editDraft.branchId || undefined,
+          artistId: editDraft.artistId.trim() ? editDraft.artistId.trim() : null,
+          customerId: editDraft.customerId.trim() ? editDraft.customerId.trim() : null,
+          billType: editDraft.billType,
+          customerNameSnapshot: editDraft.customerNameSnapshot.trim() ? editDraft.customerNameSnapshot.trim() : null,
+          customerPhoneSnapshot: editDraft.customerPhoneSnapshot.trim() ? editDraft.customerPhoneSnapshot.trim() : null,
+          discountTotal: toIntOrZero(editDraft.discountTotal),
+          status: editDraft.status,
+          voidReason: editDraft.status === "VOID" ? (editDraft.voidReason.trim() || "BOSS 作廢") : null,
+        },
+        items: editDraft.items.map((it, idx) => ({
+          id: it.id,
+          nameSnapshot: it.nameSnapshot,
+          basePriceSnapshot: toIntOrZero(it.basePriceSnapshot),
+          finalPriceSnapshot: toIntOrZero(it.finalPriceSnapshot),
+          notes: it.notes.trim() ? it.notes.trim() : null,
+          sortOrder: idx,
+        })),
+        payments: editDraft.payments.map((p) => ({
+          id: p.id,
+          amount: toIntOrZero(p.amount),
+          method: p.method,
+          paidAt: p.paidAtLocal ? new Date(p.paidAtLocal).toISOString() : undefined,
+          notes: p.notes.trim() ? p.notes.trim() : null,
+          allocations: { artistAmount: toIntOrZero(p.artistAmount), shopAmount: toIntOrZero(p.shopAmount) },
+        })),
+        recomputeAllocations: editDraft.recomputeAllocations,
+      };
+
+      await putJsonWithAuth(`/admin/billing/bills/${editBillId}/full`, payload);
+      setEditOpen(false);
+      setEditBillId(null);
+      setEditDraft(null);
+      await fetchBills();
+      if (selected?.id === editBillId) {
+        await openDetail(editBillId);
+      }
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "儲存帳務變更失敗");
+    } finally {
+      setEditLoading(false);
+    }
+  }, [userRole, editBillId, editDraft, fetchBills, selected, openDetail]);
+
+  const openDelete = useCallback((billId: string) => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    setDeleteBillId(billId);
+    setDeleteReason("");
+    setDeleteConfirm("");
+    setDeleteOpen(true);
+  }, [userRole]);
+
+  const onConfirmDelete = useCallback(async () => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    if (!deleteBillId) return;
+    const okConfirm = deleteConfirm.trim() === "DELETE" || deleteConfirm.trim() === deleteBillId;
+    if (!okConfirm) {
+      setError("請輸入 DELETE 或帳單 ID 以確認刪除");
+      return;
+    }
+    if (!deleteReason.trim()) {
+      setError("請輸入刪除原因");
+      return;
+    }
+    try {
+      setError(null);
+      setEditLoading(true);
+      await deleteJsonWithAuth(`/admin/billing/bills/${deleteBillId}`, { reason: deleteReason.trim() });
+      setDeleteOpen(false);
+      setDeleteBillId(null);
+      await fetchBills();
+      if (selected?.id === deleteBillId) {
+        setDetailOpen(false);
+        setSelected(null);
+      }
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "刪除帳單失敗");
+    } finally {
+      setEditLoading(false);
+    }
+  }, [userRole, deleteBillId, deleteConfirm, deleteReason, fetchBills, selected]);
 
   const clearFocusIdFromUrl = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -921,16 +1115,44 @@ export default function AdminBillingPage() {
                     <td className="py-2 pr-3">${formatMoney(r.summary?.artistAmount || 0)}</td>
                     <td className="py-2 pr-3">{statusBadge(r.status)}</td>
                     <td className="py-2 pr-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openDetail(r.id);
-                        }}
-                      >
-                        查看
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDetail(r.id);
+                          }}
+                        >
+                          查看
+                        </Button>
+                        {userRole.toUpperCase() === "BOSS" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={editLoading}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEdit(r.id);
+                              }}
+                            >
+                              編輯
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={editLoading}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDelete(r.id);
+                              }}
+                            >
+                              刪除
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1180,6 +1402,487 @@ export default function AdminBillingPage() {
               <Button onClick={onCreateManualBill}>建立</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* BOSS: hard delete dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>刪除帳單（硬刪）</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-red-600">
+              ⚠️ 這是硬刪：會刪除帳單/付款/拆帳/明細，並自動回滾會員儲值與消費紀錄。請務必確認。
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">刪除原因（必填）</label>
+              <Input value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} placeholder="請輸入原因..." />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">確認文字（輸入 DELETE 或帳單 ID）</label>
+              <Input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder="DELETE" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+                取消
+              </Button>
+              <Button variant="destructive" onClick={onConfirmDelete} disabled={editLoading}>
+                {editLoading ? "刪除中..." : "確認刪除"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* BOSS: full edit dialog */}
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) {
+            setEditBillId(null);
+            setEditDraft(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>編輯帳單（BOSS）</DialogTitle>
+          </DialogHeader>
+
+          {!editDraft ? (
+            <div className="text-sm text-muted-foreground">載入中...</div>
+          ) : (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">分店</label>
+                  <Select
+                    value={editDraft.branchId}
+                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, branchId: v } : d))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="請選擇分店" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground">刺青師（可空）</label>
+                  <Select
+                    value={editDraft.artistId || "none"}
+                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, artistId: v === "none" ? "" : v } : d))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="不指定" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">不指定</SelectItem>
+                      {artists.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {(a.name || a.id) + `（${a.branchName || "無分店"}）`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground">會員（可空）</label>
+                  <Input
+                    value={editDraft.customerId}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, customerId: e.target.value } : d))}
+                    placeholder="輸入會員 ID（可空）"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground">客戶姓名快照（可空）</label>
+                  <Input
+                    value={editDraft.customerNameSnapshot}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, customerNameSnapshot: e.target.value } : d))}
+                    placeholder="王小明"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">客戶手機快照（可空）</label>
+                  <Input
+                    value={editDraft.customerPhoneSnapshot}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, customerPhoneSnapshot: e.target.value } : d))}
+                    placeholder="0912345678"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">帳單類型</label>
+                  <Select
+                    value={editDraft.billType}
+                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, billType: v } : d))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="WALK_IN" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="APPOINTMENT">預約</SelectItem>
+                      <SelectItem value="WALK_IN">現場</SelectItem>
+                      <SelectItem value="PRODUCT">商品</SelectItem>
+                      <SelectItem value="STORED_VALUE_TOPUP">儲值</SelectItem>
+                      <SelectItem value="OTHER">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground">折扣（會影響應收）</label>
+                  <Input
+                    inputMode="numeric"
+                    value={editDraft.discountTotal}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, discountTotal: e.target.value } : d))}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground">狀態</label>
+                  <Select
+                    value={editDraft.status}
+                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, status: v as BillStatus } : d))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="OPEN" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="OPEN">未結清</SelectItem>
+                      <SelectItem value="SETTLED">已結清</SelectItem>
+                      <SelectItem value="VOID">作廢</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {editDraft.status === "VOID" ? (
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground">作廢原因（建議填）</label>
+                    <Input
+                      value={editDraft.voidReason}
+                      onChange={(e) => setEditDraft((d) => (d ? { ...d, voidReason: e.target.value } : d))}
+                      placeholder="作廢原因..."
+                    />
+                  </div>
+                ) : null}
+
+                <div className="md:col-span-3 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editDraft.recomputeAllocations}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, recomputeAllocations: e.target.checked } : d))}
+                  />
+                  <span className="text-sm text-muted-foreground">儲存時依規則重算拆帳（非儲值付款）</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">明細 items</div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setEditDraft((d) =>
+                        d
+                          ? {
+                              ...d,
+                              items: [
+                                ...d.items,
+                                {
+                                  nameSnapshot: "",
+                                  basePriceSnapshot: "0",
+                                  finalPriceSnapshot: "0",
+                                  notes: "",
+                                  sortOrder: d.items.length,
+                                },
+                              ],
+                            }
+                          : d,
+                      )
+                    }
+                  >
+                    + 新增項目
+                  </Button>
+                </div>
+                <div className="border rounded-md overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b bg-gray-50">
+                        <th className="py-2 px-3">名稱</th>
+                        <th className="py-2 px-3 w-32">原價</th>
+                        <th className="py-2 px-3 w-32">成交</th>
+                        <th className="py-2 px-3">備註</th>
+                        <th className="py-2 px-3 w-20">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editDraft.items.map((it, idx) => (
+                        <tr key={it.id || `new-${idx}`} className="border-b">
+                          <td className="py-2 px-3">
+                            <Input
+                              value={it.nameSnapshot}
+                              onChange={(e) =>
+                                setEditDraft((d) =>
+                                  d
+                                    ? {
+                                        ...d,
+                                        items: d.items.map((x, i) => (i === idx ? { ...x, nameSnapshot: e.target.value } : x)),
+                                      }
+                                    : d,
+                                )
+                              }
+                              placeholder="項目名稱"
+                            />
+                          </td>
+                          <td className="py-2 px-3">
+                            <Input
+                              inputMode="numeric"
+                              value={it.basePriceSnapshot}
+                              onChange={(e) =>
+                                setEditDraft((d) =>
+                                  d
+                                    ? {
+                                        ...d,
+                                        items: d.items.map((x, i) => (i === idx ? { ...x, basePriceSnapshot: e.target.value } : x)),
+                                      }
+                                    : d,
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="py-2 px-3">
+                            <Input
+                              inputMode="numeric"
+                              value={it.finalPriceSnapshot}
+                              onChange={(e) =>
+                                setEditDraft((d) =>
+                                  d
+                                    ? {
+                                        ...d,
+                                        items: d.items.map((x, i) => (i === idx ? { ...x, finalPriceSnapshot: e.target.value } : x)),
+                                      }
+                                    : d,
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="py-2 px-3">
+                            <Input
+                              value={it.notes}
+                              onChange={(e) =>
+                                setEditDraft((d) =>
+                                  d ? { ...d, items: d.items.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)) } : d,
+                                )
+                              }
+                              placeholder="可空"
+                            />
+                          </td>
+                          <td className="py-2 px-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setEditDraft((d) => (d ? { ...d, items: d.items.filter((_, i) => i !== idx) } : d))
+                              }
+                              disabled={editDraft.items.length <= 1}
+                            >
+                              移除
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {editDraft.items.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-4 px-3 text-center text-muted-foreground">
+                            無明細
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">付款 payments</div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setEditDraft((d) =>
+                        d
+                          ? {
+                              ...d,
+                              payments: [
+                                ...d.payments,
+                                {
+                                  amount: "0",
+                                  method: "CASH",
+                                  paidAtLocal: "",
+                                  notes: "",
+                                  artistAmount: "0",
+                                  shopAmount: "0",
+                                },
+                              ],
+                            }
+                          : d,
+                      )
+                    }
+                  >
+                    + 新增付款
+                  </Button>
+                </div>
+                <div className="border rounded-md overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b bg-gray-50">
+                        <th className="py-2 px-3 w-44">方式</th>
+                        <th className="py-2 px-3 w-32">金額</th>
+                        <th className="py-2 px-3 w-56">時間</th>
+                        <th className="py-2 px-3">備註</th>
+                        <th className="py-2 px-3 w-44">拆帳（店/師）</th>
+                        <th className="py-2 px-3 w-20">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editDraft.payments.map((p, idx) => {
+                        const isStored = String(p.method).toUpperCase() === "STORED_VALUE";
+                        return (
+                          <tr key={p.id || `pnew-${idx}`} className="border-b">
+                            <td className="py-2 px-3">
+                              <Select
+                                value={p.method}
+                                onValueChange={(v) =>
+                                  setEditDraft((d) =>
+                                    d ? { ...d, payments: d.payments.map((x, i) => (i === idx ? { ...x, method: v } : x)) } : d,
+                                  )
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {paymentMethods.map((m) => (
+                                    <SelectItem key={m.value} value={m.value}>
+                                      {m.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="py-2 px-3">
+                              <Input
+                                inputMode="numeric"
+                                value={p.amount}
+                                onChange={(e) =>
+                                  setEditDraft((d) =>
+                                    d ? { ...d, payments: d.payments.map((x, i) => (i === idx ? { ...x, amount: e.target.value } : x)) } : d,
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="py-2 px-3">
+                              <Input
+                                type="datetime-local"
+                                value={p.paidAtLocal}
+                                onChange={(e) =>
+                                  setEditDraft((d) =>
+                                    d
+                                      ? { ...d, payments: d.payments.map((x, i) => (i === idx ? { ...x, paidAtLocal: e.target.value } : x)) }
+                                      : d,
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="py-2 px-3">
+                              <Input
+                                value={p.notes}
+                                onChange={(e) =>
+                                  setEditDraft((d) =>
+                                    d ? { ...d, payments: d.payments.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)) } : d,
+                                  )
+                                }
+                                placeholder="可空"
+                              />
+                            </td>
+                            <td className="py-2 px-3">
+                              <div className="flex gap-2 items-center">
+                                <Input
+                                  inputMode="numeric"
+                                  className="w-20"
+                                  value={isStored ? "0" : p.shopAmount}
+                                  disabled={isStored}
+                                  onChange={(e) =>
+                                    setEditDraft((d) =>
+                                      d ? { ...d, payments: d.payments.map((x, i) => (i === idx ? { ...x, shopAmount: e.target.value } : x)) } : d,
+                                    )
+                                  }
+                                />
+                                <span className="text-xs text-muted-foreground">/</span>
+                                <Input
+                                  inputMode="numeric"
+                                  className="w-20"
+                                  value={isStored ? "0" : p.artistAmount}
+                                  disabled={isStored}
+                                  onChange={(e) =>
+                                    setEditDraft((d) =>
+                                      d
+                                        ? { ...d, payments: d.payments.map((x, i) => (i === idx ? { ...x, artistAmount: e.target.value } : x)) }
+                                        : d,
+                                    )
+                                  }
+                                />
+                              </div>
+                            </td>
+                            <td className="py-2 px-3">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setEditDraft((d) => (d ? { ...d, payments: d.payments.filter((_, i) => i !== idx) } : d))
+                                }
+                              >
+                                移除
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {editDraft.payments.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="py-4 px-3 text-center text-muted-foreground">
+                            尚無付款
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editLoading}>
+                  取消
+                </Button>
+                <Button onClick={onSaveEdit} disabled={editLoading}>
+                  {editLoading ? "儲存中..." : "儲存"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

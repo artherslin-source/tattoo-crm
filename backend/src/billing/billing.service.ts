@@ -41,6 +41,557 @@ function sumAddonMoneyFromVariantsSnapshot(v: any): number {
 export class BillingService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private computeOppositeTopupHistoryType(type: string): 'TOPUP' | 'SPEND' {
+    return String(type).toUpperCase() === 'SPEND' ? 'TOPUP' : 'SPEND';
+  }
+
+  private async deleteMatchingTopupHistoryOrCompensate(
+    tx: Prisma.TransactionClient,
+    input: {
+      memberId: string;
+      operatorIds: Array<string | null | undefined>;
+      amountAbs: number;
+      expectedType: 'TOPUP' | 'SPEND';
+      at: Date;
+      compensateOperatorId: string;
+    },
+  ): Promise<{ deletedId?: string; compensated?: { type: 'TOPUP' | 'SPEND'; amount: number } }> {
+    const opIds = input.operatorIds.filter(Boolean) as string[];
+    const windowMs = 10 * 60 * 1000;
+    const start = new Date(input.at.getTime() - windowMs);
+    const end = new Date(input.at.getTime() + windowMs);
+
+    const candidates = await tx.topupHistory.findMany({
+      where: {
+        memberId: input.memberId,
+        amount: input.amountAbs,
+        type: input.expectedType,
+        ...(opIds.length > 0 ? { operatorId: { in: opIds } } : {}),
+        createdAt: { gte: start, lte: end },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    if (candidates.length > 0) {
+      // Pick the closest createdAt to the payment time
+      let best = candidates[0];
+      let bestDiff = Math.abs(best.createdAt.getTime() - input.at.getTime());
+      for (const c of candidates) {
+        const d = Math.abs(c.createdAt.getTime() - input.at.getTime());
+        if (d < bestDiff) {
+          best = c;
+          bestDiff = d;
+        }
+      }
+      await tx.topupHistory.delete({ where: { id: best.id } });
+      return { deletedId: best.id };
+    }
+
+    // No deterministic match; create compensating history entry to keep ledger consistent.
+    const opposite = this.computeOppositeTopupHistoryType(input.expectedType);
+    await tx.topupHistory.create({
+      data: {
+        memberId: input.memberId,
+        operatorId: input.compensateOperatorId,
+        amount: input.amountAbs,
+        type: opposite,
+      },
+    });
+    return { compensated: { type: opposite, amount: input.amountAbs } };
+  }
+
+  private async reverseBillSideEffects(
+    tx: Prisma.TransactionClient,
+    input: {
+      bill: Prisma.AppointmentBillGetPayload<{
+        include: { payments: true };
+      }>;
+      actor: AccessActor;
+    },
+  ) {
+    const bill = input.bill;
+    if (!bill.customerId) return { applied: false as const };
+
+    const member = await tx.member.findUnique({ where: { userId: bill.customerId } });
+    if (!member) return { applied: false as const };
+
+    let balanceDelta = 0;
+    let totalSpentDelta = 0;
+    let topupHistoryDeleted = 0;
+    let topupHistoryCompensated = 0;
+
+    const payments = bill.payments || [];
+    const billType = bill.billType;
+
+    if (billType === BILL_TYPE_STORED_VALUE_TOPUP) {
+      // Topup bill increased balance by payment amounts; reverse by decrementing
+      const topupSum = payments.reduce((s, p) => s + (p.amount || 0), 0);
+      balanceDelta -= topupSum;
+
+      for (const p of payments) {
+        const amountAbs = Math.abs(p.amount || 0);
+        const res = await this.deleteMatchingTopupHistoryOrCompensate(tx, {
+          memberId: member.id,
+          operatorIds: [p.recordedById, bill.createdById, input.actor.id],
+          amountAbs,
+          expectedType: 'TOPUP',
+          at: p.paidAt ?? new Date(),
+          compensateOperatorId: input.actor.id,
+        });
+        if (res.deletedId) topupHistoryDeleted += 1;
+        if (res.compensated) topupHistoryCompensated += 1;
+      }
+    } else {
+      // Consumption / other bills: totalSpent was incremented by payment amounts; reverse it.
+      const paidSum = payments.reduce((s, p) => s + (p.amount || 0), 0);
+      totalSpentDelta -= paidSum;
+
+      for (const p of payments) {
+        if (String(p.method || '').toUpperCase() !== 'STORED_VALUE') continue;
+        // Stored value payment changed member balance: nextBalance = balance - amount
+        balanceDelta += p.amount || 0;
+
+        const expectedType: 'TOPUP' | 'SPEND' = (p.amount || 0) > 0 ? 'SPEND' : 'TOPUP';
+        const amountAbs = Math.abs(p.amount || 0);
+        const res = await this.deleteMatchingTopupHistoryOrCompensate(tx, {
+          memberId: member.id,
+          operatorIds: [p.recordedById, bill.createdById, input.actor.id],
+          amountAbs,
+          expectedType,
+          at: p.paidAt ?? new Date(),
+          compensateOperatorId: input.actor.id,
+        });
+        if (res.deletedId) topupHistoryDeleted += 1;
+        if (res.compensated) topupHistoryCompensated += 1;
+      }
+    }
+
+    if (balanceDelta !== 0 || totalSpentDelta !== 0) {
+      await tx.member.update({
+        where: { id: member.id },
+        data: {
+          ...(balanceDelta !== 0 ? { balance: { increment: balanceDelta } } : {}),
+          ...(totalSpentDelta !== 0 ? { totalSpent: { increment: totalSpentDelta } } : {}),
+        },
+      });
+    }
+
+    return {
+      applied: true as const,
+      memberId: member.id,
+      balanceDelta,
+      totalSpentDelta,
+      topupHistoryDeleted,
+      topupHistoryCompensated,
+    };
+  }
+
+  private async applyBillSideEffects(
+    tx: Prisma.TransactionClient,
+    input: {
+      bill: Prisma.AppointmentBillGetPayload<{
+        include: { payments: true };
+      }>;
+      actor: AccessActor;
+    },
+  ) {
+    const bill = input.bill;
+    if (!bill.customerId) return { applied: false as const };
+
+    const member = await tx.member.findUnique({ where: { userId: bill.customerId } });
+    if (!member) return { applied: false as const };
+
+    let balanceDelta = 0;
+    let totalSpentDelta = 0;
+    let topupHistoryCreated = 0;
+
+    const payments = bill.payments || [];
+    const billType = bill.billType;
+
+    if (billType === BILL_TYPE_STORED_VALUE_TOPUP) {
+      const topupSum = payments.reduce((s, p) => s + (p.amount || 0), 0);
+      balanceDelta += topupSum;
+      for (const p of payments) {
+        const amountAbs = Math.abs(p.amount || 0);
+        await tx.topupHistory.create({
+          data: {
+            memberId: member.id,
+            operatorId: input.actor.id,
+            amount: amountAbs,
+            type: 'TOPUP',
+          },
+        });
+        topupHistoryCreated += 1;
+      }
+    } else {
+      // Keep totalSpent aligned with billing payments (same as recordPayment/recordPaymentByBillId)
+      const paidSum = payments.reduce((s, p) => s + (p.amount || 0), 0);
+      totalSpentDelta += paidSum;
+
+      for (const p of payments) {
+        if (String(p.method || '').toUpperCase() !== 'STORED_VALUE') continue;
+        balanceDelta -= p.amount || 0;
+        const type: 'TOPUP' | 'SPEND' = (p.amount || 0) > 0 ? 'SPEND' : 'TOPUP';
+        const amountAbs = Math.abs(p.amount || 0);
+        await tx.topupHistory.create({
+          data: {
+            memberId: member.id,
+            operatorId: input.actor.id,
+            amount: amountAbs,
+            type,
+          },
+        });
+        topupHistoryCreated += 1;
+      }
+    }
+
+    if (balanceDelta !== 0 || totalSpentDelta !== 0) {
+      await tx.member.update({
+        where: { id: member.id },
+        data: {
+          ...(balanceDelta !== 0 ? { balance: { increment: balanceDelta } } : {}),
+          ...(totalSpentDelta !== 0 ? { totalSpent: { increment: totalSpentDelta } } : {}),
+        },
+      });
+    }
+
+    return {
+      applied: true as const,
+      memberId: member.id,
+      balanceDelta,
+      totalSpentDelta,
+      topupHistoryCreated,
+    };
+  }
+
+  async deleteBillHard(actor: AccessActor, billId: string, input: { reason: string }) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can delete bills');
+    if (!input?.reason || input.reason.trim().length === 0) throw new BadRequestException('reason is required');
+
+    return this.prisma.$transaction(async (tx) => {
+      const bill = await tx.appointmentBill.findUnique({
+        where: { id: billId },
+        include: {
+          items: true,
+          payments: { include: { allocations: true } },
+        },
+      });
+      if (!bill) throw new NotFoundException('帳務不存在');
+
+      const reverse = await this.reverseBillSideEffects(tx, {
+        bill: { ...bill, payments: bill.payments } as any,
+        actor,
+      });
+
+      const paymentIds = bill.payments.map((p) => p.id);
+
+      // If other payments reference these payments as refunds, detach to avoid FK errors.
+      if (paymentIds.length > 0) {
+        await tx.payment.updateMany({
+          where: { refundOfPaymentId: { in: paymentIds }, id: { notIn: paymentIds } },
+          data: { refundOfPaymentId: null },
+        });
+      }
+
+      await tx.paymentAllocation.deleteMany({
+        where: paymentIds.length > 0 ? { paymentId: { in: paymentIds } } : { paymentId: '__none__' as any },
+      });
+      await tx.payment.deleteMany({
+        where: paymentIds.length > 0 ? { id: { in: paymentIds } } : { id: '__none__' as any },
+      });
+      await tx.appointmentBillItem.deleteMany({ where: { billId: bill.id } });
+      await tx.appointmentBill.delete({ where: { id: bill.id } });
+
+      return {
+        deletedBillId: bill.id,
+        reason: input.reason,
+        reversed: reverse,
+      };
+    });
+  }
+
+  async updateBillFull(
+    actor: AccessActor,
+    billId: string,
+    input: {
+      bill?: {
+        branchId?: string;
+        customerId?: string | null;
+        artistId?: string | null;
+        billType?: string;
+        customerNameSnapshot?: string | null;
+        customerPhoneSnapshot?: string | null;
+        discountTotal?: number;
+        status?: BillStatus;
+        voidReason?: string | null;
+      };
+      items?: Array<{
+        id?: string;
+        serviceId?: string | null;
+        nameSnapshot: string;
+        basePriceSnapshot: number;
+        finalPriceSnapshot: number;
+        variantsSnapshot?: any;
+        notes?: string | null;
+        sortOrder?: number;
+      }>;
+      payments?: Array<{
+        id?: string;
+        amount: number;
+        method: string;
+        paidAt?: Date;
+        recordedById?: string | null;
+        notes?: string | null;
+        allocations?: { artistAmount: number; shopAmount: number };
+      }>;
+      recomputeAllocations?: boolean;
+    },
+  ) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can fully edit bills');
+
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.appointmentBill.findUnique({
+        where: { id: billId },
+        include: {
+          items: true,
+          payments: { include: { allocations: true } },
+        },
+      });
+      if (!existing) throw new NotFoundException('帳務不存在');
+
+      // Reverse side-effects from old state first (based on current DB rows)
+      const reverse = await this.reverseBillSideEffects(tx, {
+        bill: { ...existing, payments: existing.payments } as any,
+        actor,
+      });
+
+      // Header update
+      const billPatch: Prisma.AppointmentBillUpdateInput = {};
+      if (input.bill?.branchId !== undefined) billPatch.branchId = input.bill.branchId;
+      if (input.bill?.customerId !== undefined) billPatch.customerId = input.bill.customerId;
+      if (input.bill?.artistId !== undefined) billPatch.artistId = input.bill.artistId;
+      if (input.bill?.billType !== undefined) billPatch.billType = input.bill.billType;
+      if (input.bill?.customerNameSnapshot !== undefined) billPatch.customerNameSnapshot = input.bill.customerNameSnapshot;
+      if (input.bill?.customerPhoneSnapshot !== undefined) billPatch.customerPhoneSnapshot = input.bill.customerPhoneSnapshot;
+      if (input.bill?.status !== undefined) {
+        billPatch.status = input.bill.status as any;
+        if (input.bill.status === 'VOID') {
+          billPatch.voidReason = input.bill.voidReason ?? existing.voidReason ?? null;
+          billPatch.voidedAt = new Date();
+        } else {
+          billPatch.voidReason = null;
+          billPatch.voidedAt = null;
+        }
+      }
+      if (Object.keys(billPatch).length > 0) {
+        await tx.appointmentBill.update({ where: { id: existing.id }, data: billPatch });
+      }
+
+      // Items CRUD (replace-by-id semantics)
+      if (input.items) {
+        const keepIds = new Set(input.items.filter((i) => i.id).map((i) => i.id!));
+        const toDelete = existing.items.filter((it) => !keepIds.has(it.id)).map((it) => it.id);
+        if (toDelete.length > 0) {
+          await tx.appointmentBillItem.deleteMany({ where: { id: { in: toDelete } } });
+        }
+        for (const it of input.items) {
+          const sortOrder = Number.isInteger(it.sortOrder) ? (it.sortOrder as number) : 0;
+          if (it.id) {
+            await tx.appointmentBillItem.update({
+              where: { id: it.id },
+              data: {
+                serviceId: it.serviceId ?? null,
+                nameSnapshot: it.nameSnapshot,
+                basePriceSnapshot: Math.max(0, Math.trunc(it.basePriceSnapshot)),
+                finalPriceSnapshot: Math.max(0, Math.trunc(it.finalPriceSnapshot)),
+                variantsSnapshot: it.variantsSnapshot ?? null,
+                notes: it.notes ?? null,
+                sortOrder,
+              },
+            });
+          } else {
+            await tx.appointmentBillItem.create({
+              data: {
+                billId: existing.id,
+                serviceId: it.serviceId ?? null,
+                nameSnapshot: it.nameSnapshot,
+                basePriceSnapshot: Math.max(0, Math.trunc(it.basePriceSnapshot)),
+                finalPriceSnapshot: Math.max(0, Math.trunc(it.finalPriceSnapshot)),
+                variantsSnapshot: it.variantsSnapshot ?? null,
+                notes: it.notes ?? null,
+                sortOrder,
+              },
+            });
+          }
+        }
+      }
+
+      // Payments CRUD
+      if (input.payments) {
+        const keepIds = new Set(input.payments.filter((p) => p.id).map((p) => p.id!));
+        const toDelete = existing.payments.filter((p) => !keepIds.has(p.id)).map((p) => p.id);
+        if (toDelete.length > 0) {
+          // detach refunds in kept payments
+          await tx.payment.updateMany({
+            where: { refundOfPaymentId: { in: toDelete }, id: { notIn: toDelete } },
+            data: { refundOfPaymentId: null },
+          });
+          await tx.paymentAllocation.deleteMany({ where: { paymentId: { in: toDelete } } });
+          await tx.payment.deleteMany({ where: { id: { in: toDelete } } });
+        }
+
+        for (const p of input.payments) {
+          const paidAt = p.paidAt ?? new Date();
+          const method = String(p.method).toUpperCase();
+          if (p.id) {
+            await tx.payment.update({
+              where: { id: p.id },
+              data: {
+                amount: Math.trunc(p.amount),
+                method,
+                paidAt,
+                recordedById: p.recordedById ?? existing.createdById ?? actor.id,
+                notes: p.notes ?? null,
+              },
+            });
+          } else {
+            await tx.payment.create({
+              data: {
+                billId: existing.id,
+                amount: Math.trunc(p.amount),
+                method,
+                paidAt,
+                recordedById: p.recordedById ?? existing.createdById ?? actor.id,
+                notes: p.notes ?? null,
+              },
+            });
+          }
+        }
+      }
+
+      // Reload current bill state after CRUD
+      const current = await tx.appointmentBill.findUnique({
+        where: { id: existing.id },
+        include: {
+          items: true,
+          payments: { include: { allocations: true } },
+        },
+      });
+      if (!current) throw new NotFoundException('帳務不存在');
+
+      // Recompute totals from items
+      const listTotal = current.items.reduce((s, it) => s + it.basePriceSnapshot, 0);
+      const derivedBillTotal = current.items.reduce((s, it) => s + it.finalPriceSnapshot, 0);
+      const discountTotal =
+        input.bill?.discountTotal !== undefined
+          ? Math.max(0, Math.trunc(input.bill.discountTotal))
+          : Math.max(0, listTotal - derivedBillTotal);
+      const billTotal = Math.max(0, listTotal - discountTotal);
+
+      // Update totals
+      await tx.appointmentBill.update({
+        where: { id: current.id },
+        data: { listTotal, discountTotal, billTotal },
+      });
+
+      // Allocations: recompute or apply manual per payment
+      const updatedBill = await tx.appointmentBill.findUnique({
+        where: { id: current.id },
+        include: {
+          payments: { include: { allocations: true } },
+        },
+      });
+      if (!updatedBill) throw new NotFoundException('帳務不存在');
+
+      const byInputPaymentId = new Map<string, any>();
+      for (const p of input.payments ?? []) {
+        if (p.id) byInputPaymentId.set(p.id, p);
+      }
+
+      for (const p of updatedBill.payments) {
+        const method = String(p.method || '').toUpperCase();
+        // Always enforce stored value allocations to 0/0
+        if (method === 'STORED_VALUE') {
+          await tx.paymentAllocation.deleteMany({ where: { paymentId: p.id } });
+          await tx.paymentAllocation.createMany({
+            data: [
+              { paymentId: p.id, target: 'ARTIST', amount: 0 },
+              { paymentId: p.id, target: 'SHOP', amount: 0 },
+            ],
+          });
+          continue;
+        }
+
+        if (input.recomputeAllocations) {
+          await tx.paymentAllocation.deleteMany({ where: { paymentId: p.id } });
+          const split = await this.resolveSplitRule(actor, updatedBill.artistId, updatedBill.branchId, p.paidAt);
+          if (!split) {
+            await tx.paymentAllocation.createMany({
+              data: [
+                { paymentId: p.id, target: 'ARTIST', amount: 0 },
+                { paymentId: p.id, target: 'SHOP', amount: 0 },
+              ],
+            });
+          } else {
+            const artistAmount = roundHalfUp((p.amount * split.artistRateBps) / 10000);
+            const shopAmount = p.amount - artistAmount;
+            await tx.paymentAllocation.createMany({
+              data: [
+                { paymentId: p.id, target: 'ARTIST', amount: artistAmount },
+                { paymentId: p.id, target: 'SHOP', amount: shopAmount },
+              ],
+            });
+          }
+          continue;
+        }
+
+        const ip = byInputPaymentId.get(p.id);
+        if (ip?.allocations) {
+          const artistAmount = Math.trunc(ip.allocations.artistAmount);
+          const shopAmount = Math.trunc(ip.allocations.shopAmount);
+          await tx.paymentAllocation.upsert({
+            where: { paymentId_target: { paymentId: p.id, target: 'ARTIST' } },
+            create: { paymentId: p.id, target: 'ARTIST', amount: artistAmount },
+            update: { amount: artistAmount },
+          });
+          await tx.paymentAllocation.upsert({
+            where: { paymentId_target: { paymentId: p.id, target: 'SHOP' } },
+            create: { paymentId: p.id, target: 'SHOP', amount: shopAmount },
+            update: { amount: shopAmount },
+          });
+        }
+      }
+
+      // Recompute status if not explicitly set to VOID
+      const after = await tx.appointmentBill.findUnique({
+        where: { id: current.id },
+        include: { payments: true, items: true },
+      });
+      if (!after) throw new NotFoundException('帳務不存在');
+      const paidTotal = after.payments.reduce((s, p) => s + p.amount, 0);
+      const computedStatus: BillStatus = after.status === 'VOID' ? 'VOID' : paidTotal >= after.billTotal ? 'SETTLED' : 'OPEN';
+      if (input.bill?.status === undefined && computedStatus !== after.status) {
+        await tx.appointmentBill.update({ where: { id: after.id }, data: { status: computedStatus } });
+      }
+
+      // Apply side-effects based on new state (after CRUD + totals)
+      const finalBill = await tx.appointmentBill.findUnique({
+        where: { id: after.id },
+        include: { payments: true },
+      });
+      if (!finalBill) throw new NotFoundException('帳務不存在');
+      const applied = await this.applyBillSideEffects(tx, { bill: finalBill as any, actor });
+
+      return {
+        id: after.id,
+        reversed: reverse,
+        applied,
+        bill: await this.getBillById(actor, after.id),
+      };
+    });
+  }
+
   async createStoredValueTopupBill(
     actor: AccessActor,
     input: { customerId: string; amount: number; method: string; notes?: string; branchId?: string },

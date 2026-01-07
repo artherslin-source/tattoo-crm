@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, BadRequestException, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards, BadRequestException, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 import { AccessGuard } from '../common/access/access.guard';
@@ -75,6 +75,59 @@ const RebuildBillsBatchSchema = z.object({
 
 const RecomputeAllocationsSchema = z.object({
   paymentIds: z.array(z.string()).optional(),
+});
+
+const DeleteBillSchema = z.object({
+  reason: z.string().min(1),
+});
+
+const FullEditBillSchema = z.object({
+  bill: z
+    .object({
+      branchId: z.string().min(1).optional(),
+      customerId: z.string().optional().nullable(),
+      artistId: z.string().optional().nullable(),
+      billType: z.string().min(1).optional(),
+      customerNameSnapshot: z.string().optional().nullable(),
+      customerPhoneSnapshot: z.string().optional().nullable(),
+      discountTotal: z.coerce.number().int().min(0).optional(),
+      status: z.enum(['OPEN', 'SETTLED', 'VOID']).optional(),
+      voidReason: z.string().optional().nullable(),
+    })
+    .optional(),
+  items: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        serviceId: z.string().optional().nullable(),
+        nameSnapshot: z.string().min(1),
+        basePriceSnapshot: z.coerce.number().int().min(0),
+        finalPriceSnapshot: z.coerce.number().int().min(0),
+        variantsSnapshot: z.any().optional(),
+        notes: z.string().optional().nullable(),
+        sortOrder: z.coerce.number().int().optional(),
+      }),
+    )
+    .optional(),
+  payments: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        amount: z.coerce.number().int(),
+        method: z.string().min(1),
+        paidAt: z.string().datetime().optional(),
+        recordedById: z.string().optional().nullable(),
+        notes: z.string().optional().nullable(),
+        allocations: z
+          .object({
+            artistAmount: z.coerce.number().int(),
+            shopAmount: z.coerce.number().int(),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
+  recomputeAllocations: z.boolean().optional(),
 });
 
 @Controller('admin/billing')
@@ -228,6 +281,25 @@ export class AdminBillingController {
       status: input.status,
       voidReason: input.voidReason,
     });
+  }
+
+  // Full edit (BOSS only): header + items + payments + allocations in one request
+  @Put('bills/:billId/full')
+  async fullEditById(@Actor() actor: AccessActor, @Param('billId') billId: string, @Body() body: unknown) {
+    const input = FullEditBillSchema.parse(body);
+    return this.billing.updateBillFull(actor, billId, {
+      bill: input.bill,
+      items: input.items,
+      payments: input.payments,
+      recomputeAllocations: input.recomputeAllocations,
+    });
+  }
+
+  // Hard delete (BOSS only): removes bill + related rows and reverses side-effects
+  @Delete('bills/:billId')
+  async deleteBillById(@Actor() actor: AccessActor, @Param('billId') billId: string, @Body() body: unknown) {
+    const input = DeleteBillSchema.parse(body);
+    return this.billing.deleteBillHard(actor, billId, { reason: input.reason });
   }
 
   // Record payment / refund
