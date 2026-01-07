@@ -2430,7 +2430,7 @@ export default function AdminBillingPage() {
             <div className="border-t pt-4">
               <div className="flex flex-wrap gap-3 items-end">
                 <div className="w-56">
-                  <label className="text-xs text-muted-foreground">重算起始日（paidAt >=）</label>
+                  <label className="text-xs text-muted-foreground">重算起始日（paidAt ≥）</label>
                   <Input type="date" value={recomputeFromDate} onChange={(e) => setRecomputeFromDate(e.target.value)} />
                 </div>
                 <div className="flex-1 min-w-[220px]">
