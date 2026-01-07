@@ -112,6 +112,8 @@ const paymentMethods = [
   { value: "OTHER", label: "其他" },
 ];
 
+const BILLING_UI_VERSION = "2026-01-07-native-selects";
+
 function NativeSelect(props: {
   value: string;
   onChange: (v: string) => void;
@@ -1464,7 +1466,8 @@ export default function AdminBillingPage() {
       >
         <DialogContent className="w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] overflow-y-auto sm:w-[90vw] sm:max-w-[90vw]">
           <DialogHeader>
-            <DialogTitle>編輯帳單（BOSS）</DialogTitle>
+              <DialogTitle>編輯帳單（BOSS）</DialogTitle>
+              <div className="text-[11px] text-muted-foreground">UI版本：{BILLING_UI_VERSION}</div>
           </DialogHeader>
 
           {!editDraft ? (
@@ -2228,32 +2231,21 @@ export default function AdminBillingPage() {
               <div className="flex flex-wrap gap-3 items-end">
                 <div className="w-72">
                   <label className="text-xs text-muted-foreground">刺青師（尚未有規則）</label>
-                  <Select 
-                    value={ruleArtistId} 
-                    onValueChange={(value) => {
+                  <NativeSelect
+                    value={ruleArtistId}
+                    onChange={(value) => {
                       setRuleArtistId(value);
-                      const selectedArtist = availableArtists.find(a => a.userId === value);
-                      if (selectedArtist) {
-                        setRuleBranchId(selectedArtist.branchId);
-                      }
+                      const selectedArtist = availableArtists.find((a) => a.userId === value);
+                      if (selectedArtist) setRuleBranchId(selectedArtist.branchId);
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="請選擇刺青師" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableArtists
-                        .filter(artist => {
-                          // 過濾掉已有規則的刺青師（現在每位刺青師只有一組規則）
-                          return !splitRules.some(rule => rule.artistId === artist.userId);
-                        })
-                        .map((artist) => (
-                          <SelectItem key={artist.userId} value={artist.userId}>
-                            {artist.displayName}（{artist.branchName || '無分店'}）
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="請選擇刺青師"
+                    options={availableArtists
+                      .filter((artist) => !splitRules.some((rule) => rule.artistId === artist.userId))
+                      .map((artist) => ({
+                        value: artist.userId,
+                        label: `${artist.displayName}（${artist.branchName || "無分店"}）`,
+                      }))}
+                  />
                 </div>
                 <div className="w-72">
                   <label className="text-xs text-muted-foreground">分店（自動）</label>
