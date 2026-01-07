@@ -366,8 +366,14 @@ export async function putJsonWithAuth<T>(
   return parseOrThrow(res);
 }
 
-export async function deleteJsonWithAuth<T>(path: string): Promise<T> {
-  const res = await withAuthFetch(path, { method: "DELETE" });
+export async function deleteJsonWithAuth<T>(path: string, body?: unknown): Promise<T> {
+  const init: RequestInit = { method: "DELETE" };
+  // Some endpoints (e.g. admin hard delete) require a JSON body (reason, etc).
+  // Keep backward-compatible: only send body when provided.
+  if (body !== undefined) {
+    init.body = JSON.stringify(body);
+  }
+  const res = await withAuthFetch(path, init);
   return parseOrThrow(res);
 }
 
