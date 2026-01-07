@@ -93,6 +93,20 @@ interface SplitRuleVersion extends SplitRule {
   createdBy?: { id: string; name: string | null } | null;
 }
 
+interface RecomputeJob {
+  id: string;
+  actorId: string;
+  actor?: { id: string; name: string | null } | null;
+  reason: string;
+  fromPaidAt: string;
+  status: string;
+  total: number;
+  recomputed: number;
+  skipped: number;
+  errors: number;
+  createdAt: string;
+}
+
 type MeResponse = {
   id: string;
   name: string | null;
@@ -283,6 +297,11 @@ export default function AdminBillingPage() {
   const [openHistoryByArtistId, setOpenHistoryByArtistId] = useState<Record<string, boolean>>({});
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
   const [recomputeFromDate, setRecomputeFromDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [recomputeReason, setRecomputeReason] = useState("");
+  const [recomputeConfirmText, setRecomputeConfirmText] = useState("");
+  const [jobsOpen, setJobsOpen] = useState(false);
+  const [recomputeJobs, setRecomputeJobs] = useState<RecomputeJob[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const fetchBills = useCallback(async () => {
@@ -684,6 +703,19 @@ export default function AdminBillingPage() {
     }
   }, []);
 
+  const fetchRecomputeJobs = useCallback(async () => {
+    if (userRole.toUpperCase() !== "BOSS") return;
+    try {
+      setJobsLoading(true);
+      const data = await getJsonWithAuth<RecomputeJob[]>("/admin/billing/payments/recompute-allocations/jobs?limit=50");
+      setRecomputeJobs(data);
+    } catch (e) {
+      console.warn("Failed to fetch recompute jobs", e);
+    } finally {
+      setJobsLoading(false);
+    }
+  }, [userRole]);
+
   useEffect(() => {
     // Only BOSS manages split rules
     if (userRole && userRole.toUpperCase() === "BOSS") {
@@ -770,32 +802,45 @@ export default function AdminBillingPage() {
       setError("請選擇重算起始日期");
       return;
     }
-    if (!confirm(`確定要重算拆帳？\n\n只會重算 paidAt >= ${recomputeFromDate} 的付款（避免朔及既往）。`)) {
+    if (!recomputeReason.trim()) {
+      setError("請輸入重算原因（必填）");
+      return;
+    }
+    if (recomputeConfirmText.trim().toUpperCase() !== "RECOMPUTE") {
+      setError("請在確認文字輸入 RECOMPUTE 才能執行");
+      return;
+    }
+    if (!confirm(`確定要重算拆帳？\n\n起始日：${recomputeFromDate}\n原因：${recomputeReason.trim()}\n\n此操作會改寫該期間付款的拆帳 allocations。`)) {
       return;
     }
     try {
       setError(null);
       setLoading(true);
       const result = await postJsonWithAuth<{
+        jobId: string;
         total: number;
         recomputed: number;
         skipped: number;
         errors: number;
       }>("/admin/billing/payments/recompute-allocations", {
         fromPaidAt: new Date(`${recomputeFromDate}T00:00`).toISOString(),
+        reason: recomputeReason.trim(),
       });
       alert(`重算完成！\n總計：${result.total}\n成功：${result.recomputed}\n跳過：${result.skipped}\n錯誤：${result.errors}`);
+      setRecomputeConfirmText("");
       await fetchBills();
       if (selected) {
         await openDetail(selected.id);
       }
+      // 留在視窗內並更新歷史紀錄
+      await fetchRecomputeJobs();
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "重算拆帳失敗");
     } finally {
       setLoading(false);
     }
-  }, [userRole, recomputeFromDate, fetchBills, selected, openDetail]);
+  }, [userRole, recomputeFromDate, recomputeReason, recomputeConfirmText, fetchBills, selected, openDetail, fetchRecomputeJobs]);
 
   const onSyncBillsFromCart = useCallback(async () => {
     if (userRole.toUpperCase() !== "BOSS") return;
@@ -2388,14 +2433,78 @@ export default function AdminBillingPage() {
                   <label className="text-xs text-muted-foreground">重算起始日（paidAt >=）</label>
                   <Input type="date" value={recomputeFromDate} onChange={(e) => setRecomputeFromDate(e.target.value)} />
                 </div>
+                <div className="flex-1 min-w-[220px]">
+                  <label className="text-xs text-muted-foreground">重算原因（必填）</label>
+                  <Input value={recomputeReason} onChange={(e) => setRecomputeReason(e.target.value)} placeholder="例如：回溯套用新規則、修正錯誤拆帳…" />
+                </div>
+                <div className="w-40">
+                  <label className="text-xs text-muted-foreground">確認文字</label>
+                  <Input value={recomputeConfirmText} onChange={(e) => setRecomputeConfirmText(e.target.value)} placeholder="RECOMPUTE" />
+                </div>
                 <Button variant="outline" onClick={onRecomputeAllocations} disabled={loading}>
                   重算拆帳（依日期範圍）
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={async () => {
+                    setJobsOpen(true);
+                    await fetchRecomputeJobs();
+                  }}
+                >
+                  查看重算紀錄
                 </Button>
               </div>
               <div className="text-xs text-muted-foreground mt-2">
                 ⚠️ 只會重算選定日期之後的付款（避免朔及既往）。
               </div>
             </div>
+
+            <Dialog open={jobsOpen} onOpenChange={setJobsOpen}>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>拆帳重算紀錄（最近 50 筆）</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  {jobsLoading ? (
+                    <div className="text-sm text-muted-foreground">載入中...</div>
+                  ) : (
+                    <div className="border rounded-md overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left border-b bg-gray-50">
+                            <th className="py-2 px-3 w-40">時間</th>
+                            <th className="py-2 px-3 w-28">起始日</th>
+                            <th className="py-2 px-3">原因</th>
+                            <th className="py-2 px-3 w-24">執行者</th>
+                            <th className="py-2 px-3 w-28">結果</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recomputeJobs.map((j) => (
+                            <tr key={j.id} className="border-b">
+                              <td className="py-2 px-3">{new Date(j.createdAt).toLocaleString()}</td>
+                              <td className="py-2 px-3">{new Date(j.fromPaidAt).toLocaleDateString()}</td>
+                              <td className="py-2 px-3 break-words">{j.reason}</td>
+                              <td className="py-2 px-3">{j.actor?.name || "（未知）"}</td>
+                              <td className="py-2 px-3">
+                                {j.status} {j.recomputed}/{j.total}（err {j.errors}）
+                              </td>
+                            </tr>
+                          ))}
+                          {recomputeJobs.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="py-4 px-3 text-center text-muted-foreground">
+                                尚無重算紀錄
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
       )}

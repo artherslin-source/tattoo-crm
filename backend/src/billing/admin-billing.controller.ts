@@ -75,7 +75,8 @@ const RebuildBillsBatchSchema = z.object({
 
 const RecomputeAllocationsSchema = z.object({
   paymentIds: z.array(z.string()).optional(),
-  fromPaidAt: z.string().datetime().optional(),
+  fromPaidAt: z.string().datetime(),
+  reason: z.string().min(1),
 });
 
 const DeleteBillSchema = z.object({
@@ -404,8 +405,15 @@ export class AdminBillingController {
     const input = RecomputeAllocationsSchema.parse(body);
     return this.billing.recomputeAllPaymentAllocations(actor, {
       paymentIds: input.paymentIds,
-      fromPaidAt: input.fromPaidAt ? new Date(input.fromPaidAt) : undefined,
+      fromPaidAt: new Date(input.fromPaidAt),
+      reason: input.reason,
     });
+  }
+
+  @Get('payments/recompute-allocations/jobs')
+  async listRecomputeAllocationJobs(@Actor() actor: AccessActor, @Query() query: any) {
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return this.billing.listSplitAllocationRecomputeJobs(actor, { limit });
   }
 }
 

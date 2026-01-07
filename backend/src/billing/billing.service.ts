@@ -2188,87 +2188,139 @@ export class BillingService {
   /**
    * 批次重算 payment allocations
    * - 僅限 BOSS\n+   * - 預設從指定日期起（paidAt >= fromPaidAt）才重算，避免違背「不朔及既往」\n+   */
-  async recomputeAllPaymentAllocations(actor: AccessActor, input?: { paymentIds?: string[]; fromPaidAt?: Date }) {
+  async recomputeAllPaymentAllocations(
+    actor: AccessActor,
+    input: { paymentIds?: string[]; fromPaidAt: Date; reason: string },
+  ) {
     if (!isBoss(actor)) {
       throw new ForbiddenException('只有 BOSS 可以重算拆帳');
     }
 
-    // 找出所有需要重算的 payments
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        id: input?.paymentIds ? { in: input.paymentIds } : undefined,
-        paidAt: input?.fromPaidAt ? { gte: input.fromPaidAt } : undefined,
-      },
-      include: {
-        bill: {
-          select: { id: true, artistId: true, branchId: true, appointmentId: true },
-        },
-        allocations: true,
-      },
-      orderBy: { paidAt: 'asc' },
-    });
+    const reason = String(input.reason || '').trim();
+    if (!reason) throw new BadRequestException('reason is required');
 
-    const recomputed: string[] = [];
-    const skipped: string[] = [];
-    const errors: Array<{ paymentId: string; error: string }> = [];
-
-    for (const payment of payments) {
-      try {
-        // 刪除舊的 allocations
-        await this.prisma.paymentAllocation.deleteMany({
-          where: { paymentId: payment.id },
-        });
-
-        // STORED_VALUE 扣款不進拆帳（allocations 固定 0/0）
-        if (payment.method === 'STORED_VALUE') {
-          await this.prisma.paymentAllocation.createMany({
-            data: [
-              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-              { paymentId: payment.id, target: 'SHOP', amount: 0 },
-            ],
-          });
-          recomputed.push(payment.id);
-          console.log(`✅ 重算拆帳 Payment ${payment.id}：STORED_VALUE → 0/0`);
-          continue;
-        }
-
-        // 規則版本化：依 paidAt 找適用版本；若無版本或無 artistId → 店家 100%
-        const split = payment.bill.artistId ? await this.getSplitRuleByArtistAt(payment.bill.artistId, payment.paidAt) : null;
-        const artistAmount = split ? roundHalfUp((payment.amount * split.artistRateBps) / 10000) : 0;
-        const shopAmount = payment.amount - artistAmount;
-
-        // 建立新的 allocations
-        await this.prisma.paymentAllocation.createMany({
-          data: [
-            { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
-            { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
-          ],
-        });
-
-        recomputed.push(payment.id);
-        console.log(
-          `✅ 重算拆帳 Payment ${payment.id}：artist=${artistAmount}, shop=${shopAmount}${
-            split ? ` (${split.artistRateBps / 100}% / ${split.shopRateBps / 100}%)` : ' (no_rule → shop_100%)'
-          }`,
-        );
-      } catch (error) {
-        errors.push({
-          paymentId: payment.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        console.error(`❌ 重算拆帳失敗 Payment ${payment.id}:`, error);
-      }
+    const fromPaidAt = input.fromPaidAt;
+    if (!(fromPaidAt instanceof Date) || Number.isNaN(fromPaidAt.getTime())) {
+      throw new BadRequestException('fromPaidAt is invalid');
     }
 
-    return {
-      total: payments.length,
-      recomputed: recomputed.length,
-      skipped: skipped.length,
-      errors: errors.length,
-      recomputedPaymentIds: recomputed,
-      skippedPaymentIds: skipped,
-      errorDetails: errors,
-    };
+    const job = await this.prisma.splitAllocationRecomputeJob.create({
+      data: {
+        actorId: actor.id,
+        reason,
+        fromPaidAt,
+        paymentIds: input.paymentIds ? (input.paymentIds as any) : null,
+        status: 'RUNNING',
+      },
+      select: { id: true },
+    });
+
+    // 找出所有需要重算的 payments
+    try {
+      const payments = await this.prisma.payment.findMany({
+        where: {
+          id: input.paymentIds ? { in: input.paymentIds } : undefined,
+          paidAt: { gte: fromPaidAt },
+        },
+        include: {
+          bill: {
+            select: { id: true, artistId: true, branchId: true, appointmentId: true },
+          },
+          allocations: true,
+        },
+        orderBy: { paidAt: 'asc' },
+      });
+
+      const recomputed: string[] = [];
+      const skipped: string[] = [];
+      const errors: Array<{ paymentId: string; error: string }> = [];
+
+      for (const payment of payments) {
+        try {
+          // 刪除舊的 allocations
+          await this.prisma.paymentAllocation.deleteMany({
+            where: { paymentId: payment.id },
+          });
+
+          // STORED_VALUE 扣款不進拆帳（allocations 固定 0/0）
+          if (payment.method === 'STORED_VALUE') {
+            await this.prisma.paymentAllocation.createMany({
+              data: [
+                { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+                { paymentId: payment.id, target: 'SHOP', amount: 0 },
+              ],
+            });
+            recomputed.push(payment.id);
+            continue;
+          }
+
+          // 規則版本化：依 paidAt 找適用版本；若無版本或無 artistId → 店家 100%
+          const split = payment.bill.artistId ? await this.getSplitRuleByArtistAt(payment.bill.artistId, payment.paidAt) : null;
+          const artistAmount = split ? roundHalfUp((payment.amount * split.artistRateBps) / 10000) : 0;
+          const shopAmount = payment.amount - artistAmount;
+
+          // 建立新的 allocations
+          await this.prisma.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
+              { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+            ],
+          });
+
+          recomputed.push(payment.id);
+        } catch (error) {
+          errors.push({
+            paymentId: payment.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      const errorDetails = errors.slice(0, 50);
+      await this.prisma.splitAllocationRecomputeJob.update({
+        where: { id: job.id },
+        data: {
+          status: errors.length > 0 ? 'DONE' : 'DONE',
+          total: payments.length,
+          recomputed: recomputed.length,
+          skipped: skipped.length,
+          errors: errors.length,
+          errorDetails: errorDetails.length > 0 ? (errorDetails as any) : null,
+        },
+      });
+
+      return {
+        jobId: job.id,
+        total: payments.length,
+        recomputed: recomputed.length,
+        skipped: skipped.length,
+        errors: errors.length,
+        recomputedPaymentIds: recomputed,
+        skippedPaymentIds: skipped,
+        errorDetails: errors,
+      };
+    } catch (e) {
+      await this.prisma.splitAllocationRecomputeJob.update({
+        where: { id: job.id },
+        data: {
+          status: 'FAILED',
+          errorDetails: [{ paymentId: 'JOB', error: e instanceof Error ? e.message : String(e) }] as any,
+        },
+      });
+      throw e;
+    }
+  }
+
+  async listSplitAllocationRecomputeJobs(actor: AccessActor, input?: { limit?: number }) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can view recompute jobs');
+    const take = clampInt(Math.trunc(input?.limit ?? 50), 1, 200);
+    return this.prisma.splitAllocationRecomputeJob.findMany({
+      orderBy: { createdAt: 'desc' },
+      take,
+      include: {
+        actor: { select: { id: true, name: true } },
+      },
+    });
   }
 }
 

@@ -38,6 +38,7 @@ model User {
   paymentsRecorded            Payment[]          @relation("PaymentRecordedBy")
   artistSplitRules            ArtistSplitRule[]  @relation("ArtistSplitRuleArtist")
   artistSplitRuleVersionsCreated ArtistSplitRule[] @relation("ArtistSplitRuleCreatedBy")
+  splitAllocationRecomputeJobs SplitAllocationRecomputeJob[] @relation("SplitAllocationRecomputeJobActor")
   appointmentBillsCreatedBy   AppointmentBill[]  @relation("AppointmentBillCreatedBy")
   member                      Member?
   artist                      Artist?
@@ -312,6 +313,27 @@ model ArtistSplitRule {
 
   @@index([artistId, branchId, effectiveFrom])
   @@index([artistId, effectiveFrom])
+}
+
+model SplitAllocationRecomputeJob {
+  id           String   @id @default(cuid())
+  actorId      String
+  reason       String
+  fromPaidAt   DateTime
+  paymentIds   Json?
+  status       String   @default("RUNNING") // RUNNING | DONE | FAILED
+  total        Int      @default(0)
+  recomputed   Int      @default(0)
+  skipped      Int      @default(0)
+  errors       Int      @default(0)
+  errorDetails Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  actor User @relation("SplitAllocationRecomputeJobActor", fields: [actorId], references: [id])
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
 }
 
 model ServiceHistory {
