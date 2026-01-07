@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Money } from "@/components/Money";
 import { buildBillItemBreakdown } from "@/lib/billing-breakdown";
@@ -112,6 +111,39 @@ const paymentMethods = [
   { value: "STORED_VALUE", label: "儲值扣款" },
   { value: "OTHER", label: "其他" },
 ];
+
+function NativeSelect(props: {
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const { value, onChange, options, placeholder, disabled, className } = props;
+  return (
+    <select
+      className={
+        className ??
+        "h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+      }
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+    >
+      {placeholder ? (
+        <option value="" disabled>
+          {placeholder}
+        </option>
+      ) : null}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function formatPayMethod(method: string) {
   return paymentMethods.find((m) => m.value === method)?.label || method;
@@ -967,51 +999,46 @@ export default function AdminBillingPage() {
             <div className="hidden lg:flex flex-wrap items-end gap-2">
               <div className="w-[160px]">
                 <div className="text-[11px] text-muted-foreground mb-1">分店</div>
-                <Select value={filterBranchId} onValueChange={setFilterBranchId}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="全部分店" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">全部分店</SelectItem>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={filterBranchId}
+                  onChange={setFilterBranchId}
+                  options={[
+                    { value: "all", label: "全部分店" },
+                    ...branches.map((b) => ({ value: b.id, label: b.name })),
+                  ]}
+                />
               </div>
 
               <div className="w-[120px]">
                 <div className="text-[11px] text-muted-foreground mb-1">狀態</div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="全部狀態" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">全部狀態</SelectItem>
-                    <SelectItem value="OPEN">未結清</SelectItem>
-                    <SelectItem value="SETTLED">已結清</SelectItem>
-                    <SelectItem value="VOID">作廢</SelectItem>
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={filterStatus}
+                  onChange={setFilterStatus}
+                  options={[
+                    { value: "all", label: "全部狀態" },
+                    { value: "OPEN", label: "未結清" },
+                    { value: "SETTLED", label: "已結清" },
+                    { value: "VOID", label: "作廢" },
+                  ]}
+                />
               </div>
 
               <div className="w-[180px]">
                 <div className="text-[11px] text-muted-foreground mb-1">刺青師</div>
-                <Select value={filterArtistId} onValueChange={setFilterArtistId}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="全部刺青師" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">全部刺青師</SelectItem>
-                    {artists.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {(a.name || a.id) + `（${a.branchName || "無分店"}）`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={filterArtistId}
+                  onChange={setFilterArtistId}
+                  options={[
+                    { value: "all", label: "全部刺青師" },
+                    ...artists.map((a) => ({
+                      value: a.id,
+                      label: `${a.name || a.id}（${a.branchName || "無分店"}）`,
+                    })),
+                  ]}
+                />
               </div>
 
               <div className="w-[140px]">
@@ -1025,30 +1052,30 @@ export default function AdminBillingPage() {
 
               <div className="w-[160px]">
                 <div className="text-[11px] text-muted-foreground mb-1">排序</div>
-                <Select value={sortField} onValueChange={(v) => setSortField(isBillSortField(v) ? v : "createdAt")}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="createdAt" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="createdAt">帳單建立時間</SelectItem>
-                    <SelectItem value="billTotal">應收金額</SelectItem>
-                    <SelectItem value="paidTotal">已收金額</SelectItem>
-                    <SelectItem value="dueTotal">未收金額</SelectItem>
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={sortField}
+                  onChange={(v) => setSortField(isBillSortField(v) ? v : "createdAt")}
+                  options={[
+                    { value: "createdAt", label: "帳單建立時間" },
+                    { value: "billTotal", label: "應收金額" },
+                    { value: "paidTotal", label: "已收金額" },
+                    { value: "dueTotal", label: "未收金額" },
+                  ]}
+                />
               </div>
 
               <div className="w-[150px]">
                 <div className="text-[11px] text-muted-foreground mb-1">方向</div>
-                <Select value={sortOrder} onValueChange={(v) => setSortOrder(isBillSortOrder(v) ? v : "desc")}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="desc" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="desc">新→舊 / 大→小</SelectItem>
-                    <SelectItem value="asc">舊→新 / 小→大</SelectItem>
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={sortOrder}
+                  onChange={(v) => setSortOrder(isBillSortOrder(v) ? v : "desc")}
+                  options={[
+                    { value: "desc", label: "新→舊 / 大→小" },
+                    { value: "asc", label: "舊→新 / 小→大" },
+                  ]}
+                />
               </div>
             </div>
 
@@ -1177,31 +1204,29 @@ export default function AdminBillingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <div className="text-xs text-muted-foreground mb-1">視角</div>
-              <Select value={viewMode} onValueChange={(v) => setViewMode(v === "ALL" ? "ALL" : "CONSUMPTION")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="消費（不含儲值）" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CONSUMPTION">消費（不含儲值）</SelectItem>
-                  <SelectItem value="ALL">全部（含儲值）</SelectItem>
-                </SelectContent>
-              </Select>
+              <NativeSelect
+                value={viewMode}
+                onChange={(v) => setViewMode(v === "ALL" ? "ALL" : "CONSUMPTION")}
+                options={[
+                  { value: "CONSUMPTION", label: "消費（不含儲值）" },
+                  { value: "ALL", label: "全部（含儲值）" },
+                ]}
+              />
             </div>
             <div>
               <div className="text-xs text-muted-foreground mb-1">帳單類型</div>
-              <Select value={filterBillType} onValueChange={setFilterBillType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="全部類型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部類型</SelectItem>
-                  <SelectItem value="APPOINTMENT">預約</SelectItem>
-                  <SelectItem value="WALK_IN">現場</SelectItem>
-                  <SelectItem value="PRODUCT">商品</SelectItem>
-                  <SelectItem value="STORED_VALUE_TOPUP">儲值</SelectItem>
-                  <SelectItem value="OTHER">其他</SelectItem>
-                </SelectContent>
-              </Select>
+              <NativeSelect
+                value={filterBillType}
+                onChange={setFilterBillType}
+                options={[
+                  { value: "all", label: "全部類型" },
+                  { value: "APPOINTMENT", label: "預約" },
+                  { value: "WALK_IN", label: "現場" },
+                  { value: "PRODUCT", label: "商品" },
+                  { value: "STORED_VALUE_TOPUP", label: "儲值" },
+                  { value: "OTHER", label: "其他" },
+                ]}
+              />
             </div>
 
             <div className="md:col-span-3">
@@ -1286,30 +1311,24 @@ export default function AdminBillingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">分店</label>
-                <Select value={newBranchId} onValueChange={setNewBranchId} disabled={userRole.toUpperCase() === "ARTIST"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={userRole.toUpperCase() === "ARTIST" ? (lockedBranchLabel || "已帶入") : "請選擇分店"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  value={newBranchId}
+                  onChange={setNewBranchId}
+                  disabled={userRole.toUpperCase() === "ARTIST"}
+                  options={branches.map((b) => ({ value: b.id, label: b.name }))}
+                  placeholder={userRole.toUpperCase() === "ARTIST" ? lockedBranchLabel || "已帶入" : "請選擇分店"}
+                />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">類型</label>
-                <Select value={newBillType} onValueChange={setNewBillType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="WALK_IN" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="WALK_IN">現場（WALK_IN）</SelectItem>
-                    <SelectItem value="OTHER">其他（OTHER）</SelectItem>
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  value={newBillType}
+                  onChange={setNewBillType}
+                  options={[
+                    { value: "WALK_IN", label: "現場（WALK_IN）" },
+                    { value: "OTHER", label: "其他（OTHER）" },
+                  ]}
+                />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">客戶姓名（可空）</label>
@@ -1321,19 +1340,16 @@ export default function AdminBillingPage() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">刺青師（可空）</label>
-                <Select value={newArtistId || "none"} onValueChange={(v) => setNewArtistId(v === "none" ? "" : v)} disabled={userRole.toUpperCase() === "ARTIST"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={userRole.toUpperCase() === "ARTIST" ? (lockedArtistLabel || "已帶入") : "不指定"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">不指定</SelectItem>
-                    {artists.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {(a.name || a.id) + `（${a.branchName || "無分店"}）`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  value={newArtistId || "none"}
+                  onChange={(v) => setNewArtistId(v === "none" ? "" : v)}
+                  disabled={userRole.toUpperCase() === "ARTIST"}
+                  options={[
+                    { value: "none", label: "不指定" },
+                    ...artists.map((a) => ({ value: a.id, label: `${a.name || a.id}（${a.branchName || "無分店"}）` })),
+                  ]}
+                  placeholder={userRole.toUpperCase() === "ARTIST" ? lockedArtistLabel || "已帶入" : "不指定"}
+                />
               </div>
             </div>
 
@@ -2040,18 +2056,11 @@ export default function AdminBillingPage() {
                   </div>
                   <div className="w-44">
                     <label className="text-xs text-muted-foreground">方式</label>
-                    <Select value={payMethod} onValueChange={setPayMethod}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="付款方式" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {paymentMethods.map((m) => (
-                          <SelectItem key={m.value} value={m.value}>
-                            {m.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <NativeSelect
+                      value={payMethod}
+                      onChange={setPayMethod}
+                      options={paymentMethods}
+                    />
                   </div>
                   <div className="flex-1 min-w-[200px]">
                     <label className="text-xs text-muted-foreground">備註</label>
