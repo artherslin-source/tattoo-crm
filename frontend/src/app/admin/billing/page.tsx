@@ -1446,7 +1446,7 @@ export default function AdminBillingPage() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] overflow-y-auto sm:w-[90vw] sm:max-w-[90vw]">
           <DialogHeader>
             <DialogTitle>編輯帳單（BOSS）</DialogTitle>
           </DialogHeader>
