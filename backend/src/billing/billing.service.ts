@@ -57,12 +57,16 @@ export class BillingService {
     const created = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: input.customerId },
-        select: { id: true, name: true, phone: true, branchId: true },
+        select: { id: true, name: true, phone: true, branchId: true, primaryArtistId: true },
       });
       if (!user) throw new NotFoundException('會員不存在');
 
       const branchId = input.branchId ?? user.branchId ?? actor.branchId ?? null;
       if (!branchId) throw new BadRequestException('無法判定分店（請提供 branchId 或先為會員指定分店）');
+
+      if (!user.primaryArtistId) {
+        throw new BadRequestException('此會員尚未設定主責刺青師，請先設定後再進行儲值入金');
+      }
 
       // ensure member record exists
       let member = await tx.member.findUnique({ where: { userId: user.id } });
@@ -85,7 +89,7 @@ export class BillingService {
           appointmentId: null,
           branchId,
           customerId: user.id,
-          artistId: null,
+          artistId: user.primaryArtistId,
           currency: 'TWD',
           billType: BILL_TYPE_STORED_VALUE_TOPUP,
           listTotal: amount,
@@ -113,24 +117,38 @@ export class BillingService {
         },
       });
 
+      const paidAt = new Date();
       const payment = await tx.payment.create({
         data: {
           billId: bill.id,
           amount,
           method,
-          paidAt: new Date(),
+          paidAt,
           recordedById: actor.id,
           notes: `${input.notes || '會員儲值'} (topupHistoryId=${history.id})`,
         },
       });
 
-      // Topup has no artist split: all SHOP.
-      await tx.paymentAllocation.createMany({
-        data: [
-          { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-          { paymentId: payment.id, target: 'SHOP', amount },
-        ],
-      });
+      // Topup allocations are attributed to member's primary artist.
+      // If no split rule: ARTIST=0, SHOP=amount
+      const split = await this.resolveSplitRule(actor, user.primaryArtistId, branchId, paidAt);
+      if (!split) {
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+            { paymentId: payment.id, target: 'SHOP', amount },
+          ],
+        });
+      } else {
+        const artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
+        const shopAmount = amount - artistAmount;
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
+            { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+          ],
+        });
+      }
 
       // Update stored value balance (do NOT touch totalSpent; totalSpent is consumption-only)
       await tx.member.update({
@@ -728,6 +746,7 @@ export class BillingService {
         payments: { 
           select: { 
             amount: true,
+            method: true,
             allocations: { select: { target: true, amount: true } },
           } 
         },
@@ -740,7 +759,9 @@ export class BillingService {
     const maxDueTotal = toIntOrUndef(query.maxDueTotal);
 
     let rows = bills.map((b) => {
-      const paidTotal = b.payments.reduce((s, p) => s + p.amount, 0);
+      const storedValuePaidTotal = b.payments.reduce((s, p) => (p.method === 'STORED_VALUE' ? s + p.amount : s), 0);
+      const cashPaidTotal = b.payments.reduce((s, p) => (p.method === 'STORED_VALUE' ? s : s + p.amount), 0);
+      const paidTotal = cashPaidTotal + storedValuePaidTotal;
       
       // 計算拆賬金額
       let artistAmount = 0;
@@ -758,6 +779,8 @@ export class BillingService {
       return {
         ...b,
         summary: {
+          cashPaidTotal,
+          storedValuePaidTotal,
           paidTotal,
           dueTotal: b.billTotal - paidTotal,
           artistAmount,
@@ -1112,8 +1135,15 @@ export class BillingService {
         });
       }
 
-      // 計算拆帳：無 artistId 或無規則 → allocations 為 0/0
-      if (!bill.artistId) {
+      // STORED_VALUE 扣款不進拆帳（allocations 固定 0/0）
+      if (method === 'STORED_VALUE') {
+        await tx.paymentAllocation.createMany({
+          data: [
+            { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+            { paymentId: payment.id, target: 'SHOP', amount: 0 },
+          ],
+        });
+      } else if (!bill.artistId) {
         await tx.paymentAllocation.createMany({
           data: [
             { paymentId: payment.id, target: 'ARTIST', amount: 0 },
@@ -1225,11 +1255,8 @@ export class BillingService {
         });
       }
 
-      // Compute allocations for this payment
-      const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
-      
-      // 無規則：allocations 為 0/0
-      if (!split) {
+      // STORED_VALUE 扣款不進拆帳（allocations 固定 0/0）
+      if (method === 'STORED_VALUE') {
         await tx.paymentAllocation.createMany({
           data: [
             { paymentId: payment.id, target: 'ARTIST', amount: 0 },
@@ -1237,55 +1264,68 @@ export class BillingService {
           ],
         });
       } else {
-        // 有規則：hybrid 拆帳邏輯
-        const targetArtistTotal = roundHalfUp((bill.billTotal * split.artistRateBps) / 10000);
-        const targetShopTotal = bill.billTotal - targetArtistTotal;
+        // Compute allocations for this payment
+        const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
 
-        const prevAlloc = await tx.paymentAllocation.findMany({
-          where: { payment: { billId: bill.id } },
-          select: { target: true, amount: true },
-        });
+        // 無規則：allocations 為 0/0
+        if (!split) {
+          await tx.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+              { paymentId: payment.id, target: 'SHOP', amount: 0 },
+            ],
+          });
+        } else {
+          // 有規則：hybrid 拆帳邏輯
+          const targetArtistTotal = roundHalfUp((bill.billTotal * split.artistRateBps) / 10000);
+          const targetShopTotal = bill.billTotal - targetArtistTotal;
 
-        const allocatedArtist = prevAlloc.filter((a) => a.target === 'ARTIST').reduce((s, a) => s + a.amount, 0);
-        const allocatedShop = prevAlloc.filter((a) => a.target === 'SHOP').reduce((s, a) => s + a.amount, 0);
+          const prevAlloc = await tx.paymentAllocation.findMany({
+            where: { payment: { billId: bill.id } },
+            select: { target: true, amount: true },
+          });
 
-        let artistAmount = 0;
-        let shopAmount = 0;
+          const allocatedArtist = prevAlloc.filter((a) => a.target === 'ARTIST').reduce((s, a) => s + a.amount, 0);
+          const allocatedShop = prevAlloc.filter((a) => a.target === 'SHOP').reduce((s, a) => s + a.amount, 0);
 
-        if (amount > 0) {
-          const remainingArtist = targetArtistTotal - allocatedArtist;
-          const remainingShop = targetShopTotal - allocatedShop;
-          const totalRemaining = remainingArtist + remainingShop;
-          if (totalRemaining > 0) {
-            artistAmount = roundHalfUp((amount * remainingArtist) / totalRemaining);
-            artistAmount = clampInt(artistAmount, 0, amount);
-            shopAmount = amount - artistAmount;
-            // Clamp to not exceed remaining buckets (final payment absorbs rounding)
-            if (shopAmount > remainingShop) {
-              shopAmount = Math.max(0, remainingShop);
-              artistAmount = amount - shopAmount;
-            }
-            if (artistAmount > remainingArtist) {
-              artistAmount = Math.max(0, remainingArtist);
+          let artistAmount = 0;
+          let shopAmount = 0;
+
+          if (amount > 0) {
+            const remainingArtist = targetArtistTotal - allocatedArtist;
+            const remainingShop = targetShopTotal - allocatedShop;
+            const totalRemaining = remainingArtist + remainingShop;
+            if (totalRemaining > 0) {
+              artistAmount = roundHalfUp((amount * remainingArtist) / totalRemaining);
+              artistAmount = clampInt(artistAmount, 0, amount);
+              shopAmount = amount - artistAmount;
+              // Clamp to not exceed remaining buckets (final payment absorbs rounding)
+              if (shopAmount > remainingShop) {
+                shopAmount = Math.max(0, remainingShop);
+                artistAmount = amount - shopAmount;
+              }
+              if (artistAmount > remainingArtist) {
+                artistAmount = Math.max(0, remainingArtist);
+                shopAmount = amount - artistAmount;
+              }
+            } else {
+              // Overpayment: use configured split
+              artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
               shopAmount = amount - artistAmount;
             }
           } else {
-            // Overpayment: use configured split
+            // Refund/chargeback: reverse using configured split (simple & consistent)
             artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
             shopAmount = amount - artistAmount;
           }
-        } else {
-          // Refund/chargeback: reverse using configured split (simple & consistent)
-          artistAmount = roundHalfUp((amount * split.artistRateBps) / 10000);
-          shopAmount = amount - artistAmount;
-        }
 
-        await tx.paymentAllocation.createMany({
-          data: [
-            { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
-            { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
-          ],
-        });
+          await tx.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: artistAmount },
+              { paymentId: payment.id, target: 'SHOP', amount: shopAmount },
+            ],
+          });
+        }
       }
 
       // Update bill status based on paid progress
@@ -1648,6 +1688,19 @@ export class BillingService {
         await this.prisma.paymentAllocation.deleteMany({
           where: { paymentId: payment.id },
         });
+
+        // STORED_VALUE 扣款不進拆帳（allocations 固定 0/0）
+        if (payment.method === 'STORED_VALUE') {
+          await this.prisma.paymentAllocation.createMany({
+            data: [
+              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
+              { paymentId: payment.id, target: 'SHOP', amount: 0 },
+            ],
+          });
+          recomputed.push(payment.id);
+          console.log(`✅ 重算拆帳 Payment ${payment.id}：STORED_VALUE → 0/0`);
+          continue;
+        }
 
         // 如果沒有 artistId，allocations 為 0/0
         if (!payment.bill.artistId) {

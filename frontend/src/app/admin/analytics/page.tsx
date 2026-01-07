@@ -25,11 +25,17 @@ interface AnalyticsData {
     total: number;
     monthly: number;
     daily: number;
+    cashflowTotal?: number;
+    cashflowMonthly?: number;
+    cashflowDaily?: number;
     trend: number; // 相比上期增長百分比
     actualDays?: number; // 實際天數
     byBranch: Array<{ branchId: string; branchName: string; amount: number }>;
+    cashflowByBranch?: Array<{ branchId: string; branchName: string; amount: number }>;
     byService: Array<{ serviceId: string; serviceName: string; amount: number; count: number }>;
+    cashflowByService?: Array<{ serviceId: string; serviceName: string; amount: number; count: number }>;
     byPaymentMethod: Array<{ method: string; amount: number; count: number }>;
+    cashflowByPaymentMethod?: Array<{ method: string; amount: number; count: number }>;
   };
   
   // 會員數據
@@ -255,8 +261,11 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-600">
-                {formatCurrency(analytics.revenue.total)}
+                {formatCurrency(analytics.revenue.cashflowTotal ?? analytics.revenue.total)}
               </div>
+              <p className="text-sm text-muted mt-2">
+                含儲值結清：{formatCurrency(analytics.revenue.total)}
+              </p>
               {dateRange !== 'all' && (
                 <div className="flex items-center mt-2 text-sm">
                   {analytics.revenue.trend >= 0 ? (
@@ -349,7 +358,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {analytics.revenue.byBranch.slice(0, 5).map((branch, index) => (
+                {(analytics.revenue.cashflowByBranch ?? analytics.revenue.byBranch).slice(0, 5).map((branch, index) => (
                   <div key={branch.branchId} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -381,7 +390,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {analytics.revenue.byService.slice(0, 5).map((service, index) => (
+                {(analytics.revenue.cashflowByService ?? analytics.revenue.byService).slice(0, 5).map((service, index) => (
                   <div key={service.serviceId} className="space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm">{service.serviceName}</span>
@@ -409,8 +418,9 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {analytics.revenue.byPaymentMethod.map((payment) => {
-                  const total = analytics.revenue.byPaymentMethod.reduce((sum, p) => sum + p.amount, 0);
+                {(analytics.revenue.cashflowByPaymentMethod ?? analytics.revenue.byPaymentMethod).map((payment) => {
+                  const dataset = analytics.revenue.cashflowByPaymentMethod ?? analytics.revenue.byPaymentMethod;
+                  const total = dataset.reduce((sum, p) => sum + p.amount, 0);
                   const percentage = ((payment.amount / total) * 100).toFixed(1);
                   
                   return (

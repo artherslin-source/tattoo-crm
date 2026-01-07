@@ -53,6 +53,24 @@ export class AdminAnalyticsUnifiedService {
     return this.safeBigIntToNumber(result[0]?.total);
   }
 
+  // 現金流口徑：排除 STORED_VALUE（但保留 method NULL / 其他方式）
+  private async revenueByPaidAtCashflow(range: TimeRange, branchFilter: any = {}) {
+    const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) params.push(branchFilter.branchId);
+
+    const result = await this.prisma.$queryRawUnsafe<{ total: bigint | number }[]>(`
+      SELECT COALESCE(SUM(p."amount"), 0) AS total
+      FROM "Payment" p
+      JOIN "AppointmentBill" b ON p."billId" = b.id
+      WHERE p."paidAt" BETWEEN $1 AND $2
+        AND (p."method" IS NULL OR p."method" <> 'STORED_VALUE')
+        ${branchCondition}
+    `, ...params);
+
+    return this.safeBigIntToNumber(result[0]?.total);
+  }
+
   // Billing v3：付款方式統計（Payment.method）
   private async billingPaymentMethodStats(range: TimeRange, branchFilter: any = {}) {
     const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
@@ -64,6 +82,24 @@ export class AdminAnalyticsUnifiedService {
       FROM "Payment" p
       JOIN "AppointmentBill" b ON p."billId" = b.id
       WHERE p."paidAt" BETWEEN $1 AND $2
+        ${branchCondition}
+      GROUP BY method
+      ORDER BY amount DESC
+    `, ...params);
+  }
+
+  // 現金流口徑：付款方式統計（排除 STORED_VALUE）
+  private async billingPaymentMethodStatsCashflow(range: TimeRange, branchFilter: any = {}) {
+    const branchCondition = branchFilter.branchId ? 'AND b."branchId" = $3' : '';
+    const params = [range.start, range.end];
+    if (branchFilter.branchId) params.push(branchFilter.branchId);
+
+    return this.prisma.$queryRawUnsafe<{ method: string; amount: bigint | number; count: bigint | number }[]>(`
+      SELECT COALESCE(p."method", 'UNKNOWN') AS method, SUM(p."amount") AS amount, COUNT(*) AS count
+      FROM "Payment" p
+      JOIN "AppointmentBill" b ON p."billId" = b.id
+      WHERE p."paidAt" BETWEEN $1 AND $2
+        AND (p."method" IS NULL OR p."method" <> 'STORED_VALUE')
         ${branchCondition}
       GROUP BY method
       ORDER BY amount DESC
@@ -346,11 +382,16 @@ export class AdminAnalyticsUnifiedService {
 
     const [
       totalRevenue,
+      cashflowTotalRevenue,
       monthlyRevenue,
+      cashflowMonthlyRevenue,
       activeMembers,
       branchRevenue,
+      cashflowBranchRevenue,
       serviceRevenue,
+      cashflowServiceRevenue,
       paymentMethodStats,
+      cashflowPaymentMethodStats,
       totalMembers,
       newMembersThisMonth,
       memberLevelStats,
@@ -358,6 +399,8 @@ export class AdminAnalyticsUnifiedService {
     ] = await Promise.all([
       // 總營收（使用統一查詢）
       this.revenueByPaidAt(currentRange, branchFilter),
+      // 現金流總營收（排除 STORED_VALUE）
+      this.revenueByPaidAtCashflow(currentRange, branchFilter),
       
       // 月營收（使用統一查詢）
       (async () => {
@@ -369,6 +412,8 @@ export class AdminAnalyticsUnifiedService {
         });
         return monthlyRev;
       })(),
+      // 現金流月營收（排除 STORED_VALUE）
+      this.revenueByPaidAtCashflow(monthRange, branchFilter),
       
       // 活躍會員（根據選擇的時間範圍）
       this.getActiveMembers(currentRange, branchFilter),
@@ -379,6 +424,19 @@ export class AdminAnalyticsUnifiedService {
         FROM "Payment" p
         JOIN "AppointmentBill" b ON p."billId" = b.id
         WHERE p."paidAt" BETWEEN $1 AND $2
+          ${branchCondition}
+        GROUP BY b."branchId"
+        ORDER BY revenue DESC
+        LIMIT 5
+      `, ...allParams),
+
+      // 分店營收排行（現金流口徑：排除 STORED_VALUE）
+      this.prisma.$queryRawUnsafe<{ branch_id: string; revenue: bigint | number }[]>(`
+        SELECT b."branchId" AS branch_id, COALESCE(SUM(p."amount"), 0) AS revenue
+        FROM "Payment" p
+        JOIN "AppointmentBill" b ON p."billId" = b.id
+        WHERE p."paidAt" BETWEEN $1 AND $2
+          AND (p."method" IS NULL OR p."method" <> 'STORED_VALUE')
           ${branchCondition}
         GROUP BY b."branchId"
         ORDER BY revenue DESC
@@ -401,9 +459,29 @@ export class AdminAnalyticsUnifiedService {
         ORDER BY revenue DESC
         LIMIT 5
       `, ...allParams),
+
+      // 服務項目營收（現金流口徑：排除 STORED_VALUE）
+      this.prisma.$queryRawUnsafe<{ service_id: string; service_name: string; revenue: bigint | number; count: bigint | number }[]>(`
+        SELECT s.id AS service_id, s.name AS service_name,
+               COALESCE(SUM(p."amount"), 0) AS revenue,
+               COUNT(DISTINCT a.id) AS count
+        FROM "Payment" p
+        JOIN "AppointmentBill" b ON p."billId" = b.id
+        JOIN "Appointment" a ON b."appointmentId" = a.id
+        JOIN "Service" s ON a."serviceId" = s.id
+        WHERE p."paidAt" BETWEEN $1 AND $2
+          AND (p."method" IS NULL OR p."method" <> 'STORED_VALUE')
+          ${branchCondition}
+          AND a."serviceId" IS NOT NULL
+        GROUP BY s.id, s.name
+        ORDER BY revenue DESC
+        LIMIT 5
+      `, ...allParams),
       
       // 付款方式統計（使用原生 SQL）
       this.billingPaymentMethodStats(currentRange, branchFilter),
+      // 付款方式統計（現金流口徑：排除 STORED_VALUE）
+      this.billingPaymentMethodStatsCashflow(currentRange, branchFilter),
       
       // 會員總數
       this.prisma.member.count(),
@@ -436,6 +514,8 @@ export class AdminAnalyticsUnifiedService {
     // 計算日均營收
     let dailyRevenue: number;
     let actualDays: number | null = null;
+    // 現金流日均營收
+    let cashflowDailyRevenue: number;
     
     if (rangeKey === 'all') {
       // 全部時間：計算從第一筆訂單到現在的實際天數
@@ -447,19 +527,23 @@ export class AdminAnalyticsUnifiedService {
           const firstDate = DateTime.fromJSDate(firstPaymentDate).setZone('Asia/Taipei');
           const totalDays = Math.max(1, now.diff(firstDate, 'days').days); // 至少1天
           dailyRevenue = Math.round(totalRevenue / totalDays);
+          cashflowDailyRevenue = Math.round(cashflowTotalRevenue / totalDays);
           actualDays = Math.round(totalDays);
         } else {
           dailyRevenue = 0;
+          cashflowDailyRevenue = 0;
           actualDays = null;
         }
       } else {
         dailyRevenue = 0;
+        cashflowDailyRevenue = 0;
         actualDays = null;
       }
     } else {
       // 計算日均營收
       const days = rangeKey === '7d' ? 7 : rangeKey === '30d' ? 30 : rangeKey === '90d' ? 90 : 365;
       dailyRevenue = Math.round(totalRevenue / days);
+      cashflowDailyRevenue = Math.round(cashflowTotalRevenue / days);
       actualDays = days;
     }
     
@@ -474,10 +558,24 @@ export class AdminAnalyticsUnifiedService {
         total: totalRevenue,
         monthly: monthlyRevenue,
         daily: dailyRevenue,
+        cashflowTotal: cashflowTotalRevenue,
+        cashflowMonthly: cashflowMonthlyRevenue,
+        cashflowDaily: cashflowDailyRevenue,
         trend: 0, // 暫時設為0，後續可加入成長率計算
         actualDays,
         byBranch: await Promise.all(branchRevenue.map(async (item) => {
           // 查詢分店名稱
+          const branch = await this.prisma.branch.findUnique({
+            where: { id: item.branch_id },
+            select: { name: true }
+          });
+          return {
+            branchId: item.branch_id,
+            branchName: branch?.name || `分店 ${item.branch_id}`,
+            amount: this.safeBigIntToNumber(item.revenue),
+          };
+        })),
+        cashflowByBranch: await Promise.all(cashflowBranchRevenue.map(async (item) => {
           const branch = await this.prisma.branch.findUnique({
             where: { id: item.branch_id },
             select: { name: true }
@@ -494,7 +592,18 @@ export class AdminAnalyticsUnifiedService {
           amount: this.safeBigIntToNumber(item.revenue),
           count: this.safeBigIntToNumber(item.count),
         })),
+        cashflowByService: cashflowServiceRevenue.map(item => ({
+          serviceId: item.service_name, // 簡化處理
+          serviceName: item.service_name,
+          amount: this.safeBigIntToNumber(item.revenue),
+          count: this.safeBigIntToNumber(item.count),
+        })),
         byPaymentMethod: paymentMethodStats.map(item => ({
+          method: this.getPaymentMethodDisplayName(item.method),
+          amount: this.safeBigIntToNumber(item.amount),
+          count: this.safeBigIntToNumber(item.count),
+        })),
+        cashflowByPaymentMethod: cashflowPaymentMethodStats.map(item => ({
           method: this.getPaymentMethodDisplayName(item.method),
           amount: this.safeBigIntToNumber(item.amount),
           count: this.safeBigIntToNumber(item.count),

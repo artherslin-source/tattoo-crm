@@ -721,11 +721,11 @@ export class AdminMembersService {
           },
         });
 
-        // No artist: allocate all to SHOP
+        // STORED_VALUE 扣款不進拆帳（allocations 固定 0/0）
         await tx.paymentAllocation.createMany({
           data: [
             { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-            { paymentId: payment.id, target: 'SHOP', amount: Math.trunc(amount) },
+            { paymentId: payment.id, target: 'SHOP', amount: 0 },
           ],
         });
 

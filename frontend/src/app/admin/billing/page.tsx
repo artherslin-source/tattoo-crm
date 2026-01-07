@@ -28,6 +28,8 @@ function isBillSortOrder(v: string): v is BillSortOrder {
 interface BillSummary {
   paidTotal: number;
   dueTotal: number;
+  cashPaidTotal?: number;
+  storedValuePaidTotal?: number;
   artistAmount?: number;
   shopAmount?: number;
 }
@@ -576,7 +578,12 @@ export default function AdminBillingPage() {
   const totals = useMemo(() => {
     const billTotal = rows.reduce((s, r) => s + r.billTotal, 0);
     const paidTotal = rows.reduce((s, r) => s + (r.summary?.paidTotal || 0), 0);
-    return { billTotal, paidTotal, dueTotal: billTotal - paidTotal };
+    const cashPaidTotal = rows.reduce(
+      (s, r) => s + (r.summary?.cashPaidTotal ?? r.summary?.paidTotal ?? 0),
+      0,
+    );
+    const storedValuePaidTotal = rows.reduce((s, r) => s + (r.summary?.storedValuePaidTotal || 0), 0);
+    return { billTotal, paidTotal, cashPaidTotal, storedValuePaidTotal, dueTotal: billTotal - paidTotal };
   }, [rows]);
 
   const sortLabel = useMemo(() => {
@@ -685,7 +692,7 @@ export default function AdminBillingPage() {
         <div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-md p-3">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>總應收</CardTitle>
@@ -694,9 +701,15 @@ export default function AdminBillingPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>總實收</CardTitle>
+            <CardTitle>總實收（現金）</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">${formatMoney(totals.paidTotal)}</CardContent>
+          <CardContent className="text-2xl font-semibold">${formatMoney(totals.cashPaidTotal)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>儲值扣款</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">${formatMoney(totals.storedValuePaidTotal)}</CardContent>
         </Card>
         <Card>
           <CardHeader>
@@ -817,7 +830,8 @@ export default function AdminBillingPage() {
                   <th className="py-2 pr-3">刺青師</th>
                   <th className="py-2 pr-3">分店</th>
                   <th className="py-2 pr-3">應收</th>
-                  <th className="py-2 pr-3">已收</th>
+                  <th className="py-2 pr-3">現金實收</th>
+                  <th className="py-2 pr-3">儲值扣款</th>
                   <th className="py-2 pr-3">未收</th>
                   <th className="py-2 pr-3">店家</th>
                   <th className="py-2 pr-3">刺青師</th>
@@ -853,7 +867,8 @@ export default function AdminBillingPage() {
                     <td className="py-2 pr-3">{r.artist?.name || "-"}</td>
                     <td className="py-2 pr-3">{r.branch?.name || "-"}</td>
                     <td className="py-2 pr-3">${formatMoney(r.billTotal)}</td>
-                    <td className="py-2 pr-3">${formatMoney(r.summary?.paidTotal || 0)}</td>
+                    <td className="py-2 pr-3">${formatMoney(r.summary?.cashPaidTotal ?? r.summary?.paidTotal ?? 0)}</td>
+                    <td className="py-2 pr-3">${formatMoney(r.summary?.storedValuePaidTotal || 0)}</td>
                     <td className="py-2 pr-3">${formatMoney(r.summary?.dueTotal || 0)}</td>
                     <td className="py-2 pr-3">${formatMoney(r.summary?.shopAmount || 0)}</td>
                     <td className="py-2 pr-3">${formatMoney(r.summary?.artistAmount || 0)}</td>
@@ -874,7 +889,7 @@ export default function AdminBillingPage() {
                 ))}
                 {rows.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={11} className="py-6 text-center text-muted-foreground">
+                    <td colSpan={12} className="py-6 text-center text-muted-foreground">
                       目前沒有帳務資料（請先在預約完成後建立帳務）
                     </td>
                   </tr>
