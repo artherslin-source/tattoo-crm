@@ -1458,41 +1458,39 @@ export default function AdminBillingPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground">分店</label>
-                  <Select
+                  {/* Native select: avoid Radix portal/popover offset on iPad inside Dialog */}
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={editDraft.branchId}
-                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, branchId: v } : d))}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, branchId: e.target.value } : d))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="請選擇分店" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="" disabled>
+                      請選擇分店
+                    </option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="text-xs text-muted-foreground">刺青師（可空）</label>
-                  <Select
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={editDraft.artistId || "none"}
-                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, artistId: v === "none" ? "" : v } : d))}
+                    onChange={(e) =>
+                      setEditDraft((d) => (d ? { ...d, artistId: e.target.value === "none" ? "" : e.target.value } : d))
+                    }
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="不指定" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">不指定</SelectItem>
-                      {artists.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {(a.name || a.id) + `（${a.branchName || "無分店"}）`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="none">不指定</option>
+                    {artists.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {(a.name || a.id) + `（${a.branchName || "無分店"}）`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -1522,21 +1520,17 @@ export default function AdminBillingPage() {
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">帳單類型</label>
-                  <Select
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={editDraft.billType}
-                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, billType: v } : d))}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, billType: e.target.value } : d))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="WALK_IN" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="APPOINTMENT">預約</SelectItem>
-                      <SelectItem value="WALK_IN">現場</SelectItem>
-                      <SelectItem value="PRODUCT">商品</SelectItem>
-                      <SelectItem value="STORED_VALUE_TOPUP">儲值</SelectItem>
-                      <SelectItem value="OTHER">其他</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="APPOINTMENT">預約</option>
+                    <option value="WALK_IN">現場</option>
+                    <option value="PRODUCT">商品</option>
+                    <option value="STORED_VALUE_TOPUP">儲值</option>
+                    <option value="OTHER">其他</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1551,19 +1545,15 @@ export default function AdminBillingPage() {
 
                 <div>
                   <label className="text-xs text-muted-foreground">狀態</label>
-                  <Select
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={editDraft.status}
-                    onValueChange={(v) => setEditDraft((d) => (d ? { ...d, status: v as BillStatus } : d))}
+                    onChange={(e) => setEditDraft((d) => (d ? { ...d, status: e.target.value as BillStatus } : d))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="OPEN" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="OPEN">未結清</SelectItem>
-                      <SelectItem value="SETTLED">已結清</SelectItem>
-                      <SelectItem value="VOID">作廢</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="OPEN">未結清</option>
+                    <option value="SETTLED">已結清</option>
+                    <option value="VOID">作廢</option>
+                  </select>
                 </div>
 
                 {editDraft.status === "VOID" ? (
@@ -1617,7 +1607,7 @@ export default function AdminBillingPage() {
                   </Button>
                 </div>
                 <div className="border rounded-md overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="min-w-[920px] w-full text-sm">
                     <thead>
                       <tr className="text-left border-b bg-gray-50">
                         <th className="py-2 px-3">名稱</th>
@@ -1746,14 +1736,14 @@ export default function AdminBillingPage() {
                   </Button>
                 </div>
                 <div className="border rounded-md overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="min-w-[980px] w-full text-sm">
                     <thead>
                       <tr className="text-left border-b bg-gray-50">
                         <th className="py-2 px-3 w-44">方式</th>
-                        <th className="py-2 px-3 w-32">金額</th>
-                        <th className="py-2 px-3 w-56">時間</th>
+                        <th className="py-2 px-3 w-40">金額</th>
+                        <th className="py-2 px-3 w-64">時間</th>
                         <th className="py-2 px-3">備註</th>
-                        <th className="py-2 px-3 w-44">拆帳（店/師）</th>
+                        <th className="py-2 px-3 w-56">拆帳（店/師）</th>
                         <th className="py-2 px-3 w-20">操作</th>
                       </tr>
                     </thead>
@@ -1765,7 +1755,7 @@ export default function AdminBillingPage() {
                             <td className="py-2 px-3">
                               {/* Use native select here to avoid Radix portal/popover positioning issues inside Dialog+table (esp. mobile/iPad). */}
                               <select
-                                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                className="h-10 min-w-[160px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 value={p.method}
                                 onChange={(e) =>
                                   setEditDraft((d) =>
@@ -1788,6 +1778,7 @@ export default function AdminBillingPage() {
                             <td className="py-2 px-3">
                               <Input
                                 inputMode="numeric"
+                                className="min-w-[120px]"
                                 value={p.amount}
                                 onChange={(e) =>
                                   setEditDraft((d) =>
@@ -1799,6 +1790,7 @@ export default function AdminBillingPage() {
                             <td className="py-2 px-3">
                               <Input
                                 type="datetime-local"
+                                className="min-w-[220px]"
                                 value={p.paidAtLocal}
                                 onChange={(e) =>
                                   setEditDraft((d) =>
@@ -1824,7 +1816,7 @@ export default function AdminBillingPage() {
                               <div className="flex gap-2 items-center">
                                 <Input
                                   inputMode="numeric"
-                                  className="w-20"
+                                  className="w-24"
                                   value={isStored ? "0" : p.shopAmount}
                                   disabled={isStored}
                                   onChange={(e) =>
@@ -1836,7 +1828,7 @@ export default function AdminBillingPage() {
                                 <span className="text-xs text-muted-foreground">/</span>
                                 <Input
                                   inputMode="numeric"
-                                  className="w-20"
+                                  className="w-24"
                                   value={isStored ? "0" : p.artistAmount}
                                   disabled={isStored}
                                   onChange={(e) =>
