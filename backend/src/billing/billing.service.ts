@@ -531,7 +531,7 @@ export class BillingService {
             await tx.paymentAllocation.createMany({
               data: [
                 { paymentId: p.id, target: 'ARTIST', amount: 0 },
-                { paymentId: p.id, target: 'SHOP', amount: 0 },
+                { paymentId: p.id, target: 'SHOP', amount: p.amount },
               ],
             });
           } else {
@@ -940,14 +940,13 @@ export class BillingService {
   }
 
   /**
-   * 取得刺青師的最新拆帳規則（每位刺青師一組，不分分店）
-   * @param artistId 刺青師 ID
-   * @returns 拆帳比例 { artistRateBps, shopRateBps } 或 null（無規則）
+   * 取得刺青師在指定時間點（paidAt）所適用的拆帳規則版本。
+   * - 規則變更不朔及既往：每筆付款用自己的 paidAt 去找 latest(effectiveFrom <= paidAt)
+   * - 若找不到任何版本：回傳 null（呼叫端決定預設拆帳；目前預設為店家 100%）
    */
-  private async getLatestSplitRuleByArtist(artistId: string) {
-    // 只查該刺青師最新一筆規則（不分 branchId）
+  private async getSplitRuleByArtistAt(artistId: string, at: Date) {
     const rule = await this.prisma.artistSplitRule.findFirst({
-      where: { artistId },
+      where: { artistId, effectiveFrom: { lte: at } },
       orderBy: { effectiveFrom: 'desc' },
     });
 
@@ -964,9 +963,9 @@ export class BillingService {
   }
 
   private async resolveSplitRule(actor: AccessActor, artistId: string | null, branchId: string, at: Date) {
-    // 無 artistId 或無規則：回傳 null（不再有預設 70/30）
+    // 無 artistId：回傳 null（呼叫端會用店家 100% 預設）
     if (!artistId) return null;
-    return this.getLatestSplitRuleByArtist(artistId);
+    return this.getSplitRuleByArtistAt(artistId, at);
   }
 
   private async ensureBillInternal(tx: Prisma.TransactionClient, appointmentId: string, createdById?: string) {
@@ -1700,21 +1699,14 @@ export class BillingService {
             { paymentId: payment.id, target: 'SHOP', amount: 0 },
           ],
         });
-      } else if (!bill.artistId) {
-        await tx.paymentAllocation.createMany({
-          data: [
-            { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-            { paymentId: payment.id, target: 'SHOP', amount: 0 },
-          ],
-        });
       } else {
         const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
         if (!split) {
-          // 無規則：allocations 為 0/0
+          // 無規則版本 / 無 artistId：預設全給店家
           await tx.paymentAllocation.createMany({
             data: [
               { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-              { paymentId: payment.id, target: 'SHOP', amount: 0 },
+              { paymentId: payment.id, target: 'SHOP', amount },
             ],
           });
         } else {
@@ -1824,12 +1816,12 @@ export class BillingService {
         // Compute allocations for this payment
         const split = await this.resolveSplitRule(actor, bill.artistId, bill.branchId, paidAt);
 
-        // 無規則：allocations 為 0/0
+        // 無規則版本 / 無 artistId：預設全給店家
         if (!split) {
           await tx.paymentAllocation.createMany({
             data: [
               { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-              { paymentId: payment.id, target: 'SHOP', amount: 0 },
+              { paymentId: payment.id, target: 'SHOP', amount },
             ],
           });
         } else {
@@ -1934,52 +1926,34 @@ export class BillingService {
     if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can manage split rules');
     const artistRateBps = clampInt(Math.trunc(input.artistRateBps), 0, 10000);
     const shopRateBps = 10000 - artistRateBps;
-    
-    return this.prisma.$transaction(async (tx) => {
-      // 查找該 artistId 的所有規則
-      const allRules = await tx.artistSplitRule.findMany({
-        where: { artistId: input.artistId },
-        orderBy: { effectiveFrom: 'desc' },
-      });
 
-      if (allRules.length === 0) {
-        // 沒有規則，建立新規則（branchId 設為 null，因為現在是 per_artist_only）
-        return tx.artistSplitRule.create({
-          data: {
-            artistId: input.artistId,
-            branchId: null,
-            artistRateBps,
-            shopRateBps,
-            effectiveFrom: input.effectiveFrom ?? new Date(),
-          },
-        });
-      }
+    // 規則版本化：每次新增一筆新版本（不覆蓋、不刪除舊版本）
+    return this.prisma.artistSplitRule.create({
+      data: {
+        artistId: input.artistId,
+        branchId: null, // 目前為 per_artist_only
+        artistRateBps,
+        shopRateBps,
+        effectiveFrom: input.effectiveFrom ?? new Date(),
+        createdById: actor.id,
+      },
+    });
+  }
 
-      // 有規則：保留最新一筆並更新，刪除其他
-      const latest = allRules[0];
-      const toDelete = allRules.slice(1).map((r) => r.id);
+  async listSplitRuleVersions(actor: AccessActor, input: { artistId?: string; branchId?: string }) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can manage split rules');
+    const where: Prisma.ArtistSplitRuleWhereInput = {};
+    if (input.artistId) where.artistId = input.artistId;
+    if (input.branchId) where.branchId = input.branchId;
 
-      // 更新最新一筆
-      const updated = await tx.artistSplitRule.update({
-        where: { id: latest.id },
-        data: {
-          artistRateBps,
-          shopRateBps,
-          branchId: null, // 統一設為 null（per_artist_only）
-          effectiveFrom: input.effectiveFrom ?? new Date(),
-          updatedAt: new Date(),
-        },
-      });
-
-      // 刪除其他舊規則
-      if (toDelete.length > 0) {
-        await tx.artistSplitRule.deleteMany({
-          where: { id: { in: toDelete } },
-        });
-        console.log(`🗑️ 刪除 ${toDelete.length} 筆重複規則（artistId=${input.artistId}）`);
-      }
-
-      return updated;
+    return this.prisma.artistSplitRule.findMany({
+      where,
+      orderBy: [{ artistId: 'asc' }, { effectiveFrom: 'desc' }],
+      include: {
+        artist: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
+        createdBy: { select: { id: true, name: true } },
+      },
     });
   }
 
@@ -2212,11 +2186,9 @@ export class BillingService {
   }
 
   /**
-   * 批次重算歷史 payment allocations（依最新拆帳規則）
-   * 僅限 BOSS 使用，會覆蓋所有歷史 allocations
-   * 方案 A：一律使用「目前最新」規則，不看 paidAt/effectiveFrom
-   */
-  async recomputeAllPaymentAllocations(actor: AccessActor, input?: { paymentIds?: string[] }) {
+   * 批次重算 payment allocations
+   * - 僅限 BOSS\n+   * - 預設從指定日期起（paidAt >= fromPaidAt）才重算，避免違背「不朔及既往」\n+   */
+  async recomputeAllPaymentAllocations(actor: AccessActor, input?: { paymentIds?: string[]; fromPaidAt?: Date }) {
     if (!isBoss(actor)) {
       throw new ForbiddenException('只有 BOSS 可以重算拆帳');
     }
@@ -2225,6 +2197,7 @@ export class BillingService {
     const payments = await this.prisma.payment.findMany({
       where: {
         id: input?.paymentIds ? { in: input.paymentIds } : undefined,
+        paidAt: input?.fromPaidAt ? { gte: input.fromPaidAt } : undefined,
       },
       include: {
         bill: {
@@ -2259,37 +2232,9 @@ export class BillingService {
           continue;
         }
 
-        // 如果沒有 artistId，allocations 為 0/0
-        if (!payment.bill.artistId) {
-          await this.prisma.paymentAllocation.createMany({
-            data: [
-              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-              { paymentId: payment.id, target: 'SHOP', amount: 0 },
-            ],
-          });
-          recomputed.push(payment.id);
-          console.log(`✅ 重算拆帳 Payment ${payment.id}：無 artistId → 0/0`);
-          continue;
-        }
-
-        // 取得「目前最新」的拆帳規則（每位刺青師一組）
-        const split = await this.getLatestSplitRuleByArtist(payment.bill.artistId);
-
-        // 無規則：allocations 為 0/0
-        if (!split) {
-          await this.prisma.paymentAllocation.createMany({
-            data: [
-              { paymentId: payment.id, target: 'ARTIST', amount: 0 },
-              { paymentId: payment.id, target: 'SHOP', amount: 0 },
-            ],
-          });
-          recomputed.push(payment.id);
-          console.log(`✅ 重算拆帳 Payment ${payment.id}：無規則 → 0/0`);
-          continue;
-        }
-
-        // 計算新的拆帳金額
-        const artistAmount = roundHalfUp((payment.amount * split.artistRateBps) / 10000);
+        // 規則版本化：依 paidAt 找適用版本；若無版本或無 artistId → 店家 100%
+        const split = payment.bill.artistId ? await this.getSplitRuleByArtistAt(payment.bill.artistId, payment.paidAt) : null;
+        const artistAmount = split ? roundHalfUp((payment.amount * split.artistRateBps) / 10000) : 0;
         const shopAmount = payment.amount - artistAmount;
 
         // 建立新的 allocations
@@ -2301,7 +2246,11 @@ export class BillingService {
         });
 
         recomputed.push(payment.id);
-        console.log(`✅ 重算拆帳 Payment ${payment.id}：artist=${artistAmount}, shop=${shopAmount} (${split.artistRateBps / 100}% / ${split.shopRateBps / 100}%)`);
+        console.log(
+          `✅ 重算拆帳 Payment ${payment.id}：artist=${artistAmount}, shop=${shopAmount}${
+            split ? ` (${split.artistRateBps / 100}% / ${split.shopRateBps / 100}%)` : ' (no_rule → shop_100%)'
+          }`,
+        );
       } catch (error) {
         errors.push({
           paymentId: payment.id,

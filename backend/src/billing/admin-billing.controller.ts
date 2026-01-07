@@ -75,6 +75,7 @@ const RebuildBillsBatchSchema = z.object({
 
 const RecomputeAllocationsSchema = z.object({
   paymentIds: z.array(z.string()).optional(),
+  fromPaidAt: z.string().datetime().optional(),
 });
 
 const DeleteBillSchema = z.object({
@@ -339,6 +340,23 @@ export class AdminBillingController {
     return this.billing.listSplitRules(actor, { artistId: query.artistId, branchId: query.branchId });
   }
 
+  // Split rule versions (history)
+  @Get('split-rules/versions')
+  async listSplitRuleVersions(@Actor() actor: AccessActor, @Query() query: any) {
+    return this.billing.listSplitRuleVersions(actor, { artistId: query.artistId, branchId: query.branchId });
+  }
+
+  @Post('split-rules/versions')
+  async createSplitRuleVersion(@Actor() actor: AccessActor, @Body() body: unknown) {
+    const input = UpsertSplitRuleSchema.parse(body);
+    return this.billing.upsertSplitRule(actor, {
+      artistId: input.artistId,
+      branchId: input.branchId ?? null,
+      artistRateBps: input.artistRateBps,
+      effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : undefined,
+    });
+  }
+
   @Post('split-rules')
   async upsertSplitRule(@Actor() actor: AccessActor, @Body() body: unknown) {
     const input = UpsertSplitRuleSchema.parse(body);
@@ -384,7 +402,10 @@ export class AdminBillingController {
   @Post('payments/recompute-allocations')
   async recomputeAllocations(@Actor() actor: AccessActor, @Body() body: unknown) {
     const input = RecomputeAllocationsSchema.parse(body);
-    return this.billing.recomputeAllPaymentAllocations(actor, { paymentIds: input.paymentIds });
+    return this.billing.recomputeAllPaymentAllocations(actor, {
+      paymentIds: input.paymentIds,
+      fromPaidAt: input.fromPaidAt ? new Date(input.fromPaidAt) : undefined,
+    });
   }
 }
 

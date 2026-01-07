@@ -89,6 +89,10 @@ interface SplitRule {
   branch?: { id: string; name: string } | null;
 }
 
+interface SplitRuleVersion extends SplitRule {
+  createdBy?: { id: string; name: string | null } | null;
+}
+
 type MeResponse = {
   id: string;
   name: string | null;
@@ -113,6 +117,13 @@ const paymentMethods = [
 ];
 
 const BILLING_UI_VERSION = "2026-01-07-native-selects";
+
+function nowDatetimeLocalValue() {
+  // datetime-local wants local time; this converts Date.now() to local ISO-ish without timezone.
+  const d = new Date();
+  const tz = d.getTimezoneOffset() * 60_000;
+  return new Date(d.getTime() - tz).toISOString().slice(0, 16);
+}
 
 function NativeSelect(props: {
   value: string;
@@ -261,12 +272,17 @@ export default function AdminBillingPage() {
 
   // Split rules (BOSS only)
   const [splitRules, setSplitRules] = useState<SplitRule[]>([]);
+  const [splitRuleVersions, setSplitRuleVersions] = useState<SplitRuleVersion[]>([]);
   const [ruleArtistId, setRuleArtistId] = useState("");
   const [ruleBranchId, setRuleBranchId] = useState("");
   const [ruleArtistRatePct, setRuleArtistRatePct] = useState("50");
+  const [ruleEffectiveFromLocal, setRuleEffectiveFromLocal] = useState(nowDatetimeLocalValue());
   const [availableArtists, setAvailableArtists] = useState<Array<{ userId: string; displayName: string; branchId: string; branchName: string | null }>>([]);
   const [editingRules, setEditingRules] = useState<Record<string, string>>({});
+  const [editingRuleEffectiveLocal, setEditingRuleEffectiveLocal] = useState<Record<string, string>>({});
+  const [openHistoryByArtistId, setOpenHistoryByArtistId] = useState<Record<string, boolean>>({});
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
+  const [recomputeFromDate, setRecomputeFromDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [exporting, setExporting] = useState(false);
 
   const fetchBills = useCallback(async () => {
@@ -659,21 +675,45 @@ export default function AdminBillingPage() {
     }
   }, []);
 
+  const fetchSplitRuleVersions = useCallback(async () => {
+    try {
+      const data = await getJsonWithAuth<SplitRuleVersion[]>("/admin/billing/split-rules/versions");
+      setSplitRuleVersions(data);
+    } catch (e) {
+      console.warn("Failed to fetch split rule versions", e);
+    }
+  }, []);
+
   useEffect(() => {
     // Only BOSS manages split rules
     if (userRole && userRole.toUpperCase() === "BOSS") {
       fetchSplitRules();
+      fetchSplitRuleVersions();
     }
-  }, [userRole, fetchSplitRules]);
+  }, [userRole, fetchSplitRules, fetchSplitRuleVersions]);
 
   // Initialize editing rules when splitRules change
   useEffect(() => {
     const initial: Record<string, string> = {};
+    const initialEffective: Record<string, string> = {};
     splitRules.forEach(r => {
       initial[r.id] = String(Math.round((r.artistRateBps || 0) / 100));
+      if (!initialEffective[r.artistId]) initialEffective[r.artistId] = nowDatetimeLocalValue();
     });
     setEditingRules(initial);
+    setEditingRuleEffectiveLocal((prev) => ({ ...initialEffective, ...prev }));
   }, [splitRules]);
+
+  const versionsByArtistId = useMemo(() => {
+    const map: Record<string, SplitRuleVersion[]> = {};
+    for (const v of splitRuleVersions) {
+      (map[v.artistId] ||= []).push(v);
+    }
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime());
+    }
+    return map;
+  }, [splitRuleVersions]);
 
   const onUpsertSplitRule = useCallback(async () => {
     if (userRole.toUpperCase() !== "BOSS") return;
@@ -689,40 +729,48 @@ export default function AdminBillingPage() {
     const bps = Math.round(pct * 100);
     try {
       setError(null);
-      await postJsonWithAuth("/admin/billing/split-rules", {
+      await postJsonWithAuth("/admin/billing/split-rules/versions", {
         artistId: ruleArtistId.trim(),
         branchId: ruleBranchId.trim() ? ruleBranchId.trim() : null,
         artistRateBps: bps,
+        effectiveFrom: ruleEffectiveFromLocal ? new Date(ruleEffectiveFromLocal).toISOString() : undefined,
       });
       setRuleArtistId("");
       setRuleBranchId("");
       setRuleArtistRatePct("50");
+      setRuleEffectiveFromLocal(nowDatetimeLocalValue());
       await fetchSplitRules();
+      await fetchSplitRuleVersions();
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "更新拆帳規則失敗");
     }
-  }, [userRole, ruleArtistId, ruleBranchId, ruleArtistRatePct, fetchSplitRules]);
+  }, [userRole, ruleArtistId, ruleBranchId, ruleArtistRatePct, ruleEffectiveFromLocal, fetchSplitRules, fetchSplitRuleVersions]);
 
   const onDeleteSplitRule = useCallback(async (artistId: string, artistName: string) => {
     if (userRole.toUpperCase() !== "BOSS") return;
-    if (!confirm(`確定要刪除「${artistName}」的拆帳規則？\n\n刪除後，該刺青師的拆帳金額將顯示為 0。`)) {
+    if (!confirm(`確定要刪除「${artistName}」的所有拆帳規則版本？\n\n刪除後，新付款會預設全給店家（歷史付款拆帳不會被回改）。`)) {
       return;
     }
     try {
       setError(null);
       await deleteJsonWithAuth(`/admin/billing/split-rules/${artistId}`);
       await fetchSplitRules();
-      alert(`已刪除「${artistName}」的拆帳規則。`);
+      await fetchSplitRuleVersions();
+      alert(`已刪除「${artistName}」的所有拆帳規則版本。`);
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "刪除拆帳規則失敗");
     }
-  }, [userRole, fetchSplitRules]);
+  }, [userRole, fetchSplitRules, fetchSplitRuleVersions]);
 
   const onRecomputeAllocations = useCallback(async () => {
     if (userRole.toUpperCase() !== "BOSS") return;
-    if (!confirm("確定要重算所有歷史拆帳？此操作會依目前最新規則覆蓋所有歷史 payment allocations。")) {
+    if (!recomputeFromDate) {
+      setError("請選擇重算起始日期");
+      return;
+    }
+    if (!confirm(`確定要重算拆帳？\n\n只會重算 paidAt >= ${recomputeFromDate} 的付款（避免朔及既往）。`)) {
       return;
     }
     try {
@@ -733,7 +781,9 @@ export default function AdminBillingPage() {
         recomputed: number;
         skipped: number;
         errors: number;
-      }>("/admin/billing/payments/recompute-allocations", {});
+      }>("/admin/billing/payments/recompute-allocations", {
+        fromPaidAt: new Date(`${recomputeFromDate}T00:00`).toISOString(),
+      });
       alert(`重算完成！\n總計：${result.total}\n成功：${result.recomputed}\n跳過：${result.skipped}\n錯誤：${result.errors}`);
       await fetchBills();
       if (selected) {
@@ -745,7 +795,7 @@ export default function AdminBillingPage() {
     } finally {
       setLoading(false);
     }
-  }, [userRole, fetchBills, selected, openDetail]);
+  }, [userRole, recomputeFromDate, fetchBills, selected, openDetail]);
 
   const onSyncBillsFromCart = useCallback(async () => {
     if (userRole.toUpperCase() !== "BOSS") return;
@@ -2132,7 +2182,7 @@ export default function AdminBillingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground">
-              已有規則的刺青師：直接在列表修改比例並儲存。新刺青師：使用下方新增區。
+              規則採「版本化」：每次儲存會新增一個版本（不朔及既往），付款拆帳以每筆 payment 的 paidAt 套用當時最新版本。
             </div>
 
             {/* 已有規則的刺青師：列表直接編輯 */}
@@ -2141,6 +2191,7 @@ export default function AdminBillingPage() {
                 <thead>
                   <tr className="text-left border-b bg-gray-50">
                     <th className="py-2 px-3">刺青師</th>
+                    <th className="py-2 px-3 w-56">新版本生效時間</th>
                     <th className="py-2 px-3">店家%</th>
                     <th className="py-2 px-3">刺青師%</th>
                     <th className="py-2 px-3">操作</th>
@@ -2171,12 +2222,16 @@ export default function AdminBillingPage() {
                       try {
                         setSavingRuleId(r.id);
                         setError(null);
-                        await postJsonWithAuth("/admin/billing/split-rules", {
+                        await postJsonWithAuth("/admin/billing/split-rules/versions", {
                           artistId: r.artistId,
                           branchId: r.branchId,
                           artistRateBps: bps,
+                          effectiveFrom: editingRuleEffectiveLocal[r.artistId]
+                            ? new Date(editingRuleEffectiveLocal[r.artistId]).toISOString()
+                            : undefined,
                         });
                         await fetchSplitRules();
+                        await fetchSplitRuleVersions();
                       } catch (e) {
                         const apiErr = e as ApiError;
                         setError(apiErr.message || "更新拆帳規則失敗");
@@ -2186,41 +2241,85 @@ export default function AdminBillingPage() {
                     };
 
                     return (
-                      <tr key={r.id} className="border-b hover:bg-gray-50">
-                        <td className="py-2 px-3">
-                          {r.artist?.name || r.artistId}（{branchLabel}）
-                        </td>
-                        <td className="py-2 px-3">{shopPct !== null ? `${shopPct.toFixed(0)}%` : "—"}</td>
-                        <td className="py-2 px-3">
-                          <Input 
-                            type="number"
-                            min="0"
-                            max="100"
-                            className="w-20"
-                            value={editingPct}
-                            onChange={(e) => setEditingRules(prev => ({ ...prev, [r.id]: e.target.value }))}
-                          />
-                        </td>
-                        <td className="py-2 px-3 space-x-2">
-                          <Button size="sm" onClick={handleSave} disabled={savingRuleId === r.id}>
-                            {savingRuleId === r.id ? "儲存中..." : "儲存"}
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => onDeleteSplitRule(r.artistId, r.artist?.name || r.artistId)}
-                            disabled={savingRuleId === r.id}
-                          >
-                            刪除
-                          </Button>
-                        </td>
-                      </tr>
+                      <>
+                        <tr key={r.id} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">
+                            {r.artist?.name || r.artistId}（{branchLabel}）
+                          </td>
+                          <td className="py-2 px-3">
+                            <Input
+                              type="datetime-local"
+                              className="w-56"
+                              value={editingRuleEffectiveLocal[r.artistId] || ""}
+                              onChange={(e) =>
+                                setEditingRuleEffectiveLocal((prev) => ({ ...prev, [r.artistId]: e.target.value }))
+                              }
+                            />
+                          </td>
+                          <td className="py-2 px-3">{shopPct !== null ? `${shopPct.toFixed(0)}%` : "—"}</td>
+                          <td className="py-2 px-3">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              className="w-20"
+                              value={editingPct}
+                              onChange={(e) => setEditingRules((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                            />
+                          </td>
+                          <td className="py-2 px-3 space-x-2">
+                            <Button size="sm" onClick={handleSave} disabled={savingRuleId === r.id}>
+                              {savingRuleId === r.id ? "儲存中..." : "新增版本"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setOpenHistoryByArtistId((prev) => ({ ...prev, [r.artistId]: !prev[r.artistId] }))
+                              }
+                              disabled={savingRuleId === r.id}
+                            >
+                              {openHistoryByArtistId[r.artistId] ? "收合歷史" : "看歷史"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onDeleteSplitRule(r.artistId, r.artist?.name || r.artistId)}
+                              disabled={savingRuleId === r.id}
+                            >
+                              刪除
+                            </Button>
+                          </td>
+                        </tr>
+                        {openHistoryByArtistId[r.artistId] && (
+                          <tr className="border-b bg-gray-50/40">
+                            <td colSpan={5} className="py-2 px-3">
+                              <div className="text-xs text-muted-foreground mb-2">版本歷史（最新在前，最多顯示 10 筆）</div>
+                              <div className="space-y-1">
+                                {(versionsByArtistId[r.artistId] || []).slice(0, 10).map((v) => (
+                                  <div key={v.id} className="flex flex-wrap gap-3 text-sm">
+                                    <div className="min-w-[220px]">{new Date(v.effectiveFrom).toLocaleString()}</div>
+                                    <div className="min-w-[120px]">刺青師 {Math.round((v.artistRateBps || 0) / 100)}%</div>
+                                    <div className="min-w-[120px]">店家 {Math.round((v.shopRateBps || 0) / 100)}%</div>
+                                    <div className="text-muted-foreground">
+                                      建立者：{v.createdBy?.name || "（未知/歷史）"}
+                                    </div>
+                                  </div>
+                                ))}
+                                {(versionsByArtistId[r.artistId] || []).length === 0 && (
+                                  <div className="text-sm text-muted-foreground">尚無版本歷史</div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
                     );
                   })}
                   {splitRules.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-4 px-3 text-center text-muted-foreground">
-                        尚未設定任何拆帳規則（無規則時拆帳金額顯示為 0）
+                      <td colSpan={5} className="py-4 px-3 text-center text-muted-foreground">
+                        尚未設定任何拆帳規則（無規則版本時：預設全給店家）
                       </td>
                     </tr>
                   )}
@@ -2270,17 +2369,31 @@ export default function AdminBillingPage() {
                     onChange={(e) => setRuleArtistRatePct(e.target.value)} 
                   />
                 </div>
-                <Button onClick={onUpsertSplitRule}>新增規則</Button>
+                <div className="w-56">
+                  <label className="text-xs text-muted-foreground">生效時間</label>
+                  <Input
+                    type="datetime-local"
+                    value={ruleEffectiveFromLocal}
+                    onChange={(e) => setRuleEffectiveFromLocal(e.target.value)}
+                  />
+                </div>
+                <Button onClick={onUpsertSplitRule}>新增版本</Button>
               </div>
             </div>
 
             {/* 重算拆帳按鈕 */}
             <div className="border-t pt-4">
-              <Button variant="outline" onClick={onRecomputeAllocations} disabled={loading} className="w-full">
-                重算拆帳（套用到所有歷史）
-              </Button>
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="w-56">
+                  <label className="text-xs text-muted-foreground">重算起始日（paidAt >=）</label>
+                  <Input type="date" value={recomputeFromDate} onChange={(e) => setRecomputeFromDate(e.target.value)} />
+                </div>
+                <Button variant="outline" onClick={onRecomputeAllocations} disabled={loading}>
+                  重算拆帳（依日期範圍）
+                </Button>
+              </div>
               <div className="text-xs text-muted-foreground mt-2">
-                ⚠️ 此操作會依目前最新規則重新計算所有歷史帳務的拆帳金額，請謹慎使用。
+                ⚠️ 只會重算選定日期之後的付款（避免朔及既往）。
               </div>
             </div>
           </CardContent>
