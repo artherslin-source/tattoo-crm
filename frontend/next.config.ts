@@ -24,7 +24,8 @@ const nextConfig: NextConfig = {
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      "https://tattoo-crm-production-413f.up.railway.app";
+      // Fallback: match current Railway service naming (frontend=tattoo-crm-production, backend=tattoo-crm-backend-production)
+      "https://tattoo-crm-backend-production.up.railway.app";
     return [
       { source: "/api/:path*", destination: `${backendUrl}/:path*` },
       { source: "/uploads/:path*", destination: `${backendUrl}/uploads/:path*` },
