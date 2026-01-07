@@ -1464,7 +1464,10 @@ export default function AdminBillingPage() {
           }
         }}
       >
-        <DialogContent className="w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] overflow-y-auto sm:w-[90vw] sm:max-w-[90vw]">
+        <DialogContent
+          disableTransform
+          className="left-[10vw] top-[10vh] w-[80vw] h-[80vh] max-w-none max-h-none overflow-y-auto sm:left-[5vw] sm:top-[5vh] sm:w-[90vw] sm:h-[90vh]"
+        >
           <DialogHeader>
               <DialogTitle>編輯帳單（BOSS）</DialogTitle>
               <div className="text-[11px] text-muted-foreground">UI版本：{BILLING_UI_VERSION}</div>
