@@ -1414,7 +1414,7 @@ export default function AdminBillingPage() {
                       {new Date(r.createdAt).toLocaleString()}
                     </td>
                     <td className="py-2 pr-3">
-                      {r.customer?.id ? (
+                      {r.customer?.id && hasAdminAccess(userRole) ? (
                         <button
                           type="button"
                           className="text-blue-600 hover:underline"
