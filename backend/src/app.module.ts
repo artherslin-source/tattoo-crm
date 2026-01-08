@@ -20,6 +20,7 @@ import { CartModule } from './cart/cart.module';
 import { BillingModule } from './billing/billing.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SiteConfigModule } from './site-config/site-config.module';
+import { BackupModule } from './backup/backup.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { SiteConfigModule } from './site-config/site-config.module';
     BillingModule,
     NotificationsModule,
     SiteConfigModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [AppService],

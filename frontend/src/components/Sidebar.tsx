@@ -34,6 +34,7 @@ export default function Sidebar({ open, onClose }: Props) {
         { href: "/admin/dashboard", label: "📊 儀表板" },
         { href: "/admin/analytics", label: "📈 統計報表" },
         ...(isBoss ? [{ href: "/admin/site/home-hero", label: "🏠 首頁設定" }] : []),
+        ...(isBoss ? [{ href: "/admin/system/backup", label: "🗄️ 備份/還原" }] : []),
         { href: "/admin/services", label: "⚙️ 服務管理" },
         { href: "/admin/artists", label: "🎨 刺青師管理" },
         { href: "/admin/members", label: "👥 會員管理" },
