@@ -225,6 +225,7 @@ export default function AdminBillingPage() {
 
   const [selected, setSelected] = useState<BillDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailMoreOpen, setDetailMoreOpen] = useState(false);
   const [highlightBillId, setHighlightBillId] = useState<string | null>(null);
   const [lastDeepLinkBillId, setLastDeepLinkBillId] = useState<string | null>(null);
 
@@ -1242,40 +1243,14 @@ export default function AdminBillingPage() {
                       <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
                             openDetail(r.id);
                           }}
                         >
-                          查看
+                          查看 <span className="ml-1 text-muted-foreground">›</span>
                         </Button>
-                        {userRole.toUpperCase() === "BOSS" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              disabled={editLoading}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEdit(r.id);
-                              }}
-                            >
-                              編輯
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              disabled={editLoading}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openDelete(r.id);
-                              }}
-                            >
-                              刪除
-                            </Button>
-                          </>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -2003,6 +1978,7 @@ export default function AdminBillingPage() {
         onOpenChange={(open) => {
           setDetailOpen(open);
           if (!open) {
+            setDetailMoreOpen(false);
             if (selected?.id) {
               setHighlightBillId(selected.id);
               if (typeof window !== "undefined") {
@@ -2014,10 +1990,72 @@ export default function AdminBillingPage() {
           }
         }}
       >
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>帳務明細</DialogTitle>
-          </DialogHeader>
+        <DialogContent
+          disableTransform
+          className="right-0 top-0 h-[100dvh] w-[520px] max-w-[95vw] max-h-none overflow-y-auto rounded-none border-l sm:rounded-l-lg sm:rounded-r-none"
+          onClick={() => {
+            // Click anywhere in the drawer should dismiss the "more" popover.
+            if (detailMoreOpen) setDetailMoreOpen(false);
+          }}
+        >
+          <div className="flex items-start justify-between gap-3 pr-10">
+            <div>
+              <DialogTitle>帳務明細</DialogTitle>
+              {selected?.id ? (
+                <div className="text-[11px] text-muted-foreground">#{selected.id.slice(-6)}</div>
+              ) : null}
+            </div>
+
+            {userRole.toUpperCase() === "BOSS" && selected ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={editLoading}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetailOpen(false);
+                    openEdit(selected.id);
+                  }}
+                >
+                  編輯
+                </Button>
+
+                <div className="relative">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={editLoading}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDetailMoreOpen((v) => !v);
+                    }}
+                  >
+                    ⋯ 更多
+                  </Button>
+
+                  {detailMoreOpen ? (
+                    <div
+                      className="absolute right-0 mt-2 w-40 rounded-md border bg-background p-1 shadow-lg z-[110]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        className="w-full rounded-sm px-2 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                        onClick={() => {
+                          setDetailMoreOpen(false);
+                          setDetailOpen(false);
+                          openDelete(selected.id);
+                        }}
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
 
           {selected && (
             <div className="space-y-5">
