@@ -12,16 +12,17 @@ export class MaintenanceMiddleware {
 
     // Allow health checks and the restore endpoint to keep working during maintenance.
     const p = req.path || '';
+    const full = (req.originalUrl || req.url || p || '').split('?')[0];
     // Note: In some deployments/proxies, requests may include a leading `/api` prefix.
     // We whitelist both variants to avoid blocking the maintenance status endpoint itself.
-    if (p.startsWith('/health') || p.startsWith('/api/health')) return next();
-    if (p.startsWith('/public/maintenance') || p.startsWith('/api/public/maintenance')) return next();
-    if (p.startsWith('/admin/maintenance') || p.startsWith('/api/admin/maintenance')) return next();
-    if (p === '/admin/backup/restore' || p === '/api/admin/backup/restore') return next();
+    if (full.startsWith('/health') || full.startsWith('/api/health')) return next();
+    if (full.startsWith('/public/maintenance') || full.startsWith('/api/public/maintenance')) return next();
+    if (full.startsWith('/admin/maintenance') || full.startsWith('/api/admin/maintenance')) return next();
+    if (full === '/admin/backup/restore' || full === '/api/admin/backup/restore') return next();
     // Allow login during maintenance so BOSS can still authenticate and turn it off.
-    if (p.startsWith('/auth/login') || p.startsWith('/api/auth/login')) return next();
-    if (p.startsWith('/auth/refresh') || p.startsWith('/api/auth/refresh')) return next();
-    if (p.startsWith('/auth/me') || p.startsWith('/api/auth/me')) return next();
+    if (full.startsWith('/auth/login') || full.startsWith('/api/auth/login')) return next();
+    if (full.startsWith('/auth/refresh') || full.startsWith('/api/auth/refresh')) return next();
+    if (full.startsWith('/auth/me') || full.startsWith('/api/auth/me')) return next();
 
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Retry-After', '120');
