@@ -173,22 +173,22 @@ export default function ProfilePaymentsPage() {
 
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <div className="text-sm text-gray-600">帳單金額</div>
+                    <div className="flex flex-col items-center">
+                      <div className="text-sm text-gray-600 text-center">帳單金額</div>
                       <div className="text-xl font-bold text-gray-900">
-                        <Money amount={bill.billTotal} className="w-full" amountClassName="tabular-nums text-right" />
+                        <Money amount={bill.billTotal} className="flex w-full justify-center" amountClassName="tabular-nums" />
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-600">已付</div>
+                    <div className="flex flex-col items-center">
+                      <div className="text-sm text-gray-600 text-center">已付</div>
                       <div className="text-xl font-bold text-blue-600">
-                        <Money amount={bill.summary.paidTotal} className="w-full" amountClassName="tabular-nums text-right" />
+                        <Money amount={bill.summary.paidTotal} className="flex w-full justify-center" amountClassName="tabular-nums" />
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-600">未付</div>
+                    <div className="flex flex-col items-center">
+                      <div className="text-sm text-gray-600 text-center">未付</div>
                       <div className="text-xl font-bold text-gray-900">
-                        <Money amount={Math.max(0, bill.summary.dueTotal)} className="w-full" amountClassName="tabular-nums text-right" />
+                        <Money amount={Math.max(0, bill.summary.dueTotal)} className="flex w-full justify-center" amountClassName="tabular-nums" />
                       </div>
                     </div>
                   </div>
