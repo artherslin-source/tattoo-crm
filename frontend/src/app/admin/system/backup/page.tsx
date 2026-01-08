@@ -62,9 +62,20 @@ export default function AdminSystemBackupPage() {
         method: "GET",
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
-      if (!res.ok) return;
-      const data = (await res.json().catch(() => null)) as { enabled?: boolean; reason?: string } | null;
+      const data = (await res.json().catch(() => null)) as
+        | { enabled?: boolean; reason?: string; maintenance?: boolean; message?: string }
+        | null;
       if (!data) return;
+
+      // During maintenance, some deployments may still respond 503 with `{ maintenance: true, message }`.
+      // Treat it as enabled so BOSS can still see the real state and attempt to turn it off.
+      if (res.status === 503 && data.maintenance === true) {
+        setMaintenanceEnabled(true);
+        if (data.message) setMaintenanceReason(data.message);
+        return;
+      }
+
+      if (!res.ok) return;
       setMaintenanceEnabled(!!data.enabled);
       if (data.reason) setMaintenanceReason(data.reason);
     } catch {
