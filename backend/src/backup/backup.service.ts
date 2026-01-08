@@ -26,7 +26,11 @@ const ENC_MAGIC = Buffer.from('TCRM1'); // Tattoo CRM v1
 
 function buildKey(password: string, salt: Buffer, n: number, r: number, p: number) {
   // 32 bytes key for AES-256-GCM
-  return scryptSync(password, salt, 32, { N: n, r, p });
+  // NOTE: Node/OpenSSL has a default scrypt memory limit. Our params (N=2^15,r=8) can hit it.
+  // Allow a safe maxmem override so export/restore won't fail with "memory limit exceeded".
+  const maxmemMb = Number(process.env.BACKUP_SCRYPT_MAXMEM_MB || 128);
+  const maxmem = Number.isFinite(maxmemMb) && maxmemMb > 0 ? Math.floor(maxmemMb * 1024 * 1024) : 128 * 1024 * 1024;
+  return scryptSync(password, salt, 32, { N: n, r, p, maxmem });
 }
 
 function runCmd(cmd: string, args: string[], opts: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
