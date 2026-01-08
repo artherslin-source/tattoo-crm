@@ -139,6 +139,69 @@ function nowDatetimeLocalValue() {
   return new Date(d.getTime() - tz).toISOString().slice(0, 16);
 }
 
+type DatePreset = "all" | "today" | "week" | "custom";
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function formatYmdLocal(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function parseLocalYmd(ymd: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const day = Number(m[3]);
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(day)) return null;
+  // Use local time (avoid Date("YYYY-MM-DD") which is parsed as UTC in many environments)
+  return new Date(y, mo - 1, day, 0, 0, 0, 0);
+}
+
+function toLocalRangeIso(input: { startYmd?: string; endYmd?: string }) {
+  const startLocal = input.startYmd ? parseLocalYmd(input.startYmd) : null;
+  const endLocal = input.endYmd ? parseLocalYmd(input.endYmd) : null;
+
+  const startIso =
+    startLocal && !Number.isNaN(startLocal.getTime())
+      ? new Date(
+          startLocal.getFullYear(),
+          startLocal.getMonth(),
+          startLocal.getDate(),
+          0,
+          1,
+          0,
+          0,
+        ).toISOString()
+      : undefined;
+
+  const endIso =
+    endLocal && !Number.isNaN(endLocal.getTime())
+      ? new Date(
+          endLocal.getFullYear(),
+          endLocal.getMonth(),
+          endLocal.getDate(),
+          23,
+          59,
+          59,
+          999,
+        ).toISOString()
+      : undefined;
+
+  return { startIso, endIso };
+}
+
+function getWeekRangeYmd(now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  // JS: Sunday = 0 ... Saturday = 6
+  start.setDate(start.getDate() - start.getDay());
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+  end.setDate(end.getDate() + 6);
+  return { startYmd: formatYmdLocal(start), endYmd: formatYmdLocal(end) };
+}
+
 function NativeSelect(props: {
   value: string;
   onChange: (v: string) => void;
@@ -210,6 +273,7 @@ export default function AdminBillingPage() {
   const [filterCustomerSearch, setFilterCustomerSearch] = useState<string>("");
   const [filterStartDate, setFilterStartDate] = useState<string>("");
   const [filterEndDate, setFilterEndDate] = useState<string>("");
+  const [filterDatePreset, setFilterDatePreset] = useState<DatePreset>("all");
   const [minBillTotal, setMinBillTotal] = useState<string>("");
   const [maxBillTotal, setMaxBillTotal] = useState<string>("");
   const [minPaidTotal, setMinPaidTotal] = useState<string>("");
@@ -305,6 +369,28 @@ export default function AdminBillingPage() {
   const [jobsLoading, setJobsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const applyDatePreset = useCallback((preset: DatePreset) => {
+    setFilterDatePreset(preset);
+    if (preset === "all") {
+      setFilterStartDate("");
+      setFilterEndDate("");
+      return;
+    }
+    if (preset === "today") {
+      const today = formatYmdLocal(new Date());
+      setFilterStartDate(today);
+      setFilterEndDate(today);
+      return;
+    }
+    if (preset === "week") {
+      const { startYmd, endYmd } = getWeekRangeYmd(new Date());
+      setFilterStartDate(startYmd);
+      setFilterEndDate(endYmd);
+      return;
+    }
+    // custom: keep whatever user already set
+  }, []);
+
   const fetchBills = useCallback(async () => {
     try {
       setLoading(true);
@@ -317,8 +403,9 @@ export default function AdminBillingPage() {
       if (filterBillType && filterBillType !== "all") params.set("billType", filterBillType);
       if (filterArtistId && filterArtistId !== "all") params.set("artistId", filterArtistId);
       if (filterCustomerSearch.trim()) params.set("customerSearch", filterCustomerSearch.trim());
-      if (filterStartDate) params.set("startDate", filterStartDate);
-      if (filterEndDate) params.set("endDate", filterEndDate);
+      const { startIso, endIso } = toLocalRangeIso({ startYmd: filterStartDate, endYmd: filterEndDate });
+      if (startIso) params.set("startDate", startIso);
+      if (endIso) params.set("endDate", endIso);
       if (minBillTotal) params.set("minBillTotal", minBillTotal);
       if (maxBillTotal) params.set("maxBillTotal", maxBillTotal);
       if (minPaidTotal) params.set("minPaidTotal", minPaidTotal);
@@ -884,8 +971,9 @@ export default function AdminBillingPage() {
       if (filterBillType && filterBillType !== "all") params.set("billType", filterBillType);
       if (filterArtistId && filterArtistId !== "all") params.set("artistId", filterArtistId);
       if (filterCustomerSearch.trim()) params.set("customerSearch", filterCustomerSearch.trim());
-      if (filterStartDate) params.set("startDate", filterStartDate);
-      if (filterEndDate) params.set("endDate", filterEndDate);
+      const { startIso, endIso } = toLocalRangeIso({ startYmd: filterStartDate, endYmd: filterEndDate });
+      if (startIso) params.set("startDate", startIso);
+      if (endIso) params.set("endDate", endIso);
       if (minBillTotal) params.set("minBillTotal", minBillTotal);
       if (maxBillTotal) params.set("maxBillTotal", maxBillTotal);
       if (minPaidTotal) params.set("minPaidTotal", minPaidTotal);
@@ -1141,11 +1229,29 @@ export default function AdminBillingPage() {
 
               <div className="w-[140px]">
                 <div className="text-[11px] text-muted-foreground mb-1">起始</div>
-                <Input className="h-9" type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} />
+                <Input
+                  className="h-9"
+                  type="date"
+                  value={filterStartDate}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setFilterStartDate(next);
+                    setFilterDatePreset(next || filterEndDate ? "custom" : "all");
+                  }}
+                />
               </div>
               <div className="w-[140px]">
                 <div className="text-[11px] text-muted-foreground mb-1">結束</div>
-                <Input className="h-9" type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} />
+                <Input
+                  className="h-9"
+                  type="date"
+                  value={filterEndDate}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setFilterEndDate(next);
+                    setFilterDatePreset(filterStartDate || next ? "custom" : "all");
+                  }}
+                />
               </div>
 
               <div className="w-[160px]">
@@ -1175,6 +1281,21 @@ export default function AdminBillingPage() {
                   ]}
                 />
               </div>
+            </div>
+
+            <div className="w-[140px]">
+              <div className="text-[11px] text-muted-foreground mb-1">日期快速</div>
+              <NativeSelect
+                className="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={filterDatePreset}
+                onChange={(v) => applyDatePreset((v as DatePreset) || "all")}
+                options={[
+                  { value: "all", label: "不限" },
+                  { value: "today", label: "當日" },
+                  { value: "week", label: "當週" },
+                  { value: "custom", label: "自訂" },
+                ]}
+              />
             </div>
 
             <Button
@@ -1348,6 +1469,7 @@ export default function AdminBillingPage() {
                   setFilterCustomerSearch("");
                   setFilterStartDate("");
                   setFilterEndDate("");
+                  setFilterDatePreset("all");
                   setMinBillTotal("");
                   setMaxBillTotal("");
                   setMinPaidTotal("");
@@ -2011,6 +2133,7 @@ export default function AdminBillingPage() {
                 <Button
                   size="sm"
                   variant="outline"
+                  className="text-xs"
                   disabled={editLoading}
                   onClick={(e) => {
                     e.stopPropagation();
