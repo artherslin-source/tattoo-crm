@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Money } from "@/components/Money";
 import { buildBillItemBreakdown } from "@/lib/billing-breakdown";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 type BillStatus = "OPEN" | "SETTLED" | "VOID";
 type BillSortField = "createdAt" | "billTotal" | "paidTotal" | "dueTotal";
@@ -296,10 +297,45 @@ export default function AdminBillingPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newBranchId, setNewBranchId] = useState("");
   const [newBillType, setNewBillType] = useState("WALK_IN");
+  const [newCustomerId, setNewCustomerId] = useState("");
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newArtistId, setNewArtistId] = useState("");
   const [newItems, setNewItems] = useState<Array<{ name: string; amount: string }>>([{ name: "刺青服務", amount: "" }]);
+
+  // Manual bill: lookup member by phone and autofill name/customerId
+  useEffect(() => {
+    if (!createOpen) return;
+    const phone = newCustomerPhone.trim();
+    if (!phone || phone.length < 10) {
+      setNewCustomerId("");
+      return;
+    }
+
+    let alive = true;
+    const t = window.setTimeout(async () => {
+      try {
+        const data = await getJsonWithAuth<{ userId: string; name: string | null; phone: string } | null>(
+          `/admin/billing/member-lookup?phone=${encodeURIComponent(phone)}`,
+        );
+        if (!alive) return;
+        if (data?.userId) {
+          setNewCustomerId(data.userId);
+          setNewCustomerName(data.name || "");
+        } else {
+          setNewCustomerId("");
+        }
+      } catch {
+        if (!alive) return;
+        setNewCustomerId("");
+      }
+    }, 350);
+
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [createOpen, newCustomerPhone]);
 
   // BOSS: full edit / hard delete
   const [editOpen, setEditOpen] = useState(false);
@@ -1092,6 +1128,10 @@ export default function AdminBillingPage() {
       setError("請選擇分店");
       return;
     }
+    if (!newCustomerPhone.trim()) {
+      setError("請輸入客戶手機");
+      return;
+    }
     const items = newItems
       .map((it, idx) => {
         const nameSnapshot = it.name.trim();
@@ -1122,6 +1162,7 @@ export default function AdminBillingPage() {
       await postJsonWithAuth("/admin/billing/bills", {
         branchId,
         billType: newBillType,
+        customerId: newCustomerId.trim() ? newCustomerId.trim() : null,
         customerNameSnapshot: newCustomerName.trim() ? newCustomerName.trim() : null,
         customerPhoneSnapshot: newCustomerPhone.trim() ? newCustomerPhone.trim() : null,
         artistId: newArtistId.trim() ? newArtistId.trim() : null,
@@ -1130,6 +1171,7 @@ export default function AdminBillingPage() {
       setCreateOpen(false);
       setNewBranchId("");
       setNewBillType("WALK_IN");
+      setNewCustomerId("");
       setNewCustomerName("");
       setNewCustomerPhone("");
       setNewArtistId("");
@@ -1567,8 +1609,15 @@ export default function AdminBillingPage() {
                 <Input value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} placeholder="王小明" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">客戶手機（可空）</label>
-                <Input value={newCustomerPhone} onChange={(e) => setNewCustomerPhone(e.target.value)} placeholder="0912345678" />
+                <label className="text-xs text-muted-foreground">客戶手機（必填）</label>
+                <Input
+                  value={newCustomerPhone}
+                  onChange={(e) => setNewCustomerPhone(normalizePhoneDigits(e.target.value))}
+                  placeholder="0912345678"
+                />
+                {newCustomerId ? (
+                  <div className="mt-1 text-[11px] text-muted-foreground">已綁定會員：{newCustomerId}</div>
+                ) : null}
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">刺青師（可空）</label>

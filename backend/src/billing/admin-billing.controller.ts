@@ -6,6 +6,8 @@ import { Actor } from '../common/access/actor.decorator';
 import type { AccessActor } from '../common/access/access.types';
 import { BillingService } from './billing.service';
 import type { Response } from 'express';
+import { normalizePhoneDigits } from '../common/utils/phone';
+import { isBoss, isArtist } from '../common/access/access.types';
 
 const EnsureBillSchema = z.object({
   appointmentId: z.string().min(1),
@@ -171,6 +173,17 @@ export class AdminBillingController {
       minDueTotal: query.minDueTotal,
       maxDueTotal: query.maxDueTotal,
     });
+  }
+
+  // Lookup a member by phone (BOSS/ARTIST). Returns minimal info and only when the user has a Member record.
+  @Get('member-lookup')
+  async lookupMemberByPhone(@Actor() actor: AccessActor, @Query('phone') phoneRaw?: string) {
+    if (!isBoss(actor) && !isArtist(actor)) {
+      throw new BadRequestException('Only BOSS/ARTIST can lookup members by phone');
+    }
+    const phone = normalizePhoneDigits(phoneRaw);
+    if (!phone) return null;
+    return this.billing.lookupMemberByPhone(phone);
   }
 
   // Export bills as .xlsx (BOSS only)

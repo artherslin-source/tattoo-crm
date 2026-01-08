@@ -41,6 +41,21 @@ function sumAddonMoneyFromVariantsSnapshot(v: any): number {
 export class BillingService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async lookupMemberByPhone(phoneDigits: string): Promise<{ userId: string; name: string | null; phone: string } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { phone: phoneDigits },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        member: { select: { id: true } },
+      },
+    });
+    if (!user?.phone) return null;
+    if (!user.member) return null;
+    return { userId: user.id, name: user.name ?? null, phone: user.phone };
+  }
+
   private computeOppositeTopupHistoryType(type: string): 'TOPUP' | 'SPEND' {
     return String(type).toUpperCase() === 'SPEND' ? 'TOPUP' : 'SPEND';
   }
