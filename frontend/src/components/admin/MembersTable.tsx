@@ -35,6 +35,7 @@ interface MembersTableProps {
   onResetPassword: (member: Member) => void;
   onDelete: (memberId: string) => void;
   getUserRole: () => string;
+  highlightUserId?: string | null;
 }
 
 // 會員等級徽章樣式
@@ -73,6 +74,7 @@ export default function MembersTable({
   onResetPassword,
   onDelete,
   getUserRole,
+  highlightUserId,
 }: MembersTableProps) {
   return (
     <div className="hidden xl:block">
@@ -93,7 +95,13 @@ export default function MembersTable({
 
           <tbody>
             {members.map((member) => (
-              <tr key={member.id} className="border-b border-gray-100 dark:border-gray-700">
+              <tr
+                key={member.id}
+                id={`member-row-${member.user?.id}`}
+                className={`border-b border-gray-100 dark:border-gray-700 ${
+                  member.user?.id && highlightUserId === member.user.id ? "bg-amber-100/60 transition-colors" : ""
+                }`}
+              >
                 <td className="px-4 py-3" data-label="姓名 / 手機號碼">
                   <div className="font-medium">{member.user?.name || '未設定'}</div>
                   <div className="text-text-muted-light text-xs truncate">{member.user?.phone || 'N/A'}</div>

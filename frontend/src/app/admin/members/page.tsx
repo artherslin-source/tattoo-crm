@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, patchJsonWithAuth, postJsonWithAuth, ApiError } from "@/lib/api";
 import { hasAdminAccess } from "@/lib/access";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
@@ -62,6 +62,8 @@ interface MembersResponse {
 
 export default function AdminMembersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightUserId = searchParams.get("highlightUserId");
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -208,6 +210,18 @@ export default function AdminMembersPage() {
     }
     fetchMembers(currentPage, itemsPerPage);
   }, [fetchMembers, isAuthorized, currentPage, itemsPerPage]);
+
+  // Scroll to highlighted member row (if present on current page)
+  useEffect(() => {
+    if (!highlightUserId) return;
+    if (!members.length) return;
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(`member-row-${highlightUserId}`);
+      if (!el) return;
+      el.scrollIntoView({ block: "center" });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [highlightUserId, members]);
 
   // 獲取分店資料
   const fetchBranches = useCallback(async () => {
@@ -702,6 +716,7 @@ export default function AdminMembersPage() {
             onResetPassword={handleOpenResetPasswordModal}
             onDelete={handleDeleteMember}
             getUserRole={() => getUserRole() || ''}
+            highlightUserId={highlightUserId}
           />
 
           {/* 手機卡片 */}
@@ -714,6 +729,7 @@ export default function AdminMembersPage() {
             onResetPassword={handleOpenResetPasswordModal}
             onDelete={handleDeleteMember}
             getUserRole={() => getUserRole() || ''}
+            highlightUserId={highlightUserId}
           />
           
           {members.length === 0 && (

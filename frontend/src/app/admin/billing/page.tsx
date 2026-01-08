@@ -1414,11 +1414,25 @@ export default function AdminBillingPage() {
                       {new Date(r.createdAt).toLocaleString()}
                     </td>
                     <td className="py-2 pr-3">
-                      {r.customer?.name ||
+                      {r.customer?.id ? (
+                        <button
+                          type="button"
+                          className="text-blue-600 hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/admin/members?highlightUserId=${encodeURIComponent(r.customer?.id || "")}`);
+                          }}
+                          title="前往會員管理"
+                        >
+                          {r.customer?.name || r.customer?.phone || "（未命名會員）"}
+                        </button>
+                      ) : (
+                        r.customer?.name ||
                         r.customer?.phone ||
                         r.customerNameSnapshot ||
                         r.customerPhoneSnapshot ||
-                        "-"}
+                        "-"
+                      )}
                     </td>
                     <td className="py-2 pr-3">{r.artist?.name || "-"}</td>
                     <td className="py-2 pr-3">{r.branch?.name || "-"}</td>

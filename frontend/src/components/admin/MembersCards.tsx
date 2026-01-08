@@ -35,6 +35,7 @@ interface MembersCardsProps {
   onResetPassword: (member: Member) => void;
   onDelete: (memberId: string) => void;
   getUserRole: () => string;
+  highlightUserId?: string | null;
 }
 
 // 會員等級徽章樣式
@@ -73,11 +74,18 @@ export default function MembersCards({
   onResetPassword,
   onDelete,
   getUserRole,
+  highlightUserId,
 }: MembersCardsProps) {
   return (
     <div className="xl:hidden space-y-3">
       {members.map((member) => (
-        <div key={member.id} className="rounded-xl border bg-white p-4 shadow-sm">
+        <div
+          key={member.id}
+          id={`member-row-${member.user?.id}`}
+          className={`rounded-xl border bg-white p-4 shadow-sm ${
+            member.user?.id && highlightUserId === member.user.id ? "bg-amber-100/60 transition-colors" : ""
+          }`}
+        >
           {/* 平板版本：橫向佈局 */}
           <div className="hidden md:block">
             <div className="flex items-center justify-between gap-4">
