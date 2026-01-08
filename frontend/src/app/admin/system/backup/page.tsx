@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth } from "@/lib/api";
 import { isBossRole } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,24 +58,9 @@ export default function AdminSystemBackupPage() {
     try {
       const token = getAccessToken();
       if (!token) return;
-      const res = await fetch(`/api/admin/maintenance`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const data = (await res.json().catch(() => null)) as
-        | { enabled?: boolean; reason?: string; maintenance?: boolean; message?: string }
-        | null;
-      if (!data) return;
 
-      // During maintenance, some deployments may still respond 503 with `{ maintenance: true, message }`.
-      // Treat it as enabled so BOSS can still see the real state and attempt to turn it off.
-      if (res.status === 503 && data.maintenance === true) {
-        setMaintenanceEnabled(true);
-        if (data.message) setMaintenanceReason(data.message);
-        return;
-      }
-
-      if (!res.ok) return;
+      // Use auth wrapper so expired access token can be refreshed automatically.
+      const data = await getJsonWithAuth<{ enabled?: boolean; reason?: string }>(`/admin/maintenance`);
       setMaintenanceEnabled(!!data.enabled);
       if (data.reason) setMaintenanceReason(data.reason);
     } catch {
@@ -174,16 +159,7 @@ export default function AdminSystemBackupPage() {
                 try {
                   const token = getAccessToken();
                   if (!token) throw new Error("未登入");
-                  const res = await fetch(`/api/admin/maintenance`, {
-                    method: "PATCH",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      "Content-Type": "application/json",
-                      Accept: "application/json",
-                    },
-                    body: JSON.stringify({ enabled: true, reason: maintenanceReason || "系統維護中" }),
-                  });
-                  if (!res.ok) throw new Error(await res.text());
+                  await patchJsonWithAuth(`/admin/maintenance`, { enabled: true, reason: maintenanceReason || "系統維護中" });
                   setMaintenanceEnabled(true);
                   setMessage("已啟動維護模式。");
                 } catch (e) {
@@ -205,16 +181,7 @@ export default function AdminSystemBackupPage() {
                 try {
                   const token = getAccessToken();
                   if (!token) throw new Error("未登入");
-                  const res = await fetch(`/api/admin/maintenance`, {
-                    method: "PATCH",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      "Content-Type": "application/json",
-                      Accept: "application/json",
-                    },
-                    body: JSON.stringify({ enabled: false }),
-                  });
-                  if (!res.ok) throw new Error(await res.text());
+                  await patchJsonWithAuth(`/admin/maintenance`, { enabled: false });
                   setMaintenanceEnabled(false);
                   setMessage("已關閉維護模式。");
                 } catch (e) {
