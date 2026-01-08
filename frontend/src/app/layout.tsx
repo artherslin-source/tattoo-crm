@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BackToTopButton from "@/components/BackToTopButton";
+import MaintenanceGate from "@/components/MaintenanceGate";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="overflow-x-hidden">
       <body className="antialiased overflow-x-hidden">
+        <MaintenanceGate />
         <Navbar />
         {children}
         <BackToTopButton />

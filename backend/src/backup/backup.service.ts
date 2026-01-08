@@ -300,8 +300,8 @@ export class BackupService {
     };
 
     try {
-      // Enter maintenance mode for restore window.
-      this.maintenance.enable('系統維護中：正在還原備份，請稍後再試');
+      // Enter maintenance mode for restore window (ephemeral; do not persist across restart).
+      this.maintenance.enableEphemeral('系統維護中：正在還原備份，請稍後再試');
 
       // Disconnect Prisma before heavy restore
       await this.prisma.$disconnect().catch(() => null);
@@ -382,7 +382,7 @@ export class BackupService {
     } catch (e) {
       console.error('Restore failed:', e);
       // Exit maintenance mode on failure so the system can continue serving.
-      this.maintenance.disable();
+      this.maintenance.disableEphemeral();
       await cleanup();
       // Do not kill the process on failure; keep serving.
       return;

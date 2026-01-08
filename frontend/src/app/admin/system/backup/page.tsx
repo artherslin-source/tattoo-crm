@@ -51,6 +51,26 @@ export default function AdminSystemBackupPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
+  const [maintenanceReason, setMaintenanceReason] = useState("系統維護中");
+
+  const refreshMaintenance = async () => {
+    try {
+      const token = getAccessToken();
+      if (!token) return;
+      const res = await fetch(`/api/admin/maintenance`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (!res.ok) return;
+      const data = (await res.json().catch(() => null)) as { enabled?: boolean; reason?: string } | null;
+      if (!data) return;
+      setMaintenanceEnabled(!!data.enabled);
+      if (data.reason) setMaintenanceReason(data.reason);
+    } catch {
+      // ignore
+    }
+  };
 
   const canRestore = useMemo(() => {
     if (!restoreFile) return false;
@@ -68,6 +88,7 @@ export default function AdminSystemBackupPage() {
       return;
     }
     setReady(true);
+    void refreshMaintenance();
   }, [router]);
 
   if (!ready) return null;
@@ -115,6 +136,87 @@ export default function AdminSystemBackupPage() {
           >
             {busy === "export" ? "產生中..." : "下載備份檔"}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>維護模式（BOSS 一鍵啟動/關閉）</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground">
+            啟動後：除健康檢查與還原端點外，其它 API 會回 503，前端會顯示「系統維護中」畫面。
+          </div>
+          <Input
+            placeholder="維護訊息（選填）"
+            value={maintenanceReason}
+            onChange={(e) => setMaintenanceReason(e.target.value)}
+            disabled={!!busy}
+          />
+          <div className="flex gap-2">
+            <Button
+              disabled={!!busy || maintenanceEnabled}
+              onClick={async () => {
+                setBusy("maintenance-on");
+                setError(null);
+                setMessage(null);
+                try {
+                  const token = getAccessToken();
+                  if (!token) throw new Error("未登入");
+                  const res = await fetch(`/api/admin/maintenance`, {
+                    method: "PATCH",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                      Accept: "application/json",
+                    },
+                    body: JSON.stringify({ enabled: true, reason: maintenanceReason || "系統維護中" }),
+                  });
+                  if (!res.ok) throw new Error(await res.text());
+                  setMaintenanceEnabled(true);
+                  setMessage("已啟動維護模式。");
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "啟動失敗");
+                } finally {
+                  setBusy(null);
+                }
+              }}
+            >
+              啟動維護模式
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!!busy || !maintenanceEnabled}
+              onClick={async () => {
+                setBusy("maintenance-off");
+                setError(null);
+                setMessage(null);
+                try {
+                  const token = getAccessToken();
+                  if (!token) throw new Error("未登入");
+                  const res = await fetch(`/api/admin/maintenance`, {
+                    method: "PATCH",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                      Accept: "application/json",
+                    },
+                    body: JSON.stringify({ enabled: false }),
+                  });
+                  if (!res.ok) throw new Error(await res.text());
+                  setMaintenanceEnabled(false);
+                  setMessage("已關閉維護模式。");
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "關閉失敗");
+                } finally {
+                  setBusy(null);
+                }
+              }}
+            >
+              關閉維護模式
+            </Button>
+          </div>
+          <div className="text-xs text-muted-foreground">目前狀態：{maintenanceEnabled ? "維護中" : "正常"}</div>
         </CardContent>
       </Card>
 

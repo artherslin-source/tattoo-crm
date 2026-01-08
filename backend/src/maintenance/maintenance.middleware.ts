@@ -6,13 +6,15 @@ import { MaintenanceService } from './maintenance.service';
 export class MaintenanceMiddleware {
   constructor(private readonly maintenance: MaintenanceService) {}
 
-  use(req: Request, res: Response, next: NextFunction) {
-    const state = this.maintenance.getState();
+  async use(req: Request, res: Response, next: NextFunction) {
+    const state = await this.maintenance.getState();
     if (!state.enabled) return next();
 
     // Allow health checks and the restore endpoint to keep working during maintenance.
     const p = req.path || '';
     if (p.startsWith('/health')) return next();
+    if (p.startsWith('/public/maintenance')) return next();
+    if (p.startsWith('/admin/maintenance')) return next();
     if (p === '/admin/backup/restore') return next();
 
     res.setHeader('Cache-Control', 'no-store');
