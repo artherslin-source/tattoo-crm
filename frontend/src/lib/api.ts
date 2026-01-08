@@ -237,12 +237,28 @@ export async function postJSON(path: string, body: Record<string, unknown> | unk
 // 認證相關函數
 export function getUserRole(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('userRole');
+  const v = localStorage.getItem('userRole');
+  if (v) return v;
+  // Fallback: decode from access token so admin access can still work during maintenance
+  // (when /users/me might be blocked by maintenance middleware).
+  const token = getAccessToken();
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  const role = typeof payload?.role === 'string' ? payload.role : null;
+  if (role) localStorage.setItem('userRole', role);
+  return role;
 }
 
 export function getUserBranchId(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('userBranchId');
+  const v = localStorage.getItem('userBranchId');
+  if (v) return v;
+  const token = getAccessToken();
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  const branchId = typeof payload?.branchId === 'string' ? payload.branchId : null;
+  if (branchId) localStorage.setItem('userBranchId', branchId);
+  return branchId;
 }
 
 export function clearTokens(): void {
@@ -251,6 +267,19 @@ export function clearTokens(): void {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userRole');
   localStorage.removeItem('userBranchId');
+}
+
+function decodeJwtPayload(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+    const json = atob(b64 + pad);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
 }
 
 

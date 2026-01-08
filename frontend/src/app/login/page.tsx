@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { postJSON, saveTokens, getJsonWithAuth, ApiError, checkBackendHealth } from "@/lib/api";
+import { postJSON, saveTokens, getJsonWithAuth, ApiError, checkBackendHealth, getUserRole, getUserBranchId } from "@/lib/api";
 import { normalizePhoneDigits } from "@/lib/phone";
 
 export default function LoginPage() {
@@ -38,12 +38,15 @@ export default function LoginPage() {
       const authData = resp.data as { accessToken: string; refreshToken?: string };
       
       // 儲存 tokens
-      saveTokens(
-        authData.accessToken, 
-        authData.refreshToken || '', 
-        '', // role 將在下面獲取
-        ''  // branchId 將在下面獲取
-      );
+      // Save tokens first, then immediately derive role/branchId from JWT payload as a fallback.
+      // This avoids being blocked when /users/me is unavailable during maintenance.
+      saveTokens(authData.accessToken, authData.refreshToken || '');
+      const roleFromToken = getUserRole() || '';
+      const branchFromToken = getUserBranchId() || '';
+      if (typeof window !== 'undefined') {
+        if (roleFromToken) localStorage.setItem('userRole', roleFromToken);
+        if (branchFromToken) localStorage.setItem('userBranchId', branchFromToken);
+      }
       
       // 獲取用戶資訊並儲存 role 和 branchId
       try {
