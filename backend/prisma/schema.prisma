@@ -55,12 +55,25 @@ model User {
   createdCustomerNotes        CustomerNote[]     @relation("CustomerNoteCreator")
   createdCustomerReminders    CustomerReminder[] @relation("CustomerReminderCreator")
   contactsOwned               Contact[]          @relation("ContactOwnerArtist")
+  siteConfigsUpdated          SiteConfig[]       @relation("SiteConfigUpdatedBy")
   // @@index([personId])
 
   @@index([branchId, role, isActive])
   @@index([role, createdAt])
   @@index([email])
   @@index([primaryArtistId, branchId])
+}
+
+model SiteConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  updatedById String?
+  updatedBy   User?    @relation("SiteConfigUpdatedBy", fields: [updatedById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([updatedById, updatedAt])
 }
 
 model Member {

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { clearTokens } from "@/lib/api";
-import { getUserRole, isArtistRole } from "@/lib/access";
+import { getUserRole, isArtistRole, isBossRole } from "@/lib/access";
 
 type Props = {
   open: boolean;
@@ -17,6 +17,7 @@ export default function Sidebar({ open, onClose }: Props) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const role = getUserRole();
   const isArtist = isArtistRole(role);
+  const isBoss = isBossRole(role);
 
   const navLinks: Array<{ href: string; label: string }> = isArtist
     ? [
@@ -32,6 +33,7 @@ export default function Sidebar({ open, onClose }: Props) {
     : [
         { href: "/admin/dashboard", label: "📊 儀表板" },
         { href: "/admin/analytics", label: "📈 統計報表" },
+        ...(isBoss ? [{ href: "/admin/site/home-hero", label: "🏠 首頁設定" }] : []),
         { href: "/admin/services", label: "⚙️ 服務管理" },
         { href: "/admin/artists", label: "🎨 刺青師管理" },
         { href: "/admin/members", label: "👥 會員管理" },

@@ -104,6 +104,7 @@ function HomePageContent({
   setMessage: (msg: { type: "success" | "error" | "warning"; text: string } | null) => void;
 }) {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [heroConfig, setHeroConfig] = useState<any>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -196,6 +197,14 @@ function HomePageContent({
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Load homepage hero config (public)
+        fetch(`/api/public/site-config/home-hero`, { cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data) setHeroConfig(data);
+          })
+          .catch(() => {});
+
         // 使用 same-origin /api rewrites 避免跨網域 CORS 與錯的 backend host
         const [servicesResponse, artistsResponse, branchesResponse] = await Promise.all([
           fetch(`/api/services`, { cache: 'no-store' }),
@@ -449,7 +458,7 @@ function HomePageContent({
 
   return (
     <div className="relative min-h-screen bg-[#0D0D0D] text-neutral-100 pb-24 sm:pb-16">
-      <Hero loggedIn={loggedIn} />
+      <Hero loggedIn={loggedIn} config={heroConfig ?? undefined} />
 
       {/* 購物車浮動按鈕 */}
       {cartItemCount > 0 && (

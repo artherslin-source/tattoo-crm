@@ -19,6 +19,7 @@ import { HealthModule } from './health/health.module';
 import { CartModule } from './cart/cart.module';
 import { BillingModule } from './billing/billing.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SiteConfigModule } from './site-config/site-config.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     CartModule,
     BillingModule,
     NotificationsModule,
+    SiteConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],
