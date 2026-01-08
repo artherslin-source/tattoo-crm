@@ -4,6 +4,7 @@ import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
 import { isBoss, type AccessActor } from '../common/access/access.types';
 import { NotificationsService } from '../notifications/notifications.service';
+import { formatContactMergeNote, normalizePhoneDigits } from '../common/utils/phone';
 
 @Injectable()
 export class ContactsService {
@@ -50,6 +51,9 @@ export class ContactsService {
       ownerArtistId: createContactDto.ownerArtistId,
     };
 
+    const normalizedPhone = normalizePhoneDigits(safeDto.phone ?? undefined);
+    if (normalizedPhone) safeDto.phone = normalizedPhone;
+
     // If ownerArtistId is provided, validate role + lock branch to that artist's branch (if available).
     if (safeDto.ownerArtistId) {
       const owner = await this.prisma.user.findUnique({
@@ -74,17 +78,71 @@ export class ContactsService {
       throw new Error('指定的分店不存在');
     }
 
+    // Merge rule (global phone unique): if phone exists, update the existing contact instead of creating a new one.
+    if (normalizedPhone) {
+      const existing = await this.prisma.contact.findFirst({
+        where: { phone: normalizedPhone },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          branchId: true,
+          ownerArtistId: true,
+          notes: true,
+        },
+      });
+
+      const mergeNote = formatContactMergeNote({
+        source: 'public',
+        normalizedPhone,
+        submittedName: safeDto.name ?? null,
+        submittedEmail: safeDto.email ?? null,
+        submittedBranchId: safeDto.branchId ?? null,
+        submittedOwnerArtistId: safeDto.ownerArtistId ?? null,
+        submittedNotes: safeDto.notes ?? null,
+      });
+
+      if (existing) {
+        const nextNotes = [existing.notes?.trim(), mergeNote].filter(Boolean).join('\n\n');
+        const nextOwnerArtistId = existing.ownerArtistId
+          ? existing.ownerArtistId
+          : (safeDto.ownerArtistId ?? null);
+
+        // Only fill blanks; do not overwrite existing branchId/name/email/ownerArtistId.
+        const updated = await this.prisma.contact.update({
+          where: { id: existing.id },
+          data: {
+            notes: nextNotes,
+            ...(existing.name ? {} : { name: safeDto.name }),
+            ...(existing.email ? {} : { email: safeDto.email }),
+            ...(existing.ownerArtistId ? {} : { ownerArtistId: nextOwnerArtistId }),
+            // branchId is global-unique contact; do not override. (We record submittedBranchId in notes.)
+          },
+          include: {
+            branch: { select: { id: true, name: true, address: true, phone: true } },
+          },
+        });
+
+        if (!existing.ownerArtistId && updated.ownerArtistId) {
+          await this.notifyOwnerAssigned({
+            contactId: updated.id,
+            contactName: updated.name,
+            contactPhone: updated.phone ?? null,
+            contactEmail: updated.email ?? null,
+            branchId: updated.branchId ?? null,
+            newOwnerArtistId: updated.ownerArtistId,
+          });
+        }
+
+        return updated;
+      }
+    }
+
     const created = await this.prisma.contact.create({
       data: safeDto,
       include: {
-        branch: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            phone: true,
-          },
-        },
+        branch: { select: { id: true, name: true, address: true, phone: true } },
       },
     });
 
@@ -122,18 +180,24 @@ export class ContactsService {
   async create(actor: AccessActor, createContactDto: CreateContactDto) {
     if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can create contacts');
     try {
+      const normalizedPhone = normalizePhoneDigits(createContactDto.phone ?? undefined);
+      const dto: CreateContactDto = {
+        ...createContactDto,
+        ...(normalizedPhone ? { phone: normalizedPhone } : {}),
+      };
+
       // 驗證分店是否存在
       const branch = await this.prisma.branch.findUnique({
-        where: { id: createContactDto.branchId }
+        where: { id: dto.branchId }
       });
       
       if (!branch) {
         throw new Error('指定的分店不存在');
       }
 
-      if (createContactDto.ownerArtistId) {
+      if (dto.ownerArtistId) {
         const owner = await this.prisma.user.findUnique({
-          where: { id: createContactDto.ownerArtistId },
+          where: { id: dto.ownerArtistId },
           select: { id: true, role: true },
         });
         if (!owner) throw new Error('指定的刺青師不存在');
@@ -141,9 +205,66 @@ export class ContactsService {
           throw new Error('ownerArtistId 必須是 ARTIST');
         }
       }
+
+      // Merge rule (global phone unique) for admin create as well.
+      if (normalizedPhone) {
+        const existing = await this.prisma.contact.findFirst({
+          where: { phone: normalizedPhone },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            branchId: true,
+            ownerArtistId: true,
+            notes: true,
+          },
+        });
+
+        const mergeNote = formatContactMergeNote({
+          source: 'admin',
+          normalizedPhone,
+          submittedName: dto.name ?? null,
+          submittedEmail: dto.email ?? null,
+          submittedBranchId: dto.branchId ?? null,
+          submittedOwnerArtistId: dto.ownerArtistId ?? null,
+          submittedNotes: dto.notes ?? null,
+        });
+
+        if (existing) {
+          const nextNotes = [existing.notes?.trim(), mergeNote].filter(Boolean).join('\n\n');
+          const nextOwnerArtistId = existing.ownerArtistId ? existing.ownerArtistId : (dto.ownerArtistId ?? null);
+
+          const updated = await this.prisma.contact.update({
+            where: { id: existing.id },
+            data: {
+              notes: nextNotes,
+              ...(existing.name ? {} : { name: dto.name }),
+              ...(existing.email ? {} : { email: dto.email }),
+              ...(existing.ownerArtistId ? {} : { ownerArtistId: nextOwnerArtistId }),
+            },
+            include: {
+              branch: { select: { id: true, name: true, address: true, phone: true } },
+            },
+          });
+
+          if (!existing.ownerArtistId && updated.ownerArtistId) {
+            await this.notifyOwnerAssigned({
+              contactId: updated.id,
+              contactName: updated.name,
+              contactPhone: updated.phone ?? null,
+              contactEmail: updated.email ?? null,
+              branchId: updated.branchId ?? null,
+              newOwnerArtistId: updated.ownerArtistId,
+            });
+          }
+
+          return updated;
+        }
+      }
       
       const created = await this.prisma.contact.create({
-        data: createContactDto,
+        data: dto,
         include: {
           branch: {
             select: {

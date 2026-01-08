@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { postJSON, saveTokens, getJsonWithAuth, ApiError } from "@/lib/api";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -11,12 +13,17 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { result: phoneConflicts } = usePhoneConflicts(phone);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
+      if (phoneConflicts?.messageCode === "USER_EXISTS") {
+        setError("此手機已註冊，請改用登入或找回密碼。");
+        return;
+      }
       const resp = await postJSON(
         "/auth/register", 
         { phone, password, name }
@@ -115,13 +122,18 @@ export default function RegisterPage() {
             placeholder="手機號碼"
             className="auth-input"
             value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => setPhone(normalizePhoneDigits(e.target.value))}
             required
             minLength={10}
             maxLength={15}
             pattern="[0-9]+"
             aria-label="手機號碼"
           />
+          {phoneConflicts?.messageCode === "USER_EXISTS" ? (
+            <div className="mb-3 text-xs text-yellow-200">
+              {phoneConflicts.message}
+            </div>
+          ) : null}
           <input
             type="password"
             placeholder="密碼"

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { postJSON, ApiError } from "@/lib/api";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 interface Service {
   id: string;
@@ -45,6 +47,8 @@ export default function PublicAppointmentPage() {
     preferredDate: '',
     notes: ''
   });
+
+  const { result: phoneConflicts } = usePhoneConflicts(formData.phone);
 
   // 載入資料
   useEffect(() => {
@@ -240,10 +244,15 @@ export default function PublicAppointmentPage() {
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
+                onChange={(e) => handleInputChange('phone', normalizePhoneDigits(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 placeholder="請輸入您的聯絡電話"
               />
+              {phoneConflicts?.messageCode === "USER_EXISTS" ? (
+                <p className="mt-1 text-xs text-yellow-700">{phoneConflicts.message}</p>
+              ) : phoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+                <p className="mt-1 text-xs text-gray-600">{phoneConflicts.message}</p>
+              ) : null}
             </div>
 
             {/* 刺青師選擇 */}

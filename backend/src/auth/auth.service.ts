@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { normalizePhoneDigits } from '../common/utils/phone';
 
 interface RegisterDto {
   phone: string;
@@ -22,12 +23,14 @@ export class AuthService {
   ) {}
 
   async register(input: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({ where: { phone: input.phone } });
+    const phone = normalizePhoneDigits(input.phone);
+    if (!phone) throw new BadRequestException('手機號碼格式不正確（需 10~15 位數字）');
+    const existing = await this.prisma.user.findUnique({ where: { phone } });
     if (existing) throw new BadRequestException('手機號碼已被註冊');
     const hashedPassword = await bcrypt.hash(input.password, 12);
     const user = await this.prisma.user.create({
       data: {
-        phone: input.phone,
+        phone,
         email: null,
         hashedPassword,
         name: input.name,

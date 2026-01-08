@@ -30,6 +30,8 @@ import {
   SERVICE_ORDER_SET,
 } from "@/constants/service-order";
 import { CheckCircle, AlertTriangle, ArrowRight, ShoppingCart as ShoppingCartIcon } from "lucide-react";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 interface Service {
   id: string;
@@ -374,6 +376,8 @@ function HomePageContent({
     }
   };
 
+  const { result: phoneConflicts } = usePhoneConflicts(formData.phone);
+
   const branchLocked = !!formData.ownerArtistId;
   // 預約表單的刺青師下拉：使用完整 artists 清單（不要去重），以便像「朱川進」這種跨分店顯示完整選項
   const bookingArtistOptions = useMemo(() => {
@@ -693,11 +697,22 @@ function HomePageContent({
                             id="phone"
                             type="tel"
                             value={formData.phone}
-                            onChange={(event) => handleInputChange("phone", event.target.value)}
+                            onChange={(event) =>
+                              handleInputChange("phone", normalizePhoneDigits(event.target.value))
+                            }
                             placeholder="請輸入您的聯絡電話"
                             className="bg-white text-gray-900 placeholder:text-gray-500 focus:ring-1 focus:ring-yellow-400/50"
                             required
                           />
+                          {phoneConflicts?.messageCode === "USER_EXISTS" ? (
+                            <p className="mt-1 text-xs text-yellow-700">
+                              {phoneConflicts.message}
+                            </p>
+                          ) : phoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+                            <p className="mt-1 text-xs text-gray-600">
+                              {phoneConflicts.message}
+                            </p>
+                          ) : null}
                         </div>
                         <div>
                           <Label htmlFor="branch" className="text-gray-900">
