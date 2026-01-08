@@ -14,6 +14,8 @@ import MembersToolbar from "@/components/admin/MembersToolbar";
 import MembersTable from "@/components/admin/MembersTable";
 import MembersCards from "@/components/admin/MembersCards";
 import { formatMembershipLevel } from "@/lib/membership";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 interface Member {
   id: string;
@@ -143,6 +145,8 @@ export default function AdminMembersPage() {
       membershipLevel: '',
     },
   });
+
+  const { result: createMemberPhoneConflicts } = usePhoneConflicts(createMemberModal.formData.phone);
 
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupHistory, setTopupHistory] = useState<TopupHistory[]>([]);
@@ -340,6 +344,10 @@ export default function AdminMembersPage() {
       
       if (!name || !password || !phone || !branchId) {
         setError('請填寫所有必填欄位');
+        return;
+      }
+      if (createMemberPhoneConflicts?.messageCode === "USER_EXISTS") {
+        setError("此手機已被註冊，請更換手機號碼或改用既有帳號。");
         return;
       }
 
@@ -1042,10 +1050,15 @@ export default function AdminMembersPage() {
                     type="tel"
                     id="memberPhone"
                     value={createMemberModal.formData.phone}
-                    onChange={(e) => handleCreateMemberFormChange('phone', e.target.value)}
+                    onChange={(e) => handleCreateMemberFormChange('phone', normalizePhoneDigits(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-text-primary-dark"
                     placeholder="請輸入電話號碼"
                   />
+                  {createMemberPhoneConflicts?.messageCode === "USER_EXISTS" ? (
+                    <p className="mt-1 text-xs text-yellow-700">{createMemberPhoneConflicts.message}</p>
+                  ) : createMemberPhoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+                    <p className="mt-1 text-xs text-gray-600">{createMemberPhoneConflicts.message}</p>
+                  ) : null}
                 </div>
                 <div>
                   <label htmlFor="memberBranch" className="block text-sm font-medium text-gray-700 dark:text-text-secondary-dark mb-2">

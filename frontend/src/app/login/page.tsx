@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { postJSON, saveTokens, getJsonWithAuth, ApiError, checkBackendHealth } from "@/lib/api";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -139,7 +140,7 @@ export default function LoginPage() {
             placeholder="手機號碼"
             className="auth-input"
             value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => setPhone(normalizePhoneDigits(e.target.value))}
             required
             minLength={10}
             maxLength={15}

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, patchJsonWithAuth, getApiBase, ApiError } from "@/lib/api";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 interface User {
   id: string;
@@ -28,6 +30,7 @@ export default function EditProfilePage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const { result: phoneConflicts } = usePhoneConflicts(phone);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -78,6 +81,12 @@ export default function EditProfilePage() {
           setSaving(false);
           return;
         }
+      }
+      // 若 phone 要變更且已被其他帳號使用，阻擋
+      if (phone && phone !== (user?.phone || "") && phoneConflicts?.messageCode === "USER_EXISTS") {
+        setError("此手機已被其他帳號使用，請更換手機號碼。");
+        setSaving(false);
+        return;
       }
 
       const updateData: { name?: string; phone?: string | null; avatarUrl?: string } = {};
@@ -168,9 +177,7 @@ export default function EditProfilePage() {
               type="tel"
               value={phone}
               onChange={(e) => {
-                // 只允許數字
-                const value = e.target.value.replace(/[^0-9]/g, '');
-                setPhone(value);
+                setPhone(normalizePhoneDigits(e.target.value));
               }}
               placeholder="請輸入手機號碼（至少10位數字）"
               minLength={10}
@@ -181,6 +188,11 @@ export default function EditProfilePage() {
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               手機號碼用於登入系統，請確保號碼正確且唯一
             </p>
+            {phoneConflicts?.messageCode === "USER_EXISTS" && phone !== (user?.phone || "") ? (
+              <p className="mt-1 text-xs text-yellow-700">{phoneConflicts.message}</p>
+            ) : phoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+              <p className="mt-1 text-xs text-gray-600">{phoneConflicts.message}</p>
+            ) : null}
           </div>
 
           <div>

@@ -10,6 +10,8 @@ import { Branch } from "@/types/branch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCheck, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 interface Artist {
   id: string;
@@ -56,6 +58,8 @@ export default function AdminArtistsPage() {
     photoUrl: '',
     active: true,
   });
+
+  const { result: phoneConflicts } = usePhoneConflicts(formData.phone);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -113,6 +117,10 @@ export default function AdminArtistsPage() {
   const handleCreateArtist = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (phoneConflicts?.messageCode === "USER_EXISTS") {
+        setError("此手機已被註冊，請更換手機號碼。");
+        return;
+      }
       const newArtist = await postJsonWithAuth('/admin/artists', formData) as Artist;
       setArtists([...artists, newArtist]);
       resetForm();
@@ -144,6 +152,10 @@ export default function AdminArtistsPage() {
     if (!editingArtist) return;
 
     try {
+      if (phoneConflicts?.messageCode === "USER_EXISTS" && formData.phone !== (editingArtist.user?.phone || "")) {
+        setError("此手機已被註冊，請更換手機號碼。");
+        return;
+      }
       // 確保 photoUrl 被包含在請求中
       const updatePayload = {
         ...formData,
@@ -315,13 +327,19 @@ export default function AdminArtistsPage() {
                     type="tel"
                     required
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                    onChange={(e) => setFormData({ ...formData, phone: normalizePhoneDigits(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                     placeholder="請輸入手機號碼"
                     minLength={10}
                     maxLength={15}
                     pattern="[0-9]+"
                   />
+                  {phoneConflicts?.messageCode === "USER_EXISTS" &&
+                  (!editingArtist || formData.phone !== (editingArtist.user?.phone || "")) ? (
+                    <p className="mt-1 text-xs text-yellow-700">{phoneConflicts.message}</p>
+                  ) : phoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+                    <p className="mt-1 text-xs text-gray-600">{phoneConflicts.message}</p>
+                  ) : null}
                 </div>
               </div>
               

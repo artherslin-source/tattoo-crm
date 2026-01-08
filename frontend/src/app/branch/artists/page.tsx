@@ -30,6 +30,8 @@ import {
   ArrowLeft,
   Building2,
 } from "lucide-react";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 interface Artist {
   id: string;
@@ -83,6 +85,8 @@ export default function BranchArtistsPage() {
     photoUrl: "",
     active: true,
   });
+
+  const { result: phoneConflicts } = usePhoneConflicts(formData.phone);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -138,6 +142,10 @@ export default function BranchArtistsPage() {
   const handleCreateArtist = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (phoneConflicts?.messageCode === "USER_EXISTS") {
+        setError("此手機已被註冊，請更換手機號碼。");
+        return;
+      }
       await postJsonWithAuth("/admin/artists", formData);
       resetForm();
       fetchArtists();
@@ -169,6 +177,10 @@ export default function BranchArtistsPage() {
     if (!editingArtist) return;
 
     try {
+      if (phoneConflicts?.messageCode === "USER_EXISTS" && formData.phone !== (editingArtist.user?.phone || "")) {
+        setError("此手機已被註冊，請更換手機號碼。");
+        return;
+      }
       console.log("🔧 發送更新請求:", formData);
       const updatedArtist = (await patchJsonWithAuth(
         `/admin/artists/${editingArtist.id}`,
@@ -305,7 +317,7 @@ export default function BranchArtistsPage() {
                       required
                       value={formData.phone}
                       onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })
+                        setFormData({ ...formData, phone: normalizePhoneDigits(e.target.value) })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-text-primary-dark"
                       placeholder="請輸入手機號碼"
@@ -313,6 +325,12 @@ export default function BranchArtistsPage() {
                       maxLength={15}
                       pattern="[0-9]+"
                     />
+                    {phoneConflicts?.messageCode === "USER_EXISTS" &&
+                    (!editingArtist || formData.phone !== (editingArtist.user?.phone || "")) ? (
+                      <p className="mt-1 text-xs text-yellow-700">{phoneConflicts.message}</p>
+                    ) : phoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+                      <p className="mt-1 text-xs text-gray-600">{phoneConflicts.message}</p>
+                    ) : null}
                   </div>
 
                   {!editingArtist && (

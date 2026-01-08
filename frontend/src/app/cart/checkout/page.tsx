@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCart, checkout, type Cart } from "@/lib/cart-api";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 interface Branch {
   id: string;
@@ -42,6 +44,8 @@ export default function CheckoutPage() {
     customerEmail: "",
     specialRequests: "",
   });
+
+  const { result: phoneConflicts } = usePhoneConflicts(formData.customerPhone);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -296,12 +300,17 @@ export default function CheckoutPage() {
                       type="tel"
                       value={formData.customerPhone}
                       onChange={(e) =>
-                        setFormData({ ...formData, customerPhone: e.target.value })
+                        setFormData({ ...formData, customerPhone: normalizePhoneDigits(e.target.value) })
                       }
                       placeholder="0912345678"
                       className="mt-2"
                       required
                     />
+                    {phoneConflicts?.messageCode === "USER_EXISTS" ? (
+                      <p className="mt-1 text-xs text-yellow-700">{phoneConflicts.message}</p>
+                    ) : phoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+                      <p className="mt-1 text-xs text-gray-600">{phoneConflicts.message}</p>
+                    ) : null}
                   </div>
 
                   <div>

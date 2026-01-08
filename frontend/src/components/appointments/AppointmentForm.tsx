@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { postJsonWithAuth, getJsonWithAuth, ApiError, getAccessToken } from "@/lib/api";
 import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { formatMembershipLevel } from "@/lib/membership";
+import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
+import { normalizePhoneDigits } from "@/lib/phone";
 
 // 規格欄位名稱中文對照
 const VARIANT_LABEL_MAP: Record<string, string> = {
@@ -191,6 +193,8 @@ export default function AppointmentForm({
     startAt: "",
     endAt: "",
   });
+
+  const { result: phoneConflicts } = usePhoneConflicts(formData.phone);
 
   // Existing member picker (optional)
   const [memberSearch, setMemberSearch] = useState("");
@@ -724,10 +728,15 @@ export default function AppointmentForm({
                 type="tel"
                 id="phone"
                 value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
+                onChange={(e) => handleInputChange('phone', normalizePhoneDigits(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+              {phoneConflicts?.messageCode === "USER_EXISTS" ? (
+                <p className="mt-1 text-xs text-yellow-700">{phoneConflicts.message}</p>
+              ) : phoneConflicts?.messageCode === "CONTACT_EXISTS" ? (
+                <p className="mt-1 text-xs text-gray-600">{phoneConflicts.message}</p>
+              ) : null}
             </div>
 
             {/* 刺青師和分店 */}
