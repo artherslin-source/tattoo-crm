@@ -57,6 +57,13 @@ const paymentMethodLabels: Record<string, string> = {
   OTHER: "其他",
 };
 
+function sanitizePaymentNote(note: string) {
+  // 移除系統用代碼：例如 (operatorId=...)(topupHistoryId=...)
+  return String(note)
+    .replace(/\s*\((?:operatorId|topupHistoryId|billId|paymentId|memberId|userId)=[^)]+\)/gi, "")
+    .trim();
+}
+
 export default function ProfilePaymentsPage() {
   const [bills, setBills] = useState<BillRow[]>([]);
   const [expandedBillIds, setExpandedBillIds] = useState<Record<string, boolean>>({});
@@ -212,7 +219,12 @@ export default function ProfilePaymentsPage() {
                                 </div>
                                 <div className="text-xs text-gray-600 mt-1">
                                   方式：{paymentMethodLabels[p.method] || p.method}
-                                  {p.notes ? `｜備註：${p.notes}` : ""}
+                                  {(() => {
+                                    if (!p.notes) return "";
+                                    const note = sanitizePaymentNote(p.notes);
+                                    if (!note) return "";
+                                    return `｜備註：${note}`;
+                                  })()}
                                 </div>
                               </div>
                               <div className={`text-sm font-semibold ${p.amount >= 0 ? "text-green-700" : "text-red-700"}`}>
