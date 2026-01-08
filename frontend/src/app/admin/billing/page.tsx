@@ -298,6 +298,7 @@ export default function AdminBillingPage() {
   const [newBranchId, setNewBranchId] = useState("");
   const [newBillType, setNewBillType] = useState("WALK_IN");
   const [newCustomerId, setNewCustomerId] = useState("");
+  const [boundMember, setBoundMember] = useState<{ userId: string; name: string | null; phone: string } | null>(null);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newArtistId, setNewArtistId] = useState("");
@@ -309,6 +310,7 @@ export default function AdminBillingPage() {
     const phone = newCustomerPhone.trim();
     if (!phone || phone.length < 10) {
       setNewCustomerId("");
+      setBoundMember(null);
       return;
     }
 
@@ -322,12 +324,15 @@ export default function AdminBillingPage() {
         if (data?.userId) {
           setNewCustomerId(data.userId);
           setNewCustomerName(data.name || "");
+          setBoundMember(data);
         } else {
           setNewCustomerId("");
+          setBoundMember(null);
         }
       } catch {
         if (!alive) return;
         setNewCustomerId("");
+        setBoundMember(null);
       }
     }, 350);
 
@@ -1172,6 +1177,7 @@ export default function AdminBillingPage() {
       setNewBranchId("");
       setNewBillType("WALK_IN");
       setNewCustomerId("");
+      setBoundMember(null);
       setNewCustomerName("");
       setNewCustomerPhone("");
       setNewArtistId("");
@@ -1615,8 +1621,10 @@ export default function AdminBillingPage() {
                   onChange={(e) => setNewCustomerPhone(normalizePhoneDigits(e.target.value))}
                   placeholder="0912345678"
                 />
-                {newCustomerId ? (
-                  <div className="mt-1 text-[11px] text-muted-foreground">已綁定會員：{newCustomerId}</div>
+                {boundMember ? (
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    已綁定會員：{(boundMember.name || "未設定") + " / " + boundMember.phone}
+                  </div>
                 ) : null}
               </div>
               <div>
