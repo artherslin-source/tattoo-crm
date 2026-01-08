@@ -60,7 +60,12 @@ const paymentMethodLabels: Record<string, string> = {
 function sanitizePaymentNote(note: string) {
   // 移除系統用代碼：例如 (operatorId=...)(topupHistoryId=...)
   return String(note)
+    // half-width parentheses: (operatorId=...)
     .replace(/\s*\((?:operatorId|topupHistoryId|billId|paymentId|memberId|userId)=[^)]+\)/gi, "")
+    // full-width parentheses: （operatorId=...）
+    .replace(/\s*（(?:operatorId|topupHistoryId|billId|paymentId|memberId|userId)=[^）]+）/gi, "")
+    // bare tokens (defense in depth): operatorId=...
+    .replace(/\s*(?:operatorId|topupHistoryId|billId|paymentId|memberId|userId)=[a-z0-9_-]+/gi, "")
     .trim();
 }
 
