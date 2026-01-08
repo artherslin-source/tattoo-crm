@@ -239,6 +239,152 @@ export class AdminMembersService {
     }
   }
 
+  async locatePage(filters: {
+    actor: AccessActor;
+    userId: string;
+    search?: string;
+    role?: string;
+    status?: string;
+    branchId?: string;
+    membershipLevel?: string;
+    sortField?: string;
+    sortOrder?: 'asc' | 'desc';
+    pageSize?: number;
+  }) {
+    // Reuse the same filtering + ordering logic as findAll, but compute which page contains the userId.
+    const where: any = {};
+    const userWhere: any = {};
+
+    if (!filters?.actor) throw new BadRequestException('actor is required');
+
+    // Scope rules (keep identical to findAll)
+    if (!isBoss(filters.actor)) {
+      const hasAssignedMembers = await this.prisma.user.count({
+        where: {
+          role: 'MEMBER',
+          branchId: filters.actor.branchId,
+          primaryArtistId: filters.actor.id,
+        },
+      });
+
+      if (hasAssignedMembers > 0) {
+        userWhere.branchId = filters.actor.branchId;
+        userWhere.primaryArtistId = filters.actor.id;
+        userWhere.role = 'MEMBER';
+      } else {
+        userWhere.branchId = filters.actor.branchId;
+        userWhere.role = 'MEMBER';
+        userWhere.OR = [
+          { appointments: { some: { artistId: filters.actor.id } } },
+          { completedServicesAsCustomer: { some: { artistId: filters.actor.id } } },
+          { appointmentBillsAsCustomer: { some: { artistId: filters.actor.id } } },
+        ];
+      }
+    }
+
+    if (filters.search) {
+      where.OR = [
+        { user: { name: { contains: filters.search, mode: 'insensitive' } } },
+        { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+        { user: { phone: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (filters.role && filters.role !== 'all') {
+      if (isBoss(filters.actor)) {
+        userWhere.role = filters.role;
+      }
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      userWhere.status = filters.status;
+    }
+
+    if (filters.branchId && filters.branchId !== 'all') {
+      if (isBoss(filters.actor)) {
+        userWhere.branchId = filters.branchId;
+      }
+    }
+
+    if (filters.membershipLevel && filters.membershipLevel !== 'all') {
+      where.membershipLevel = filters.membershipLevel;
+    }
+
+    if (Object.keys(userWhere).length > 0) {
+      where.user = userWhere;
+    }
+
+    // Build orderBy (keep identical to findAll)
+    const orderBy: any[] = [];
+    if (filters.sortField && filters.sortOrder) {
+      switch (filters.sortField) {
+        case 'name':
+          orderBy.push({ user: { name: filters.sortOrder } });
+          break;
+        case 'email':
+          orderBy.push({ user: { email: filters.sortOrder } });
+          break;
+        case 'branch':
+          orderBy.push({ user: { branch: { name: filters.sortOrder } } });
+          break;
+        case 'role':
+          orderBy.push({ user: { role: filters.sortOrder } });
+          break;
+        case 'totalSpent':
+          orderBy.push({ totalSpent: filters.sortOrder });
+          break;
+        case 'membershipLevel':
+          orderBy.push({ membershipLevel: filters.sortOrder });
+          break;
+        case 'balance':
+          orderBy.push({ balance: filters.sortOrder });
+          break;
+        case 'createdAt':
+          orderBy.push({ user: { createdAt: filters.sortOrder } });
+          break;
+        default:
+          orderBy.push({ user: { createdAt: 'desc' } });
+      }
+    } else {
+      orderBy.push({ user: { createdAt: 'desc' } });
+    }
+    orderBy.push({ id: 'desc' });
+
+    const rawPageSize = filters.pageSize ?? 10;
+    const pageSize = Math.min(Math.max(Number(rawPageSize) || 10, 1), 100);
+
+    // If the target user isn't visible under current scope/filters, return found=false
+    const target = await this.prisma.member.findFirst({
+      where: { ...where, userId: filters.userId },
+      select: { id: true },
+    });
+    if (!target) {
+      return { found: false as const };
+    }
+
+    const total = await this.prisma.member.count({ where });
+    const batchSize = 1000;
+    for (let offset = 0; offset < total; offset += batchSize) {
+      const batch = await this.prisma.member.findMany({
+        where,
+        orderBy,
+        skip: offset,
+        take: batchSize,
+        select: { userId: true },
+      });
+      const idx = batch.findIndex((r) => r.userId === filters.userId);
+      if (idx >= 0) {
+        const absoluteIndex = offset + idx; // 0-based
+        const page = Math.floor(absoluteIndex / pageSize) + 1;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        return { found: true as const, page, total, pageSize, totalPages };
+      }
+    }
+
+    // Fallback (shouldn't happen): treat as not found
+    return { found: false as const };
+  }
+
   async findOne(actor: AccessActor, id: string) {
     const member = await this.prisma.member.findUnique({
       where: { id },

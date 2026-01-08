@@ -154,6 +154,7 @@ export default function AdminMembersPage() {
   const [topupHistory, setTopupHistory] = useState<TopupHistory[]>([]);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const manualFetchRef = useRef(false);
+  const locateOnceRef = useRef<string | null>(null);
 
   useEffect(() => {
     const userRole = getUserRole();
@@ -210,6 +211,36 @@ export default function AdminMembersPage() {
     }
     fetchMembers(currentPage, itemsPerPage);
   }, [fetchMembers, isAuthorized, currentPage, itemsPerPage]);
+
+  // If highlightUserId is present, locate which page contains it and jump there.
+  useEffect(() => {
+    if (!isAuthorized) return;
+    if (!highlightUserId) return;
+    if (locateOnceRef.current === highlightUserId) return;
+    locateOnceRef.current = highlightUserId;
+
+    const run = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("userId", highlightUserId);
+        params.set("pageSize", String(itemsPerPage));
+        if (sortField) params.set("sortField", sortField);
+        if (sortOrder) params.set("sortOrder", sortOrder);
+        if (search) params.set("search", search);
+        if (branchId) params.set("branchId", branchId);
+        if (role) params.set("role", role);
+        if (membershipLevel) params.set("membershipLevel", membershipLevel);
+
+        const data = await getJsonWithAuth<{ found: boolean; page?: number }>(`/admin/members/locate?${params.toString()}`);
+        if (data?.found && data.page && data.page !== currentPage) {
+          setCurrentPage(data.page);
+        }
+      } catch (e) {
+        console.warn("Failed to locate member page:", e);
+      }
+    };
+    run();
+  }, [isAuthorized, highlightUserId, itemsPerPage, sortField, sortOrder, search, branchId, role, membershipLevel, currentPage]);
 
   // Scroll to highlighted member row (if present on current page)
   useEffect(() => {

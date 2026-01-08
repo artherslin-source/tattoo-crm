@@ -71,6 +71,25 @@ export class AdminMembersController {
     }
   }
 
+  // Locate which page contains a given userId under current filters/sort.
+  @Get('locate')
+  async locate(@Actor() actor: AccessActor, @Query() query: any) {
+    const userId = String(query.userId || '').trim();
+    if (!userId) throw new BadRequestException('userId is required');
+    return this.service.locatePage({
+      actor,
+      userId,
+      search: query.search,
+      role: query.role,
+      status: query.status,
+      branchId: query.branchId,
+      membershipLevel: query.membershipLevel,
+      sortField: query.sortField,
+      sortOrder: query.sortOrder,
+      pageSize: query.pageSize ? Number(query.pageSize) : undefined,
+    });
+  }
+
   @Post()
   createMember(@Actor() actor: AccessActor, @Body() data: {
     name: string;
