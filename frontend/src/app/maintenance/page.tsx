@@ -8,6 +8,7 @@ type MaintenanceState = {
   enabled: boolean;
   message: string;
   since: string | null;
+  maintenance?: boolean;
 };
 
 export default function MaintenancePage() {
@@ -21,7 +22,8 @@ export default function MaintenancePage() {
       const res = await fetch("/api/public/maintenance", { method: "GET", cache: "no-store" });
       const data = (await res.json().catch(() => null)) as MaintenanceState | null;
       if (data) setState(data);
-      if (data && !data.enabled) {
+      const enabled = !!data?.enabled || (res.status === 503 && (data as any)?.maintenance === true);
+      if (data && !enabled) {
         router.replace("/home");
       }
     } finally {

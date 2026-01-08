@@ -12,10 +12,12 @@ export class MaintenanceMiddleware {
 
     // Allow health checks and the restore endpoint to keep working during maintenance.
     const p = req.path || '';
-    if (p.startsWith('/health')) return next();
-    if (p.startsWith('/public/maintenance')) return next();
-    if (p.startsWith('/admin/maintenance')) return next();
-    if (p === '/admin/backup/restore') return next();
+    // Note: In some deployments/proxies, requests may include a leading `/api` prefix.
+    // We whitelist both variants to avoid blocking the maintenance status endpoint itself.
+    if (p.startsWith('/health') || p.startsWith('/api/health')) return next();
+    if (p.startsWith('/public/maintenance') || p.startsWith('/api/public/maintenance')) return next();
+    if (p.startsWith('/admin/maintenance') || p.startsWith('/api/admin/maintenance')) return next();
+    if (p === '/admin/backup/restore' || p === '/api/admin/backup/restore') return next();
 
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Retry-After', '120');

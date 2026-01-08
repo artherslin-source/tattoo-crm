@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 type MaintenanceState = {
   enabled: boolean;
+  maintenance?: boolean;
 };
 
 export default function MaintenanceGate() {
@@ -21,7 +22,9 @@ export default function MaintenanceGate() {
         const data = (await res.json().catch(() => null)) as MaintenanceState | null;
         if (!alive || !data) return;
 
-        if (data.enabled) {
+        const isEnabled = !!data.enabled || (res.status === 503 && (data as any)?.maintenance === true);
+
+        if (isEnabled) {
           // Avoid redirect loops and excessive replaces.
           const now = Date.now();
           if (pathname === "/maintenance") return;

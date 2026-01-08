@@ -18,21 +18,21 @@ export class MaintenanceController {
   constructor(private readonly maintenance: MaintenanceService) {}
 
   // Public: frontend can poll this to decide whether to show maintenance page.
-  @Get('public/maintenance')
+  @Get(['public/maintenance', 'api/public/maintenance'])
   async getPublicState() {
     const s = await this.maintenance.getState();
     return { enabled: !!s.enabled, message: s.reason || '系統維護中，請稍後再試', since: s.since ?? null };
   }
 
   // Admin (BOSS): manual toggle persistent maintenance.
-  @Get('admin/maintenance')
+  @Get(['admin/maintenance', 'api/admin/maintenance'])
   @UseGuards(AuthGuard('jwt'), AccessGuard)
   async getAdminState(@Actor() actor: AccessActor) {
     if (!isBoss(actor)) throw new ForbiddenException('BOSS only');
     return this.maintenance.getState();
   }
 
-  @Patch('admin/maintenance')
+  @Patch(['admin/maintenance', 'api/admin/maintenance'])
   @UseGuards(AuthGuard('jwt'), AccessGuard)
   async setAdminState(@Actor() actor: AccessActor, @Body() body: unknown) {
     if (!isBoss(actor)) throw new ForbiddenException('BOSS only');
