@@ -1045,6 +1045,27 @@ export default function AdminBillingPage() {
     return { billTotal, paidTotal, cashPaidTotal, storedValuePaidTotal, dueTotal: billTotal - paidTotal };
   }, [rows]);
 
+  const tableTotals = useMemo(() => {
+    const billTotalSum = rows.reduce((s, r) => s + (r.billTotal || 0), 0);
+    const cashPaidTotalSum = rows.reduce(
+      (s, r) => s + (r.summary?.cashPaidTotal ?? r.summary?.paidTotal ?? 0),
+      0,
+    );
+    const storedValuePaidTotalSum = rows.reduce((s, r) => s + (r.summary?.storedValuePaidTotal || 0), 0);
+    const paidTotalSum = rows.reduce((s, r) => s + (r.summary?.paidTotal || 0), 0);
+    const dueTotalSum = billTotalSum - paidTotalSum;
+    const shopAmountSum = rows.reduce((s, r) => s + (r.summary?.shopAmount || 0), 0);
+    const artistAmountSum = rows.reduce((s, r) => s + (r.summary?.artistAmount || 0), 0);
+    return {
+      billTotalSum,
+      cashPaidTotalSum,
+      storedValuePaidTotalSum,
+      dueTotalSum,
+      shopAmountSum,
+      artistAmountSum,
+    };
+  }, [rows]);
+
   const sortLabel = useMemo(() => {
     const fieldLabel =
       sortField === "createdAt"
@@ -1384,6 +1405,23 @@ export default function AdminBillingPage() {
                   </tr>
                 )}
               </tbody>
+              {rows.length > 0 ? (
+                <tfoot>
+                  <tr className="border-t bg-muted/30 font-semibold">
+                    <td className="py-2 pr-3" colSpan={4}>
+                      小記（共 {rows.length} 筆）
+                    </td>
+                    <td className="py-2 pr-3">${formatMoney(tableTotals.billTotalSum)}</td>
+                    <td className="py-2 pr-3">${formatMoney(tableTotals.cashPaidTotalSum)}</td>
+                    <td className="py-2 pr-3">${formatMoney(tableTotals.storedValuePaidTotalSum)}</td>
+                    <td className="py-2 pr-3">${formatMoney(tableTotals.dueTotalSum)}</td>
+                    <td className="py-2 pr-3">${formatMoney(tableTotals.shopAmountSum)}</td>
+                    <td className="py-2 pr-3">${formatMoney(tableTotals.artistAmountSum)}</td>
+                    <td className="py-2 pr-3">-</td>
+                    <td className="py-2 pr-3">-</td>
+                  </tr>
+                </tfoot>
+              ) : null}
             </table>
           </div>
         </CardContent>
