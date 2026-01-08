@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MaintenanceService } from '../maintenance/maintenance.service';
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as os from 'os';
@@ -97,7 +98,10 @@ function buildSecretsEnvText() {
 
 @Injectable()
 export class BackupService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly maintenance: MaintenanceService,
+  ) {}
 
   private getUploadsPath() {
     // Railway volume mount in backend/railway.json
@@ -296,6 +300,9 @@ export class BackupService {
     };
 
     try {
+      // Enter maintenance mode for restore window.
+      this.maintenance.enable('系統維護中：正在還原備份，請稍後再試');
+
       // Disconnect Prisma before heavy restore
       await this.prisma.$disconnect().catch(() => null);
 
@@ -374,6 +381,8 @@ export class BackupService {
       setTimeout(() => process.exit(0), 1500);
     } catch (e) {
       console.error('Restore failed:', e);
+      // Exit maintenance mode on failure so the system can continue serving.
+      this.maintenance.disable();
       await cleanup();
       // Do not kill the process on failure; keep serving.
       return;

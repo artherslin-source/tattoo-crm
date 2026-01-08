@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -21,6 +21,8 @@ import { BillingModule } from './billing/billing.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SiteConfigModule } from './site-config/site-config.module';
 import { BackupModule } from './backup/backup.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
+import { MaintenanceMiddleware } from './maintenance/maintenance.middleware';
 
 @Module({
   imports: [
@@ -44,8 +46,13 @@ import { BackupModule } from './backup/backup.module';
     NotificationsModule,
     SiteConfigModule,
     BackupModule,
+    MaintenanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MaintenanceMiddleware).forRoutes('*');
+  }
+}
