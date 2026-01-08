@@ -18,6 +18,10 @@ export class MaintenanceMiddleware {
     if (p.startsWith('/public/maintenance') || p.startsWith('/api/public/maintenance')) return next();
     if (p.startsWith('/admin/maintenance') || p.startsWith('/api/admin/maintenance')) return next();
     if (p === '/admin/backup/restore' || p === '/api/admin/backup/restore') return next();
+    // Allow login during maintenance so BOSS can still authenticate and turn it off.
+    if (p.startsWith('/auth/login') || p.startsWith('/api/auth/login')) return next();
+    if (p.startsWith('/auth/refresh') || p.startsWith('/api/auth/refresh')) return next();
+    if (p.startsWith('/auth/me') || p.startsWith('/api/auth/me')) return next();
 
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Retry-After', '120');

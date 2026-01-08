@@ -18,6 +18,9 @@ export default function MaintenanceGate() {
 
     const check = async () => {
       try {
+        const bypassMaintenance =
+          pathname === "/login" || pathname.startsWith("/admin");
+
         const res = await fetch("/api/public/maintenance", { method: "GET", cache: "no-store" });
         const data = (await res.json().catch(() => null)) as MaintenanceState | null;
         if (!alive || !data) return;
@@ -27,6 +30,7 @@ export default function MaintenanceGate() {
         if (isEnabled) {
           // Avoid redirect loops and excessive replaces.
           const now = Date.now();
+          if (bypassMaintenance) return;
           if (pathname === "/maintenance") return;
           if (now - lastRedirectAt.current < 1500) return;
           lastRedirectAt.current = now;
