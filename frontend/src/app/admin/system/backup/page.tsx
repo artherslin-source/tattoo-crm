@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
+import { detectBackendUrl, getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
 import { isBossRole } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -312,7 +312,10 @@ export default function AdminSystemBackupPage() {
                 fd.append("password", restorePassword);
                 fd.append("confirm", "RESTORE");
 
-                const res = await fetch(`/api/admin/backup/restore`, {
+                // IMPORTANT: restore upload can be large; going through Next rewrites (/api/*) may fail with generic 500.
+                // Upload directly to backend service URL to avoid proxy/body streaming limits.
+                const backendUrl = await detectBackendUrl();
+                const res = await fetch(`${backendUrl}/admin/backup/restore`, {
                   method: "POST",
                   headers: { Authorization: `Bearer ${token}` },
                   body: fd,
