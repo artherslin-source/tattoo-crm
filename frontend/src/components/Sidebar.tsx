@@ -45,21 +45,22 @@ export default function Sidebar({ open, onClose }: Props) {
     return [
       { href: "/admin/dashboard", label: "📊 儀表板" },
       { href: "/admin/analytics", label: "📈 統計報表" },
-      { href: "/admin/artists", label: "🎨 刺青師管理" },
       { href: "/admin/members", label: "👥 會員管理" },
       { href: "/admin/contacts", label: "💬 聯絡管理" },
       { href: "/admin/appointments", label: "📅 預約管理" },
       { href: "/admin/billing", label: "💰 帳務管理" },
-      { href: "/admin/notifications", label: "🔔 通知中心" },
     ];
   }, [isArtist]);
 
   const settingsItems: NavItem[] = useMemo(() => {
-    // BOSS-only: 首頁設定 / 備份還原 / 服務管理
+    // 設定群組：首頁設定/服務管理/刺青師管理/通知中心/備份管理
+    // BOSS-only 仍維持：首頁設定 / 備份管理 / 服務管理
     const items: NavItem[] = [
       { href: "/admin/site/home-hero", label: "🏠 首頁設定", bossOnly: true },
       { href: "/admin/services", label: "⚙️ 服務管理", bossOnly: true },
-      { href: "/admin/system/backup", label: "🗄️ 備份/還原", bossOnly: true },
+      { href: "/admin/artists", label: "🎨 刺青師管理" },
+      { href: "/admin/notifications", label: "🔔 通知中心" },
+      { href: "/admin/system/backup", label: "🗄️ 備份管理", bossOnly: true },
     ];
     return items.filter((it) => !it.bossOnly || isBoss);
   }, [isBoss]);
