@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Req, ForbiddenException, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AccessGuard } from '../common/access/access.guard';
 import { ServicesService } from '../services/services.service';
@@ -8,6 +8,10 @@ import { existsSync, mkdirSync } from 'fs';
 import { extname, join } from 'path';
 import { z } from 'zod';
 import { calculatePriceAndDuration, getAddonTotal } from '../cart/pricing';
+import { Actor } from '../common/access/actor.decorator';
+import type { AccessActor } from '../common/access/access.types';
+import { isBoss } from '../common/access/access.types';
+import type { Response } from 'express';
 
 // 嘗試將瀏覽器上傳時以 latin1/ISO-8859-1 編碼的檔名轉為 UTF-8（支援繁體中文）
 function normalizeFilename(name: string): string {
@@ -97,6 +101,72 @@ export class AdminServicesController {
   async create(@Body() body: unknown) {
     const input = CreateServiceSchema.parse(body);
     return this.services.create(input);
+  }
+
+  @Get('export.csv')
+  async exportCsv(@Actor() actor: AccessActor, @Res() res: Response) {
+    if (!isBoss(actor)) throw new ForbiddenException('Boss only');
+
+    const prisma = (this.services as any)['prisma'];
+    const rows = await prisma.service.findMany({
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        price: true,
+        currency: true,
+        durationMin: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // Excel-friendly BOM
+    const bom = '\uFEFF';
+    const header = [
+      'id',
+      'name',
+      'category',
+      'price',
+      'currency',
+      'durationMin',
+      'isActive',
+      'createdAt',
+      'updatedAt',
+    ];
+
+    const esc = (v: unknown) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      const needs = /[",\n\r]/.test(s);
+      const doubled = s.replace(/"/g, '""');
+      return needs ? `"${doubled}"` : doubled;
+    };
+
+    const lines = [
+      header.join(','),
+      ...rows.map((r: any) =>
+        [
+          r.id,
+          r.name,
+          r.category ?? '',
+          r.price ?? '',
+          r.currency ?? '',
+          r.durationMin ?? '',
+          r.isActive ? 'true' : 'false',
+          r.createdAt ? new Date(r.createdAt).toISOString() : '',
+          r.updatedAt ? new Date(r.updatedAt).toISOString() : '',
+        ]
+          .map(esc)
+          .join(','),
+      ),
+    ];
+
+    const filename = `services-base-prices-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(bom + lines.join('\n'));
   }
 
   @Post(':id/quote')

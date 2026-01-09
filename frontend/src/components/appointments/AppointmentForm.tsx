@@ -26,6 +26,8 @@ interface Service {
   description: string | null;
   price: number;
   durationMin: number;
+  category?: string | null;
+  isActive?: boolean;
 }
 
 interface Artist {
@@ -255,12 +257,25 @@ export default function AppointmentForm({
       setLoading(true);
       try {
         const [servicesData, artistsData, branchesData] = await Promise.all([
-          getJsonWithAuth<Service[]>("/services"),
+          // Use admin/services here so we can de-duplicate by name (DB may contain legacy duplicates)
+          getJsonWithAuth<Service[]>("/admin/services"),
           getJsonWithAuth<Artist[]>("/admin/artists"),
           getJsonWithAuth<Branch[]>("/branches"),
         ]);
 
-        setServices(servicesData);
+        // De-duplicate by name (keep earliest created if present; otherwise keep first)
+        const byName = new Map<string, Service>();
+        for (const s of servicesData || []) {
+          const exist = byName.get(s.name);
+          if (!exist) {
+            byName.set(s.name, s);
+            continue;
+          }
+          const a = (exist as any).createdAt ? new Date((exist as any).createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+          const b = (s as any).createdAt ? new Date((s as any).createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+          if (b < a) byName.set(s.name, s);
+        }
+        setServices(Array.from(byName.values()));
         setArtists(artistsData);
         const uniqueBranches = sortBranchesByName(getUniqueBranches<Branch>(branchesData));
         setBranches(uniqueBranches);

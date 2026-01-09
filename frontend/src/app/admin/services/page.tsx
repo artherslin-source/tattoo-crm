@@ -56,6 +56,7 @@ export default function AdminServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [showImageSelector, setShowImageSelector] = useState(false);
@@ -134,6 +135,42 @@ const defaultFormValues = {
       setError(apiErr.message || "載入服務資料失敗");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadBasePricesCsv = async () => {
+    try {
+      setExporting(true);
+      setError(null);
+      const token = getAccessToken();
+      if (!token) {
+        setError("需要登入後才能匯出");
+        return;
+      }
+      // Use same-origin rewrites; include Bearer token
+      const res = await fetch(`/api/admin/services/export.csv`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `匯出失敗（${res.status}）`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `services-base-prices-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "匯出失敗";
+      setError(msg);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -366,6 +403,16 @@ const defaultFormValues = {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              variant="secondary"
+              onClick={downloadBasePricesCsv}
+              disabled={exporting}
+              className="flex w-full items-center justify-center space-x-2 sm:w-auto"
+              title="匯出 DB 上的服務基礎價（含停用）"
+            >
+              <Package className="h-4 w-4" />
+              <span>{exporting ? "匯出中..." : "匯出基礎價 CSV"}</span>
+            </Button>
             <Button
               onClick={() => setShowCreateForm(true)}
               className="flex w-full items-center justify-center space-x-2 sm:w-auto"
