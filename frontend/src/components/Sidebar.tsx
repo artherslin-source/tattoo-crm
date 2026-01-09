@@ -55,6 +55,8 @@ export default function Sidebar({ open, onClose }: Props) {
   }, [isArtist]);
 
   const settingsItems: NavItem[] = useMemo(() => {
+    // ARTIST 後台不顯示「設定」群組（避免看到不該有的管理入口）
+    if (isArtist) return [];
     // 設定群組：首頁設定/服務管理/刺青師管理/通知中心/備份管理
     // BOSS-only 仍維持：首頁設定 / 備份管理 / 服務管理
     const items: NavItem[] = [
@@ -66,7 +68,7 @@ export default function Sidebar({ open, onClose }: Props) {
       { href: "/admin/system/prelaunch", label: "🚀 交付前重置", bossOnly: true },
     ];
     return items.filter((it) => !it.bossOnly || isBoss);
-  }, [isBoss]);
+  }, [isBoss, isArtist]);
 
   const isInSettings = useMemo(() => {
     if (!pathname) return false;
