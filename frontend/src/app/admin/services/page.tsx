@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, ApiError, getImageUrl, getApiBase } from "@/lib/api";
+import { getUserRole, getJsonWithAuth, deleteJsonWithAuth, postJsonWithAuth, putJsonWithAuth, patchJsonWithAuth, ApiError, getImageUrl, getApiBase } from "@/lib/api";
 import { hasAdminAccess, isBossRole } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,16 @@ interface Service {
   isActive: boolean;
   createdAt: string;
 }
+
+type RepriceRow = {
+  serviceId: string;
+  name: string;
+  isActive: boolean;
+  oldPrice: number;
+  candidatePrice: number | null;
+  notes: string;
+  hasActiveVariants: boolean;
+};
 
 const ALLOWED_SERVICE_NAME_SET = new Set<string>(SERVICE_DISPLAY_ORDER);
 
@@ -63,6 +73,11 @@ export default function AdminServicesPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [initializingVariant, setInitializingVariant] = useState<string | null>(null);
   const [managingVariantService, setManagingVariantService] = useState<{ id: string; name: string } | null>(null);
+  const [togglingServiceId, setTogglingServiceId] = useState<string | null>(null);
+  const [repriceLoading, setRepriceLoading] = useState(false);
+  const [repriceRows, setRepriceRows] = useState<RepriceRow[] | null>(null);
+  const [overridePrices, setOverridePrices] = useState<Record<string, string>>({});
+  const [repriceApplying, setRepriceApplying] = useState(false);
 
 const DEFAULT_DESCRIPTION = "尚未設定";
 const DEFAULT_PRICE = "1"; // 必須 > 0，只作佔位值
@@ -138,6 +153,19 @@ const defaultFormValues = {
     }
   };
 
+  const toggleServiceActive = async (service: Service, nextActive: boolean) => {
+    try {
+      setTogglingServiceId(service.id);
+      await patchJsonWithAuth(`/admin/services/${service.id}/active`, { isActive: nextActive });
+      await fetchServices();
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "更新服務狀態失敗");
+    } finally {
+      setTogglingServiceId(null);
+    }
+  };
+
   const downloadBasePricesCsv = async () => {
     try {
       setExporting(true);
@@ -171,6 +199,60 @@ const defaultFormValues = {
       setError(msg);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const loadRepriceDryRun = async () => {
+    try {
+      setRepriceLoading(true);
+      setError(null);
+      const resp = await postJsonWithAuth<{ rows: RepriceRow[] }>(`/admin/services/reprice/dry-run`, {});
+      setRepriceRows(resp.rows || []);
+      setOverridePrices({});
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "載入重訂預覽失敗");
+    } finally {
+      setRepriceLoading(false);
+    }
+  };
+
+  const fillOverridesWithCandidate = () => {
+    if (!repriceRows) return;
+    const next: Record<string, string> = { ...overridePrices };
+    for (const r of repriceRows) {
+      if (r.candidatePrice && r.candidatePrice > 0) {
+        next[r.serviceId] = String(r.candidatePrice);
+      }
+    }
+    setOverridePrices(next);
+  };
+
+  const applyOverridePrices = async () => {
+    if (!repriceRows) return;
+    const overrides: Record<string, number> = {};
+    for (const [id, raw] of Object.entries(overridePrices)) {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n <= 0) continue;
+      overrides[id] = Math.trunc(n);
+    }
+    if (!Object.keys(overrides).length) {
+      setError("請至少輸入一筆要套用的基礎價");
+      return;
+    }
+    if (!confirm("確定要套用你輸入的基礎價嗎？此操作會直接更新 DB 的 Service.price")) return;
+
+    try {
+      setRepriceApplying(true);
+      setError(null);
+      await postJsonWithAuth(`/admin/services/reprice/apply`, { overrides, confirm: "APPLY" });
+      await fetchServices();
+      await loadRepriceDryRun();
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "套用基礎價失敗");
+    } finally {
+      setRepriceApplying(false);
     }
   };
 
@@ -476,6 +558,93 @@ const defaultFormValues = {
         </Card>
       </div>
 
+      {/* Base price reprice tool (BOSS-only) */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>基礎價重訂（Service.price）</CardTitle>
+          <CardDescription>
+            系統會以「啟用規格」試算每個服務的最低可達價作為候選值；你可在下方手動輸入覆蓋價，並只套用你有填的那些服務。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button variant="outline" onClick={loadRepriceDryRun} disabled={repriceLoading}>
+              {repriceLoading ? "載入中..." : "產生預覽"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={fillOverridesWithCandidate}
+              disabled={!repriceRows || repriceLoading}
+              title="將候選價批次填入輸入欄位（你仍可逐筆調整）"
+            >
+              批次填入候選價
+            </Button>
+            <Button
+              onClick={applyOverridePrices}
+              disabled={!repriceRows || repriceApplying}
+              className="sm:ml-auto"
+              title="只會套用你有輸入價格的服務"
+            >
+              {repriceApplying ? "套用中..." : "套用手動價格"}
+            </Button>
+          </div>
+
+          {repriceRows ? (
+            <div className="mt-4 overflow-auto rounded-md border border-gray-200">
+              <table className="min-w-[900px] w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left py-2 px-3">服務</th>
+                    <th className="text-left py-2 px-3">狀態</th>
+                    <th className="text-right py-2 px-3">舊基礎價</th>
+                    <th className="text-right py-2 px-3">候選最低價</th>
+                    <th className="text-right py-2 px-3">手動覆蓋價</th>
+                    <th className="text-left py-2 px-3">備註</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {repriceRows.map((r) => {
+                    const raw = overridePrices[r.serviceId] ?? "";
+                    const parsed = Number(raw);
+                    const willApply = Number.isFinite(parsed) && parsed > 0;
+                    return (
+                      <tr key={r.serviceId} className="border-t">
+                        <td className="py-2 px-3">
+                          <div className="font-medium">{r.name}</div>
+                          <div className="text-xs text-gray-500">{r.serviceId}</div>
+                        </td>
+                        <td className="py-2 px-3">{r.isActive ? "啟用" : "停用"}</td>
+                        <td className="py-2 px-3 text-right">NT$ {Number(r.oldPrice || 0).toLocaleString()}</td>
+                        <td className="py-2 px-3 text-right">
+                          {typeof r.candidatePrice === "number" ? `NT$ ${r.candidatePrice.toLocaleString()}` : "—"}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            step={100}
+                            value={raw}
+                            onChange={(e) =>
+                              setOverridePrices((prev) => ({ ...prev, [r.serviceId]: e.target.value }))
+                            }
+                            className={`w-40 rounded-md border px-2 py-1 text-right ${willApply ? "border-blue-400" : "border-gray-300"}`}
+                            placeholder="（不套用）"
+                          />
+                        </td>
+                        <td className="py-2 px-3 text-xs text-gray-600">{r.notes}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-3 text-sm text-gray-600">尚未載入預覽。</div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Create/Edit Form */}
       {showCreateForm && (
         <Card id="edit-service-form" className="mb-8">
@@ -725,6 +894,23 @@ const defaultFormValues = {
                       <div className="flex flex-wrap gap-2">
                         {service ? (
                           <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleServiceActive(service, !service.isActive)}
+                              disabled={togglingServiceId === service.id}
+                              className="flex items-center space-x-1"
+                              title={service.isActive ? "停用此服務（將不再出現在新增預約/前台）" : "啟用此服務"}
+                            >
+                              {togglingServiceId === service.id ? (
+                                <>
+                                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-600 border-t-transparent"></div>
+                                  <span>更新中...</span>
+                                </>
+                              ) : (
+                                <span>{service.isActive ? "停用" : "啟用"}</span>
+                              )}
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"

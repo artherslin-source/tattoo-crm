@@ -378,6 +378,26 @@ export class AdminAppointmentsService {
         });
       }
 
+      // Enforce: if service has active variants and this is NOT a contact conversion with cartSnapshot,
+      // admin must provide at least one selectedVariant.
+      const hasActiveVariants = Array.isArray((service as any).variants) && (service as any).variants.length > 0;
+      const selected = input.selectedVariants && typeof input.selectedVariants === 'object' ? input.selectedVariants : null;
+      const hasSelected = !!selected && Object.keys(selected).length > 0;
+
+      let contactHasCartItems = false;
+      if (input.contactId) {
+        const c = await this.prisma.contact.findUnique({
+          where: { id: input.contactId },
+          select: { cartSnapshot: true },
+        });
+        const items = (c?.cartSnapshot as any)?.items;
+        contactHasCartItems = Array.isArray(items) && items.length > 0;
+      }
+
+      if (hasActiveVariants && !hasSelected && !contactHasCartItems) {
+        throw new BadRequestException('此服務需要至少選 1 個規格（selectedVariants）才能建立預約');
+      }
+
       // Contact conversion guard + atomic conversion.
       return this.prisma.$transaction(async (tx) => {
         if (input.contactId) {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Req, ForbiddenException, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Req, ForbiddenException, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AccessGuard } from '../common/access/access.guard';
 import { ServicesService } from '../services/services.service';
@@ -44,6 +44,19 @@ const UpdateServiceSchema = CreateServiceSchema.partial();
 
 const QuoteSchema = z.object({
   selectedVariants: z.record(z.string(), z.any()).optional().default({}),
+});
+
+const SetActiveSchema = z.object({
+  isActive: z.boolean(),
+});
+
+const RepriceDryRunSchema = z.object({
+  // reserved for future (filters, etc)
+}).optional();
+
+const RepriceApplySchema = z.object({
+  overrides: z.record(z.string(), z.number().int().positive()).default({}),
+  confirm: z.string().optional(),
 });
 
 @Controller('admin/services')
@@ -101,6 +114,18 @@ export class AdminServicesController {
   async create(@Body() body: unknown) {
     const input = CreateServiceSchema.parse(body);
     return this.services.create(input);
+  }
+
+  @Patch(':id/active')
+  async setActive(@Actor() actor: AccessActor, @Param('id') id: string, @Body() body: unknown) {
+    if (!isBoss(actor)) throw new ForbiddenException('Boss only');
+    const input = SetActiveSchema.parse(body);
+    const prisma = (this.services as any)['prisma'];
+    return prisma.service.update({
+      where: { id },
+      data: { isActive: input.isActive },
+      select: { id: true, name: true, isActive: true, updatedAt: true },
+    });
   }
 
   @Get('export.csv')
@@ -199,6 +224,131 @@ export class AdminServicesController {
       estimatedDuration,
       normalizedSelectedVariants: selectedVariants,
     };
+  }
+
+  @Post('reprice/dry-run')
+  async repriceDryRun(@Actor() actor: AccessActor, @Body() body: unknown) {
+    if (!isBoss(actor)) throw new ForbiddenException('Boss only');
+    RepriceDryRunSchema?.parse(body);
+
+    const prisma = (this.services as any)['prisma'];
+    const services = await prisma.service.findMany({
+      orderBy: [{ name: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, name: true, price: true, isActive: true, createdAt: true },
+    });
+
+    // Fetch variants in one go
+    const serviceIds = services.map((s: any) => s.id);
+    const variants = await prisma.serviceVariant.findMany({
+      where: { serviceId: { in: serviceIds }, isActive: true },
+      select: { serviceId: true, type: true, name: true, priceModifier: true, sortOrder: true, metadata: true },
+      orderBy: [{ serviceId: 'asc' }, { type: 'asc' }, { sortOrder: 'asc' }],
+    });
+
+    const variantsByService = new Map<string, any[]>();
+    for (const v of variants) {
+      const arr = variantsByService.get(v.serviceId) ?? [];
+      arr.push(v);
+      variantsByService.set(v.serviceId, arr);
+    }
+
+    const deriveCandidateMinPrice = (svc: any, vars: any[]): { candidatePrice: number | null; notes: string } => {
+      const sizeVars = vars.filter((v) => v.type === 'size');
+      const colorVars = vars.filter((v) => v.type === 'color');
+
+      // Heuristic: without size variants, the pricing model cannot derive a meaningful minimum.
+      if (!sizeVars.length) {
+        return { candidatePrice: null, notes: vars.length ? '無尺寸規格，無法推導最低價' : '無啟用規格，無法推導最低價' };
+      }
+
+      const candidates: Array<Record<string, any>> = [];
+      for (const s of sizeVars) {
+        if (colorVars.length) {
+          for (const c of colorVars) {
+            candidates.push({ size: s.name, color: c.name });
+          }
+        } else {
+          candidates.push({ size: s.name });
+        }
+      }
+
+      let best: number | null = null;
+      for (const selectedVariants of candidates) {
+        const { finalPrice: itemFinalPrice } = calculatePriceAndDuration(
+          svc.price,
+          svc.durationMin ?? 60,
+          vars,
+          selectedVariants,
+        );
+        const addon = getAddonTotal(selectedVariants);
+        const total = Math.max(0, Math.trunc(Number(itemFinalPrice + addon)));
+        if (!Number.isFinite(total) || total <= 0) continue;
+        if (best === null || total < best) best = total;
+      }
+
+      if (best === null) return { candidatePrice: null, notes: '試算結果無法得到有效最低價' };
+      return { candidatePrice: best, notes: '以啟用規格試算最低價' };
+    };
+
+    // Need durationMin/base info; fetch minimal fields in a map
+    const svcDetails = await prisma.service.findMany({
+      where: { id: { in: serviceIds } },
+      select: { id: true, durationMin: true, price: true },
+    });
+    const detailById = new Map<string, any>(svcDetails.map((s: any) => [s.id, s]));
+
+    const rows = services.map((s: any) => {
+      const vars = variantsByService.get(s.id) ?? [];
+      const detail = detailById.get(s.id) ?? s;
+      const { candidatePrice, notes } = deriveCandidateMinPrice({ ...s, ...detail }, vars);
+      return {
+        serviceId: s.id,
+        name: s.name,
+        isActive: s.isActive,
+        oldPrice: s.price,
+        candidatePrice,
+        notes,
+        hasActiveVariants: vars.length > 0,
+      };
+    });
+
+    return { rows };
+  }
+
+  @Post('reprice/apply')
+  async repriceApply(@Actor() actor: AccessActor, @Body() body: unknown) {
+    if (!isBoss(actor)) throw new ForbiddenException('Boss only');
+    const input = RepriceApplySchema.parse(body);
+    if (input.confirm && input.confirm !== 'APPLY') {
+      throw new BadRequestException('confirm must be APPLY');
+    }
+
+    const overrides = input.overrides ?? {};
+    const ids = Object.keys(overrides);
+    if (!ids.length) return { updated: [], skipped: [], count: 0 };
+
+    const prisma = (this.services as any)['prisma'];
+    const updated: any[] = [];
+    const skipped: any[] = [];
+    for (const id of ids) {
+      const price = overrides[id];
+      if (!Number.isFinite(price) || price <= 0) {
+        skipped.push({ id, reason: 'invalid_price' });
+        continue;
+      }
+      try {
+        const r = await prisma.service.update({
+          where: { id },
+          data: { price },
+          select: { id: true, name: true, price: true, updatedAt: true },
+        });
+        updated.push(r);
+      } catch (e: any) {
+        skipped.push({ id, reason: e?.message || 'update_failed' });
+      }
+    }
+
+    return { count: updated.length, updated, skipped };
   }
 
   @Put(':id')

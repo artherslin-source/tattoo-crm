@@ -224,6 +224,16 @@ export default function AppointmentForm({
     return services.find((s) => s.id === formData.serviceId) || null;
   }, [services, formData.serviceId]);
 
+  const hasAnyActiveVariants = useMemo(() => {
+    const lists = Object.values(serviceVariants || {});
+    return lists.some((arr) => Array.isArray(arr) && arr.length > 0);
+  }, [serviceVariants]);
+
+  const isVariantSelectionValid = useMemo(() => {
+    if (!hasAnyActiveVariants) return true;
+    return Object.keys(selectedVariants || {}).length > 0;
+  }, [hasAnyActiveVariants, selectedVariants]);
+
   const { result: phoneConflicts } = usePhoneConflicts(formData.phone);
 
   // Existing member picker (optional)
@@ -266,6 +276,7 @@ export default function AppointmentForm({
         // De-duplicate by name (keep earliest created if present; otherwise keep first)
         const byName = new Map<string, Service>();
         for (const s of servicesData || []) {
+          if ((s as any).isActive === false) continue;
           const exist = byName.get(s.name);
           if (!exist) {
             byName.set(s.name, s);
@@ -594,6 +605,11 @@ export default function AppointmentForm({
 
       if (availableSlots.length && !availableSlots.includes(timeSlot)) {
         setError("所選時段已不可用，請重新選擇");
+        return;
+      }
+
+      if (hasAnyActiveVariants && !isVariantSelectionValid) {
+        setError("此服務需要至少選 1 個規格後才能建立預約");
         return;
       }
 
@@ -952,6 +968,12 @@ export default function AppointmentForm({
                   </div>
                 </div>
 
+                {hasAnyActiveVariants && !isVariantSelectionValid ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    此服務需要至少選 1 個規格，才可建立預約。
+                  </div>
+                ) : null}
+
                 {/* Quote preview */}
                 <div className="flex flex-col gap-2 rounded-md bg-white px-3 py-2 border border-gray-200">
                   <div className="flex items-center justify-between">
@@ -1178,7 +1200,7 @@ export default function AppointmentForm({
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || (hasAnyActiveVariants && !isVariantSelectionValid)}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 {submitting ? '創建中...' : '創建預約'}
