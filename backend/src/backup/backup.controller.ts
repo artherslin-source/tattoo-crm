@@ -2,7 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
+  Param,
   Post,
+  Query,
   Res,
   UseGuards,
   UseInterceptors,
@@ -38,10 +41,27 @@ export class BackupController {
   async exportBackup(@Actor() actor: AccessActor, @Body() body: unknown, @Res() res: Response) {
     if (!isBoss(actor)) throw new BadRequestException('Only BOSS can export backups');
     const input = ExportSchema.parse(body);
-    return this.backup.streamEncryptedBackupZip(res, {
-      actor,
-      password: input.password,
-    });
+    // Large backups can take minutes and will often time out if streamed directly.
+    // Kick off an async job and let frontend poll status + use native browser download.
+    const job = await this.backup.startExportJob({ actor, password: input.password });
+    return res.json(job);
+  }
+
+  @Get('export/:jobId')
+  async exportStatus(@Actor() actor: AccessActor, @Param('jobId') jobId: string) {
+    if (!isBoss(actor)) throw new BadRequestException('Only BOSS can export backups');
+    const job = this.backup.getExportJob(jobId);
+    if (!job) throw new BadRequestException('Job not found');
+    return {
+      jobId: job.id,
+      status: job.status,
+      createdAt: job.createdAt,
+      startedAt: job.startedAt ?? null,
+      finishedAt: job.finishedAt ?? null,
+      filename: job.filename ?? null,
+      error: job.error ?? null,
+      download: job.status === 'ready' && job.dlToken ? { dlToken: job.dlToken, expiresAt: job.dlExpiresAt ?? null } : null,
+    };
   }
 
   @Post('export-secrets')
@@ -93,6 +113,18 @@ export class BackupController {
       message: 'Restore started. Service will restart after completion.',
       filename: path.basename(file.path),
     };
+  }
+}
+
+// Public download endpoint (no JWT header required). Protected by short-lived dlToken.
+@Controller('admin/backup')
+export class BackupDownloadController {
+  constructor(private readonly backup: BackupService) {}
+
+  @Get('export/:jobId/download')
+  async download(@Param('jobId') jobId: string, @Query('dlToken') dlToken: string | undefined, @Res() res: Response) {
+    if (!dlToken) throw new BadRequestException('dlToken is required');
+    await this.backup.streamExportJobDownload({ jobId, dlToken, res });
   }
 }
 

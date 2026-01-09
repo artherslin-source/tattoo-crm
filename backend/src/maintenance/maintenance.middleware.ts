@@ -19,6 +19,8 @@ export class MaintenanceMiddleware {
     if (full.startsWith('/public/maintenance') || full.startsWith('/api/public/maintenance')) return next();
     if (full.startsWith('/admin/maintenance') || full.startsWith('/api/admin/maintenance')) return next();
     if (full === '/admin/backup/restore' || full === '/api/admin/backup/restore') return next();
+    // Allow backup export status/download so BOSS can operate during maintenance if needed.
+    if (full.startsWith('/admin/backup/export') || full.startsWith('/api/admin/backup/export')) return next();
     // Allow login during maintenance so BOSS can still authenticate and turn it off.
     if (full.startsWith('/auth/login') || full.startsWith('/api/auth/login')) return next();
     if (full.startsWith('/auth/refresh') || full.startsWith('/api/auth/refresh')) return next();

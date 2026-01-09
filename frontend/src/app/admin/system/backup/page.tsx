@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
 import { isBossRole } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,15 @@ async function downloadEncryptedFile(path: string, filenameFallback: string, pas
   window.URL.revokeObjectURL(url);
 }
 
+type ExportJobStatus = "queued" | "running" | "ready" | "failed";
+type ExportJobResp = {
+  jobId: string;
+  status: ExportJobStatus;
+  filename: string | null;
+  error: string | null;
+  download: { dlToken: string; expiresAt: number | null } | null;
+};
+
 export default function AdminSystemBackupPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -53,6 +62,7 @@ export default function AdminSystemBackupPage() {
   const [error, setError] = useState<string | null>(null);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceReason, setMaintenanceReason] = useState("系統維護中");
+  const [exportJobId, setExportJobId] = useState<string | null>(null);
 
   const refreshMaintenance = async () => {
     try {
@@ -121,8 +131,29 @@ export default function AdminSystemBackupPage() {
               setError(null);
               setMessage(null);
               try {
-                await downloadEncryptedFile("/admin/backup/export", "tattoo-crm-backup.zip.enc", password);
-                setMessage("已開始下載備份檔。");
+                // Start async job first; for large files, avoid fetch().blob() which is memory-heavy and unreliable.
+                const started = await postJsonWithAuth<{ jobId: string }>(`/admin/backup/export`, { password });
+                setExportJobId(started.jobId);
+                setMessage("備份產生中…（檔案大時可能需要數分鐘）");
+
+                const startedAt = Date.now();
+                const timeoutMs = 60 * 60 * 1000; // 1h
+
+                while (Date.now() - startedAt < timeoutMs) {
+                  const st = await getJsonWithAuth<ExportJobResp>(`/admin/backup/export/${started.jobId}`);
+                  if (st.status === "failed") throw new Error(st.error || "備份產生失敗");
+                  if (st.status === "ready" && st.download?.dlToken) {
+                    const dl = `/api/admin/backup/export/${started.jobId}/download?dlToken=${encodeURIComponent(
+                      st.download.dlToken
+                    )}`;
+                    window.location.assign(dl);
+                    setMessage("已開始下載備份檔。");
+                    return;
+                  }
+                  await new Promise((r) => window.setTimeout(r, 2500));
+                }
+
+                throw new Error("備份產生逾時，請稍後再試");
               } catch (e) {
                 setError(e instanceof Error ? e.message : "下載失敗");
               } finally {

@@ -100,6 +100,20 @@ function buildSecretsEnvText() {
   return lines.join('\n');
 }
 
+type ExportJobStatus = 'queued' | 'running' | 'ready' | 'failed';
+type ExportJob = {
+  id: string;
+  status: ExportJobStatus;
+  createdAt: number;
+  startedAt?: number;
+  finishedAt?: number;
+  filename?: string;
+  filePath?: string;
+  error?: string;
+  dlToken?: string;
+  dlExpiresAt?: number;
+};
+
 @Injectable()
 export class BackupService {
   constructor(
@@ -107,15 +121,72 @@ export class BackupService {
     private readonly maintenance: MaintenanceService,
   ) {}
 
+  private exportJobs = new Map<string, ExportJob>();
+  private exportLock: Promise<void> | null = null;
+
   private getUploadsPath() {
     // Railway volume mount in backend/railway.json
     return process.env.UPLOADS_DIR || '/app/uploads';
+  }
+
+  private getBackupsPath() {
+    return process.env.BACKUPS_DIR || path.join(this.getUploadsPath(), 'backups');
   }
 
   private getDatabaseUrl() {
     const url = process.env.DATABASE_URL;
     if (!url) throw new BadRequestException('DATABASE_URL is not configured');
     return url;
+  }
+
+  private async cleanupOldExportArtifacts() {
+    const keepMs = Number(process.env.BACKUP_EXPORT_KEEP_MS || 6 * 60 * 60 * 1000); // default 6h
+    const now = Date.now();
+    for (const [id, job] of this.exportJobs.entries()) {
+      const t = job.finishedAt ?? job.createdAt;
+      if (now - t > keepMs) this.exportJobs.delete(id);
+    }
+    const dir = this.getBackupsPath();
+    try {
+      const entries = await fsp.readdir(dir, { withFileTypes: true });
+      await Promise.all(
+        entries.map(async (e) => {
+          if (!e.isFile()) return;
+          const full = path.join(dir, e.name);
+          const st = await fsp.stat(full).catch(() => null);
+          if (!st) return;
+          if (now - st.mtimeMs > keepMs) await fsp.rm(full, { force: true }).catch(() => null);
+        }),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  private async withExportLock<T>(fn: () => Promise<T>): Promise<T> {
+    while (this.exportLock) {
+      try {
+        await this.exportLock;
+      } catch {
+        // ignore
+      }
+    }
+    let release!: () => void;
+    let rejector!: (e: unknown) => void;
+    this.exportLock = new Promise<void>((resolve, reject) => {
+      release = resolve;
+      rejector = reject;
+    });
+    try {
+      const out = await fn();
+      release();
+      this.exportLock = null;
+      return out;
+    } catch (e) {
+      rejector(e);
+      this.exportLock = null;
+      throw e;
+    }
   }
 
   private async writeEncryptedStreamHeaderV1(out: NodeJS.WritableStream, header: EncHeaderV1) {
@@ -125,6 +196,150 @@ export class BackupService {
     out.write(ENC_MAGIC);
     out.write(len);
     out.write(headerBuf);
+  }
+
+  private async buildEncryptedBackupFile(password: string): Promise<{ filePath: string; filename: string }> {
+    const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'backup-'));
+    const dbDump = path.join(tmpDir, 'db.dump');
+    const uploadsTar = path.join(tmpDir, 'uploads.tar.gz');
+
+    const uploadsPath = this.getUploadsPath();
+    const dbUrl = this.getDatabaseUrl();
+
+    await ensureDir(tmpDir);
+    await ensureDir(uploadsPath);
+
+    await runCmd('pg_dump', ['-Fc', '--no-owner', '--no-privileges', `--dbname=${dbUrl}`, '-f', dbDump]);
+    await runCmd('tar', ['-czf', uploadsTar, '-C', uploadsPath, '.']);
+
+    const manifest = {
+      schemaVersion: 1,
+      createdAt: new Date().toISOString(),
+      db: { format: 'pg_dump_custom', filename: 'db.dump' },
+      uploads: { path: uploadsPath, filename: 'uploads.tar.gz' },
+      requiredEnvKeys: requiredEnvKeysList(),
+    };
+    const manifestStr = JSON.stringify(manifest, null, 2);
+
+    const filename = `tattoo-crm-backup_${new Date()
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\..+/, '')
+      .replace('T', '_')}.zip.enc`;
+
+    const backupsDir = this.getBackupsPath();
+    await ensureDir(backupsDir);
+    const outPath = path.join(backupsDir, filename);
+
+    const salt = randomBytes(16);
+    const iv = randomBytes(12);
+    const n = 2 ** 15;
+    const r = 8;
+    const p = 1;
+    const key = buildKey(password, salt, n, r, p);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+
+    const header: EncHeaderV1 = {
+      v: 1,
+      alg: 'aes-256-gcm',
+      kdf: 'scrypt',
+      saltB64: salt.toString('base64'),
+      ivB64: iv.toString('base64'),
+      n,
+      r,
+      p,
+    };
+
+    const ws = fs.createWriteStream(outPath);
+    await this.writeEncryptedStreamHeaderV1(ws, header);
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.file(dbDump, { name: 'db.dump' });
+    archive.file(uploadsTar, { name: 'uploads.tar.gz' });
+    archive.append(manifestStr, { name: 'manifest.json' });
+
+    cipher.pipe(ws, { end: false });
+    archive.pipe(cipher);
+
+    const cleanupTmp = async () => {
+      await fsp.rm(tmpDir, { recursive: true, force: true }).catch(() => null);
+    };
+
+    await new Promise<void>((resolve, reject) => {
+      const onErr = (err: unknown) => reject(err);
+      archive.on('error', onErr);
+      cipher.on('error', onErr);
+      ws.on('error', onErr);
+
+      cipher.on('end', () => {
+        try {
+          const tag = cipher.getAuthTag();
+          ws.write(tag);
+          ws.end();
+        } catch (e) {
+          reject(e);
+        }
+      });
+      ws.on('finish', () => resolve());
+
+      void archive.finalize();
+    }).finally(cleanupTmp);
+
+    return { filePath: outPath, filename };
+  }
+
+  async startExportJob(input: { actor: any; password: string }) {
+    await this.cleanupOldExportArtifacts();
+    const id = randomBytes(12).toString('hex');
+    const job: ExportJob = { id, status: 'queued', createdAt: Date.now() };
+    this.exportJobs.set(id, job);
+
+    void this.withExportLock(async () => {
+      const j = this.exportJobs.get(id);
+      if (!j) return;
+      j.status = 'running';
+      j.startedAt = Date.now();
+      try {
+        const { filePath, filename } = await this.buildEncryptedBackupFile(input.password);
+        j.filename = filename;
+        j.filePath = filePath;
+        j.status = 'ready';
+        j.finishedAt = Date.now();
+        j.dlToken = randomBytes(24).toString('hex');
+        j.dlExpiresAt = Date.now() + Number(process.env.BACKUP_EXPORT_DL_TOKEN_TTL_MS || 15 * 60 * 1000); // 15m
+      } catch (e) {
+        j.status = 'failed';
+        j.finishedAt = Date.now();
+        j.error = e instanceof Error ? e.message : String(e);
+      }
+    });
+
+    return { jobId: id };
+  }
+
+  getExportJob(jobId: string): ExportJob | null {
+    return this.exportJobs.get(jobId) || null;
+  }
+
+  async streamExportJobDownload(input: { jobId: string; dlToken: string; res: Response }) {
+    const job = this.exportJobs.get(input.jobId);
+    if (!job) throw new BadRequestException('Job not found');
+    if (job.status !== 'ready' || !job.filePath || !job.filename) throw new BadRequestException('Job not ready');
+    if (!job.dlToken || input.dlToken !== job.dlToken) throw new BadRequestException('Invalid download token');
+    if (job.dlExpiresAt && Date.now() > job.dlExpiresAt) throw new BadRequestException('Download token expired');
+
+    input.res.setHeader('Content-Type', 'application/octet-stream');
+    input.res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+    input.res.setHeader('Cache-Control', 'no-store');
+    if (typeof (input.res as any).flushHeaders === 'function') (input.res as any).flushHeaders();
+
+    await new Promise<void>((resolve, reject) => {
+      const rs = fs.createReadStream(job.filePath!);
+      rs.on('error', reject);
+      input.res.on('error', reject);
+      input.res.on('finish', () => resolve());
+      rs.pipe(input.res);
+    });
   }
 
   async streamEncryptedBackupZip(res: Response, input: { actor: any; password: string }) {
