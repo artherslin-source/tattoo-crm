@@ -7,6 +7,7 @@ import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { extname, join } from 'path';
 import { z } from 'zod';
+import { calculatePriceAndDuration, getAddonTotal } from '../cart/pricing';
 
 // 嘗試將瀏覽器上傳時以 latin1/ISO-8859-1 編碼的檔名轉為 UTF-8（支援繁體中文）
 function normalizeFilename(name: string): string {
@@ -36,6 +37,10 @@ const CreateServiceSchema = z.object({
 });
 
 const UpdateServiceSchema = CreateServiceSchema.partial();
+
+const QuoteSchema = z.object({
+  selectedVariants: z.record(z.string(), z.any()).optional().default({}),
+});
 
 @Controller('admin/services')
 @UseGuards(AuthGuard('jwt'), AccessGuard)
@@ -92,6 +97,38 @@ export class AdminServicesController {
   async create(@Body() body: unknown) {
     const input = CreateServiceSchema.parse(body);
     return this.services.create(input);
+  }
+
+  @Post(':id/quote')
+  async quote(@Param('id') id: string, @Body() body: unknown) {
+    const input = QuoteSchema.parse(body);
+    const selectedVariants = input.selectedVariants ?? {};
+
+    // Admin quote needs active variants for pricing logic
+    const prisma = (this.services as any)['prisma'];
+    const withVariants = await prisma.service.findUnique({
+      where: { id },
+      include: { variants: { where: { isActive: true } } },
+    });
+    if (!withVariants) throw new BadRequestException('服務不存在');
+
+    const { finalPrice: itemFinalPrice, estimatedDuration } = calculatePriceAndDuration(
+      withVariants.price,
+      withVariants.durationMin,
+      withVariants.variants,
+      selectedVariants,
+    );
+    const addonTotal = getAddonTotal(selectedVariants);
+
+    return {
+      basePrice: withVariants.price,
+      // Keep same behavior as billing/cart: final shown price includes addons from selectedVariants.
+      finalPrice: Math.max(0, Math.trunc(Number(itemFinalPrice + addonTotal))),
+      itemFinalPrice: Math.max(0, Math.trunc(Number(itemFinalPrice))),
+      addonTotal: Math.max(0, Math.trunc(Number(addonTotal))),
+      estimatedDuration,
+      normalizedSelectedVariants: selectedVariants,
+    };
   }
 
   @Put(':id')

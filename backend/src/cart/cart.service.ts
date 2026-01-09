@@ -2,24 +2,12 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { AddToCartDto, UpdateCartItemDto, CartResponseDto, CartItemResponseDto } from './dto/add-to-cart.dto';
 import { CheckoutCartDto } from './dto/checkout-cart.dto';
+import { calculatePriceAndDuration, getAddonTotal } from './pricing';
 // dayBounds was previously used for slot-based conflict checks; C-flow INTENT checkout doesn't need it.
 
 @Injectable()
 export class CartService {
   constructor(private prisma: PrismaService) {}
-
-  private getAddonTotal(selectedVariants: any): number {
-    const v = selectedVariants && typeof selectedVariants === 'object' ? selectedVariants : {};
-    const candidates = [v.design_fee, v.custom_addon];
-    let sum = 0;
-    for (const raw of candidates) {
-      const n = typeof raw === 'number' ? raw : Number(raw);
-      if (!Number.isFinite(n)) continue;
-      if (n <= 0) continue;
-      sum += Math.round(n);
-    }
-    return sum;
-  }
 
   /**
    * 獲取或創建購物車
@@ -91,7 +79,7 @@ export class CartService {
     // 所有規格都非必選，不需要驗證
 
     // 計算價格和時長
-    const { finalPrice, estimatedDuration } = this.calculatePriceAndDuration(
+    const { finalPrice, estimatedDuration } = calculatePriceAndDuration(
       service.price,
       service.durationMin,
       service.variants,
@@ -161,7 +149,7 @@ export class CartService {
     };
 
     // 重新計算價格和時長
-    const { finalPrice, estimatedDuration } = this.calculatePriceAndDuration(
+    const { finalPrice, estimatedDuration } = calculatePriceAndDuration(
       cartItem.service.price,
       cartItem.service.durationMin,
       cartItem.service.variants,
@@ -275,7 +263,7 @@ export class CartService {
     }
 
     // 計算總價和總時長
-    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice + this.getAddonTotal(item.selectedVariants), 0);
+    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice + getAddonTotal(item.selectedVariants), 0);
     const totalDuration = cart.items.reduce((sum, item) => sum + item.estimatedDuration, 0);
 
     // 轉換為響應格式
@@ -344,7 +332,7 @@ export class CartService {
     }
 
     // 計算總價和總時長（用於 cartSnapshot）
-    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice + this.getAddonTotal(item.selectedVariants), 0);
+    const totalPrice = cart.items.reduce((sum, item) => sum + item.finalPrice + getAddonTotal(item.selectedVariants), 0);
     const totalDuration = cart.items.reduce((sum, item) => sum + item.estimatedDuration, 0);
 
     // 創建購物車快照
@@ -423,214 +411,6 @@ export class CartService {
    * 計算價格（根據選擇的規格）
    * 新價格體系：尺寸×顏色組合定價
    */
-  private calculatePriceAndDuration(
-    basePrice: number,
-    baseDuration: number,
-    variants: any[],
-    selectedVariants: any,
-  ): { finalPrice: number; estimatedDuration: number } {
-    let finalPrice = 0;
-    const estimatedDuration = 60; // 固定預設值 (不再計算時長)
-
-    // 檢查是否有特殊定價邏輯（圖騰小圖案：彩色=黑白+1000）
-    // 需要檢查彩色的metadata，因為只有彩色有colorPriceDiff
-    const colorVariantForMetadata = variants.find(
-      (v) => v.type === 'color' && v.name === '彩色',
-    );
-    const colorMetadata = colorVariantForMetadata?.metadata as any;
-    const hasColorPriceDiff = colorMetadata?.colorPriceDiff !== undefined;
-    
-    // 1. 優先使用顏色規格的固定價格（根據價格表，顏色價格是完整價格）
-    // 檢查 color 和 size 是否為非空字符串（安全檢查，避免 undefined/null 錯誤）
-    const hasColor = selectedVariants.color && 
-                     typeof selectedVariants.color === 'string' && 
-                     selectedVariants.color.trim() !== '';
-    const hasSize = selectedVariants.size && 
-                    typeof selectedVariants.size === 'string' && 
-                    selectedVariants.size.trim() !== '';
-    
-    if (hasColor && hasSize) {
-      const colorVariant = variants.find(
-        (v) => v.type === 'color' && v.name === selectedVariants.color,
-      );
-      console.log(`🔍 [後端價格計算] 選擇的顏色: ${selectedVariants.color}`, colorVariant);
-      console.log(`🔍 [後端價格計算] 選擇的尺寸: ${selectedVariants.size}`);
-      console.log(`🔍 [後端價格計算] 是否有colorPriceDiff: ${hasColorPriceDiff}`);
-      
-      if (colorVariant) {
-        // 獲取尺寸的價格（黑白價格）
-        const sizeVariant = variants.find(
-          (v) => v.type === 'size' && v.name === selectedVariants.size,
-        );
-        
-        if (sizeVariant) {
-          const blackWhitePrice = sizeVariant.priceModifier;
-          console.log(`🔍 [後端價格計算] 尺寸價格（黑白）: NT$ ${blackWhitePrice}`);
-          
-          // 如果有colorPriceDiff邏輯（圖騰小圖案）
-          if (hasColorPriceDiff) {
-            if (selectedVariants.color === '彩色') {
-              const excludeSizes = colorMetadata.excludeSizes || [];
-              
-              // 檢查是否在排除列表中（如Z尺寸）
-              if (excludeSizes.includes(selectedVariants.size)) {
-                // 使用特殊的彩色價格（如Z彩色=1000）
-                finalPrice = colorMetadata.zColorPrice || 1000;
-                console.log(`💰 使用排除尺寸的特殊彩色價格 [${selectedVariants.size} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
-              } else {
-                // 彩色價格 = 黑白價格 + 差價
-                const colorPriceDiff = colorMetadata.colorPriceDiff || 1000;
-                finalPrice = blackWhitePrice + colorPriceDiff;
-                console.log(`💰 使用尺寸+顏色差價 [${selectedVariants.size} 黑白=NT$ ${blackWhitePrice} + 彩色差價=NT$ ${colorPriceDiff}]: NT$ ${finalPrice}`);
-              }
-            } else if (selectedVariants.color === '黑白') {
-              // 黑白價格 = 尺寸價格
-              finalPrice = blackWhitePrice;
-              console.log(`💰 使用尺寸價格（黑白） [${selectedVariants.size}]: NT$ ${finalPrice}`);
-            }
-          } else {
-            // 沒有colorPriceDiff邏輯，使用原有邏輯
-            const metadata = colorVariant.metadata as any;
-            if (metadata?.sizePrices && selectedVariants.size) {
-              // 向後兼容：使用metadata中的sizePrices（舊邏輯）
-              const sizePrice = metadata.sizePrices[selectedVariants.size];
-              if (sizePrice !== undefined) {
-                finalPrice = sizePrice;
-                console.log(`💰 使用metadata中的尺寸+顏色價格 [${selectedVariants.size} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
-              } else {
-                // 如果metadata中沒有該尺寸的價格，回退到其他邏輯
-                console.warn(`⚠️ metadata中沒有尺寸「${selectedVariants.size}」的價格，使用其他邏輯`);
-                if (colorVariant.priceModifier >= 1000) {
-                  finalPrice = colorVariant.priceModifier;
-                } else if (selectedVariants.size) {
-                  const sizeVariant = variants.find(
-                    (v) => v.type === 'size' && v.name === selectedVariants.size,
-                  );
-                  if (sizeVariant) {
-                    finalPrice = sizeVariant.priceModifier;
-                  }
-                }
-              }
-            } else if (colorVariant.priceModifier >= 1000) {
-              // 如果顏色規格的 priceModifier >= 1000，視為固定價格（完整價格）
-              finalPrice = colorVariant.priceModifier;
-              console.log(`💰 使用顏色固定價格 [${selectedVariants.color}]: NT$ ${finalPrice}`);
-            } else if (colorVariant.priceModifier > 0) {
-              // 向後兼容：使用尺寸 + 顏色加價
-              let sizePrice = 0;
-              const sizeVariant = selectedVariants.size 
-                ? variants.find((v) => v.type === 'size' && v.name === selectedVariants.size)
-                : null;
-              
-              if (sizeVariant) {
-                sizePrice = sizeVariant.priceModifier;
-              }
-              finalPrice = sizePrice + colorVariant.priceModifier;
-              console.log(`💰 使用尺寸+顏色加價 [${selectedVariants.size || '無尺寸'} + ${selectedVariants.color}]: NT$ ${finalPrice}`);
-            } else {
-              // priceModifier 為 0 或負數，使用尺寸價格（黑白）
-              if (selectedVariants.size) {
-                const sizeVariant = variants.find(
-                  (v) => v.type === 'size' && v.name === selectedVariants.size,
-                );
-                if (sizeVariant) {
-                  finalPrice = sizeVariant.priceModifier;
-                  console.log(`💰 使用尺寸價格 [${selectedVariants.size}]: NT$ ${finalPrice}`);
-                }
-              }
-            }
-          }
-        } else {
-          console.warn(`⚠️ 找不到尺寸「${selectedVariants.size}」`);
-        }
-      } else {
-        console.warn(`⚠️ 找不到顏色規格: ${selectedVariants.color}`);
-      }
-    } else if (hasSize) {
-      // 如果只選擇了尺寸，使用尺寸價格
-      const sizeVariant = variants.find(
-        (v) => v.type === 'size' && v.name === selectedVariants.size,
-      );
-      if (sizeVariant) {
-        finalPrice = sizeVariant.priceModifier;
-      } else {
-        // 如果找不到對應的尺寸，使用基礎價格
-        finalPrice = basePrice;
-      }
-    } else if (hasColor) {
-      // 如果只選擇了顏色，使用顏色價格
-      const colorVariant = variants.find(
-        (v) => v.type === 'color' && v.name === selectedVariants.color,
-      );
-      if (colorVariant) {
-        if (colorVariant.priceModifier >= 1000) {
-          // 固定價格
-          finalPrice = colorVariant.priceModifier;
-        } else if (colorVariant.priceModifier > 0) {
-          // 加價
-          finalPrice = colorVariant.priceModifier;
-        } else {
-          // 價格為 0，使用基礎價格
-          finalPrice = basePrice;
-        }
-      } else {
-        // 如果找不到對應的顏色，使用基礎價格
-        finalPrice = basePrice;
-      }
-    } else {
-      // 如果都沒有選擇，使用基礎價格
-      finalPrice = basePrice;
-    }
-
-    // 3. 計算部位調整
-    if (selectedVariants.position && 
-        typeof selectedVariants.position === 'string' && 
-        selectedVariants.position.trim() !== '') {
-      const positionVariant = variants.find(
-        (v) => v.type === 'position' && v.name === selectedVariants.position,
-      );
-      if (positionVariant) {
-        finalPrice += positionVariant.priceModifier;
-      }
-    }
-
-    // 4. 計算左右半邊調整
-    if (selectedVariants.side && 
-        typeof selectedVariants.side === 'string' && 
-        selectedVariants.side.trim() !== '') {
-      const sideVariant = variants.find(
-        (v) => v.type === 'side' && v.name === selectedVariants.side,
-      );
-      if (sideVariant) {
-        finalPrice += sideVariant.priceModifier;
-      }
-    }
-
-    // 5. 設計費另計，不計入總價
-    // 設計費將在後端或結帳時單獨處理，不在這裡加入 finalPrice
-
-    // 6. 計算增出範圍與細膩度加購（custom_addon 是直接輸入的價格）
-    if (selectedVariants.custom_addon && typeof selectedVariants.custom_addon === 'number' && selectedVariants.custom_addon > 0) {
-      finalPrice += selectedVariants.custom_addon;
-      console.log(`💰 增出範圍與細膩度加購: +NT$ ${selectedVariants.custom_addon}`);
-    }
-
-    // 7. 計算其他規格（風格、複雜度等）
-    ['style', 'complexity', 'technique', 'custom'].forEach((type) => {
-      const selectedValue = selectedVariants[type];
-      if (selectedValue) {
-        const variant = variants.find(
-          (v) => v.type === type && v.name === selectedValue,
-        );
-        if (variant) {
-          finalPrice += variant.priceModifier;
-        }
-      }
-    });
-
-    return { finalPrice, estimatedDuration };
-  }
-
   /**
    * 清理過期購物車（定時任務調用）
    */

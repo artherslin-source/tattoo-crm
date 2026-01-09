@@ -15,6 +15,7 @@ const CreateAppointmentSchema = z.object({
   artistId: z.string(),
   branchId: z.string(),
   notes: z.string().optional().or(z.undefined()),
+  selectedVariants: z.record(z.string(), z.any()).optional(),
   // 從聯絡訂單創建預約的欄位
   name: z.string().optional(),
   email: z.string().email().optional(),
@@ -165,6 +166,7 @@ export class AdminAppointmentsController {
         artistId: input.artistId,
         branchId: input.branchId,
         notes: input.notes,
+        selectedVariants: input.selectedVariants,
         contactId: contactId,
       });
     } catch (error) {

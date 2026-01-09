@@ -63,6 +63,18 @@ interface AppointmentFormData {
   contactId: string;
 }
 
+type ServiceVariant = {
+  id: string;
+  type: string;
+  name: string;
+  priceModifier: number;
+  sortOrder: number;
+  isRequired?: boolean;
+  metadata?: any;
+};
+
+type GroupedVariants = Record<string, ServiceVariant[]>;
+
 type ContactDetail = {
   id: string;
   name?: string | null;
@@ -180,6 +192,17 @@ export default function AppointmentForm({
   const [lockedOwnerArtistId, setLockedOwnerArtistId] = useState<string>("");
   const [cartSnapshot, setCartSnapshot] = useState<ContactDetail['cartSnapshot'] | null>(null);
 
+  // Manual appointment pricing (no cartSnapshot): variants + quote by selectedVariants
+  const [serviceVariants, setServiceVariants] = useState<GroupedVariants>({});
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, any>>({});
+  const [quote, setQuote] = useState<{
+    basePrice: number;
+    finalPrice: number;
+    itemFinalPrice?: number;
+    addonTotal?: number;
+    estimatedDuration?: number;
+  } | null>(null);
+
   const [formData, setFormData] = useState<AppointmentFormData>({
     userId: "",
     name: fromContact?.name ?? searchParams.get("name") ?? "",
@@ -246,6 +269,63 @@ export default function AppointmentForm({
 
     fetchData();
   }, [canFetch]);
+
+  // Fetch variants when service changes (manual creation only; contact conversion uses cartSnapshot)
+  useEffect(() => {
+    const run = async () => {
+      if (!formData.serviceId) {
+        setServiceVariants({});
+        setSelectedVariants({});
+        setQuote(null);
+        return;
+      }
+      if (cartSnapshot && cartSnapshot.items?.length) return;
+
+      try {
+        const res = await fetch(`/api/services/${formData.serviceId}/variants`, { cache: "no-store" });
+        if (!res.ok) {
+          setServiceVariants({});
+          setSelectedVariants({});
+          setQuote(null);
+          return;
+        }
+        const data = (await res.json()) as GroupedVariants;
+        setServiceVariants(data || {});
+        setSelectedVariants({});
+        setQuote(null);
+      } catch (e) {
+        console.warn("Failed to fetch service variants:", e);
+        setServiceVariants({});
+        setSelectedVariants({});
+        setQuote(null);
+      }
+    };
+    run();
+  }, [formData.serviceId, cartSnapshot]);
+
+  // Quote price for manual creation when selectedVariants changes
+  useEffect(() => {
+    const run = async () => {
+      if (!formData.serviceId) return;
+      if (cartSnapshot && cartSnapshot.items?.length) return;
+
+      try {
+        const resp = await postJsonWithAuth<{
+          basePrice: number;
+          finalPrice: number;
+          itemFinalPrice?: number;
+          addonTotal?: number;
+          estimatedDuration?: number;
+        }>(`/admin/services/${formData.serviceId}/quote`, { selectedVariants });
+        setQuote(resp);
+      } catch (e) {
+        console.warn("Quote failed:", e);
+        setQuote(null);
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.serviceId, JSON.stringify(selectedVariants), cartSnapshot]);
 
   // If coming from a Contact, fetch the latest contact detail and apply ownerArtist lock rules.
   useEffect(() => {
@@ -392,6 +472,29 @@ export default function AppointmentForm({
     }
   };
 
+  const handleVariantChange = (key: string, raw: any) => {
+    setSelectedVariants((prev) => {
+      const next = { ...prev };
+      const isNumberField = key === "design_fee" || key === "custom_addon";
+      if (isNumberField) {
+        const n = typeof raw === "number" ? raw : Number(raw);
+        if (!Number.isFinite(n) || n <= 0) {
+          delete next[key];
+        } else {
+          next[key] = Math.round(n);
+        }
+      } else {
+        const v = typeof raw === "string" ? raw.trim() : String(raw ?? "").trim();
+        if (!v) {
+          delete next[key];
+        } else {
+          next[key] = v;
+        }
+      }
+      return next;
+    });
+  };
+
   // Scheduling uses holdMin (store-wide default 150; admin can adjust)
   const durationMin = useMemo(() => holdMin, [holdMin]);
 
@@ -503,6 +606,7 @@ export default function AppointmentForm({
         holdMin,
         notes: formData.notes || undefined,
         contactId: formData.contactId || undefined,
+        selectedVariants: cartSnapshot && cartSnapshot.items?.length ? undefined : selectedVariants,
       };
 
       const created = await postJsonWithAuth<{ id: string }>("/admin/appointments", payload);
@@ -817,6 +921,90 @@ export default function AppointmentForm({
                 ))}
               </select>
             </div>
+
+            {/* 規格（後台手動新增預約用；若由聯絡轉換則以 cartSnapshot 為準） */}
+            {!cartSnapshot?.items?.length && formData.serviceId ? (
+              <div className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div className="flex flex-col gap-1">
+                  <div className="text-sm font-medium text-gray-900">服務規格（試算計價）</div>
+                  <div className="text-xs text-gray-600">
+                    選擇規格後會依「前台購物車同一套規則」試算；建立預約時會寫入購物車快照，後續帳務沿用既有流程。
+                  </div>
+                </div>
+
+                {/* Quote preview */}
+                {quote ? (
+                  <div className="flex items-center justify-between rounded-md bg-white px-3 py-2 border border-gray-200">
+                    <div className="text-sm text-gray-700">試算金額</div>
+                    <div className="text-sm font-semibold text-blue-700">
+                      NT$ {Number(quote.finalPrice || 0).toLocaleString()}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Variant fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(["size", "color", "position", "side", "style", "complexity"] as const).map((key) => {
+                    const list = (serviceVariants[key] || []).slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                    if (!list.length) return null;
+                    const label = VARIANT_LABEL_MAP[key] || key;
+                    return (
+                      <div key={key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+                        <select
+                          value={String(selectedVariants[key] ?? "")}
+                          onChange={(e) => handleVariantChange(key, e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">（不選）</option>
+                          {list.map((v) => (
+                            <option key={v.id} value={v.name}>
+                              {v.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+
+                  {serviceVariants.design_fee?.length ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {VARIANT_LABEL_MAP.design_fee || "design_fee"}
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={100}
+                        value={String(selectedVariants.design_fee ?? "")}
+                        onChange={(e) => handleVariantChange("design_fee", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
+                  ) : null}
+
+                  {serviceVariants.custom_addon?.length ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {VARIANT_LABEL_MAP.custom_addon || "custom_addon"}
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={100}
+                        value={String(selectedVariants.custom_addon ?? "")}
+                        onChange={(e) => handleVariantChange("custom_addon", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
 
             {/* 排程保留時間（可自由加減） */}
             <div>

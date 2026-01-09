@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { isBoss, isArtist, type AccessActor } from '../common/access/access.types';
 import type { Prisma } from '@prisma/client';
 import { BillingService } from '../billing/billing.service';
+import { calculatePriceAndDuration, getAddonTotal } from '../cart/pricing';
 
 @Injectable()
 export class AdminAppointmentsService {
@@ -271,6 +272,7 @@ export class AdminAppointmentsService {
     artistId: string; 
     branchId: string; 
     notes?: string;
+    selectedVariants?: Record<string, any>;
     contactId?: string;
   }) {
     try {
@@ -294,7 +296,10 @@ export class AdminAppointmentsService {
       // 驗證所有外鍵是否存在
       const [user, service, artist, branch] = await Promise.all([
         this.prisma.user.findUnique({ where: { id: input.userId } }),
-        this.prisma.service.findUnique({ where: { id: input.serviceId } }),
+        this.prisma.service.findUnique({
+          where: { id: input.serviceId },
+          include: { variants: { where: { isActive: true } } },
+        }),
         this.prisma.user.findUnique({ where: { id: input.artistId } }), // 修正：artistId 實際上是 User 表的 ID
         this.prisma.branch.findUnique({ where: { id: input.branchId } }),
       ]);
@@ -389,6 +394,39 @@ export class AdminAppointmentsService {
           }
         }
 
+        const selectedVariants = input.selectedVariants ?? null;
+        // Build cartSnapshot consistent with checkout cartSnapshot when selectedVariants is provided.
+        const cartSnapshot =
+          selectedVariants && typeof selectedVariants === 'object'
+            ? (() => {
+                const { finalPrice: itemFinalPrice, estimatedDuration } = calculatePriceAndDuration(
+                  service.price,
+                  service.durationMin,
+                  (service as any).variants ?? [],
+                  selectedVariants,
+                );
+                const addonTotal = getAddonTotal(selectedVariants);
+                const totalPrice = itemFinalPrice + addonTotal;
+                const totalDuration = estimatedDuration;
+                return {
+                  items: [
+                    {
+                      serviceId: service.id,
+                      serviceName: service.name,
+                      selectedVariants,
+                      basePrice: service.price,
+                      finalPrice: itemFinalPrice,
+                      estimatedDuration,
+                      notes: input.notes,
+                      referenceImages: [],
+                    },
+                  ],
+                  totalPrice,
+                  totalDuration,
+                };
+              })()
+            : null;
+
         const created = await tx.appointment.create({
           data: {
             startAt: input.startAt,
@@ -400,6 +438,7 @@ export class AdminAppointmentsService {
             notes: input.notes,
             contactId: input.contactId,
             status: "PENDING",
+            ...(cartSnapshot ? { cartSnapshot: cartSnapshot as any } : {}),
           },
           include: {
             user: { select: { id: true, name: true, email: true } },
