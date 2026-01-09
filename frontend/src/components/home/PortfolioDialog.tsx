@@ -3,8 +3,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { X, Image as ImageIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getApiBase } from "@/lib/api";
+import useMediaQuery from "@/hooks/useMediaQuery";
 
 interface Artist {
   id: string;
@@ -43,6 +44,19 @@ const MOCK_PORTFOLIO_COLORS = [
 export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps) {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 640px)");
+
+  // Viewer overlay state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ startDist: number; startScale: number } | null>(null);
+  const dragRef = useRef<{ lastX: number; lastY: number } | null>(null);
+  const lastTapRef = useRef<number>(0);
+
+  const displayed = useMemo(() => items, [items]);
 
   useEffect(() => {
     const fetchPortfolio = async () => {
@@ -64,11 +78,108 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
     fetchPortfolio();
   }, [artist, open]);
 
+  useEffect(() => {
+    if (!viewerOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setViewerOpen(false);
+      if (e.key === "ArrowLeft") setViewerIndex((i) => Math.max(0, i - 1));
+      if (e.key === "ArrowRight") setViewerIndex((i) => Math.min(displayed.length - 1, i + 1));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [viewerOpen, displayed.length]);
+
+  useEffect(() => {
+    // reset transforms when switching image or closing
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+    pointersRef.current.clear();
+    pinchRef.current = null;
+    dragRef.current = null;
+  }, [viewerIndex, viewerOpen]);
+
+  const openViewer = (index: number) => {
+    if (!displayed.length) return;
+    setViewerIndex(index);
+    setViewerOpen(true);
+  };
+
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+  const handleViewerPointerDown = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    const now = Date.now();
+    if (now - lastTapRef.current < 320) {
+      // double tap/click
+      setScale((s) => {
+        const next = s > 1 ? 1 : 2;
+        return next;
+      });
+      setOffset({ x: 0, y: 0 });
+      pointersRef.current.clear();
+      pinchRef.current = null;
+      dragRef.current = null;
+      lastTapRef.current = 0;
+      return;
+    }
+    lastTapRef.current = now;
+
+    const pts = Array.from(pointersRef.current.values());
+    if (pts.length === 2) {
+      const dx = pts[0].x - pts[1].x;
+      const dy = pts[0].y - pts[1].y;
+      pinchRef.current = { startDist: Math.hypot(dx, dy), startScale: scale };
+      dragRef.current = null;
+    } else if (pts.length === 1) {
+      dragRef.current = { lastX: e.clientX, lastY: e.clientY };
+    }
+  };
+
+  const handleViewerPointerMove = (e: React.PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = Array.from(pointersRef.current.values());
+
+    if (pts.length === 2 && pinchRef.current) {
+      const dx = pts[0].x - pts[1].x;
+      const dy = pts[0].y - pts[1].y;
+      const dist = Math.hypot(dx, dy);
+      const nextScale = clamp((pinchRef.current.startScale * dist) / pinchRef.current.startDist, 1, 4);
+      setScale(nextScale);
+      return;
+    }
+
+    if (pts.length === 1 && dragRef.current) {
+      const dx = e.clientX - dragRef.current.lastX;
+      const dy = e.clientY - dragRef.current.lastY;
+      dragRef.current = { lastX: e.clientX, lastY: e.clientY };
+      if (scale > 1) {
+        setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
+      }
+    }
+  };
+
+  const handleViewerPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    const pts = Array.from(pointersRef.current.values());
+    if (pts.length < 2) pinchRef.current = null;
+    if (pts.length === 0) dragRef.current = null;
+  };
+
   if (!artist) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto bg-white dark:bg-neutral-900 p-0 w-[95vw] md:w-full">
+      <DialogContent
+        disableTransform={isMobile}
+        className={
+          isMobile
+            ? "left-0 right-0 bottom-0 top-auto max-w-none w-full h-[92vh] overflow-y-auto bg-white dark:bg-neutral-900 p-0 rounded-t-2xl border border-gray-200 dark:border-neutral-800"
+            : "max-w-5xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto bg-white dark:bg-neutral-900 p-0 w-[95vw] md:w-full"
+        }
+      >
         {/* 標題區 - 響應式 padding */}
         <DialogHeader className="sticky top-0 z-10 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-700 p-4 sm:p-6">
           <div className="flex items-start gap-3 sm:gap-4">
@@ -113,15 +224,25 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
           </div>
 
           {/* 作品集網格 - 完整響應式 */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
-            {(items.length ? items : []).map((item) => (
-              <div key={item.id} className="group relative aspect-square overflow-hidden rounded-lg sm:rounded-xl">
+          <div className="columns-2 md:columns-3 gap-3 sm:gap-4">
+            {items.map((item, idx) => (
+              <button
+                key={item.id}
+                type="button"
+                className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
+                onClick={() => openViewer(idx)}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.imageUrl || 'https://placehold.co/800x800?text=Work'} alt={item.title} className="absolute inset-0 h-full w-full object-cover" />
+                <img
+                  src={item.imageUrl || "https://placehold.co/800x800?text=Work"}
+                  alt={item.title}
+                  className="w-full h-auto object-cover"
+                  loading="lazy"
+                />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
-                  <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title || '作品'}</p>
+                  <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title || "作品"}</p>
                 </div>
-              </div>
+              </button>
             ))}
 
             {/* 若沒有作品，顯示示意色塊作為暫時替代 */}
@@ -130,9 +251,12 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
                 {MOCK_PORTFOLIO_COLORS.map((item) => (
                   <div
                     key={item.id}
-                    className="group relative aspect-square overflow-hidden rounded-lg sm:rounded-xl"
+                    className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-90`} />
+                    <div
+                      className={`bg-gradient-to-br ${item.gradient} opacity-90`}
+                      style={{ height: 140 + (item.id % 3) * 40 }}
+                    />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
                       <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title}</p>
                     </div>
@@ -173,6 +297,95 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
             </div>
           </div>
         </div>
+
+        {/* Fullscreen viewer overlay */}
+        {viewerOpen && displayed.length > 0 ? (
+          <div className="fixed inset-0 z-[120] bg-black/95">
+            <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-3 sm:p-4">
+              <div className="text-xs sm:text-sm text-white/80">
+                {viewerIndex + 1} / {displayed.length}
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewerOpen(false)}
+                className="rounded-full bg-white/10 px-3 py-2 text-xs sm:text-sm text-white hover:bg-white/15"
+              >
+                關閉
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/15"
+              onClick={() => setViewerIndex((i) => Math.max(0, i - 1))}
+              disabled={viewerIndex === 0}
+              aria-label="上一張"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/15"
+              onClick={() => setViewerIndex((i) => Math.min(displayed.length - 1, i + 1))}
+              disabled={viewerIndex === displayed.length - 1}
+              aria-label="下一張"
+            >
+              ›
+            </button>
+
+            <div className="absolute inset-0 pt-14 sm:pt-16 pb-14 sm:pb-16 flex items-center justify-center">
+              <div
+                className="h-full w-full flex items-center justify-center touch-none"
+                onPointerDown={handleViewerPointerDown}
+                onPointerMove={handleViewerPointerMove}
+                onPointerUp={handleViewerPointerUp}
+                onPointerCancel={handleViewerPointerUp}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={displayed[viewerIndex]?.imageUrl || "https://placehold.co/1200x1200?text=Work"}
+                  alt={displayed[viewerIndex]?.title || "作品"}
+                  className="max-h-full max-w-full select-none"
+                  style={{
+                    transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`,
+                    transformOrigin: "center",
+                    transition: pointersRef.current.size === 0 ? "transform 120ms ease-out" : "none",
+                  }}
+                  draggable={false}
+                />
+              </div>
+            </div>
+
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 p-3">
+              <button
+                type="button"
+                className="rounded-full bg-white/10 px-4 py-2 text-xs sm:text-sm text-white hover:bg-white/15"
+                onClick={() => setViewerIndex((i) => Math.max(0, i - 1))}
+                disabled={viewerIndex === 0}
+              >
+                上一張
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-white/10 px-4 py-2 text-xs sm:text-sm text-white hover:bg-white/15"
+                onClick={() => {
+                  setScale(1);
+                  setOffset({ x: 0, y: 0 });
+                }}
+              >
+                重置
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-white/10 px-4 py-2 text-xs sm:text-sm text-white hover:bg-white/15"
+                onClick={() => setViewerIndex((i) => Math.min(displayed.length - 1, i + 1))}
+                disabled={viewerIndex === displayed.length - 1}
+              >
+                下一張
+              </button>
+            </div>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

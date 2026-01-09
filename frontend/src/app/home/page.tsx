@@ -565,7 +565,80 @@ function HomePageContent({
                   </div>
                 </div>
 
-                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {/* Mobile: horizontal scroller; md+ keep grid */}
+                <div className="md:hidden -mx-2 px-2 overflow-x-auto">
+                  <div className="flex gap-4 snap-x snap-mandatory pb-2">
+                    {uniqueArtists.slice(0, 6).map((artist) => (
+                      <Card
+                        key={artist.id}
+                        className="border-white/10 bg-white/5 text-white relative snap-start min-w-[82vw] max-w-[82vw]"
+                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                      >
+                        <CardHeader>
+                          <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900">
+                            {artist.photoUrl ? (
+                              <Image src={artist.photoUrl} alt={artist.displayName} fill className="object-cover" unoptimized />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white/70">
+                                {artist.displayName.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-2 mt-4">
+                            <CardTitle className="text-xl text-white flex-1">{artist.displayName}</CardTitle>
+                            {artist.branch?.name && (
+                              <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg whitespace-nowrap">
+                                {artist.branch.name}
+                              </span>
+                            )}
+                          </div>
+                          <CardDescription className="text-sm text-neutral-300">{artist.speciality}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-sm text-neutral-200">
+                          <p>{artist.bio}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {(artist.styles || [])
+                              .filter((style) => {
+                                const englishTags = ['Traditional', 'Nature', 'Minimalist', 'Japanese', 'Geometric'];
+                                return !englishTags.includes(style);
+                              })
+                              .map((style) => (
+                              <Badge key={style} variant="secondary" className="bg-white/10 text-white">
+                                {style}
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              variant="outline"
+                              className="w-full border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
+                              onClick={() => {
+                                setSelectedArtist({ ...artist, id: artist.user.id } as unknown as Artist);
+                                setPortfolioDialogOpen(true);
+                              }}
+                            >
+                              查看作品集
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="w-full border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
+                              onClick={() => prefillBookingArtist(artist)}
+                            >
+                              立即預約
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {!uniqueArtists.length && (
+                      <div className="min-w-[82vw] max-w-[82vw] rounded-2xl border border-dashed border-white/10 p-8 text-center text-neutral-300 snap-start">
+                        正在載入刺青師資訊，敬請稍候。
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="hidden md:grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {uniqueArtists.slice(0, 6).map((artist) => (
                     <Card 
                       key={artist.id} 
@@ -584,7 +657,6 @@ function HomePageContent({
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-4">
                           <CardTitle className="text-xl text-white flex-1">{artist.displayName}</CardTitle>
-                          {/* 分店標籤：橢圓形、金色底、白色字，位於卡片右側中間，與名字同水平線 */}
                           {artist.branch?.name && (
                             <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg whitespace-nowrap">
                               {artist.branch.name}
@@ -598,7 +670,6 @@ function HomePageContent({
                         <div className="flex flex-wrap gap-2">
                           {(artist.styles || [])
                             .filter((style) => {
-                              // 過濾掉英文標籤
                               const englishTags = ['Traditional', 'Nature', 'Minimalist', 'Japanese', 'Geometric'];
                               return !englishTags.includes(style);
                             })
@@ -613,7 +684,6 @@ function HomePageContent({
                             variant="outline"
                             className="flex-1 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
                             onClick={() => {
-                              // 傳入 userId 給作品集對話框使用（覆寫 id 為 user.id）
                               setSelectedArtist({ ...artist, id: artist.user.id } as unknown as Artist);
                               setPortfolioDialogOpen(true);
                             }}
