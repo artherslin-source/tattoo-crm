@@ -1,8 +1,8 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { X, Image as ImageIcon } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getApiBase } from "@/lib/api";
 import useMediaQuery from "@/hooks/useMediaQuery";
@@ -46,6 +46,11 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
   const [loading, setLoading] = useState(false);
   const isMobile = useMediaQuery("(max-width: 640px)");
 
+  // Image availability tracking (avoid broken images + avoid repeated 404s)
+  const loadedUrlsRef = useRef(new Set<string>());
+  const failedUrlsRef = useRef(new Set<string>());
+  const [assetVersion, setAssetVersion] = useState(0);
+
   // Viewer overlay state
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -56,7 +61,27 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
   const dragRef = useRef<{ lastX: number; lastY: number } | null>(null);
   const lastTapRef = useRef<number>(0);
 
-  const displayed = useMemo(() => items, [items]);
+  const hasAnyRealLoaded = loadedUrlsRef.current.size > 0;
+
+  const visibleRealItems = useMemo(() => {
+    // Force recompute when assetVersion changes
+    void assetVersion;
+    return items.filter((it) => {
+      const url = it.imageUrl;
+      if (!url) return false;
+      return !failedUrlsRef.current.has(url);
+    });
+  }, [items, assetVersion]);
+
+  // Placeholder-only mode until any real image successfully loads.
+  const showPlaceholdersOnly = !hasAnyRealLoaded;
+
+  const displayed = useMemo(() => {
+    // Viewer should only show real items (no placeholders)
+    void assetVersion;
+    if (!hasAnyRealLoaded) return [];
+    return visibleRealItems;
+  }, [assetVersion, hasAnyRealLoaded, visibleRealItems]);
 
   useEffect(() => {
     const fetchPortfolio = async () => {
@@ -68,7 +93,12 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
         const base = getApiBase();
         const res = await fetch(`${base}/artists/${artist.id}/portfolio`, { cache: "no-store" });
         const data = await res.json();
-        setItems(Array.isArray(data) ? data : []);
+        const nextItems = Array.isArray(data) ? data : [];
+        setItems(nextItems);
+        // Reset tracking for the new artist/session
+        loadedUrlsRef.current = new Set();
+        failedUrlsRef.current = new Set();
+        setAssetVersion((v) => v + 1);
       } catch (e) {
         setItems([]);
       } finally {
@@ -77,6 +107,48 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
     };
     fetchPortfolio();
   }, [artist, open]);
+
+  useEffect(() => {
+    // Background probe: keep UI pretty (placeholders) but still detect when real images become available.
+    if (!open) return;
+    if (!items.length) return;
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+    const probes: HTMLImageElement[] = [];
+
+    for (const it of items) {
+      const url = it.imageUrl;
+      if (!url) continue;
+      if (loadedUrlsRef.current.has(url) || failedUrlsRef.current.has(url)) continue;
+
+      const img = new window.Image();
+      img.onload = () => {
+        if (cancelled) return;
+        if (!loadedUrlsRef.current.has(url)) {
+          loadedUrlsRef.current.add(url);
+          setAssetVersion((v) => v + 1);
+        }
+      };
+      img.onerror = () => {
+        if (cancelled) return;
+        if (!failedUrlsRef.current.has(url)) {
+          failedUrlsRef.current.add(url);
+          setAssetVersion((v) => v + 1);
+        }
+      };
+      img.src = url;
+      probes.push(img);
+    }
+
+    return () => {
+      cancelled = true;
+      for (const img of probes) {
+        img.onload = null;
+        img.onerror = null;
+      }
+    };
+  }, [open, items]);
 
   useEffect(() => {
     if (!viewerOpen) return;
@@ -187,6 +259,9 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
               <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-1 sm:mb-2 truncate">
                 {artist.displayName} 的作品集
               </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-text-secondary-light dark:text-text-secondary-dark truncate">
+                {artist.speciality}
+              </DialogDescription>
               <p className="text-xs sm:text-sm text-text-secondary-light dark:text-text-secondary-dark truncate">
                 {artist.speciality}
               </p>
@@ -225,43 +300,55 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
 
           {/* 作品集網格 - 完整響應式 */}
           <div className="columns-2 md:columns-3 gap-3 sm:gap-4">
-            {items.map((item, idx) => (
-              <button
-                key={item.id}
-                type="button"
-                className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
-                onClick={() => openViewer(idx)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={item.imageUrl || "https://placehold.co/800x800?text=Work"}
-                  alt={item.title}
-                  className="w-full h-auto object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
-                  <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title || "作品"}</p>
-                </div>
-              </button>
-            ))}
-
-            {/* 若沒有作品，顯示示意色塊作為暫時替代 */}
-            {!loading && items.length === 0 && (
+            {showPlaceholdersOnly ? (
               <>
-                {MOCK_PORTFOLIO_COLORS.map((item) => (
+                <div className="mb-3 sm:mb-4 break-inside-avoid rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:rounded-xl sm:text-sm">
+                  作品尚未上傳或圖片正在同步中，以下為版面示意；實際作品將以刺青師上傳內容為準。
+                </div>
+                {MOCK_PORTFOLIO_COLORS.slice(0, 10).map((item) => (
                   <div
                     key={item.id}
                     className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
                   >
                     <div
                       className={`bg-gradient-to-br ${item.gradient} opacity-90`}
-                      style={{ height: 140 + (item.id % 3) * 40 }}
+                      style={{ height: 150 + (item.id % 4) * 45 }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
                       <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title}</p>
                     </div>
                   </div>
                 ))}
+              </>
+            ) : (
+              <>
+                {visibleRealItems.map((item, idx) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
+                    onClick={() => openViewer(idx)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.imageUrl || "https://placehold.co/800x800?text=Work"}
+                      alt={item.title}
+                      className="w-full h-auto object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
+                      <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title || "作品"}</p>
+                    </div>
+                  </button>
+                ))}
+
+                {!loading && visibleRealItems.length === 0 ? (
+                  <>
+                    <div className="mb-3 sm:mb-4 break-inside-avoid rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:rounded-xl sm:text-sm">
+                      目前沒有可顯示的作品圖片（可能尚未上傳或同步中）。
+                    </div>
+                  </>
+                ) : null}
               </>
             )}
           </div>
