@@ -35,20 +35,6 @@ export async function detectBackendUrl(): Promise<string> {
   
   const normalizeBase = (base: string) => base.replace(/\/+$/, '');
 
-  const probeHealth = async (base: string): Promise<boolean> => {
-    const clean = normalizeBase(base);
-    try {
-      // backend health endpoint is `/health/simple` (avoid false negatives / CORS noise on `/health`)
-      const res = await fetch(`${clean}/health/simple`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(2500),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  };
-
   const envUrlRaw = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
   const envUrl = envUrlRaw ? normalizeBase(envUrlRaw) : null;
   
@@ -61,48 +47,19 @@ export async function detectBackendUrl(): Promise<string> {
   console.log('🔍 Current hostname:', hostname);
   
   if (hostname.includes('railway.app')) {
-    // Railway：嘗試用常見命名模式推測後端 URL，並用 /health 探測可用者
     const current = `https://${hostname}`;
-    // 注意：Railway 上 env URL 有機會指到「舊後端/錯的 service」。
-    // 我們把「推測的後端」放前面優先 probe；env URL 只做最後備援。
-    const candidatesRaw: string[] = [
-      // common: tattoo-crm-production -> tattoo-crm-backend-production
-      current.replace('tattoo-crm-production', 'tattoo-crm-backend-production'),
-      // common: frontend -> backend
-      current.replace('frontend', 'backend'),
-      // common suffix: -backend
-      current.replace('.up.railway.app', '-backend.up.railway.app'),
-      ...(envUrl ? [envUrl] : []),
-    ].filter(Boolean);
-
-    const seen = new Set<string>();
-    const candidates = candidatesRaw
-      .map(normalizeBase)
-      .filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
-
-    console.log('🔍 Railway backend URL candidates:', candidates);
-
-    for (const base of candidates) {
-      const ok = await probeHealth(base);
-      console.log('🔍 Probe /health/simple:', { base, ok });
-      if (ok) {
-        console.log('✅ Using inferred healthy backend URL:', base);
-        return base;
-      }
+    // Browser 端跨網域 probe 很容易被 CORS/Edge error 擋住而誤判。
+    // 在 Railway 我們改成「優先 envUrl，其次用已知的 backend hostname 規則」。
+    if (envUrl) return envUrl;
+    if (hostname.includes('tattoo-crm-production')) {
+      return normalizeBase(current.replace('tattoo-crm-production', 'tattoo-crm-production-413f'));
     }
-
-    console.warn('⚠️ No healthy backend candidate found; falling back to first candidate (may fail).');
-    return candidates[0] ?? current;
+    return normalizeBase(current);
   }
-  
+
   if (envUrl) {
     console.log('🔍 Using env backend URL candidate:', envUrl);
-    const ok = await probeHealth(envUrl);
-    if (ok) {
-      console.log('✅ Env backend URL is healthy:', envUrl);
-      return envUrl;
-    }
-    console.warn('⚠️ Env backend URL health check failed; falling back to hostname.');
+    return envUrl;
   }
 
   console.log('🔍 Using hostname as fallback:', `https://${hostname}`);
@@ -121,7 +78,7 @@ function getApiBaseUrl(): string {
     const current = `https://${hostname}`;
     // best-effort inference (sync path; detectBackendUrl() will do real probing)
     if (hostname.includes('tattoo-crm-production')) {
-      return normalizeBase(current.replace('tattoo-crm-production', 'tattoo-crm-backend-production'));
+      return normalizeBase(current.replace('tattoo-crm-production', 'tattoo-crm-production-413f'));
     }
     if (hostname.includes('frontend')) {
       return normalizeBase(current.replace('frontend', 'backend'));
