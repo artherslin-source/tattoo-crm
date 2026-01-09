@@ -30,6 +30,30 @@ export class AdminAppointmentsService {
     return Array.from(ids);
   }
 
+  private async buildScopeWhere(actor: AccessActor, branchId?: string): Promise<Prisma.AppointmentWhereInput> {
+    if (isBoss(actor)) return {};
+
+    const accessible = await this.resolveAccessibleBranchIds(actor);
+    if (!accessible.length) throw new ForbiddenException('Insufficient permissions');
+
+    let branchWhere: Prisma.AppointmentWhereInput;
+    if (branchId && branchId !== 'all') {
+      if (!accessible.includes(branchId)) throw new ForbiddenException('Insufficient branch access');
+      branchWhere = { branchId };
+    } else {
+      branchWhere = { branchId: { in: accessible } };
+    }
+
+    return {
+      AND: [
+        branchWhere,
+        {
+          OR: [{ artistId: actor.id }, { user: { primaryArtistId: actor.id } }],
+        },
+      ],
+    };
+  }
+
   async findAll(filters: { 
     actor: AccessActor;
     search?: string; 
@@ -166,8 +190,9 @@ export class AdminAppointmentsService {
   }
 
   async findOne(input: { actor: AccessActor; id: string }) {
+    const scope = await this.buildScopeWhere(input.actor);
     const appointment = await this.prisma.appointment.findFirst({
-      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      where: { AND: [{ id: input.id }, scope] },
       select: {
         id: true,
         userId: true,
@@ -251,9 +276,8 @@ export class AdminAppointmentsService {
     try {
       // Scope validation for ARTIST
       if (!isBoss(input.actor)) {
-        if (input.branchId !== input.actor.branchId) {
-          throw new ForbiddenException('Cannot create appointment outside your branch');
-        }
+        const accessible = await this.resolveAccessibleBranchIds(input.actor);
+        if (!accessible.includes(input.branchId)) throw new ForbiddenException('Cannot create appointment outside your allowed branches');
         // ARTIST can only create appointments assigned to themselves (future staff roles can broaden this).
         if (input.artistId !== input.actor.id) {
           throw new ForbiddenException('Cannot assign appointment to another artist');
@@ -419,8 +443,9 @@ export class AdminAppointmentsService {
       throw new BadRequestException('無效的狀態');
     }
 
+    const scope = await this.buildScopeWhere(input.actor);
     const appointment = await this.prisma.appointment.findFirst({ 
-      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      where: { AND: [{ id: input.id }, scope] },
       include: {
         user: { select: { id: true, name: true, email: true } },
         service: { select: { id: true, name: true, price: true, durationMin: true } },
@@ -462,9 +487,10 @@ export class AdminAppointmentsService {
   }
 
   async confirmSchedule(input: { actor: AccessActor; id: string; startAt: Date; holdMin: number; reason?: string }) {
+    const scope = await this.buildScopeWhere(input.actor);
     const updatedAppointment = await this.prisma.$transaction(async (tx) => {
       const appointment = await tx.appointment.findFirst({
-        where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+        where: { AND: [{ id: input.id }, scope] },
         select: {
           id: true,
           status: true,
@@ -533,8 +559,9 @@ export class AdminAppointmentsService {
   }
 
   async reschedule(input: { actor: AccessActor; id: string; startAt: Date; endAt: Date; holdMin?: number; reason?: string }) {
+    const scope = await this.buildScopeWhere(input.actor);
     const appointment = await this.prisma.appointment.findFirst({
-      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      where: { AND: [{ id: input.id }, scope] },
       include: { user: { select: { id: true, primaryArtistId: true } } },
     });
     if (!appointment) throw new NotFoundException('預約不存在');
@@ -600,8 +627,9 @@ export class AdminAppointmentsService {
   }
 
   async cancel(input: { actor: AccessActor; id: string; reason?: string }) {
+    const scope = await this.buildScopeWhere(input.actor);
     const appointment = await this.prisma.appointment.findFirst({
-      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      where: { AND: [{ id: input.id }, scope] },
       select: { id: true, status: true, startAt: true },
     });
     if (!appointment) throw new NotFoundException('預約不存在');
@@ -626,8 +654,9 @@ export class AdminAppointmentsService {
   }
 
   async noShow(input: { actor: AccessActor; id: string; reason?: string }) {
+    const scope = await this.buildScopeWhere(input.actor);
     const appointment = await this.prisma.appointment.findFirst({
-      where: { id: input.id, ...this.buildScopeWhere(input.actor) },
+      where: { AND: [{ id: input.id }, scope] },
       select: { id: true, status: true },
     });
     if (!appointment) throw new NotFoundException('預約不存在');
@@ -647,7 +676,8 @@ export class AdminAppointmentsService {
   }
 
   async update(input: { actor: AccessActor; id: string; data: { startAt?: Date; endAt?: Date; notes?: string; artistId?: string } }) {
-    const appointment = await this.prisma.appointment.findFirst({ where: { id: input.id, ...this.buildScopeWhere(input.actor) } });
+    const scope = await this.buildScopeWhere(input.actor);
+    const appointment = await this.prisma.appointment.findFirst({ where: { AND: [{ id: input.id }, scope] } });
     if (!appointment) {
       throw new NotFoundException('預約不存在');
     }
@@ -689,7 +719,8 @@ export class AdminAppointmentsService {
   }
 
   async remove(input: { actor: AccessActor; id: string }) {
-    const appointment = await this.prisma.appointment.findFirst({ where: { id: input.id, ...this.buildScopeWhere(input.actor) } });
+    const scope = await this.buildScopeWhere(input.actor);
+    const appointment = await this.prisma.appointment.findFirst({ where: { AND: [{ id: input.id }, scope] } });
     if (!appointment) {
       throw new NotFoundException('預約不存在');
     }
