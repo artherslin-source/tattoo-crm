@@ -203,11 +203,6 @@ export default function AppointmentForm({
     estimatedDuration?: number;
   } | null>(null);
 
-  const selectedService = useMemo(() => {
-    if (!formData.serviceId) return null;
-    return services.find((s) => s.id === formData.serviceId) || null;
-  }, [services, formData.serviceId]);
-
   const [formData, setFormData] = useState<AppointmentFormData>({
     userId: "",
     name: fromContact?.name ?? searchParams.get("name") ?? "",
@@ -221,6 +216,11 @@ export default function AppointmentForm({
     startAt: "",
     endAt: "",
   });
+
+  const selectedService = useMemo(() => {
+    if (!formData.serviceId) return null;
+    return services.find((s) => s.id === formData.serviceId) || null;
+  }, [services, formData.serviceId]);
 
   const { result: phoneConflicts } = usePhoneConflicts(formData.phone);
 
