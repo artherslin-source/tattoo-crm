@@ -33,6 +33,8 @@
     "add:artists": "npx ts-node scripts/add-artists.ts",
     "fix:artists-branch": "npx ts-node scripts/fix-artists-branch.ts",
     "add:portfolio:samples": "npx ts-node scripts/add-portfolio-samples.ts"
+    ,
+    "prelaunch:reset": "npx ts-node scripts/prelaunch-reset.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^8.3.1",
