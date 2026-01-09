@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  GoneException,
   Param,
   Post,
   Query,
@@ -106,25 +107,9 @@ export class BackupController {
     @Body() body: any,
   ) {
     if (!isBoss(actor)) throw new BadRequestException('Only BOSS can restore backups');
-    if (!file?.path) throw new BadRequestException('file is required');
-
-    const parsed = RestoreSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
-    }
-
-    // Fire-and-forget restore: respond immediately, then restore and restart.
-    void this.backup.restoreFromEncryptedBackupFile({
-      actor,
-      password: parsed.data.password,
-      encryptedFilePath: file.path,
-    });
-
-    return {
-      ok: true,
-      message: 'Restore started. Service will restart after completion.',
-      filename: path.basename(file.path),
-    };
+    // This environment no longer supports self-serve restore. Use engineering-operated restore instead.
+    // We deliberately return 410 so automated callers can detect the deprecation.
+    throw new GoneException('此環境不支援自助還原，請聯絡工程團隊協助還原。');
   }
 }
 

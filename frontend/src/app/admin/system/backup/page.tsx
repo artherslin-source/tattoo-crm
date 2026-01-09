@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { detectBackendUrl, getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
+import { getAccessToken, getUserRole, getJsonWithAuth, patchJsonWithAuth, postJsonWithAuth } from "@/lib/api";
 import { isBossRole } from "@/lib/access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,10 +53,6 @@ export default function AdminSystemBackupPage() {
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
   const [secretsPassword, setSecretsPassword] = useState("");
-  const [restorePassword, setRestorePassword] = useState("");
-  const [restorePassword2, setRestorePassword2] = useState("");
-  const [restoreConfirm, setRestoreConfirm] = useState("");
-  const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,14 +73,6 @@ export default function AdminSystemBackupPage() {
       // ignore
     }
   };
-
-  const canRestore = useMemo(() => {
-    if (!restoreFile) return false;
-    if (restoreConfirm !== "RESTORE") return false;
-    if (!restorePassword || restorePassword.length < 1) return false;
-    if (restorePassword !== restorePassword2) return false;
-    return true;
-  }, [restoreFile, restoreConfirm, restorePassword, restorePassword2]);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -264,76 +252,17 @@ export default function AdminSystemBackupPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>上傳備份檔並還原（危險）</CardTitle>
+          <CardTitle>還原（由工程團隊協助）</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-sm text-red-700 border border-red-200 bg-red-50 rounded-md p-3">
-            還原會「清空並覆蓋」現有 DB + uploads，建議先公告維護時間。完成後後端會自動重啟。
+        <CardContent className="space-y-2">
+          <div className="text-sm text-muted-foreground">
+            此環境不提供自助還原。若需還原，請聯絡工程團隊並提供：
           </div>
-
-          <Input
-            type="file"
-            onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
-            accept=".enc,.bin,.zip,.zip.enc"
-          />
-          <Input
-            placeholder='輸入 "RESTORE" 以確認'
-            value={restoreConfirm}
-            onChange={(e) => setRestoreConfirm(e.target.value)}
-          />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <Input
-              type="password"
-              placeholder="輸入備份密碼"
-              value={restorePassword}
-              onChange={(e) => setRestorePassword(e.target.value)}
-            />
-            <Input
-              type="password"
-              placeholder="再次輸入備份密碼"
-              value={restorePassword2}
-              onChange={(e) => setRestorePassword2(e.target.value)}
-            />
-          </div>
-          <Button
-            variant="destructive"
-            disabled={!canRestore || !!busy}
-            onClick={async () => {
-              if (!restoreFile) return;
-              setBusy("restore");
-              setError(null);
-              setMessage(null);
-              try {
-                const token = getAccessToken();
-                if (!token) throw new Error("未登入");
-
-                const fd = new FormData();
-                fd.append("file", restoreFile);
-                fd.append("password", restorePassword);
-                fd.append("confirm", "RESTORE");
-
-                // IMPORTANT: restore upload can be large; going through Next rewrites (/api/*) may fail with generic 500.
-                // Upload directly to backend service URL to avoid proxy/body streaming limits.
-                const backendUrl = await detectBackendUrl();
-                const res = await fetch(`${backendUrl}/admin/backup/restore`, {
-                  method: "POST",
-                  headers: { Authorization: `Bearer ${token}` },
-                  body: fd,
-                });
-                if (!res.ok) {
-                  const text = await res.text().catch(() => "");
-                  throw new Error(text || "還原請求失敗");
-                }
-                setMessage("已開始還原。後端完成後會自動重啟，請稍後重新整理。");
-              } catch (e) {
-                setError(e instanceof Error ? e.message : "還原失敗");
-              } finally {
-                setBusy(null);
-              }
-            }}
-          >
-            {busy === "restore" ? "啟動中..." : "開始還原（會重啟）"}
-          </Button>
+          <ul className="text-sm text-muted-foreground list-disc pl-5">
+            <li>備份檔（<code>.zip.enc</code>）</li>
+            <li>解密密碼</li>
+            <li>（跨平台搬遷時）secrets 檔（<code>.env.enc</code>）</li>
+          </ul>
         </CardContent>
       </Card>
     </div>

@@ -10,7 +10,7 @@ export class MaintenanceMiddleware {
     const state = await this.maintenance.getState();
     if (!state.enabled) return next();
 
-    // Allow health checks and the restore endpoint to keep working during maintenance.
+    // Allow health checks during maintenance.
     const p = req.path || '';
     const full = (req.originalUrl || req.url || p || '').split('?')[0];
     // Note: In some deployments/proxies, requests may include a leading `/api` prefix.
@@ -18,7 +18,6 @@ export class MaintenanceMiddleware {
     if (full.startsWith('/health') || full.startsWith('/api/health')) return next();
     if (full.startsWith('/public/maintenance') || full.startsWith('/api/public/maintenance')) return next();
     if (full.startsWith('/admin/maintenance') || full.startsWith('/api/admin/maintenance')) return next();
-    if (full === '/admin/backup/restore' || full === '/api/admin/backup/restore') return next();
     // Allow backup export status/download so BOSS can operate during maintenance if needed.
     if (full.startsWith('/admin/backup/export') || full.startsWith('/api/admin/backup/export')) return next();
     // Allow login during maintenance so BOSS can still authenticate and turn it off.
