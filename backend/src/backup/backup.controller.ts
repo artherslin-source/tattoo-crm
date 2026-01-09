@@ -22,6 +22,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { z } from 'zod';
 import * as path from 'path';
+import * as fs from 'fs';
 
 const ExportSchema = z.object({
   password: z.string().min(1),
@@ -78,7 +79,18 @@ export class BackupController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: '/tmp',
+        destination: (_req, _file, cb) => {
+          // On some Railway/container setups, /tmp may not be writable/reliable.
+          // Use uploads volume so large files can be stored safely.
+          const uploadsDir = process.env.UPLOADS_DIR || '/app/uploads';
+          const dir = path.join(uploadsDir, 'tmp');
+          try {
+            fs.mkdirSync(dir, { recursive: true });
+          } catch {
+            // ignore; multer will surface a clearer error if it still fails
+          }
+          cb(null, dir);
+        },
         filename: (_req, file, cb) => {
           const base = `restore_${Date.now()}_${Math.random().toString(16).slice(2)}`;
           const ext = path.extname(file.originalname || '') || '.bin';
