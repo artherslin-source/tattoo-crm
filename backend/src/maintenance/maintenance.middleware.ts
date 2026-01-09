@@ -24,6 +24,8 @@ export class MaintenanceMiddleware {
     if (full.startsWith('/auth/login') || full.startsWith('/api/auth/login')) return next();
     if (full.startsWith('/auth/refresh') || full.startsWith('/api/auth/refresh')) return next();
     if (full.startsWith('/auth/me') || full.startsWith('/api/auth/me')) return next();
+    // Allow prelaunch reset endpoints during maintenance (still guarded by JWT + BOSS check).
+    if (full.startsWith('/admin/system/prelaunch-reset') || full.startsWith('/api/admin/system/prelaunch-reset')) return next();
 
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Retry-After', '120');
