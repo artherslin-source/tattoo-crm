@@ -160,7 +160,7 @@ export function EmptyState({ onCreate }: { onCreate?: () => void }) {
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#1A1D23] text-2xl sm:mb-6 sm:h-20 sm:w-20 sm:text-3xl">🎨</div>
       <h3 className="text-lg font-semibold text-[var(--text)] sm:text-xl">還沒有作品</h3>
       <p className="mt-2 max-w-md px-2 text-sm text-[var(--muted)]">
-        建立您的第一個作品集，展示獨特的刺青風格。也可以先了解如何建立分類，讓作品呈現更有層次。
+        建立您的第一個作品集，展示獨特的刺青風格。
       </p>
       <div className="mt-6 flex w-full flex-col gap-3 sm:mt-8 sm:w-auto sm:flex-row">
         {onCreate && (
@@ -172,12 +172,6 @@ export function EmptyState({ onCreate }: { onCreate?: () => void }) {
             新增作品
           </button>
         )}
-        <a
-          href="#"
-          className="w-full rounded-xl border border-[var(--line)] px-6 py-3 text-sm font-medium text-[var(--text)]/80 transition hover:border-[var(--accent)]/40 hover:text-[var(--text)] sm:w-auto"
-        >
-          了解如何建立分類
-        </a>
       </div>
     </div>
   );
