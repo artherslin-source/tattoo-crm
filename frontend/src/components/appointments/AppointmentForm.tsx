@@ -203,6 +203,11 @@ export default function AppointmentForm({
     estimatedDuration?: number;
   } | null>(null);
 
+  const selectedService = useMemo(() => {
+    if (!formData.serviceId) return null;
+    return services.find((s) => s.id === formData.serviceId) || null;
+  }, [services, formData.serviceId]);
+
   const [formData, setFormData] = useState<AppointmentFormData>({
     userId: "",
     name: fromContact?.name ?? searchParams.get("name") ?? "",
@@ -916,7 +921,7 @@ export default function AppointmentForm({
                 <option value="">請選擇服務</option>
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
-                    {service.name} - NT$ {service.price.toLocaleString()}
+                    {service.name}
                   </option>
                 ))}
               </select>
@@ -933,14 +938,20 @@ export default function AppointmentForm({
                 </div>
 
                 {/* Quote preview */}
-                {quote ? (
-                  <div className="flex items-center justify-between rounded-md bg-white px-3 py-2 border border-gray-200">
-                    <div className="text-sm text-gray-700">試算金額</div>
-                    <div className="text-sm font-semibold text-blue-700">
-                      NT$ {Number(quote.finalPrice || 0).toLocaleString()}
+                <div className="flex flex-col gap-2 rounded-md bg-white px-3 py-2 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-700">基礎價</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      NT$ {Number(selectedService?.price || 0).toLocaleString()}
                     </div>
                   </div>
-                ) : null}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-700">試算金額</div>
+                    <div className="text-sm font-semibold text-blue-700">
+                      NT$ {Number(quote?.finalPrice || 0).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Variant fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
