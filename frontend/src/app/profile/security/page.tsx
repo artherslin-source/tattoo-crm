@@ -187,9 +187,15 @@ export default function ProfileSecurityPage() {
               <CardTitle>帳號綁定</CardTitle>
               <CardDescription>連結第三方帳號以便快速登入</CardDescription>
             </div>
+            <Badge variant="secondary" className="ml-auto">
+              即將推出
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="text-sm text-gray-500">
+            目前版本尚未開放第三方帳號綁定（LINE / Google），敬請期待。
+          </div>
           <div className="flex items-center justify-between p-3 border rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center text-white font-bold">
@@ -200,7 +206,7 @@ export default function ProfileSecurityPage() {
                 <div className="text-sm text-gray-500">尚未綁定</div>
               </div>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled>
               綁定
             </Button>
           </div>
@@ -214,7 +220,7 @@ export default function ProfileSecurityPage() {
                 <div className="text-sm text-gray-500">尚未綁定</div>
               </div>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled>
               綁定
             </Button>
           </div>

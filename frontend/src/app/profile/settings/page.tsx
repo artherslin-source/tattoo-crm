@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Bell, Palette, Eye, Shield } from "lucide-react";
 
 export default function ProfileSettingsPage() {
   const [notifications, setNotifications] = useState({
-    email: true,
+    email: false,
     line: false,
-    app: true,
+    app: false,
   });
 
   const [privacy, setPrivacy] = useState({
@@ -35,9 +36,15 @@ export default function ProfileSettingsPage() {
               <CardTitle>通知設定</CardTitle>
               <CardDescription>選擇接收通知的方式</CardDescription>
             </div>
+            <Badge variant="secondary" className="ml-auto">
+              即將推出
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="text-sm text-gray-500">
+            目前版本尚未開放通知功能（Email / LINE / App 推播），敬請期待。
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="email-notif">Email 通知</Label>
@@ -46,9 +53,7 @@ export default function ProfileSettingsPage() {
             <Switch
               id="email-notif"
               checked={notifications.email}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, email: checked })
-              }
+              disabled
             />
           </div>
           <div className="flex items-center justify-between">
@@ -59,9 +64,7 @@ export default function ProfileSettingsPage() {
             <Switch
               id="line-notif"
               checked={notifications.line}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, line: checked })
-              }
+              disabled
             />
           </div>
           <div className="flex items-center justify-between">
@@ -72,9 +75,7 @@ export default function ProfileSettingsPage() {
             <Switch
               id="app-notif"
               checked={notifications.app}
-              onCheckedChange={(checked) =>
-                setNotifications({ ...notifications, app: checked })
-              }
+              disabled
             />
           </div>
         </CardContent>
@@ -141,7 +142,7 @@ export default function ProfileSettingsPage() {
 
       {/* 儲存按鈕 */}
       <div className="flex justify-end">
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button className="bg-blue-600 hover:bg-blue-700" disabled>
           儲存設定
         </Button>
       </div>
