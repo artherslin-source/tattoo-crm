@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Money } from "@/components/Money";
 import { formatMoney } from "@/lib/money";
+import { formatArtistLabel } from "@/lib/artist-label";
 
 interface Contact {
   id: string;
@@ -539,7 +540,7 @@ export default function AdminContactsPage() {
                                 <option value="">請選擇刺青師</option>
                                 {branchArtists.map((a) => (
                                   <option key={a.userId} value={a.userId}>
-                                    {a.name}（{a.branchName}）
+                                    {formatArtistLabel({ displayName: a.name, branchName: a.branchName })}
                                   </option>
                                 ))}
                               </select>

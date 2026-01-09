@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { postJSON, ApiError } from "@/lib/api";
 import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
 import { normalizePhoneDigits } from "@/lib/phone";
+import { formatArtistLabel } from "@/lib/artist-label";
 
 interface Service {
   id: string;
@@ -22,6 +23,7 @@ interface Artist {
   speciality: string;
   portfolioUrl?: string;
   branchId: string;
+  branch?: { id: string; name: string };
   user: {
     id: string;
     name: string;
@@ -270,7 +272,7 @@ export default function PublicAppointmentPage() {
                 <option value="">請選擇刺青師</option>
                 {artists.map((artist) => (
                   <option key={artist.id} value={artist.user.id}>
-                    {artist.displayName} - {artist.speciality}
+                    {formatArtistLabel({ displayName: artist.displayName, userName: artist.user?.name, branchName: artist.branch?.name })} - {artist.speciality}
                   </option>
                 ))}
               </select>

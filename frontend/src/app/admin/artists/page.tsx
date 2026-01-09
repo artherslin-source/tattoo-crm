@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { UserCheck, Plus, Edit, Trash2, ArrowLeft } from "lucide-react";
 import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
 import { normalizePhoneDigits } from "@/lib/phone";
+import { formatArtistLabel } from "@/lib/artist-label";
 
 interface Artist {
   id: string;
@@ -500,7 +501,7 @@ export default function AdminArtistsPage() {
                   <tr key={artist.id} className="border-b border-gray-100 dark:border-gray-700">
                         <td className="py-3 px-4">
                           <div className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                            {artist.user?.name || '未設定'}
+                            {formatArtistLabel({ userName: artist.user?.name || null, branchName: artist.branch?.name || null })}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">

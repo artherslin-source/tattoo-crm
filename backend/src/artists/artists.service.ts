@@ -21,7 +21,8 @@ export class ArtistsService {
             branchId: true,
             isActive: true,
           }
-        }
+        },
+        branch: { select: { id: true, name: true } },
       } 
     });
   }
@@ -67,20 +68,12 @@ export class ArtistsService {
   }
 
   async getPortfolioPublic(artistUserId: string) {
-    // 共享作品集策略：
-    // 1) 先找到此 userId 對應的 Artist 以取得 displayName
-    // 2) 找出所有同 displayName 的 Artist，彙整其 userId 作為 portfolio 的 artistId 集合
-    // 3) 回傳該集合的所有作品（依建立時間倒序）
-    const artist = await this.prisma.artist.findFirst({ where: { userId: artistUserId } });
-    if (!artist) {
-      return [];
-    }
-
-    const sameNameArtists = await this.prisma.artist.findMany({ where: { displayName: artist.displayName } });
-    const userIds = Array.from(new Set(sameNameArtists.map(a => a.userId).filter(Boolean)));
-
+    // IMPORTANT:
+    // - System allows artists with the same displayName (different phone/accounts).
+    // - Do NOT merge portfolios by name; it can leak/merge unrelated artists’ works.
+    // If we want shared portfolio across accounts in the future, introduce an explicit groupId.
     return this.prisma.portfolioItem.findMany({
-      where: { artistId: { in: userIds.length ? userIds : [artistUserId] } },
+      where: { artistId: artistUserId },
       orderBy: { createdAt: 'desc' },
     });
   }

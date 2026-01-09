@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatArtistLabel } from "@/lib/artist-label";
 import {
   Bell,
   BellRing,
@@ -317,7 +318,7 @@ export default function AdminNotificationsPage() {
     }
     if (row.scope === "SINGLE_ARTIST") {
       const a = artists.find((x) => x.userId === row.artistId);
-      return `刺青師：${a ? `${a.name}（${a.branchName}）` : row.artistId || "未知"}`;
+      return `刺青師：${a ? formatArtistLabel({ displayName: a.name, branchName: a.branchName }) : row.artistId || "未知"}`;
     }
     return row.scope ? String(row.scope) : "未知";
   };
@@ -458,7 +459,7 @@ export default function AdminNotificationsPage() {
                           <SelectContent>
                             {artists.map((a) => (
                               <SelectItem key={a.userId} value={a.userId}>
-                                {a.name}（{a.branchName}）
+                                {formatArtistLabel({ displayName: a.name, branchName: a.branchName })}
                               </SelectItem>
                             ))}
                           </SelectContent>

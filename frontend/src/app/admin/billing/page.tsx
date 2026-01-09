@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Money } from "@/components/Money";
 import { buildBillItemBreakdown } from "@/lib/billing-breakdown";
 import { normalizePhoneDigits } from "@/lib/phone";
+import { formatArtistLabel } from "@/lib/artist-label";
 
 type BillStatus = "OPEN" | "SETTLED" | "VOID";
 type BillSortField = "createdAt" | "billTotal" | "paidTotal" | "dueTotal";
@@ -772,7 +773,10 @@ export default function AdminBillingPage() {
   const lockedArtistLabel = useMemo(() => {
     if (userRole.toUpperCase() !== "ARTIST") return null;
     const artist = artists.find((a) => a.id === newArtistId);
-    return artist?.name || me?.name || null;
+    return formatArtistLabel({
+      displayName: artist?.name || me?.name || null,
+      branchName: artist?.branchName || me?.branch?.name || lockedBranchLabel || null,
+    });
   }, [userRole, artists, newArtistId, me]);
 
   useEffect(() => {
@@ -801,7 +805,10 @@ export default function AdminBillingPage() {
             .filter((a) => a.user?.id && a.branch?.id)
             .map((a) => ({
               userId: a.user!.id!,
-              displayName: a.name || a.user!.name || a.user!.id!,
+              displayName: formatArtistLabel({
+                displayName: a.name || a.user!.name || a.user!.id!,
+                branchName: a.branch!.name || null,
+              }),
               branchId: a.branch!.id!,
               branchName: a.branch!.name || null,
             }))
@@ -1032,7 +1039,7 @@ export default function AdminBillingPage() {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new ApiError(text || `下載失敗 (${res.status})`, res.status);
+        throw new ApiError(res.status, text || `下載失敗 (${res.status})`);
       }
 
       const blob = await res.blob();
@@ -1290,7 +1297,7 @@ export default function AdminBillingPage() {
                     { value: "all", label: "全部刺青師" },
                     ...artists.map((a) => ({
                       value: a.id,
-                      label: `${a.name || a.id}（${a.branchName || "無分店"}）`,
+                      label: formatArtistLabel({ displayName: a.name || a.id, branchName: a.branchName }),
                     })),
                   ]}
                 />
@@ -1370,7 +1377,7 @@ export default function AdminBillingPage() {
             <Button
               variant="outline"
               onClick={() => setFilterOpen(true)}
-              title={`分店：${filterBranchId === "all" ? "全部" : branches.find((b) => b.id === filterBranchId)?.name || filterBranchId}｜狀態：${filterStatus === "all" ? "全部" : filterStatus}｜刺青師：${filterArtistId === "all" ? "全部" : artists.find((a) => a.id === filterArtistId)?.name || filterArtistId}｜日期：${dateRangeLabel}｜排序：${sortLabel}`}
+              title={`分店：${filterBranchId === "all" ? "全部" : branches.find((b) => b.id === filterBranchId)?.name || filterBranchId}｜狀態：${filterStatus === "all" ? "全部" : filterStatus}｜刺青師：${filterArtistId === "all" ? "全部" : formatArtistLabel({ displayName: artists.find((a) => a.id === filterArtistId)?.name || filterArtistId, branchName: artists.find((a) => a.id === filterArtistId)?.branchName || null })}｜日期：${dateRangeLabel}｜排序：${sortLabel}`}
             >
               更多篩選
             </Button>
@@ -1649,7 +1656,7 @@ export default function AdminBillingPage() {
                   disabled={userRole.toUpperCase() === "ARTIST"}
                   options={[
                     { value: "none", label: "不指定" },
-                    ...artists.map((a) => ({ value: a.id, label: `${a.name || a.id}（${a.branchName || "無分店"}）` })),
+                    ...artists.map((a) => ({ value: a.id, label: formatArtistLabel({ displayName: a.name || a.id, branchName: a.branchName }) })),
                   ]}
                   placeholder={userRole.toUpperCase() === "ARTIST" ? lockedArtistLabel || "已帶入" : "不指定"}
                 />
@@ -2660,7 +2667,7 @@ export default function AdminBillingPage() {
                       .filter((artist) => !splitRules.some((rule) => rule.artistId === artist.userId))
                       .map((artist) => ({
                         value: artist.userId,
-                        label: `${artist.displayName}（${artist.branchName || "無分店"}）`,
+                        label: artist.displayName,
                       }))}
                   />
                 </div>
