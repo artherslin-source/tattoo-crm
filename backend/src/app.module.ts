@@ -23,6 +23,7 @@ import { SiteConfigModule } from './site-config/site-config.module';
 import { BackupModule } from './backup/backup.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { MaintenanceMiddleware } from './maintenance/maintenance.middleware';
+import { PrelaunchModule } from './system-prelaunch/prelaunch.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { MaintenanceMiddleware } from './maintenance/maintenance.middleware';
     SiteConfigModule,
     BackupModule,
     MaintenanceModule,
+    PrelaunchModule,
   ],
   controllers: [AppController],
   providers: [AppService],

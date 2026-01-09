@@ -56,6 +56,7 @@ model User {
   createdCustomerReminders    CustomerReminder[] @relation("CustomerReminderCreator")
   contactsOwned               Contact[]          @relation("ContactOwnerArtist")
   siteConfigsUpdated          SiteConfig[]       @relation("SiteConfigUpdatedBy")
+  artistBranchAccesses        ArtistBranchAccess[]
   // @@index([personId])
 
   @@index([branchId, role, isActive])
@@ -103,6 +104,7 @@ model Branch {
   users             User[]
   completedServices CompletedService[]
   contacts          Contact[]
+  artistBranchAccesses ArtistBranchAccess[]
 }
 
 model Artist {
@@ -123,6 +125,20 @@ model Artist {
   user         User                 @relation(fields: [userId], references: [id])
 
   @@map("TattooArtist") // 讓 Artist 模型對應到既有的 TattooArtist 表
+}
+
+model ArtistBranchAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  branchId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([userId, branchId])
+  @@index([userId])
+  @@index([branchId])
 }
 
 model ArtistAvailability {

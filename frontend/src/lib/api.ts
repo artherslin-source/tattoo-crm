@@ -276,11 +276,30 @@ async function withAuthFetch(
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
+  // Artist branch switch support (client-side only):
+  // If user is ARTIST and selected a specific branch, append `branchId=` to GET requests.
+  let finalPath = normalizedPath;
+  try {
+    const method = (init.method || 'GET').toUpperCase();
+    if (typeof window !== 'undefined' && method === 'GET') {
+      const role = window.localStorage.getItem('userRole') || '';
+      const normalizedRole = role.toUpperCase();
+      const selected = window.localStorage.getItem('artistSelectedBranchId') || '';
+      if (normalizedRole === 'ARTIST' && selected && selected !== 'all') {
+        const u = new URL(`/api${normalizedPath}`, window.location.origin);
+        if (!u.searchParams.has('branchId')) u.searchParams.set('branchId', selected);
+        finalPath = u.pathname.replace(/^\/api/, '') + (u.search ? u.search : '');
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   // Browser: always use same-origin rewrites to avoid CORS and backend URL drift.
   // Server (SSR): keep using detected backend URL.
   const url =
     typeof window !== 'undefined'
-      ? `/api${normalizedPath}`
+      ? `/api${finalPath}`
       : `${await detectBackendUrl()}${normalizedPath}`;
   
   const res = await fetch(url, {

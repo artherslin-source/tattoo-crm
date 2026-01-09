@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { isBoss, type AccessActor } from '../common/access/access.types';
+import { isBoss, isArtist, type AccessActor } from '../common/access/access.types';
 import type { Prisma } from '@prisma/client';
 import { BillingService } from '../billing/billing.service';
 
@@ -16,19 +16,18 @@ export class AdminAppointmentsService {
   private cancelCutoffMs = 24 * 60 * 60 * 1000;
   private maxHoldMin = 24 * 60; // 24h cap
 
-  private buildScopeWhere(actor: AccessActor): Prisma.AppointmentWhereInput {
-    if (isBoss(actor)) return {};
-    return {
-      AND: [
-        { branchId: actor.branchId ?? undefined },
-        {
-          OR: [
-            { artistId: actor.id },
-            { user: { primaryArtistId: actor.id } },
-          ],
-        },
-      ],
-    };
+  private async resolveAccessibleBranchIds(actor: AccessActor): Promise<string[]> {
+    if (isBoss(actor)) return [];
+    const ids = new Set<string>();
+    if (actor.branchId) ids.add(actor.branchId);
+    if (isArtist(actor)) {
+      const rows = await this.prisma.artistBranchAccess.findMany({
+        where: { userId: actor.id },
+        select: { branchId: true },
+      });
+      for (const r of rows) ids.add(r.branchId);
+    }
+    return Array.from(ids);
   }
 
   async findAll(filters: { 
@@ -42,8 +41,25 @@ export class AdminAppointmentsService {
     sortOrder?: 'asc' | 'desc';
   }) {
     const where: any = {
-      ...this.buildScopeWhere(filters.actor),
+      AND: [],
     };
+
+    if (!isBoss(filters.actor)) {
+      const accessible = await this.resolveAccessibleBranchIds(filters.actor);
+      // Branch filter for ARTIST: allow switching, but must be within accessible branches.
+      if (filters.branchId && filters.branchId !== 'all') {
+        if (!accessible.includes(filters.branchId)) throw new ForbiddenException('Insufficient branch access');
+        where.AND.push({ branchId: filters.branchId });
+      } else {
+        where.AND.push({ branchId: { in: accessible } });
+      }
+      where.AND.push({
+        OR: [{ artistId: filters.actor.id }, { user: { primaryArtistId: filters.actor.id } }],
+      });
+    } else if (filters?.branchId && filters.branchId !== 'all') {
+      where.AND.push({ branchId: filters.branchId });
+      console.log('🔍 Branch filter applied (BOSS):', filters.branchId);
+    }
 
     if (filters?.search) {
       where.AND = where.AND ?? [];
@@ -60,13 +76,6 @@ export class AdminAppointmentsService {
 
     if (filters?.status) {
       where.status = filters.status;
-    }
-
-    // Branch filter: only BOSS can choose arbitrary branches; ARTIST is forced to own branch.
-    if (filters?.branchId && isBoss(filters.actor)) {
-      where.AND = where.AND ?? [];
-      where.AND.push({ branchId: filters.branchId });
-      console.log('🔍 Branch filter applied (BOSS):', filters.branchId);
     }
 
     if (filters?.startDate || filters?.endDate) {

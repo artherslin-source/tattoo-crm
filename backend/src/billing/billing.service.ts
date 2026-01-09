@@ -1240,11 +1240,28 @@ export class BillingService {
       if (query.branchId && query.branchId !== 'all') where.branchId = query.branchId;
       if (query.artistId && query.artistId !== 'all') where.artistId = query.artistId;
     } else if (isArtist(actor)) {
+      // Restrict to accessible branches (primary branch + explicit grants)
+      const ids = new Set<string>();
+      if (actor.branchId) ids.add(actor.branchId);
+      const rows = await this.prisma.artistBranchAccess.findMany({
+        where: { userId: actor.id },
+        select: { branchId: true },
+      });
+      for (const r of rows) ids.add(r.branchId);
+      const accessible = Array.from(ids);
+
       // ARTIST: only see bills where artistId = actor.id OR (stored value topup created by actor)
       where.OR = [
         { artistId: actor.id },
         { billType: BILL_TYPE_STORED_VALUE_TOPUP, createdById: actor.id },
       ];
+      // Branch switch: if provided, limit to that branch (must be accessible), else show across accessible branches.
+      if (query.branchId && query.branchId !== 'all') {
+        if (!accessible.includes(query.branchId)) throw new ForbiddenException('Insufficient branch access');
+        where.branchId = query.branchId;
+      } else if (accessible.length) {
+        where.branchId = { in: accessible } as any;
+      }
     } else {
       // Other roles: scope by branch
       where.branchId = actor.branchId ?? undefined;

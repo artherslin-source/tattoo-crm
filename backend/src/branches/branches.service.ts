@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AccessActor } from '../common/access/access.types';
+import { isBoss, isArtist } from '../common/access/access.types';
 
 @Injectable()
 export class BranchesService {
@@ -55,6 +57,22 @@ export class BranchesService {
         }
       }
     });
+  }
+
+  async listAccessible(actor: AccessActor) {
+    if (isBoss(actor)) return this.prisma.branch.findMany({ orderBy: { name: 'asc' } });
+
+    // ARTIST: union of primary branchId + ArtistBranchAccess
+    const ids = new Set<string>();
+    if (actor.branchId) ids.add(actor.branchId);
+    if (isArtist(actor)) {
+      const rows = await this.prisma.artistBranchAccess.findMany({
+        where: { userId: actor.id },
+        select: { branchId: true },
+      });
+      for (const r of rows) ids.add(r.branchId);
+    }
+    return this.prisma.branch.findMany({ where: { id: { in: Array.from(ids) } }, orderBy: { name: 'asc' } });
   }
 }
 

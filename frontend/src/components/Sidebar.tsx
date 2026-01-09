@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 import useMediaQuery from "@/hooks/useMediaQuery";
-import { clearTokens } from "@/lib/api";
+import { clearTokens, getJsonWithAuth } from "@/lib/api";
 import { getUserRole, isArtistRole, isBossRole } from "@/lib/access";
 
 type Props = {
@@ -20,6 +20,8 @@ type NavItem = {
 };
 
 const LS_SETTINGS_OPEN = "adminSidebarSettingsOpen";
+const LS_ARTIST_BRANCH_ID = "artistSelectedBranchId";
+type Branch = { id: string; name: string };
 
 export default function Sidebar({ open, onClose }: Props) {
   const router = useRouter();
@@ -61,6 +63,7 @@ export default function Sidebar({ open, onClose }: Props) {
       { href: "/admin/artists", label: "🎨 刺青師管理" },
       { href: "/admin/notifications", label: "🔔 通知中心" },
       { href: "/admin/system/backup", label: "🗄️ 備份管理", bossOnly: true },
+      { href: "/admin/system/prelaunch", label: "🚀 交付前重置", bossOnly: true },
     ];
     return items.filter((it) => !it.bossOnly || isBoss);
   }, [isBoss]);
@@ -73,9 +76,60 @@ export default function Sidebar({ open, onClose }: Props) {
       pathname === "/admin/services" ||
       pathname.startsWith("/admin/services/") ||
       pathname === "/admin/system/backup" ||
-      pathname.startsWith("/admin/system/backup/")
+      pathname.startsWith("/admin/system/backup/") ||
+      pathname === "/admin/system/prelaunch" ||
+      pathname.startsWith("/admin/system/prelaunch/")
     );
   }, [pathname]);
+
+  const [accessibleBranches, setAccessibleBranches] = useState<Branch[]>([]);
+  const [artistBranchId, setArtistBranchId] = useState<string>("all");
+
+  useEffect(() => {
+    if (!isArtist) return;
+    try {
+      const saved = window.localStorage.getItem(LS_ARTIST_BRANCH_ID);
+      if (saved) setArtistBranchId(saved);
+    } catch {}
+
+    void (async () => {
+      try {
+        const branches = await getJsonWithAuth<Branch[]>(`/branches/accessible`);
+        setAccessibleBranches(branches);
+      } catch {
+        // ignore
+      }
+    })();
+  }, [isArtist]);
+
+  const renderArtistBranchSwitch = () => {
+    if (!isArtist) return null;
+    if (accessibleBranches.length <= 1) return null;
+    return (
+      <div className="mb-3">
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1">分店切換</div>
+        <select
+          value={artistBranchId}
+          onChange={(e) => {
+            const v = e.target.value;
+            setArtistBranchId(v);
+            try {
+              window.localStorage.setItem(LS_ARTIST_BRANCH_ID, v);
+            } catch {}
+            window.location.reload();
+          }}
+          className="w-full rounded-md border border-[var(--color-sidebar-border)] bg-[var(--color-sidebar-bg)] px-2 py-2 text-sm text-[var(--color-text)]"
+        >
+          <option value="all">全部分店</option>
+          {accessibleBranches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
@@ -152,6 +206,7 @@ export default function Sidebar({ open, onClose }: Props) {
       <aside className="sidebar">
         <div>
           <h1 className="brand-logo">彫川紋身 CRM</h1>
+          {renderArtistBranchSwitch()}
           {renderNav({})}
         </div>
         <div className="flex flex-col gap-3">
@@ -183,6 +238,7 @@ export default function Sidebar({ open, onClose }: Props) {
                 <h1 className="brand-logo">彫川紋身 CRM</h1>
                 <button onClick={onClose} aria-label="關閉" className="text-2xl">✕</button>
               </div>
+              {renderArtistBranchSwitch()}
               {renderNav({ onItemClick: onClose, className: "flex flex-col gap-3" })}
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-neutral-700 flex flex-col gap-4">
                 <ThemeToggle />
