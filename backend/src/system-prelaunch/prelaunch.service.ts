@@ -30,6 +30,18 @@ export class PrelaunchService {
     });
   }
 
+  async unlock(_actor: AccessActor, input: { confirm: 'UNLOCK'; secret: string }) {
+    this.requireEnabled();
+
+    const expected = process.env.PRELAUNCH_RESET_SECRET;
+    if (!expected) throw new BadRequestException('PRELAUNCH_RESET_SECRET is not configured');
+    if (input.secret !== expected) throw new ForbiddenException('Invalid secret');
+
+    // Delete the done flag so apply can run again.
+    await this.prisma.siteConfig.deleteMany({ where: { key: DONE_KEY } });
+    return { ok: true };
+  }
+
   // NOTE: 交付前重置改為「純清空資料」；不再包含刺青師手機/密碼更新或朱川進修復功能。
 
   async dryRun(_actor: AccessActor) {

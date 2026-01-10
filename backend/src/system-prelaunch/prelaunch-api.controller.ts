@@ -12,6 +12,11 @@ const ApplySchema = z.object({
   secret: z.string().min(1),
 });
 
+const UnlockSchema = z.object({
+  confirm: z.literal('UNLOCK'),
+  secret: z.string().min(1),
+});
+
 const ZhuFixApplySchema = z.object({
   confirm: z.literal('FIX_ZHU'),
   secret: z.string().min(1),
@@ -39,6 +44,14 @@ export class PrelaunchApiController {
     const parsed = ApplySchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
     return this.prelaunch.apply(actor, parsed.data);
+  }
+
+  @Post('unlock')
+  async unlock(@Actor() actor: AccessActor, @Body() body: unknown) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can unlock prelaunch reset');
+    const parsed = UnlockSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
+    return this.prelaunch.unlock(actor, parsed.data);
   }
 
   @Get('zhu-fix/dry-run')

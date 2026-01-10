@@ -26,6 +26,7 @@ export default function AdminSystemPrelaunchPage() {
   const [dryRun, setDryRun] = useState<DryRunResp | null>(null);
   const [secret, setSecret] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [unlockConfirm, setUnlockConfirm] = useState("");
 
   const canApply = useMemo(() => {
     if (!secret) return false;
@@ -107,6 +108,55 @@ export default function AdminSystemPrelaunchPage() {
           </div>
         </CardContent>
       </Card>
+
+      {dryRun?.done ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>解除鎖定（允許再次重置）</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="text-sm text-muted-foreground">
+              如果需要再次執行清空，請先解除鎖定（會清除「已執行」標記）。解除後你仍需要在下方重新輸入 RESET 才能執行。
+            </div>
+            <Input
+              placeholder="輸入 PRELAUNCH_RESET_SECRET"
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              disabled={!!busy}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input
+                placeholder='輸入 "UNLOCK" 以確認'
+                value={unlockConfirm}
+                onChange={(e) => setUnlockConfirm(e.target.value)}
+                disabled={!!busy}
+              />
+              <Button
+                variant="outline"
+                disabled={!!busy || !secret || unlockConfirm !== "UNLOCK"}
+                onClick={async () => {
+                  setBusy("unlock");
+                  setError(null);
+                  setMessage(null);
+                  try {
+                    await postJsonWithAuth(`/admin/system/prelaunch-reset/unlock`, { confirm: "UNLOCK", secret });
+                    setMessage("已解除鎖定：你現在可以再次執行交付前重置。");
+                    setUnlockConfirm("");
+                    setConfirm("");
+                    await refresh();
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "解除鎖定失敗");
+                  } finally {
+                    setBusy(null);
+                  }
+                }}
+              >
+                {busy === "unlock" ? "解除中..." : "解除鎖定"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
