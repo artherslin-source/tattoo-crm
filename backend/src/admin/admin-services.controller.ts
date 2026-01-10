@@ -256,65 +256,15 @@ export class AdminServicesController {
 
     const deriveCandidateMinPrice = (svc: any, vars: any[]): { candidatePrice: number | null; notes: string } => {
       const active = vars.filter((v) => v.isActive !== false);
-      const sizeActive = active.filter((v) => v.type === 'size');
-      const sizeAll = vars.filter((v) => v.type === 'size');
       const colorActive = active.filter((v) => v.type === 'color');
-      const colorAll = vars.filter((v) => v.type === 'color');
 
-      // If no variants or no size variants, treat as fixed-price service: keep current base price as candidate.
-      // This avoids flooding the UI with "cannot derive" for fixed-price services.
-      if (!sizeAll.length) {
-        // If colors exist, we can at least derive a minimum adjustment from color priceModifier.
-        // Candidate = basePrice + min(enabledColor.priceModifier)
-        if (colorActive.length) {
-          const minColor = Math.min(...colorActive.map((c) => Math.trunc(Number(c.priceModifier ?? 0)) || 0));
-          const base = Number.isFinite(svc.price) ? Math.trunc(Number(svc.price)) : 0;
-          const candidate = Math.max(0, base + minColor);
-          return {
-            candidatePrice: candidate > 0 ? candidate : (base > 0 ? base : null),
-            notes: '無尺寸規格：以顏色規格推導（基礎價 + 最小顏色加價），請人工確認',
-          };
-        }
-        const notes =
-          vars.length === 0
-            ? '無規格：固定價服務，候選=現有基礎價'
-            : '無尺寸規格：固定價/非尺寸計價，候選=現有基礎價';
-        return { candidatePrice: Number.isFinite(svc.price) && svc.price > 0 ? svc.price : null, notes };
+      // New rule: candidate = min(enabledColor.priceModifier)
+      if (!colorActive.length) {
+        return { candidatePrice: null, notes: '無啟用顏色規格，無法推導候選最低價' };
       }
-
-      // Prefer active sizes/colors; if no active sizes, fall back to all sizes (but annotate).
-      const sizeVars = sizeActive.length ? sizeActive : sizeAll;
-      // Requirement: if sizes are inactive but colors are active, still use active colors for derivation.
-      const colorVars = colorActive.length ? colorActive : colorAll;
-      const usedInactive = sizeActive.length === 0;
-
-      const candidates: Array<Record<string, any>> = [];
-      for (const s of sizeVars) {
-        if (colorVars.length) {
-          for (const c of colorVars) {
-            candidates.push({ size: s.name, color: c.name });
-          }
-        } else {
-          candidates.push({ size: s.name });
-        }
-      }
-
-      let best: number | null = null;
-      for (const selectedVariants of candidates) {
-        const { finalPrice: itemFinalPrice } = calculatePriceAndDuration(
-          svc.price,
-          svc.durationMin ?? 60,
-          vars,
-          selectedVariants,
-        );
-        const addon = getAddonTotal(selectedVariants);
-        const total = Math.max(0, Math.trunc(Number(itemFinalPrice + addon)));
-        if (!Number.isFinite(total) || total <= 0) continue;
-        if (best === null || total < best) best = total;
-      }
-
-      if (best === null) return { candidatePrice: null, notes: '試算結果無法得到有效最低價' };
-      return { candidatePrice: best, notes: usedInactive ? '以停用尺寸規格試算最低價（請確認尺寸啟用狀態）' : '以尺寸規格試算最低價' };
+      const minColor = Math.min(...colorActive.map((c) => Math.trunc(Number(c.priceModifier ?? 0)) || 0));
+      // Candidate can be 0 in theory; keep it as number for display, but UI may choose not to apply 0.
+      return { candidatePrice: Number.isFinite(minColor) ? minColor : null, notes: '以啟用顏色規格推導候選最低價' };
     };
 
     // Need durationMin/base info; fetch minimal fields in a map

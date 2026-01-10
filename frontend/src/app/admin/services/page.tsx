@@ -10,6 +10,13 @@ import { Settings, Plus, Edit, Trash2, ArrowLeft, Image as ImageIcon, Package, C
 import { ServiceImageSelector } from "@/components/admin/ServiceImageSelector";
 import { VariantManager } from "@/components/admin/VariantManager";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SERVICE_DISPLAY_ORDER, SERVICE_ORDER_MAP } from "@/constants/service-order";
 
 interface Service {
@@ -79,6 +86,7 @@ export default function AdminServicesPage() {
   const [overridePrices, setOverridePrices] = useState<Record<string, string>>({});
   const [repriceApplying, setRepriceApplying] = useState(false);
   const [repriceSelectedIds, setRepriceSelectedIds] = useState<Record<string, boolean>>({});
+  const [repriceRowApplyingId, setRepriceRowApplyingId] = useState<string | null>(null);
 
 const DEFAULT_DESCRIPTION = "尚未設定";
 const DEFAULT_PRICE = "1"; // 必須 > 0，只作佔位值
@@ -286,6 +294,31 @@ const defaultFormValues = {
       setError(apiErr.message || "套用基礎價失敗");
     } finally {
       setRepriceApplying(false);
+    }
+  };
+
+  const applyRowOverrideNow = async (serviceId: string) => {
+    if (!repriceRows) return;
+    const raw = overridePrices[serviceId] ?? "";
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0) {
+      setError("此列沒有可套用的手動覆蓋價（需 > 0）");
+      return;
+    }
+    try {
+      setRepriceRowApplyingId(serviceId);
+      setError(null);
+      await postJsonWithAuth(`/admin/services/reprice/apply`, {
+        overrides: { [serviceId]: Math.trunc(n) },
+        confirm: "APPLY",
+      });
+      await fetchServices();
+      await loadRepriceDryRun();
+    } catch (e) {
+      const apiErr = e as ApiError;
+      setError(apiErr.message || "套用手動價失敗");
+    } finally {
+      setRepriceRowApplyingId(null);
     }
   };
 
@@ -605,10 +638,18 @@ const defaultFormValues = {
               {repriceLoading ? "載入中..." : "產生預覽"}
             </Button>
             <Button
+              onClick={applyOverridePrices}
+              disabled={!repriceRows || repriceApplying}
+              className="sm:ml-auto"
+              title="只會套用你有輸入價格的服務"
+            >
+              {repriceApplying ? "套用中..." : "套用手動價格"}
+            </Button>
+            <Button
               variant="secondary"
               onClick={() => applyCandidateToRows(selectedRepriceIds)}
               disabled={!repriceRows || repriceLoading || selectedRepriceIds.length === 0}
-              title="將勾選列的候選價填入手動覆蓋價（你仍可逐筆調整）"
+              title="將勾選列的候選價填入輸入欄位（你仍可逐筆調整）"
             >
               批次套用候選價（勾選）
             </Button>
@@ -619,14 +660,6 @@ const defaultFormValues = {
               title="將候選價批次填入輸入欄位（你仍可逐筆調整）"
             >
               全列套用候選價
-            </Button>
-            <Button
-              onClick={applyOverridePrices}
-              disabled={!repriceRows || repriceApplying}
-              className="sm:ml-auto"
-              title="只會套用你有輸入價格的服務"
-            >
-              {repriceApplying ? "套用中..." : "套用手動價格"}
             </Button>
           </div>
 
@@ -694,31 +727,39 @@ const defaultFormValues = {
                         </td>
                         <td className="py-2 px-3 text-xs text-gray-600">{r.notes}</td>
                         <td className="py-2 px-3">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => applyCandidateToRows([r.serviceId])}
-                              disabled={typeof r.candidatePrice !== "number" || r.candidatePrice <= 0}
-                              title="將此列候選價填入手動覆蓋價"
-                            >
-                              套用候選價
-                            </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              toggleServiceActive(
-                                // minimal shape
-                                ({ id: r.serviceId, name: r.name, isActive: r.isActive } as any) as Service,
-                                !r.isActive,
-                              )
-                            }
-                            disabled={togglingServiceId === r.serviceId}
-                          >
-                            {togglingServiceId === r.serviceId ? "更新中..." : r.isActive ? "停用" : "啟用"}
-                          </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                操作
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" sideOffset={6}>
+                              <DropdownMenuItem
+                                disabled={typeof r.candidatePrice !== "number" || r.candidatePrice <= 0}
+                                onSelect={() => applyCandidateToRows([r.serviceId])}
+                              >
+                                套用候選價
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={repriceRowApplyingId === r.serviceId || !(Number.isFinite(parsed) && parsed > 0)}
+                                onSelect={() => applyRowOverrideNow(r.serviceId)}
+                              >
+                                {repriceRowApplyingId === r.serviceId ? "套用中..." : "套用手動價"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled={togglingServiceId === r.serviceId}
+                                onSelect={() =>
+                                  toggleServiceActive(
+                                    ({ id: r.serviceId, name: r.name, isActive: r.isActive } as any) as Service,
+                                    !r.isActive,
+                                  )
+                                }
+                              >
+                                {togglingServiceId === r.serviceId ? "更新中..." : r.isActive ? "停用" : "啟用"}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     );
