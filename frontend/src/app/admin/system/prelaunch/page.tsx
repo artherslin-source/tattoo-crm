@@ -19,6 +19,13 @@ type DryRunResp = {
   requires?: { env?: { NODE_ENV?: string; PRELAUNCH_RESET_SECRET?: boolean } };
 };
 
+type ZhuFixResp = {
+  accounts?: any;
+  linkExists?: boolean;
+  access?: any;
+  moveCounts?: Record<string, number>;
+};
+
 export default function AdminSystemPrelaunchPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -27,8 +34,10 @@ export default function AdminSystemPrelaunchPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const [dryRun, setDryRun] = useState<DryRunResp | null>(null);
+  const [zhuFix, setZhuFix] = useState<ZhuFixResp | null>(null);
   const [secret, setSecret] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [zhuConfirm, setZhuConfirm] = useState("");
 
   const canApply = useMemo(() => {
     if (!secret) return false;
@@ -43,6 +52,8 @@ export default function AdminSystemPrelaunchPage() {
     try {
       const data = await getJsonWithAuth<DryRunResp>(`/admin/system/prelaunch-reset/dry-run`);
       setDryRun(data);
+      const z = await getJsonWithAuth<ZhuFixResp>(`/admin/system/prelaunch-reset/zhu-fix/dry-run`);
+      setZhuFix(z);
     } catch (e) {
       setError(e instanceof Error ? e.message : "讀取 dry-run 失敗");
     } finally {
@@ -121,11 +132,74 @@ export default function AdminSystemPrelaunchPage() {
           </div>
 
           <div>
-            <div className="font-semibold mb-2">朱川進合併狀態（預覽）</div>
+            <div className="font-semibold mb-2">朱川進狀態（預覽）</div>
             <pre className="text-xs bg-muted/30 border rounded-md p-3 overflow-auto max-h-48">
               {JSON.stringify(dryRun?.planned?.zhu ?? null, null, 2)}
             </pre>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>朱川進修復（可重複）</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="text-sm text-muted-foreground">
+            用於「東港登入 + 三重保留身分」：建立 link、移除（已合併停用）字樣、並依 branchId 把既有資料歸回三重身分。
+          </div>
+          <pre className="text-xs bg-muted/30 border rounded-md p-3 overflow-auto max-h-64">
+            {JSON.stringify(zhuFix ?? null, null, 2)}
+          </pre>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input
+              placeholder='輸入 "FIX_ZHU" 以確認'
+              value={zhuConfirm}
+              onChange={(e) => setZhuConfirm(e.target.value)}
+              disabled={!!busy}
+            />
+            <Button
+              variant="outline"
+              disabled={!!busy}
+              onClick={async () => {
+                setBusy("zhu-dry");
+                setError(null);
+                try {
+                  const z = await getJsonWithAuth<ZhuFixResp>(`/admin/system/prelaunch-reset/zhu-fix/dry-run`);
+                  setZhuFix(z);
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "讀取 Zhu dry-run 失敗");
+                } finally {
+                  setBusy(null);
+                }
+              }}
+            >
+              {busy === "zhu-dry" ? "載入中..." : "重新整理（Zhu）"}
+            </Button>
+          </div>
+          <Button
+            variant="destructive"
+            disabled={!!busy || !secret || zhuConfirm !== "FIX_ZHU"}
+            onClick={async () => {
+              setBusy("zhu-apply");
+              setError(null);
+              setMessage(null);
+              try {
+                await postJsonWithAuth(`/admin/system/prelaunch-reset/zhu-fix/apply`, {
+                  confirm: "FIX_ZHU",
+                  secret,
+                });
+                setMessage("朱川進修復已套用完成。請重新登入朱川進驗證分店切換與資料歸屬。");
+                await refresh();
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "朱川進修復失敗");
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            {busy === "zhu-apply" ? "修復中..." : "套用朱川進修復"}
+          </Button>
         </CardContent>
       </Card>
 
