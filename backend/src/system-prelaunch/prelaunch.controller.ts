@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, GoneException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AccessGuard } from '../common/access/access.guard';
 import { Actor } from '../common/access/actor.decorator';
@@ -37,19 +37,16 @@ export class PrelaunchController {
     return this.prelaunch.apply(actor, parsed.data);
   }
 
-  // Zhu cross-branch repair (repeatable)
   @Get('zhu-fix/dry-run')
   async zhuFixDryRun(@Actor() actor: AccessActor) {
     if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can run zhu fix');
-    return this.prelaunch.zhuFixDryRun(actor);
+    throw new GoneException('Zhu fix has been removed');
   }
 
   @Post('zhu-fix/apply')
   async zhuFixApply(@Actor() actor: AccessActor, @Body() body: unknown) {
     if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can run zhu fix');
-    const parsed = ZhuFixApplySchema.safeParse(body);
-    if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
-    return this.prelaunch.zhuFixApply(actor, parsed.data);
+    throw new GoneException('Zhu fix has been removed');
   }
 }
 

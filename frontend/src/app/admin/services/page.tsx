@@ -647,6 +647,7 @@ const defaultFormValues = {
             </Button>
             <Button
               variant="secondary"
+              className="shadow-sm hover:shadow"
               onClick={() => applyCandidateToRows(selectedRepriceIds)}
               disabled={!repriceRows || repriceLoading || selectedRepriceIds.length === 0}
               title="將勾選列的候選價填入輸入欄位（你仍可逐筆調整）"
@@ -655,6 +656,7 @@ const defaultFormValues = {
             </Button>
             <Button
               variant="secondary"
+              className="shadow-sm hover:shadow"
               onClick={fillOverridesWithCandidate}
               disabled={!repriceRows || repriceLoading}
               title="將候選價批次填入輸入欄位（你仍可逐筆調整）"

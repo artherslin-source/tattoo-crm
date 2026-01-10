@@ -11,19 +11,9 @@ import { Input } from "@/components/ui/input";
 type DryRunResp = {
   done?: boolean;
   planned?: {
-    artistPhones?: Array<{ name: string; phone: string | null }>;
     wipeCounts?: Record<string, number>;
-    zhu?: any;
   };
-  artistMatches?: Record<string, any[]>;
   requires?: { env?: { NODE_ENV?: string; PRELAUNCH_RESET_SECRET?: boolean } };
-};
-
-type ZhuFixResp = {
-  accounts?: any;
-  linkExists?: boolean;
-  access?: any;
-  moveCounts?: Record<string, number>;
 };
 
 export default function AdminSystemPrelaunchPage() {
@@ -34,10 +24,8 @@ export default function AdminSystemPrelaunchPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const [dryRun, setDryRun] = useState<DryRunResp | null>(null);
-  const [zhuFix, setZhuFix] = useState<ZhuFixResp | null>(null);
   const [secret, setSecret] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [zhuConfirm, setZhuConfirm] = useState("");
 
   const canApply = useMemo(() => {
     if (!secret) return false;
@@ -52,8 +40,6 @@ export default function AdminSystemPrelaunchPage() {
     try {
       const data = await getJsonWithAuth<DryRunResp>(`/admin/system/prelaunch-reset/dry-run`);
       setDryRun(data);
-      const z = await getJsonWithAuth<ZhuFixResp>(`/admin/system/prelaunch-reset/zhu-fix/dry-run`);
-      setZhuFix(z);
     } catch (e) {
       setError(e instanceof Error ? e.message : "讀取 dry-run 失敗");
     } finally {
@@ -79,7 +65,7 @@ export default function AdminSystemPrelaunchPage() {
       <div>
         <h1 className="text-2xl font-bold">交付前重置（BOSS）</h1>
         <p className="text-sm text-muted-foreground">
-          這個操作會更新刺青師登入手機/密碼，並清空會員/聯絡/預約/帳務/通知資料。執行後不可重複。
+          這個操作會清空會員/聯絡/預約/帳務/通知資料。執行後不可重複。
         </p>
       </div>
 
@@ -109,17 +95,6 @@ export default function AdminSystemPrelaunchPage() {
           </div>
 
           <div>
-            <div className="font-semibold mb-2">將更新的刺青師手機（密碼統一 12345678）</div>
-            <ul className="list-disc pl-5 space-y-1">
-              {(dryRun?.planned?.artistPhones ?? []).map((a) => (
-                <li key={a.name}>
-                  {a.name}：<span className="font-mono">{a.phone ?? "-"}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
             <div className="font-semibold mb-2">將清空的資料筆數（預覽）</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.entries(dryRun?.planned?.wipeCounts ?? {}).map(([k, v]) => (
@@ -130,87 +105,6 @@ export default function AdminSystemPrelaunchPage() {
               ))}
             </div>
           </div>
-
-          <div>
-            <div className="font-semibold mb-2">朱川進狀態（預覽）</div>
-            <pre className="text-xs bg-muted/30 border rounded-md p-3 overflow-auto max-h-48">
-              {JSON.stringify(dryRun?.planned?.zhu ?? null, null, 2)}
-            </pre>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>朱川進修復（可重複）</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="text-sm text-muted-foreground">
-            用於「東港登入 + 三重保留身分」：建立 link、移除（已合併停用）字樣、並依 branchId 把既有資料歸回三重身分。
-          </div>
-          <pre className="text-xs bg-muted/30 border rounded-md p-3 overflow-auto max-h-64">
-            {JSON.stringify(zhuFix ?? null, null, 2)}
-          </pre>
-          <Input
-            placeholder="輸入 PRELAUNCH_RESET_SECRET（必填）"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            disabled={!!busy}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <Input
-              placeholder='輸入 "FIX_ZHU" 以確認'
-              value={zhuConfirm}
-              onChange={(e) => setZhuConfirm(e.target.value)}
-              disabled={!!busy}
-            />
-            <Button
-              variant="outline"
-              disabled={!!busy}
-              onClick={async () => {
-                setBusy("zhu-dry");
-                setError(null);
-                try {
-                  const z = await getJsonWithAuth<ZhuFixResp>(`/admin/system/prelaunch-reset/zhu-fix/dry-run`);
-                  setZhuFix(z);
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : "讀取 Zhu dry-run 失敗");
-                } finally {
-                  setBusy(null);
-                }
-              }}
-            >
-              {busy === "zhu-dry" ? "載入中..." : "重新整理（Zhu）"}
-            </Button>
-          </div>
-          <Button
-            variant="destructive"
-            disabled={!!busy || !secret || zhuConfirm !== "FIX_ZHU"}
-            onClick={async () => {
-              setBusy("zhu-apply");
-              setError(null);
-              setMessage(null);
-              try {
-                await postJsonWithAuth(`/admin/system/prelaunch-reset/zhu-fix/apply`, {
-                  confirm: "FIX_ZHU",
-                  secret,
-                });
-                setMessage("朱川進修復已套用完成。請重新登入朱川進驗證分店切換與資料歸屬。");
-                await refresh();
-              } catch (e) {
-                setError(e instanceof Error ? e.message : "朱川進修復失敗");
-              } finally {
-                setBusy(null);
-              }
-            }}
-          >
-            {busy === "zhu-apply" ? "修復中..." : "套用朱川進修復"}
-          </Button>
-          {!secret ? (
-            <div className="text-xs text-muted-foreground">
-              需要輸入 PRELAUNCH_RESET_SECRET 才能執行（避免誤觸）。
-            </div>
-          ) : null}
         </CardContent>
       </Card>
 
