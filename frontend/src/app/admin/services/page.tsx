@@ -78,6 +78,7 @@ export default function AdminServicesPage() {
   const [repriceRows, setRepriceRows] = useState<RepriceRow[] | null>(null);
   const [overridePrices, setOverridePrices] = useState<Record<string, string>>({});
   const [repriceApplying, setRepriceApplying] = useState(false);
+  const [repriceSelectedIds, setRepriceSelectedIds] = useState<Record<string, boolean>>({});
 
 const DEFAULT_DESCRIPTION = "尚未設定";
 const DEFAULT_PRICE = "1"; // 必須 > 0，只作佔位值
@@ -157,6 +158,9 @@ const defaultFormValues = {
     try {
       setTogglingServiceId(service.id);
       await patchJsonWithAuth(`/admin/services/${service.id}/active`, { isActive: nextActive });
+      // Update UI immediately (and then refresh list for safety)
+      setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, isActive: nextActive } : s)));
+      setRepriceRows((prev) => (prev ? prev.map((r) => (r.serviceId === service.id ? { ...r, isActive: nextActive } : r)) : prev));
       await fetchServices();
     } catch (e) {
       const apiErr = e as ApiError;
@@ -209,6 +213,7 @@ const defaultFormValues = {
       const resp = await postJsonWithAuth<{ rows: RepriceRow[] }>(`/admin/services/reprice/dry-run`, {});
       setRepriceRows(resp.rows || []);
       setOverridePrices({});
+      setRepriceSelectedIds({});
     } catch (e) {
       const apiErr = e as ApiError;
       setError(apiErr.message || "載入重訂預覽失敗");
@@ -216,6 +221,34 @@ const defaultFormValues = {
       setRepriceLoading(false);
     }
   };
+
+  const applyCandidateToRows = (serviceIds: string[]) => {
+    if (!repriceRows) return;
+    const byId = new Map(repriceRows.map((r) => [r.serviceId, r]));
+    setOverridePrices((prev) => {
+      const next = { ...prev };
+      for (const id of serviceIds) {
+        const r = byId.get(id);
+        if (r && typeof r.candidatePrice === "number" && r.candidatePrice > 0) {
+          next[id] = String(r.candidatePrice);
+        }
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllRepriceRows = (checked: boolean) => {
+    if (!repriceRows) return;
+    const next: Record<string, boolean> = {};
+    for (const r of repriceRows) next[r.serviceId] = checked;
+    setRepriceSelectedIds(next);
+  };
+
+  const selectedRepriceIds = useMemo(() => {
+    return Object.entries(repriceSelectedIds)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+  }, [repriceSelectedIds]);
 
   const fillOverridesWithCandidate = () => {
     if (!repriceRows) return;
@@ -573,11 +606,19 @@ const defaultFormValues = {
             </Button>
             <Button
               variant="secondary"
+              onClick={() => applyCandidateToRows(selectedRepriceIds)}
+              disabled={!repriceRows || repriceLoading || selectedRepriceIds.length === 0}
+              title="將勾選列的候選價填入手動覆蓋價（你仍可逐筆調整）"
+            >
+              批次套用候選價（勾選）
+            </Button>
+            <Button
+              variant="secondary"
               onClick={fillOverridesWithCandidate}
               disabled={!repriceRows || repriceLoading}
               title="將候選價批次填入輸入欄位（你仍可逐筆調整）"
             >
-              批次填入候選價
+              全列套用候選價
             </Button>
             <Button
               onClick={applyOverridePrices}
@@ -594,12 +635,21 @@ const defaultFormValues = {
               <table className="min-w-[900px] w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="text-left py-2 px-3 w-[44px]">
+                      <input
+                        type="checkbox"
+                        aria-label="全選"
+                        checked={repriceRows.length > 0 && repriceRows.every((r) => repriceSelectedIds[r.serviceId] === true)}
+                        onChange={(e) => toggleSelectAllRepriceRows(e.target.checked)}
+                      />
+                    </th>
                     <th className="text-left py-2 px-3">服務</th>
                     <th className="text-left py-2 px-3">狀態</th>
                     <th className="text-right py-2 px-3">舊基礎價</th>
                     <th className="text-right py-2 px-3">候選最低價</th>
                     <th className="text-right py-2 px-3">手動覆蓋價</th>
                     <th className="text-left py-2 px-3">備註</th>
+                    <th className="text-left py-2 px-3">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -609,6 +659,16 @@ const defaultFormValues = {
                     const willApply = Number.isFinite(parsed) && parsed > 0;
                     return (
                       <tr key={r.serviceId} className="border-t">
+                        <td className="py-2 px-3">
+                          <input
+                            type="checkbox"
+                            aria-label={`選取 ${r.name}`}
+                            checked={repriceSelectedIds[r.serviceId] === true}
+                            onChange={(e) =>
+                              setRepriceSelectedIds((prev) => ({ ...prev, [r.serviceId]: e.target.checked }))
+                            }
+                          />
+                        </td>
                         <td className="py-2 px-3">
                           <div className="font-medium">{r.name}</div>
                           <div className="text-xs text-gray-500">{r.serviceId}</div>
@@ -634,6 +694,16 @@ const defaultFormValues = {
                         </td>
                         <td className="py-2 px-3 text-xs text-gray-600">{r.notes}</td>
                         <td className="py-2 px-3">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => applyCandidateToRows([r.serviceId])}
+                              disabled={typeof r.candidatePrice !== "number" || r.candidatePrice <= 0}
+                              title="將此列候選價填入手動覆蓋價"
+                            >
+                              套用候選價
+                            </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -648,6 +718,7 @@ const defaultFormValues = {
                           >
                             {togglingServiceId === r.serviceId ? "更新中..." : r.isActive ? "停用" : "啟用"}
                           </Button>
+                          </div>
                         </td>
                       </tr>
                     );
