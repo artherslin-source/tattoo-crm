@@ -54,17 +54,17 @@ export function Hero({ loggedIn, config }: HeroProps) {
         <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-transparent" />
       </div>
 
-      <div className="relative mx-auto flex min-h-[70vh] w-full max-w-6xl flex-col justify-center gap-12 px-4 py-24 sm:px-6 lg:flex-row lg:items-center lg:gap-16 lg:px-8">
+      <div className="relative mx-auto flex min-h-[70vh] w-full max-w-6xl flex-col justify-center gap-12 px-4 py-24 sm:px-6 ipad:py-20 ipad:min-h-[62vh] lg:flex-row lg:items-center lg:gap-16 lg:px-8">
         <div className="max-w-2xl space-y-6 text-center lg:text-left">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-1 text-xs uppercase tracking-[0.3em] text-white/70">
             {c.badgeText}
           </span>
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl ipad:text-5xl ipad:leading-tight lg:text-6xl">
             {c.headlineLines[0] || ""}
             <br className="hidden sm:block" />
             {c.headlineLines[1] || ""}
           </h1>
-          <p className="text-base text-neutral-200 sm:text-lg">
+          <p className="text-base text-neutral-200 sm:text-lg ipad:text-lg">
             {c.description}
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -90,14 +90,14 @@ export function Hero({ loggedIn, config }: HeroProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-left text-white/80 sm:max-w-lg lg:max-w-none">
+        <div className="grid grid-cols-2 gap-4 text-left text-white/80 sm:max-w-lg ipad:gap-5 lg:max-w-none">
           {c.stats.slice(0, 4).map((s, idx) => (
             <div
               key={`${idx}-${s.label}`}
-              className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur"
+              className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur ipad:p-6"
             >
-              <p className="text-3xl font-semibold text-white">{s.value}</p>
-              <p className="text-sm uppercase tracking-[0.3em] text-white/50">{s.label}</p>
+              <p className="text-3xl font-semibold text-white ipad:text-4xl">{s.value}</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-white/50 ipad:text-[0.95rem]">{s.label}</p>
             </div>
           ))}
         </div>

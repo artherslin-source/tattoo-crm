@@ -479,8 +479,8 @@ function HomePageContent({
         </div>
       )}
 
-      {/* 桌機版固定浮動側邊欄 */}
-      <aside className="hidden lg:fixed lg:left-6 lg:top-32 lg:z-30 lg:block lg:w-48 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-black/40 lg:p-4 lg:backdrop-blur-lg lg:shadow-lg">
+      {/* 桌機版固定浮動側邊欄（iPad 視為平板，避免壓縮內容區） */}
+      <aside className="hidden lg:fixed lg:left-6 lg:top-32 lg:z-30 lg:block lg:w-48 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-black/40 lg:p-4 lg:backdrop-blur-lg lg:shadow-lg ipad:hidden">
         <nav aria-label="快速導覽" className="space-y-3">
           <p className="text-sm uppercase tracking-[0.2em] text-neutral-500">快速導覽</p>
           <ul className="space-y-1 text-sm">
@@ -503,7 +503,7 @@ function HomePageContent({
       </aside>
 
       <main className="relative z-10 -mt-12 space-y-16 pb-12 sm:-mt-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:ml-[15rem] lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:ml-[15rem] lg:px-8 ipad:ml-0 ipad:px-6">
           <section className="space-y-16">
               <section id="services" className="space-y-6 scroll-mt-24">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

@@ -185,6 +185,31 @@
   color: var(--color-primary);
 }
 
+/* iPad / iPad Pro: make admin drawer feel more spacious and touch-friendly */
+@media (min-width: 768px) and (max-width: 1366px) {
+  .drawer-panel {
+    width: 340px;
+  }
+
+  .drawer-panel nav a {
+    padding: 1rem 1.1rem;
+    font-size: 1rem;
+  }
+
+  .drawer-panel nav .sidebar-group-btn {
+    padding: 0.95rem 1.1rem;
+    font-size: 1rem;
+  }
+
+  .topbar {
+    padding: 0.95rem 1.25rem;
+  }
+
+  .main-content {
+    padding: 1.75rem;
+  }
+}
+
 /* ==========================================
    CARD COMPONENTS
    ========================================== */

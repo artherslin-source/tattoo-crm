@@ -8,6 +8,12 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        // iPad / iPad Pro (device-specific range)
+        ipad: { raw: '(min-width: 768px) and (max-width: 1366px)' },
+        ipad_portrait: { raw: '(min-width: 768px) and (max-width: 1366px) and (orientation: portrait)' },
+        ipad_landscape: { raw: '(min-width: 768px) and (max-width: 1366px) and (orientation: landscape)' },
+      },
       colors: {
         // Background & Surface
         bg: 'var(--color-bg)',

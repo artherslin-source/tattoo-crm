@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 import useMediaQuery from "@/hooks/useMediaQuery";
+import useIsIpad from "@/hooks/useIsIpad";
 import { clearTokens, getJsonWithAuth } from "@/lib/api";
 import { getUserRole, isArtistRole, isBossRole } from "@/lib/access";
 
@@ -27,6 +28,7 @@ export default function Sidebar({ open, onClose }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isIpad = useIsIpad();
   const role = getUserRole();
   const isArtist = isArtistRole(role);
   const isBoss = isBossRole(role);
@@ -203,7 +205,8 @@ export default function Sidebar({ open, onClose }: Props) {
   };
 
   // 桌機：直接顯示固定側欄
-  if (isDesktop) {
+  // iPad/iPad Pro：一律使用 Drawer（含橫向 1024/1366），避免桌機 sidebar 壓縮內容區
+  if (isDesktop && !isIpad) {
     return (
       <aside className="sidebar">
         <div>

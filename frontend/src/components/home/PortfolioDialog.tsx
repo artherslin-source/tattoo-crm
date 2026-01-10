@@ -249,11 +249,11 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
         className={
           isMobile
             ? "left-0 right-0 bottom-0 top-auto max-w-none w-full h-[92vh] overflow-y-auto bg-white dark:bg-neutral-900 p-0 rounded-t-2xl border border-gray-200 dark:border-neutral-800"
-            : "max-w-5xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto bg-white dark:bg-neutral-900 p-0 w-[95vw] md:w-full"
+            : "max-w-5xl max-h-[95vh] md:max-h-[90vh] ipad:max-h-[92vh] overflow-y-auto bg-white dark:bg-neutral-900 p-0 w-[95vw] md:w-full"
         }
       >
         {/* 標題區 - 響應式 padding */}
-        <DialogHeader className="sticky top-0 z-10 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-700 p-4 sm:p-6">
+        <DialogHeader className="sticky top-0 z-10 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-700 p-4 sm:p-6 ipad:p-7">
           <div className="flex items-start gap-3 sm:gap-4">
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-1 sm:mb-2 truncate">

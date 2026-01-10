@@ -29,9 +29,10 @@ export const Button: React.FC<ButtonProps> = ({
   };
   
   const sizeClasses = {
-    default: "px-4 py-2 text-sm",
-    sm: "px-3 py-1.5 text-sm",
-    lg: "px-6 py-3 text-base"
+    // iPad: slightly larger touch targets + font for comfort
+    default: "px-4 py-2 text-sm ipad:px-5 ipad:py-3 ipad:text-base ipad:min-h-[44px]",
+    sm: "px-3 py-1.5 text-sm ipad:px-4 ipad:py-2.5 ipad:text-base ipad:min-h-[44px]",
+    lg: "px-6 py-3 text-base ipad:px-7 ipad:py-3.5 ipad:text-lg ipad:min-h-[48px]"
   };
   
   const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
