@@ -57,6 +57,8 @@ model User {
   contactsOwned               Contact[]          @relation("ContactOwnerArtist")
   siteConfigsUpdated          SiteConfig[]       @relation("SiteConfigUpdatedBy")
   artistBranchAccesses        ArtistBranchAccess[]
+  artistLoginLinksAsLogin     ArtistLoginLink[]   @relation("ArtistLoginLinkLoginUser")
+  artistLoginLinksAsArtist    ArtistLoginLink[]   @relation("ArtistLoginLinkArtistUser")
   // @@index([personId])
 
   @@index([branchId, role, isActive])
@@ -139,6 +141,22 @@ model ArtistBranchAccess {
   @@unique([userId, branchId])
   @@index([userId])
   @@index([branchId])
+}
+
+// ARTIST 跨分店「登入合併」：同一個 login user 代表同一真人，
+// 但可連結到多個分店的 artist user 身分（資料歸檔仍各自歸屬到不同 userId）。
+model ArtistLoginLink {
+  id          String   @id @default(cuid())
+  loginUserId String
+  artistUserId String
+  createdAt   DateTime @default(now())
+
+  loginUser   User     @relation("ArtistLoginLinkLoginUser", fields: [loginUserId], references: [id])
+  artistUser  User     @relation("ArtistLoginLinkArtistUser", fields: [artistUserId], references: [id])
+
+  @@unique([loginUserId, artistUserId])
+  @@index([loginUserId])
+  @@index([artistUserId])
 }
 
 model ArtistAvailability {

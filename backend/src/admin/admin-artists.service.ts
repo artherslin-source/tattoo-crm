@@ -7,7 +7,7 @@ import { isBoss, type AccessActor } from '../common/access/access.types';
 export class AdminArtistsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(actor: AccessActor) {
+  async findAll(actor: AccessActor, opts?: { includeInactive?: boolean }) {
     try {
       // 構建查詢條件
       const whereCondition: any = {};
@@ -15,6 +15,10 @@ export class AdminArtistsService {
       if (!isBoss(actor)) {
         // ARTIST: only self (keeps appointment-creation UI simple and prevents cross-artist access)
         whereCondition.userId = actor.id;
+      }
+      if (!opts?.includeInactive) {
+        whereCondition.active = true;
+        whereCondition.user = { isActive: true };
       }
 
       const artists = await this.prisma.artist.findMany({

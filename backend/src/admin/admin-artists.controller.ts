@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Req, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Req, NotFoundException, ForbiddenException, BadRequestException, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AccessGuard } from '../common/access/access.guard';
 import { Actor } from '../common/access/actor.decorator';
@@ -64,16 +64,19 @@ export class AdminArtistsController {
   }
 
   @Get()
-  async findAll(@Actor() actor: AccessActor) {
+  async findAll(@Actor() actor: AccessActor, @Query('includeInactive') includeInactive?: string) {
     console.log('🎯 AdminArtistsController.findAll called');
     console.log('🔍 Actor info:', { role: actor.role, branchId: actor.branchId });
     try {
       console.log('🔧 Trying to call adminArtistsService.findAll()');
-      return this.adminArtistsService.findAll(actor);
+      return this.adminArtistsService.findAll(actor, { includeInactive: includeInactive === '1' || includeInactive === 'true' });
     } catch (error) {
       console.log('❌ Error calling adminArtistsService:', error);
       console.log('🔧 Trying direct Prisma query as fallback');
       return this.prisma.artist.findMany({
+        where: includeInactive === '1' || includeInactive === 'true'
+          ? {}
+          : { active: true, user: { isActive: true } },
         include: { 
           user: {
             select: {

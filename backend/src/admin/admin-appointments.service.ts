@@ -4,6 +4,7 @@ import { isBoss, isArtist, type AccessActor } from '../common/access/access.type
 import type { Prisma } from '@prisma/client';
 import { BillingService } from '../billing/billing.service';
 import { calculatePriceAndDuration, getAddonTotal } from '../cart/pricing';
+import { resolveArtistScope, getAllArtistUserIdsForLogin, resolveTargetArtistUserIdForBranch } from '../common/access/artist-scope';
 
 @Injectable()
 export class AdminAppointmentsService {
@@ -33,23 +34,25 @@ export class AdminAppointmentsService {
 
   private async buildScopeWhere(actor: AccessActor, branchId?: string): Promise<Prisma.AppointmentWhereInput> {
     if (isBoss(actor)) return {};
-
-    const accessible = await this.resolveAccessibleBranchIds(actor);
-    if (!accessible.length) throw new ForbiddenException('Insufficient permissions');
-
-    let branchWhere: Prisma.AppointmentWhereInput;
-    if (branchId && branchId !== 'all') {
-      if (!accessible.includes(branchId)) throw new ForbiddenException('Insufficient branch access');
-      branchWhere = { branchId };
-    } else {
-      branchWhere = { branchId: { in: accessible } };
+    if (!isArtist(actor)) {
+      // Non-boss non-artist: scope by own branch
+      return actor.branchId ? { branchId: actor.branchId } : {};
     }
+    const { selectedBranchId, accessibleBranchIds, allArtistUserIds } = await resolveArtistScope(this.prisma, actor, branchId);
+    if (!accessibleBranchIds.length) throw new ForbiddenException('Insufficient permissions');
+
+    const branchWhere: Prisma.AppointmentWhereInput = selectedBranchId
+      ? { branchId: selectedBranchId }
+      : { branchId: { in: accessibleBranchIds } };
 
     return {
       AND: [
         branchWhere,
         {
-          OR: [{ artistId: actor.id }, { user: { primaryArtistId: actor.id } }],
+          OR: [
+            { artistId: { in: allArtistUserIds } as any },
+            { user: { primaryArtistId: { in: allArtistUserIds } as any } as any },
+          ],
         },
       ],
     };
@@ -70,17 +73,26 @@ export class AdminAppointmentsService {
     };
 
     if (!isBoss(filters.actor)) {
-      const accessible = await this.resolveAccessibleBranchIds(filters.actor);
-      // Branch filter for ARTIST: allow switching, but must be within accessible branches.
-      if (filters.branchId && filters.branchId !== 'all') {
-        if (!accessible.includes(filters.branchId)) throw new ForbiddenException('Insufficient branch access');
-        where.AND.push({ branchId: filters.branchId });
-      } else {
-        where.AND.push({ branchId: { in: accessible } });
+      if (isArtist(filters.actor)) {
+        const { selectedBranchId, accessibleBranchIds, allArtistUserIds } = await resolveArtistScope(
+          this.prisma,
+          filters.actor,
+          filters.branchId,
+        );
+        if (selectedBranchId) {
+          where.AND.push({ branchId: selectedBranchId });
+        } else {
+          where.AND.push({ branchId: { in: accessibleBranchIds } });
+        }
+        where.AND.push({
+          OR: [
+            { artistId: { in: allArtistUserIds } as any },
+            { user: { primaryArtistId: { in: allArtistUserIds } as any } as any },
+          ],
+        });
+      } else if (filters.actor.branchId) {
+        where.AND.push({ branchId: filters.actor.branchId });
       }
-      where.AND.push({
-        OR: [{ artistId: filters.actor.id }, { user: { primaryArtistId: filters.actor.id } }],
-      });
     } else if (filters?.branchId && filters.branchId !== 'all') {
       where.AND.push({ branchId: filters.branchId });
       console.log('🔍 Branch filter applied (BOSS):', filters.branchId);
@@ -276,20 +288,23 @@ export class AdminAppointmentsService {
     contactId?: string;
   }) {
     try {
+      let effectiveArtistId = input.artistId;
+
       // Scope validation for ARTIST
       if (!isBoss(input.actor)) {
         const accessible = await this.resolveAccessibleBranchIds(input.actor);
         if (!accessible.includes(input.branchId)) throw new ForbiddenException('Cannot create appointment outside your allowed branches');
-        // ARTIST can only create appointments assigned to themselves (future staff roles can broaden this).
-        if (input.artistId !== input.actor.id) {
-          throw new ForbiddenException('Cannot assign appointment to another artist');
+
+        if (isArtist(input.actor)) {
+          // Single-login multi-identity: pick correct identity by branch for write operations.
+          effectiveArtistId = await resolveTargetArtistUserIdForBranch(this.prisma, input.actor, input.branchId);
         }
       }
 
       console.log('🔍 開始驗證外鍵:', {
         userId: input.userId,
         serviceId: input.serviceId,
-        artistId: input.artistId,
+        artistId: effectiveArtistId,
         branchId: input.branchId
       });
 
@@ -300,7 +315,7 @@ export class AdminAppointmentsService {
           where: { id: input.serviceId },
           include: { variants: { where: { isActive: true } } },
         }),
-        this.prisma.user.findUnique({ where: { id: input.artistId } }), // 修正：artistId 實際上是 User 表的 ID
+        this.prisma.user.findUnique({ where: { id: effectiveArtistId } }), // artistId is User.id
         this.prisma.branch.findUnique({ where: { id: input.branchId } }),
       ]);
 
@@ -320,9 +335,9 @@ export class AdminAppointmentsService {
         if (!user.primaryArtistId) {
           await this.prisma.user.update({
             where: { id: user.id },
-            data: { primaryArtistId: input.actor.id, branchId: input.actor.branchId ?? user.branchId },
+            data: { primaryArtistId: effectiveArtistId, branchId: input.branchId ?? input.actor.branchId ?? user.branchId },
           });
-        } else if (user.primaryArtistId !== input.actor.id) {
+        } else if (user.primaryArtistId !== input.actor.id && user.primaryArtistId !== effectiveArtistId) {
           throw new ForbiddenException('Customer is not owned by this artist');
         }
       }
@@ -343,8 +358,10 @@ export class AdminAppointmentsService {
         endAt: input.endAt
       });
 
-      // 暫時跳過跨分店排程檢查（personId 欄位未啟用）
-      const artistIdsToCheck: string[] = [input.artistId];
+      // Cross-identity conflict check for single-login artists
+      const artistIdsToCheck: string[] = isArtist(input.actor)
+        ? await getAllArtistUserIdsForLogin(this.prisma, input.actor.id)
+        : [effectiveArtistId];
 
       const conflicts = await this.prisma.appointment.findMany({
         where: {
@@ -453,7 +470,7 @@ export class AdminAppointmentsService {
             endAt: input.endAt,
             userId: input.userId,
             serviceId: input.serviceId,
-            artistId: input.artistId,
+            artistId: effectiveArtistId,
             branchId: input.branchId,
             notes: input.notes,
             contactId: input.contactId,
@@ -480,7 +497,7 @@ export class AdminAppointmentsService {
               where: { id: input.contactId },
               data: {
                 status: 'CONVERTED',
-                ownerArtistId: contact.ownerArtistId ?? input.artistId,
+                ownerArtistId: contact.ownerArtistId ?? effectiveArtistId,
               },
             });
           }

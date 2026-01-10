@@ -360,9 +360,9 @@ export class ArtistController {
 
   // 5. 通知系統
   @Get("notifications")
-  async getNotifications(@Req() req) {
-    const artistId = req.user.id;
-    return this.artistService.getNotifications(artistId);
+  async getNotifications(@Req() req, @Query('branchId') branchId?: string) {
+    const actor = req.user;
+    return this.artistService.getNotifications(actor, branchId);
   }
 
   @Patch("notifications/:id/read")

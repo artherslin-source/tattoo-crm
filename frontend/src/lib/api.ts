@@ -277,11 +277,11 @@ async function withAuthFetch(
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
   // Artist branch switch support (client-side only):
-  // If user is ARTIST and selected a specific branch, append `branchId=` to GET requests.
+  // If user is ARTIST and selected a specific branch, append `branchId=` to requests
+  // so both list queries and create/update actions can follow the sidebar branch switch.
   let finalPath = normalizedPath;
   try {
-    const method = (init.method || 'GET').toUpperCase();
-    if (typeof window !== 'undefined' && method === 'GET') {
+    if (typeof window !== 'undefined') {
       const role = window.localStorage.getItem('userRole') || '';
       const normalizedRole = role.toUpperCase();
       const selected = window.localStorage.getItem('artistSelectedBranchId') || '';

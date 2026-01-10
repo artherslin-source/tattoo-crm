@@ -633,6 +633,22 @@ const defaultFormValues = {
                           />
                         </td>
                         <td className="py-2 px-3 text-xs text-gray-600">{r.notes}</td>
+                        <td className="py-2 px-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              toggleServiceActive(
+                                // minimal shape
+                                ({ id: r.serviceId, name: r.name, isActive: r.isActive } as any) as Service,
+                                !r.isActive,
+                              )
+                            }
+                            disabled={togglingServiceId === r.serviceId}
+                          >
+                            {togglingServiceId === r.serviceId ? "更新中..." : r.isActive ? "停用" : "啟用"}
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}

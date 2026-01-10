@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ContactsService } from './contacts.service';
 import { CreateContactDto } from './dto/create-contact.dto';
@@ -18,13 +18,13 @@ export class ContactsController {
   }
 
   @Get()
-  findAll(@Actor() actor: AccessActor) {
-    return this.contactsService.findAll(actor);
+  findAll(@Actor() actor: AccessActor, @Query('branchId') branchId?: string) {
+    return this.contactsService.findAll(actor, { branchId });
   }
 
   @Get('stats')
-  getStats(@Actor() actor: AccessActor) {
-    return this.contactsService.getStats(actor);
+  getStats(@Actor() actor: AccessActor, @Query('branchId') branchId?: string) {
+    return this.contactsService.getStats(actor, { branchId });
   }
 
   @Get(':id')

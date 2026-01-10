@@ -13,6 +13,11 @@ const ApplySchema = z.object({
   secret: z.string().min(1),
 });
 
+const ZhuFixApplySchema = z.object({
+  confirm: z.literal('FIX_ZHU'),
+  secret: z.string().min(1),
+});
+
 @Controller('admin/system/prelaunch-reset')
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 export class PrelaunchController {
@@ -30,6 +35,21 @@ export class PrelaunchController {
     const parsed = ApplySchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
     return this.prelaunch.apply(actor, parsed.data);
+  }
+
+  // Zhu cross-branch repair (repeatable)
+  @Get('zhu-fix/dry-run')
+  async zhuFixDryRun(@Actor() actor: AccessActor) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can run zhu fix');
+    return this.prelaunch.zhuFixDryRun(actor);
+  }
+
+  @Post('zhu-fix/apply')
+  async zhuFixApply(@Actor() actor: AccessActor, @Body() body: unknown) {
+    if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can run zhu fix');
+    const parsed = ZhuFixApplySchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
+    return this.prelaunch.zhuFixApply(actor, parsed.data);
   }
 }
 

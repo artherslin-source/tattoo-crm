@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { isBoss, isArtist, type AccessActor } from '../common/access/access.types';
 import { BILL_TYPE_STORED_VALUE_TOPUP } from './billing.constants';
 import * as ExcelJS from 'exceljs';
+import { resolveArtistScope } from '../common/access/artist-scope';
 
 type BillStatus = 'OPEN' | 'SETTLED' | 'VOID';
 
@@ -1240,27 +1241,23 @@ export class BillingService {
       if (query.branchId && query.branchId !== 'all') where.branchId = query.branchId;
       if (query.artistId && query.artistId !== 'all') where.artistId = query.artistId;
     } else if (isArtist(actor)) {
-      // Restrict to accessible branches (primary branch + explicit grants)
-      const ids = new Set<string>();
-      if (actor.branchId) ids.add(actor.branchId);
-      const rows = await this.prisma.artistBranchAccess.findMany({
-        where: { userId: actor.id },
-        select: { branchId: true },
-      });
-      for (const r of rows) ids.add(r.branchId);
-      const accessible = Array.from(ids);
+      const { selectedBranchId, accessibleBranchIds, allArtistUserIds } = await resolveArtistScope(
+        this.prisma,
+        actor,
+        query.branchId,
+      );
 
-      // ARTIST: only see bills where artistId = actor.id OR (stored value topup created by actor)
+      // ARTIST: see bills for any linked identity (and stored-value topups created by any linked identity)
       where.OR = [
-        { artistId: actor.id },
-        { billType: BILL_TYPE_STORED_VALUE_TOPUP, createdById: actor.id },
+        { artistId: { in: allArtistUserIds } as any },
+        { billType: BILL_TYPE_STORED_VALUE_TOPUP, createdById: { in: allArtistUserIds } as any },
       ];
-      // Branch switch: if provided, limit to that branch (must be accessible), else show across accessible branches.
-      if (query.branchId && query.branchId !== 'all') {
-        if (!accessible.includes(query.branchId)) throw new ForbiddenException('Insufficient branch access');
-        where.branchId = query.branchId;
-      } else if (accessible.length) {
-        where.branchId = { in: accessible } as any;
+
+      // Branch switch: if provided, limit to that branch, else show across accessible branches.
+      if (selectedBranchId) {
+        where.branchId = selectedBranchId;
+      } else if (accessibleBranchIds.length) {
+        where.branchId = { in: accessibleBranchIds } as any;
       }
     } else {
       // Other roles: scope by branch

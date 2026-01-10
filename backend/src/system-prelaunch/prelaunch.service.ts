@@ -43,22 +43,88 @@ export class PrelaunchService {
 
   private async findArtistsByName(name: string) {
     return this.prisma.artist.findMany({
-      where: { OR: [{ displayName: name }, { user: { name } }] },
+      // name may already include suffix in production (e.g. "（已合併停用）"), so use startsWith for robustness
+      where: { OR: [{ displayName: { startsWith: name } }, { user: { name: { startsWith: name } } }] },
       include: { branch: { select: { id: true, name: true } }, user: true },
     });
   }
 
-  private async resolveZhuPrimarySecondary() {
+  private async resolveZhuDonggangSanchong() {
     const hits = await this.findArtistsByName('朱川進');
-    if (hits.length < 2) {
-      throw new BadRequestException('Expected two Zhu accounts (東港/三重) but did not find both');
-    }
     const donggang = hits.find((a) => a.branch?.name === '東港店');
     const sanchong = hits.find((a) => a.branch?.name === '三重店');
     if (!donggang || !sanchong) {
       throw new BadRequestException('Could not locate Zhu 東港店/三重店 accounts');
     }
-    return { primary: donggang, secondary: sanchong };
+    return { donggang, sanchong };
+  }
+
+  private async getZhuFixPlan() {
+    const { donggang, sanchong } = await this.resolveZhuDonggangSanchong();
+    const donggangBranchId = donggang.branch?.id ?? donggang.user.branchId ?? null;
+    const sanchongBranchId = sanchong.branch?.id ?? sanchong.user.branchId ?? null;
+    if (!donggangBranchId || !sanchongBranchId) {
+      throw new BadRequestException('Zhu branchId missing');
+    }
+
+    const link = await this.prisma.artistLoginLink.findFirst({
+      where: { loginUserId: donggang.userId, artistUserId: sanchong.userId },
+      select: { id: true },
+    });
+    const accessRows = await this.prisma.artistBranchAccess.findMany({
+      where: { userId: donggang.userId },
+      select: { branchId: true },
+    });
+    const accessSet = new Set(accessRows.map((r) => r.branchId));
+
+    const counts = {
+      contacts_owner: await this.prisma.contact.count({
+        where: { branchId: sanchongBranchId, ownerArtistId: donggang.userId },
+      }),
+      contacts_preferred: await this.prisma.contact.count({
+        where: { branchId: sanchongBranchId, preferredArtistId: donggang.userId },
+      }),
+      appointments: await this.prisma.appointment.count({
+        where: { branchId: sanchongBranchId, artistId: donggang.userId },
+      }),
+      bills: await this.prisma.appointmentBill.count({
+        where: { branchId: sanchongBranchId, artistId: donggang.userId },
+      }),
+      completedServices: await this.prisma.completedService.count({
+        where: { branchId: sanchongBranchId, artistId: donggang.userId },
+      }),
+    };
+
+    return {
+      accounts: {
+        donggang: {
+          userId: donggang.userId,
+          artistId: donggang.id,
+          branchId: donggangBranchId,
+          branchName: donggang.branch?.name ?? null,
+          userName: donggang.user.name ?? null,
+          userPhone: donggang.user.phone ?? null,
+          userActive: donggang.user.isActive,
+          artistActive: donggang.active,
+        },
+        sanchong: {
+          userId: sanchong.userId,
+          artistId: sanchong.id,
+          branchId: sanchongBranchId,
+          branchName: sanchong.branch?.name ?? null,
+          userName: sanchong.user.name ?? null,
+          userPhone: sanchong.user.phone ?? null,
+          userActive: sanchong.user.isActive,
+          artistActive: sanchong.active,
+        },
+      },
+      linkExists: !!link,
+      access: {
+        hasDonggang: accessSet.has(donggangBranchId),
+        hasSanchong: accessSet.has(sanchongBranchId),
+      },
+      moveCounts: counts,
+    };
   }
 
   async dryRun(_actor: AccessActor) {
@@ -101,11 +167,7 @@ export class PrelaunchService {
 
     let zhu: any = null;
     try {
-      const { primary, secondary } = await this.resolveZhuPrimarySecondary();
-      zhu = {
-        primary: { userId: primary.userId, artistId: primary.id, branch: primary.branch?.name ?? null, email: primary.user.email ?? null, phone: primary.user.phone ?? null },
-        secondary: { userId: secondary.userId, artistId: secondary.id, branch: secondary.branch?.name ?? null, email: secondary.user.email ?? null, phone: secondary.user.phone ?? null },
-      };
+      zhu = await this.getZhuFixPlan();
     } catch (e) {
       zhu = { error: e instanceof Error ? e.message : String(e) };
     }
@@ -134,13 +196,13 @@ export class PrelaunchService {
 
     const passwordHash = await bcrypt.hash('12345678', 12);
 
-    const { primary: zhuPrimary, secondary: zhuSecondary } = await this.resolveZhuPrimarySecondary();
+    const { donggang: zhuDonggang, sanchong: zhuSanchong } = await this.resolveZhuDonggangSanchong();
 
     // Choose accounts for other artists (pick first match; Zhu uses primary only)
     const chosen: Array<{ fix: ArtistPhoneFix; artistId: string; userId: string }> = [];
     for (const fix of ARTIST_PHONE_FIXES) {
       if (fix.name === '朱川進') {
-        chosen.push({ fix, artistId: zhuPrimary.id, userId: zhuPrimary.userId });
+        chosen.push({ fix, artistId: zhuDonggang.id, userId: zhuDonggang.userId });
         continue;
       }
       const hits = await this.findArtistsByName(fix.name);
@@ -164,93 +226,33 @@ export class PrelaunchService {
     const memberUserIds = new Set<string>([...memberUsers.map((u) => u.id), ...memberRows.map((m) => m.userId)]);
 
     const summary = await this.prisma.$transaction(async (tx) => {
-      // 1) Zhu merge (secondary -> primary) for non-wiped config/content tables
-      // Portfolio items should be preserved and merged.
-      await tx.portfolioItem.updateMany({
-        where: { artistId: zhuSecondary.userId },
-        data: { artistId: zhuPrimary.userId },
-      });
-      // Artist split rules should be preserved.
-      await tx.artistSplitRule.updateMany({
-        where: { artistId: zhuSecondary.userId },
-        data: { artistId: zhuPrimary.userId },
-      });
-      // Payments recordedBy / createdBy (if any) — preserve attribution under primary
-      await tx.payment.updateMany({
-        where: { recordedById: zhuSecondary.userId },
-        data: { recordedById: zhuPrimary.userId },
-      });
-      await tx.appointmentBill.updateMany({
-        where: { createdById: zhuSecondary.userId },
-        data: { createdById: zhuPrimary.userId },
-      });
-      await tx.user.updateMany({
-        where: { primaryArtistId: zhuSecondary.userId },
-        data: { primaryArtistId: zhuPrimary.userId },
-      });
-      await tx.contact.updateMany({
-        where: { ownerArtistId: zhuSecondary.userId },
-        data: { ownerArtistId: zhuPrimary.userId },
-      });
-      await tx.contact.updateMany({
-        where: { preferredArtistId: zhuSecondary.userId },
-        data: { preferredArtistId: zhuPrimary.userId },
-      });
-
-      // Merge availability from secondary Artist model into primary Artist model (best-effort)
-      const secondaryAvail = await tx.artistAvailability.findMany({ where: { artistId: zhuSecondary.id } });
-      for (const a of secondaryAvail) {
-        // avoid duplicates by exact match
-        const exists = await tx.artistAvailability.findFirst({
-          where: {
-            artistId: zhuPrimary.id,
-            weekday: a.weekday,
-            specificDate: a.specificDate,
-            startTime: a.startTime,
-            endTime: a.endTime,
-            isBlocked: a.isBlocked,
-            repeatRule: a.repeatRule,
-          },
-          select: { id: true },
-        });
-        if (!exists) {
-          await tx.artistAvailability.create({
-            data: {
-              artistId: zhuPrimary.id,
-              weekday: a.weekday,
-              specificDate: a.specificDate,
-              startTime: a.startTime,
-              endTime: a.endTime,
-              isBlocked: a.isBlocked,
-              repeatRule: a.repeatRule,
-            },
-          });
-        }
-      }
-
-      // Ensure ArtistBranchAccess entries for Zhu primary: 東港 + 三重
-      if (!zhuPrimary.branch?.id || !zhuSecondary.branch?.id) {
+      // 1) Zhu cross-branch: keep both identities and link login(東港) -> 三重.
+      if (!zhuDonggang.branch?.id || !zhuSanchong.branch?.id) {
         throw new BadRequestException('Zhu branch IDs missing');
       }
-      await tx.artistBranchAccess.upsert({
-        where: { userId_branchId: { userId: zhuPrimary.userId, branchId: zhuPrimary.branch.id } },
-        create: { userId: zhuPrimary.userId, branchId: zhuPrimary.branch.id },
+      await tx.artistLoginLink.upsert({
+        where: { loginUserId_artistUserId: { loginUserId: zhuDonggang.userId, artistUserId: zhuSanchong.userId } } as any,
+        create: { loginUserId: zhuDonggang.userId, artistUserId: zhuSanchong.userId },
         update: {},
       });
       await tx.artistBranchAccess.upsert({
-        where: { userId_branchId: { userId: zhuPrimary.userId, branchId: zhuSecondary.branch.id } },
-        create: { userId: zhuPrimary.userId, branchId: zhuSecondary.branch.id },
+        where: { userId_branchId: { userId: zhuDonggang.userId, branchId: zhuDonggang.branch.id } },
+        create: { userId: zhuDonggang.userId, branchId: zhuDonggang.branch.id },
         update: {},
       });
-
-      // Deactivate Zhu secondary user + artist
+      await tx.artistBranchAccess.upsert({
+        where: { userId_branchId: { userId: zhuDonggang.userId, branchId: zhuSanchong.branch.id } },
+        create: { userId: zhuDonggang.userId, branchId: zhuSanchong.branch.id },
+        update: {},
+      });
+      // Keep secondary identity active but phone must be null (single phone login constraint).
       await tx.user.update({
-        where: { id: zhuSecondary.userId },
-        data: { isActive: false, phone: null, name: '朱川進（已合併停用）' },
+        where: { id: zhuSanchong.userId },
+        data: { isActive: true, phone: null, role: 'ARTIST', name: '朱川進', branchId: zhuSanchong.branch.id },
       });
       await tx.artist.update({
-        where: { id: zhuSecondary.id },
-        data: { active: false, displayName: '朱川進（已合併停用）' },
+        where: { id: zhuSanchong.id },
+        data: { active: true, displayName: '朱川進', branchId: zhuSanchong.branch.id },
       });
 
       // 2) Update target artists' phones + reset password
@@ -286,13 +288,93 @@ export class PrelaunchService {
 
       return {
         updatedArtists,
-        zhu: { primaryUserId: zhuPrimary.userId, secondaryUserId: zhuSecondary.userId },
+        zhu: { loginUserId: zhuDonggang.userId, linkedUserId: zhuSanchong.userId },
         deleted: Object.fromEntries(Object.entries(del).map(([k, v]: any) => [k, v.count ?? v])),
       };
     });
 
     await this.markDone(summary);
     return { ok: true, summary };
+  }
+
+  // Zhu cross-branch repair (repeatable)
+  async zhuFixDryRun(_actor: AccessActor) {
+    this.requireEnabled();
+    return this.getZhuFixPlan();
+  }
+
+  async zhuFixApply(_actor: AccessActor, input: { confirm: 'FIX_ZHU'; secret: string }) {
+    this.requireEnabled();
+    const expected = process.env.PRELAUNCH_RESET_SECRET;
+    if (!expected) throw new BadRequestException('PRELAUNCH_RESET_SECRET is not configured');
+    if (input.secret !== expected) throw new ForbiddenException('Invalid secret');
+
+    const plan = await this.getZhuFixPlan();
+    const donggang = plan.accounts.donggang;
+    const sanchong = plan.accounts.sanchong;
+
+    const res = await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: donggang.userId },
+        data: { isActive: true, role: 'ARTIST', name: '朱川進' },
+      });
+      await tx.user.update({
+        where: { id: sanchong.userId },
+        data: { isActive: true, phone: null, role: 'ARTIST', name: '朱川進', branchId: sanchong.branchId },
+      });
+      await tx.artist.update({
+        where: { id: donggang.artistId },
+        data: { active: true, displayName: '朱川進', branchId: donggang.branchId },
+      });
+      await tx.artist.update({
+        where: { id: sanchong.artistId },
+        data: { active: true, displayName: '朱川進', branchId: sanchong.branchId },
+      });
+
+      await tx.artistLoginLink.upsert({
+        where: { loginUserId_artistUserId: { loginUserId: donggang.userId, artistUserId: sanchong.userId } } as any,
+        create: { loginUserId: donggang.userId, artistUserId: sanchong.userId },
+        update: {},
+      });
+
+      await tx.artistBranchAccess.upsert({
+        where: { userId_branchId: { userId: donggang.userId, branchId: donggang.branchId } },
+        create: { userId: donggang.userId, branchId: donggang.branchId },
+        update: {},
+      });
+      await tx.artistBranchAccess.upsert({
+        where: { userId_branchId: { userId: donggang.userId, branchId: sanchong.branchId } },
+        create: { userId: donggang.userId, branchId: sanchong.branchId },
+        update: {},
+      });
+
+      const moved = {
+        contacts_owner: await tx.contact.updateMany({
+          where: { branchId: sanchong.branchId, ownerArtistId: donggang.userId },
+          data: { ownerArtistId: sanchong.userId },
+        }),
+        contacts_preferred: await tx.contact.updateMany({
+          where: { branchId: sanchong.branchId, preferredArtistId: donggang.userId },
+          data: { preferredArtistId: sanchong.userId },
+        }),
+        appointments: await tx.appointment.updateMany({
+          where: { branchId: sanchong.branchId, artistId: donggang.userId },
+          data: { artistId: sanchong.userId },
+        }),
+        bills: await tx.appointmentBill.updateMany({
+          where: { branchId: sanchong.branchId, artistId: donggang.userId },
+          data: { artistId: sanchong.userId },
+        }),
+        completedServices: await tx.completedService.updateMany({
+          where: { branchId: sanchong.branchId, artistId: donggang.userId },
+          data: { artistId: sanchong.userId },
+        }),
+      };
+
+      return { movedCounts: Object.fromEntries(Object.entries(moved).map(([k, v]) => [k, (v as any).count])) };
+    });
+
+    return { ok: true, plan, ...res };
   }
 }
 

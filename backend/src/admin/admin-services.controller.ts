@@ -240,8 +240,10 @@ export class AdminServicesController {
     // Fetch variants in one go
     const serviceIds = services.map((s: any) => s.id);
     const variants = await prisma.serviceVariant.findMany({
-      where: { serviceId: { in: serviceIds }, isActive: true },
-      select: { serviceId: true, type: true, name: true, priceModifier: true, sortOrder: true, metadata: true },
+      // NOTE: include inactive variants too; many services keep some sizes disabled.
+      // We'll prefer isActive=true when deriving candidate prices.
+      where: { serviceId: { in: serviceIds } },
+      select: { serviceId: true, type: true, name: true, priceModifier: true, sortOrder: true, metadata: true, isActive: true },
       orderBy: [{ serviceId: 'asc' }, { type: 'asc' }, { sortOrder: 'asc' }],
     });
 
@@ -253,13 +255,38 @@ export class AdminServicesController {
     }
 
     const deriveCandidateMinPrice = (svc: any, vars: any[]): { candidatePrice: number | null; notes: string } => {
-      const sizeVars = vars.filter((v) => v.type === 'size');
-      const colorVars = vars.filter((v) => v.type === 'color');
+      const active = vars.filter((v) => v.isActive !== false);
+      const sizeActive = active.filter((v) => v.type === 'size');
+      const sizeAll = vars.filter((v) => v.type === 'size');
+      const colorActive = active.filter((v) => v.type === 'color');
+      const colorAll = vars.filter((v) => v.type === 'color');
 
-      // Heuristic: without size variants, the pricing model cannot derive a meaningful minimum.
-      if (!sizeVars.length) {
-        return { candidatePrice: null, notes: vars.length ? '無尺寸規格，無法推導最低價' : '無啟用規格，無法推導最低價' };
+      // If no variants or no size variants, treat as fixed-price service: keep current base price as candidate.
+      // This avoids flooding the UI with "cannot derive" for fixed-price services.
+      if (!sizeAll.length) {
+        // If colors exist, we can at least derive a minimum adjustment from color priceModifier.
+        // Candidate = basePrice + min(enabledColor.priceModifier)
+        if (colorActive.length) {
+          const minColor = Math.min(...colorActive.map((c) => Math.trunc(Number(c.priceModifier ?? 0)) || 0));
+          const base = Number.isFinite(svc.price) ? Math.trunc(Number(svc.price)) : 0;
+          const candidate = Math.max(0, base + minColor);
+          return {
+            candidatePrice: candidate > 0 ? candidate : (base > 0 ? base : null),
+            notes: '無尺寸規格：以顏色規格推導（基礎價 + 最小顏色加價），請人工確認',
+          };
+        }
+        const notes =
+          vars.length === 0
+            ? '無規格：固定價服務，候選=現有基礎價'
+            : '無尺寸規格：固定價/非尺寸計價，候選=現有基礎價';
+        return { candidatePrice: Number.isFinite(svc.price) && svc.price > 0 ? svc.price : null, notes };
       }
+
+      // Prefer active sizes/colors; if no active sizes, fall back to all sizes (but annotate).
+      const sizeVars = sizeActive.length ? sizeActive : sizeAll;
+      // Requirement: if sizes are inactive but colors are active, still use active colors for derivation.
+      const colorVars = colorActive.length ? colorActive : colorAll;
+      const usedInactive = sizeActive.length === 0;
 
       const candidates: Array<Record<string, any>> = [];
       for (const s of sizeVars) {
@@ -287,7 +314,7 @@ export class AdminServicesController {
       }
 
       if (best === null) return { candidatePrice: null, notes: '試算結果無法得到有效最低價' };
-      return { candidatePrice: best, notes: '以啟用規格試算最低價' };
+      return { candidatePrice: best, notes: usedInactive ? '以停用尺寸規格試算最低價（請確認尺寸啟用狀態）' : '以尺寸規格試算最低價' };
     };
 
     // Need durationMin/base info; fetch minimal fields in a map

@@ -7,6 +7,7 @@ import { getUniqueBranches, sortBranchesByName } from "@/lib/branch-utils";
 import { formatMembershipLevel } from "@/lib/membership";
 import { usePhoneConflicts } from "@/hooks/usePhoneConflicts";
 import { normalizePhoneDigits } from "@/lib/phone";
+import { getUserRole, isArtistRole } from "@/lib/access";
 
 // 規格欄位名稱中文對照
 const VARIANT_LABEL_MAP: Record<string, string> = {
@@ -165,6 +166,8 @@ export default function AppointmentForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = useAccessToken();
+  const role = getUserRole();
+  const isArtist = isArtistRole(role);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -497,11 +500,28 @@ export default function AppointmentForm({
         setFormData(prev => ({
           ...prev,
           artistId: value,
-          branchId: artist.branchId
+          // Only auto-fill if branch not chosen yet.
+          // Multi-branch artists should allow selecting branch independently.
+          branchId: prev.branchId || artist.branchId
         }));
       }
     }
   };
+
+  // ARTIST: follow sidebar branch switch.
+  // - selected != all: lock branchId to selected branch
+  // - selected == all: allow choosing branchId in the form (so create can target 東港/三重)
+  useEffect(() => {
+    if (!isArtist) return;
+    try {
+      const selected = window.localStorage.getItem("artistSelectedBranchId") || "";
+      if (selected && selected !== "all") {
+        setFormData((prev) => ({ ...prev, branchId: selected }));
+      }
+    } catch {
+      // ignore
+    }
+  }, [isArtist]);
 
   const handleVariantChange = (key: string, raw: any) => {
     setSelectedVariants((prev) => {
@@ -917,9 +937,23 @@ export default function AppointmentForm({
                   value={formData.branchId}
                   onChange={(e) => handleInputChange('branchId', e.target.value)}
                   className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    formData.artistId ? 'bg-gray-100 cursor-not-allowed' : ''
+                    (lockedByOwner || (isArtist && (() => {
+                      try {
+                        const selected = window.localStorage.getItem("artistSelectedBranchId") || "";
+                        return !!selected && selected !== "all";
+                      } catch {
+                        return false;
+                      }
+                    })())) ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
-                  disabled={!!formData.artistId}
+                  disabled={lockedByOwner || (isArtist && (() => {
+                    try {
+                      const selected = window.localStorage.getItem("artistSelectedBranchId") || "";
+                      return !!selected && selected !== "all";
+                    } catch {
+                      return false;
+                    }
+                  })())}
                   required
                 >
                   <option value="">請選擇分店</option>
@@ -929,9 +963,16 @@ export default function AppointmentForm({
                     </option>
                   ))}
                 </select>
-                {formData.artistId && (
+                {(lockedByOwner || (isArtist && (() => {
+                  try {
+                    const selected = window.localStorage.getItem("artistSelectedBranchId") || "";
+                    return !!selected && selected !== "all";
+                  } catch {
+                    return false;
+                  }
+                })())) && (
                   <p className="text-sm text-text-muted-light mt-1">
-                    分店已根據選擇的刺青師自動設定
+                    分店已依左上角切換（或聯絡指派）鎖定
                   </p>
                 )}
               </div>

@@ -5,6 +5,7 @@ import { UpdateContactDto } from './dto/update-contact.dto';
 import { isBoss, type AccessActor } from '../common/access/access.types';
 import { NotificationsService } from '../notifications/notifications.service';
 import { formatContactMergeNote, normalizePhoneDigits } from '../common/utils/phone';
+import { resolveArtistScope } from '../common/access/artist-scope';
 
 @Injectable()
 export class ContactsService {
@@ -177,6 +178,28 @@ export class ContactsService {
     return contact;
   }
 
+  private async getAccessibleBranchIdsForArtist(actor: AccessActor): Promise<string[]> {
+    const ids = new Set<string>();
+    if (actor.branchId) ids.add(actor.branchId);
+    const extra = await this.prisma.artistBranchAccess.findMany({
+      where: { userId: actor.id },
+      select: { branchId: true },
+    });
+    for (const r of extra) ids.add(r.branchId);
+    return Array.from(ids);
+  }
+
+  private async normalizeBranchFilter(actor: AccessActor, input?: { branchId?: string }) {
+    const raw = (input?.branchId || '').trim();
+    const branchId = raw && raw !== 'all' ? raw : null;
+    if (isBoss(actor)) return { branchId, accessibleBranchIds: null as string[] | null };
+    const accessibleBranchIds = await this.getAccessibleBranchIdsForArtist(actor);
+    if (branchId && !accessibleBranchIds.includes(branchId)) {
+      throw new ForbiddenException('Insufficient permissions for selected branch');
+    }
+    return { branchId, accessibleBranchIds };
+  }
+
   async create(actor: AccessActor, createContactDto: CreateContactDto) {
     if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can create contacts');
     try {
@@ -295,15 +318,32 @@ export class ContactsService {
     }
   }
 
-  async findAll(actor: AccessActor) {
-    const where = isBoss(actor)
+  async findAll(actor: AccessActor, input?: { branchId?: string }) {
+    const { selectedBranchId, allArtistUserIds, accessibleBranchIds } = await resolveArtistScope(
+      this.prisma,
+      actor,
+      input?.branchId,
+    );
+    const scope = isBoss(actor)
       ? {}
       : {
           OR: [
-            { ownerArtistId: actor.id },
-            { appointments: { some: { artistId: actor.id } } },
+            { ownerArtistId: { in: allArtistUserIds } as any },
+            { appointments: { some: { artistId: { in: allArtistUserIds } as any } } },
           ],
         };
+    const where =
+      isBoss(actor)
+        ? selectedBranchId
+          ? { branchId: selectedBranchId }
+          : {}
+        : {
+            AND: [
+              scope,
+              { branchId: { in: accessibleBranchIds! } },
+              ...(selectedBranchId ? [{ branchId: selectedBranchId }] : []),
+            ],
+          };
     return this.prisma.contact.findMany({
       where,
       include: {
@@ -462,15 +502,32 @@ export class ContactsService {
     });
   }
 
-  async getStats(actor: AccessActor) {
-    const where = isBoss(actor)
+  async getStats(actor: AccessActor, input?: { branchId?: string }) {
+    const { selectedBranchId, allArtistUserIds, accessibleBranchIds } = await resolveArtistScope(
+      this.prisma,
+      actor,
+      input?.branchId,
+    );
+    const scope = isBoss(actor)
       ? {}
       : {
           OR: [
-            { ownerArtistId: actor.id },
-            { appointments: { some: { artistId: actor.id } } },
+            { ownerArtistId: { in: allArtistUserIds } as any },
+            { appointments: { some: { artistId: { in: allArtistUserIds } as any } } },
           ],
         };
+    const where =
+      isBoss(actor)
+        ? selectedBranchId
+          ? { branchId: selectedBranchId }
+          : {}
+        : {
+            AND: [
+              scope,
+              { branchId: { in: accessibleBranchIds! } },
+              ...(selectedBranchId ? [{ branchId: selectedBranchId }] : []),
+            ],
+          };
     const total = await this.prisma.contact.count({ where });
     const pending = await this.prisma.contact.count({
       where: { ...where, status: 'PENDING' },

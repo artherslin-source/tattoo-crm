@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { Prisma } from "@prisma/client";
+import { getAllArtistUserIdsForLogin, resolveTargetArtistUserIdForBranch } from "../common/access/artist-scope";
+import type { AccessActor } from "../common/access/access.types";
 
 @Injectable()
 export class ArtistService {
@@ -47,7 +49,11 @@ export class ArtistService {
     console.log('DEBUG todayAppointments[0].service:', JSON.stringify(todayAppointments[0]?.service, null, 2));
 
     // 最新通知（模擬數據，實際應該從 Notification 表獲取）
-    const notifications = await this.getNotifications(artistId);
+    const notificationUserIds = await getAllArtistUserIdsForLogin(this.prisma, artistId);
+    const notifications = await this.prisma.notification.findMany({
+      where: { userId: { in: notificationUserIds } },
+      orderBy: { createdAt: 'desc' },
+    });
 
     return {
       todayAppointments,
@@ -675,10 +681,13 @@ export class ArtistService {
   }
 
   // 5. 通知系統
-  async getNotifications(artistId: string) {
+  async getNotifications(actor: AccessActor, branchId?: string) {
+    const ids = branchId && branchId !== 'all'
+      ? [await resolveTargetArtistUserIdForBranch(this.prisma, actor, branchId)]
+      : await getAllArtistUserIdsForLogin(this.prisma, actor.id);
     return this.prisma.notification.findMany({
       where: {
-        userId: artistId,
+        userId: { in: ids },
       },
       orderBy: {
         createdAt: 'desc',
@@ -687,11 +696,12 @@ export class ArtistService {
   }
 
   async markNotificationAsRead(notificationId: string, artistId: string) {
-    // 驗證通知是否屬於該刺青師
+    const ids = await getAllArtistUserIdsForLogin(this.prisma, artistId);
+    // 驗證通知是否屬於該刺青師（含連結身分）
     const notification = await this.prisma.notification.findFirst({
       where: {
         id: notificationId,
-        userId: artistId,
+        userId: { in: ids },
       },
     });
 

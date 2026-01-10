@@ -264,6 +264,7 @@ export default function AdminBillingPage() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<BillRow[]>([]);
   const [userRole, setUserRole] = useState<string>("");
+  const [artistSelectedBranchId, setArtistSelectedBranchId] = useState<string>("all");
   const [me, setMe] = useState<MeResponse | null>(null);
 
   // Filters / sorting
@@ -731,6 +732,12 @@ export default function AdminBillingPage() {
   useEffect(() => {
     const role = (typeof window !== "undefined" && localStorage.getItem("userRole")) || "";
     setUserRole(role);
+    try {
+      const selected = (typeof window !== "undefined" && localStorage.getItem("artistSelectedBranchId")) || "all";
+      setArtistSelectedBranchId(selected || "all");
+    } catch {
+      // ignore
+    }
     if (!hasAdminAccess(role)) {
       router.push("/login");
       return;
@@ -758,9 +765,16 @@ export default function AdminBillingPage() {
     const role = userRole.toUpperCase();
     if (role !== "ARTIST") return;
     if (!me?.id) return;
-    if (me.branchId) setNewBranchId(me.branchId);
+    // Follow sidebar selection:
+    // - if selected != all: lock to that branch
+    // - if selected == all: default to me.branchId but allow choosing
+    if (artistSelectedBranchId && artistSelectedBranchId !== "all") {
+      setNewBranchId(artistSelectedBranchId);
+    } else if (me.branchId) {
+      setNewBranchId(me.branchId);
+    }
     setNewArtistId(me.id);
-  }, [createOpen, userRole, me]);
+  }, [createOpen, userRole, me, artistSelectedBranchId]);
 
   const lockedBranchLabel = useMemo(() => {
     if (userRole.toUpperCase() !== "ARTIST") return null;
@@ -1615,9 +1629,15 @@ export default function AdminBillingPage() {
                 <NativeSelect
                   value={newBranchId}
                   onChange={setNewBranchId}
-                  disabled={userRole.toUpperCase() === "ARTIST"}
+                  disabled={userRole.toUpperCase() === "ARTIST" && artistSelectedBranchId !== "all"}
                   options={branches.map((b) => ({ value: b.id, label: b.name }))}
-                  placeholder={userRole.toUpperCase() === "ARTIST" ? lockedBranchLabel || "已帶入" : "請選擇分店"}
+                  placeholder={
+                    userRole.toUpperCase() === "ARTIST"
+                      ? artistSelectedBranchId === "all"
+                        ? "請選擇要寫入的分店"
+                        : lockedBranchLabel || "已帶入"
+                      : "請選擇分店"
+                  }
                 />
               </div>
               <div>
