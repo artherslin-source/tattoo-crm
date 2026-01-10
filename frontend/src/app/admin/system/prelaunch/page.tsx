@@ -151,6 +151,12 @@ export default function AdminSystemPrelaunchPage() {
           <pre className="text-xs bg-muted/30 border rounded-md p-3 overflow-auto max-h-64">
             {JSON.stringify(zhuFix ?? null, null, 2)}
           </pre>
+          <Input
+            placeholder="輸入 PRELAUNCH_RESET_SECRET（必填）"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            disabled={!!busy}
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Input
               placeholder='輸入 "FIX_ZHU" 以確認'
@@ -200,6 +206,11 @@ export default function AdminSystemPrelaunchPage() {
           >
             {busy === "zhu-apply" ? "修復中..." : "套用朱川進修復"}
           </Button>
+          {!secret ? (
+            <div className="text-xs text-muted-foreground">
+              需要輸入 PRELAUNCH_RESET_SECRET 才能執行（避免誤觸）。
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
