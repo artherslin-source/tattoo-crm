@@ -283,11 +283,12 @@ function HomePageContent({
       // Prefer backend-provided group key only if it's truly a shared key (i.e., different from this userId).
       // If backend falls back to userId (no linkage), we fall back to displayName so cross-branch same-name artists can be merged on homepage.
       const userId = a.user?.id || "";
+      const nameKey = (a.displayName || a.user?.name || "").trim();
       const groupKeyFromBackend =
         a.artistGroupKey && userId && a.artistGroupKey !== userId
           ? a.artistGroupKey
           : undefined;
-      const key = groupKeyFromBackend || a.displayName || userId || a.id;
+      const key = groupKeyFromBackend || nameKey || userId || a.id;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(a);
     }
@@ -309,11 +310,17 @@ function HomePageContent({
     const merged: MergedArtist[] = [];
     for (const [groupKey, list] of groups.entries()) {
       // Choose the newest updated artist as primary content source (bio/photoUrl/etc).
-      const primary = list
+      const sortedByUpdated = list
         .slice()
-        .sort((a, b) => parseDateMs(b.updatedAt) - parseDateMs(a.updatedAt))[0];
+        .sort((a, b) => parseDateMs(b.updatedAt) - parseDateMs(a.updatedAt));
+      const primary = sortedByUpdated[0];
+
+      // Some cross-branch duplicates may have mismatched/empty bio.
+      // For homepage display, prefer the newest non-empty bio within the group.
+      const bestBio =
+        sortedByUpdated.map((x) => (x.bio || "").trim()).find((v) => !!v) || (primary?.bio || "");
       const branchBadges = sortBranchBadges(list.map((x) => normalizeBranchName(x.branch?.name)));
-      merged.push({ ...(primary as any), branchBadges, _groupKey: groupKey });
+      merged.push({ ...(primary as any), bio: bestBio, branchBadges, _groupKey: groupKey });
     }
 
     // 定義排序順序：朱川進、黃晨洋、林承葉、陳翔男、陳震宇
@@ -630,12 +637,11 @@ function HomePageContent({
                               </div>
                             )}
                           </div>
-                          <CardDescription className="text-sm text-neutral-300">
+                          <CardDescription className="text-sm text-white">
                             {excerptBio(artist.bio, 70) || artist.speciality || "多風格"}
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 text-sm text-neutral-200">
-                          <p>{artist.bio}</p>
                           <div className="flex flex-wrap gap-2">
                             {(artist.styles || [])
                               .filter((style) => {
@@ -710,12 +716,11 @@ function HomePageContent({
                             </div>
                           )}
                         </div>
-                        <CardDescription className="text-sm text-neutral-300">
+                        <CardDescription className="text-sm text-white">
                           {excerptBio(artist.bio, 70) || artist.speciality || "多風格"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4 text-sm text-neutral-200">
-                        <p>{excerptBio(artist.bio, 120) || artist.speciality || ""}</p>
                         <div className="flex flex-wrap gap-2">
                           {(artist.styles || [])
                             .filter((style) => {
