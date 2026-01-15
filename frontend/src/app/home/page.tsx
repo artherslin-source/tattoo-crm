@@ -288,7 +288,12 @@ function HomePageContent({
         a.artistGroupKey && userId && a.artistGroupKey !== userId
           ? a.artistGroupKey
           : undefined;
-      const key = groupKeyFromBackend || nameKey || userId || a.id;
+      // Production requirement: only on homepage, force-merge Zhu Chuanjin across branches into a single card.
+      // Keep all backend/ops data separated; this affects display only.
+      const key =
+        nameKey === "朱川進"
+          ? "special:朱川進"
+          : groupKeyFromBackend || nameKey || userId || a.id;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(a);
     }
