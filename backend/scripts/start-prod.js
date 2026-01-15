@@ -29,6 +29,20 @@ if (!databaseUrl) {
   ]);
 }
 
+// 🛡️ Production safety guard: fail fast if any dangerous seed/reset flags are enabled.
+try {
+  require('./assert-prod-safe');
+} catch (e) {
+  // If guard file is missing for any reason, fail closed in production.
+  const nodeEnv = String(process.env.NODE_ENV || '').toLowerCase();
+  if (nodeEnv === 'production') {
+    exitWithMessage([
+      '❌ Production safety guard missing: backend/scripts/assert-prod-safe.js',
+      '➡ 為了保護客戶資料，已中止啟動。',
+    ]);
+  }
+}
+
 const normalizedUrl = databaseUrl.trim().toLowerCase();
 const postgresPrefixes = ['postgresql://', 'postgres://'];
 const isPostgres = postgresPrefixes.some((prefix) => normalizedUrl.startsWith(prefix));
@@ -62,53 +76,16 @@ try {
   run('npx prisma migrate deploy', '執行資料庫遷移');
   console.log('✅ 資料庫遷移完成（未刪除任何資料）');
 } catch (error) {
-  console.warn('⚠️ 資料庫遷移失敗，但服務將繼續啟動');
-  console.warn('   錯誤訊息:', error.message);
-  // 如果 migrate deploy 失敗，嘗試使用 db push（但不用 force-reset）
-  try {
-    console.log('🔄 嘗試使用 db push 同步 schema...');
-    console.warn('⚠️ 注意：若 Prisma 判定有破壞性變更，需使用 --accept-data-loss 才能同步。');
-    run('npx prisma db push --accept-data-loss', '同步資料庫 Schema（允許必要的破壞性變更）');
-    console.log('✅ Schema 同步完成');
-  } catch (pushError) {
-    console.warn('⚠️ Schema 同步也失敗，但服務將繼續啟動');
-    console.warn('   錯誤訊息:', pushError.message);
-  }
+  // Policy A: if migration cannot be safely applied, FAIL FAST. Never attempt db push or accept-data-loss in production.
+  exitWithMessage([
+    '❌ 資料庫遷移失敗，已中止啟動（保護客戶資料）。',
+    `➡ 錯誤訊息: ${error.message}`,
+    '',
+    '➡ 請修正 migration 後重新部署（不要使用 prisma db push --accept-data-loss）。',
+  ]);
 }
 
-// 🛡️ 只在環境變數明確要求時才執行 seed（且必須設置 PROTECT_REAL_DATA=true）
-const shouldRunSeed = process.env.RUN_SEED === 'true';
-const protectRealData = process.env.PROTECT_REAL_DATA === 'true';
-
-if (shouldRunSeed) {
-  if (!protectRealData) {
-    console.warn('⚠️⚠️⚠️ 警告：RUN_SEED=true 但 PROTECT_REAL_DATA 未設置為 true！');
-    console.warn('⚠️⚠️⚠️ 這可能會刪除真實的服務項目和圖片上傳記錄！');
-    console.warn('⚠️⚠️⚠️ 建議設置 PROTECT_REAL_DATA=true 以保護真實資料');
-    console.warn('⚠️⚠️⚠️ 繼續執行 seed（可能導致資料丟失）...');
-  } else {
-    console.log('🛡️ 保護模式啟用：seed 不會刪除真實的服務項目和圖片資料');
-  }
-  
-  console.log('🌱 執行資料庫 seeding（根據 PROTECT_REAL_DATA 設定保護真實資料）...');
-  try {
-    run('npx ts-node prisma/seed.ts', '匯入預設種子資料');
-    console.log('✅ 資料庫種子數據導入成功');
-  } catch (error) {
-    console.warn('⚠️ Seeding 失敗，但服務將繼續啟動');
-    console.warn('   錯誤訊息:', error.message);
-  }
-} else {
-  console.log('ℹ️ RUN_SEED 未設置為 true，跳過 seed（保護真實資料）');
-}
-
-// 無論是否執行 seeding，都確保添加新刺青師（只添加缺失的，不刪除現有的）
-console.log('\n🔍 確保新刺青師已添加（只添加缺失的，不刪除現有的）...');
-try {
-  run('npm run add:artists', '添加新的刺青師資料（如果不存在）');
-  console.log('✅ 新刺青師檢查完成');
-} catch (error) {
-  console.warn('⚠️ 添加新刺青師時發生錯誤，但不影響服務啟動:', error.message);
-}
+// 🛡️ Production policy: no automatic data writes on startup (no seed, no backfill, no bootstrap).
+console.log('🛡️ Production policy: 不在啟動時自動寫入/補資料（seed/初始化/回填一律禁止）。');
 
 run('node dist/main.js', '啟動 NestJS 伺服器');
