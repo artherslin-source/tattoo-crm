@@ -52,6 +52,9 @@ interface Artist {
   speciality: string;
   portfolioUrl?: string;
   photoUrl?: string;
+  updatedAt?: string;
+  // Backend-provided stable grouping key for cross-branch linked artist identities.
+  artistGroupKey?: string;
   branchId: string;
   branch?: {
     id: string;
@@ -256,45 +259,73 @@ function HomePageContent({
     fetchCartCount();
   }, []);
 
-  // 過濾重複的朱川進，只保留第一個（通常是東港店），並按照指定順序排序
-  const uniqueArtists = useMemo(() => {
+  function excerptBio(raw?: string, maxLen = 60) {
+    const s = (raw || "").trim().replace(/\s+/g, " ");
+    if (!s) return "";
+    if (s.length <= maxLen) return s;
+    return s.slice(0, maxLen) + "…";
+  }
+
+  function parseDateMs(v?: string) {
+    const t = v ? Date.parse(v) : NaN;
+    return Number.isFinite(t) ? t : 0;
+  }
+
+  // 合併跨分店的「同一人」刺青師：優先使用後端提供 artistGroupKey（來自 ArtistLoginLink），避免同名誤合併。
+  // UI 顯示：分店 badge 支援多個（東港店在左、三重店在右）。
+  const mergedArtists = useMemo(() => {
     if (!artists.length) return [];
-    const seenNames = new Set<string>();
-    const filtered: Artist[] = [];
-    
-    // 先過濾重複的朱川進
-    for (const artist of artists) {
-      if (artist.displayName === '朱川進') {
-        // 只保留第一個朱川進
-        if (!seenNames.has('朱川進')) {
-          seenNames.add('朱川進');
-          filtered.push(artist);
-        }
-      } else {
-        filtered.push(artist);
-      }
+
+    type MergedArtist = Artist & { branchBadges: string[]; _groupKey: string };
+    const groups = new Map<string, Artist[]>();
+
+    for (const a of artists) {
+      // Prefer backend-provided group key only if it's truly a shared key (i.e., different from this userId).
+      // If backend falls back to userId (no linkage), we fall back to displayName so cross-branch same-name artists can be merged on homepage.
+      const userId = a.user?.id || "";
+      const groupKeyFromBackend =
+        a.artistGroupKey && userId && a.artistGroupKey !== userId
+          ? a.artistGroupKey
+          : undefined;
+      const key = groupKeyFromBackend || a.displayName || userId || a.id;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(a);
     }
-    
+
+    const orderPref = ["東港店", "三重店"];
+    const normalizeBranchName = (n?: string) => (n || "").trim();
+    const sortBranchBadges = (names: string[]) =>
+      Array.from(new Set(names.filter(Boolean))).sort((a, b) => {
+        const ia = orderPref.indexOf(a);
+        const ib = orderPref.indexOf(b);
+        if (ia !== -1 || ib !== -1) {
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+        }
+        return a.localeCompare(b, "zh-Hant");
+      });
+
+    const merged: MergedArtist[] = [];
+    for (const [groupKey, list] of groups.entries()) {
+      // Choose the newest updated artist as primary content source (bio/photoUrl/etc).
+      const primary = list
+        .slice()
+        .sort((a, b) => parseDateMs(b.updatedAt) - parseDateMs(a.updatedAt))[0];
+      const branchBadges = sortBranchBadges(list.map((x) => normalizeBranchName(x.branch?.name)));
+      merged.push({ ...(primary as any), branchBadges, _groupKey: groupKey });
+    }
+
     // 定義排序順序：朱川進、黃晨洋、林承葉、陳翔男、陳震宇
-    const sortOrder = ['朱川進', '黃晨洋', '林承葉', '陳翔男', '陳震宇'];
-    
-    // 按照指定順序排序
-    const sorted = filtered.sort((a, b) => {
+    const sortOrder = ["朱川進", "黃晨洋", "林承葉", "陳翔男", "陳震宇"];
+    return merged.sort((a, b) => {
       const indexA = sortOrder.indexOf(a.displayName);
       const indexB = sortOrder.indexOf(b.displayName);
-      
-      // 如果都在排序列表中，按照列表順序排序
-      if (indexA !== -1 && indexB !== -1) {
-        return indexA - indexB;
-      }
-      // 如果只有一個在列表中，在列表中的排在前面
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
       if (indexA !== -1) return -1;
       if (indexB !== -1) return 1;
-      // 如果都不在列表中，保持原有順序
       return 0;
     });
-    
-    return sorted;
   }, [artists]);
 
   const DEFAULT_SERVICE_THUMB = "https://placehold.co/640x400?text=Tattoo";
@@ -568,7 +599,7 @@ function HomePageContent({
                 {/* Mobile: horizontal scroller; md+ keep grid */}
                 <div className="md:hidden -mx-2 px-2 overflow-x-auto">
                   <div className="flex gap-4 snap-x snap-mandatory pb-2">
-                    {uniqueArtists.slice(0, 6).map((artist) => (
+                    {mergedArtists.slice(0, 6).map((artist) => (
                       <Card
                         key={artist.id}
                         className="border-white/10 bg-white/5 text-white relative snap-start min-w-[82vw] max-w-[82vw]"
@@ -586,13 +617,22 @@ function HomePageContent({
                           </div>
                           <div className="flex items-center justify-between gap-2 mt-4">
                             <CardTitle className="text-xl text-white flex-1">{artist.displayName}</CardTitle>
-                            {artist.branch?.name && (
-                              <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg whitespace-nowrap">
-                                {artist.branch.name}
-                              </span>
+                            {!!(artist as any).branchBadges?.length && (
+                              <div className="flex items-center gap-2 flex-wrap justify-end">
+                                {(artist as any).branchBadges.map((bn: string) => (
+                                  <span
+                                    key={bn}
+                                    className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg whitespace-nowrap"
+                                  >
+                                    {bn}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
-                          <CardDescription className="text-sm text-neutral-300">{artist.speciality}</CardDescription>
+                          <CardDescription className="text-sm text-neutral-300">
+                            {excerptBio(artist.bio, 70) || artist.speciality || "多風格"}
+                          </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 text-sm text-neutral-200">
                           <p>{artist.bio}</p>
@@ -630,7 +670,7 @@ function HomePageContent({
                         </CardContent>
                       </Card>
                     ))}
-                    {!uniqueArtists.length && (
+                    {!mergedArtists.length && (
                       <div className="min-w-[82vw] max-w-[82vw] rounded-2xl border border-dashed border-white/10 p-8 text-center text-neutral-300 snap-start">
                         正在載入刺青師資訊，敬請稍候。
                       </div>
@@ -639,7 +679,7 @@ function HomePageContent({
                 </div>
 
                 <div className="hidden md:grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                  {uniqueArtists.slice(0, 6).map((artist) => (
+                  {mergedArtists.slice(0, 6).map((artist) => (
                     <Card 
                       key={artist.id} 
                       className="border-white/10 bg-white/5 text-white relative"
@@ -657,16 +697,25 @@ function HomePageContent({
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-4">
                           <CardTitle className="text-xl text-white flex-1">{artist.displayName}</CardTitle>
-                          {artist.branch?.name && (
-                            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg whitespace-nowrap">
-                              {artist.branch.name}
-                            </span>
+                          {!!(artist as any).branchBadges?.length && (
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                              {(artist as any).branchBadges.map((bn: string) => (
+                                <span
+                                  key={bn}
+                                  className="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-500 text-white text-xs font-medium shadow-lg whitespace-nowrap"
+                                >
+                                  {bn}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
-                        <CardDescription className="text-sm text-neutral-300">{artist.speciality}</CardDescription>
+                        <CardDescription className="text-sm text-neutral-300">
+                          {excerptBio(artist.bio, 70) || artist.speciality || "多風格"}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4 text-sm text-neutral-200">
-                        <p>{artist.bio}</p>
+                        <p>{excerptBio(artist.bio, 120) || artist.speciality || ""}</p>
                         <div className="flex flex-wrap gap-2">
                           {(artist.styles || [])
                             .filter((style) => {
@@ -702,7 +751,7 @@ function HomePageContent({
                     </Card>
                   ))}
 
-                  {!uniqueArtists.length && (
+                  {!mergedArtists.length && (
                     <div className="col-span-full rounded-2xl border border-dashed border-white/10 p-8 text-center text-neutral-300">
                       正在載入刺青師資訊，敬請稍候。
                     </div>
