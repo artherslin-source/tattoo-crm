@@ -282,10 +282,38 @@ export class UsersService {
       if (updateUserDto.photoUrl !== undefined) artistUpdateData.photoUrl = updateUserDto.photoUrl;
       
       if (Object.keys(artistUpdateData).length > 0) {
-        await this.prisma.artist.update({
-          where: { id: updatedUser.artist.id },
-          data: artistUpdateData,
+        // Sync across cross-branch linked artist identities (ArtistLoginLink):
+        // - profile page edits should reflect on homepage artist card even if the same person has multiple branch artist users.
+        // - best-effort: if no link exists, we just update the current artist record.
+        let loginUserId = userId;
+        const link = await this.prisma.artistLoginLink.findFirst({
+          where: {
+            OR: [{ loginUserId: userId }, { artistUserId: userId }],
+          },
+          select: { loginUserId: true },
         });
+        if (link?.loginUserId) loginUserId = link.loginUserId;
+
+        const linked = await this.prisma.artistLoginLink.findMany({
+          where: { loginUserId },
+          select: { artistUserId: true },
+        });
+        const userIdsToSync = Array.from(
+          new Set([loginUserId, ...linked.map((l) => l.artistUserId)].filter(Boolean)),
+        );
+
+        if (userIdsToSync.length > 0) {
+          await this.prisma.artist.updateMany({
+            where: { userId: { in: userIdsToSync } },
+            data: artistUpdateData,
+          });
+        } else {
+          await this.prisma.artist.update({
+            where: { id: updatedUser.artist.id },
+            data: artistUpdateData,
+          });
+        }
+
         // 重新獲取更新後的 artist 信息
         const artist = await this.prisma.artist.findUnique({
           where: { id: updatedUser.artist.id },
