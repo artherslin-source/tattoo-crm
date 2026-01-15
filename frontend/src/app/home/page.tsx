@@ -259,13 +259,6 @@ function HomePageContent({
     fetchCartCount();
   }, []);
 
-  function excerptBio(raw?: string, maxLen = 60) {
-    const s = (raw || "").trim().replace(/\s+/g, " ");
-    if (!s) return "";
-    if (s.length <= maxLen) return s;
-    return s.slice(0, maxLen) + "…";
-  }
-
   function parseDateMs(v?: string) {
     const t = v ? Date.parse(v) : NaN;
     return Number.isFinite(t) ? t : 0;
@@ -658,8 +651,8 @@ function HomePageContent({
                               </div>
                             )}
                           </div>
-                          <CardDescription className="text-sm text-white">
-                            {excerptBio(artist.bio, 70) || artist.speciality || "多風格"}
+                          <CardDescription className="text-sm text-white whitespace-pre-wrap break-words">
+                            {(artist.bio || "").trim() || artist.speciality || "多風格"}
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 text-sm text-neutral-200">
@@ -737,8 +730,8 @@ function HomePageContent({
                             </div>
                           )}
                         </div>
-                        <CardDescription className="text-sm text-white">
-                          {excerptBio(artist.bio, 70) || artist.speciality || "多風格"}
+                        <CardDescription className="text-sm text-white whitespace-pre-wrap break-words">
+                          {(artist.bio || "").trim() || artist.speciality || "多風格"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4 text-sm text-neutral-200">
