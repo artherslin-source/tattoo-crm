@@ -318,12 +318,28 @@ function HomePageContent({
       const sortedByUpdated = list
         .slice()
         .sort((a, b) => parseDateMs(b.updatedAt) - parseDateMs(a.updatedAt));
-      const primary = sortedByUpdated[0];
+      const isZhuForcedGroup = groupKey === "special:朱川進";
+      const pickByBranch = (branchName: string) =>
+        sortedByUpdated.find((x) => (x.branch?.name || "").trim() === branchName);
+
+      // For Zhu forced-merge, use Donggang branch as the canonical display source (matches the desired profile intro).
+      const primary =
+        (isZhuForcedGroup ? pickByBranch("東港店") : undefined) || sortedByUpdated[0];
 
       // Some cross-branch duplicates may have mismatched/empty bio.
-      // For homepage display, prefer the newest non-empty bio within the group.
-      const bestBio =
-        sortedByUpdated.map((x) => (x.bio || "").trim()).find((v) => !!v) || (primary?.bio || "");
+      // For homepage display:
+      // - For Zhu forced-merge, prefer Donggang bio first.
+      // - Otherwise prefer the newest non-empty bio within the group.
+      const bestBio = (() => {
+        if (isZhuForcedGroup) {
+          const donggangBio = (pickByBranch("東港店")?.bio || "").trim();
+          if (donggangBio) return donggangBio;
+        }
+        return (
+          sortedByUpdated.map((x) => (x.bio || "").trim()).find((v) => !!v) ||
+          (primary?.bio || "")
+        );
+      })();
       const branchBadges = sortBranchBadges(list.map((x) => normalizeBranchName(x.branch?.name)));
       merged.push({ ...(primary as any), bio: bestBio, branchBadges, _groupKey: groupKey });
     }
