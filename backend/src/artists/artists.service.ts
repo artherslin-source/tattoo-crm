@@ -7,8 +7,34 @@ export class ArtistsService {
     console.log('ArtistsService constructor called, prisma:', !!this.prisma);
   }
 
+  private async attachArtistGroupKey<T extends { userId?: string; user?: { id?: string } }>(
+    rows: T[],
+  ): Promise<Array<T & { artistGroupKey: string }>> {
+    const userIds = Array.from(
+      new Set(
+        rows
+          .map((r) => r.userId || r.user?.id)
+          .filter((v): v is string => !!v),
+      ),
+    );
+    if (userIds.length === 0) return rows.map((r) => ({ ...(r as any), artistGroupKey: (r as any).userId || (r as any).user?.id || '' }));
+
+    // Map artistUserId -> loginUserId (group key). If no link, group key defaults to userId.
+    const links = await this.prisma.artistLoginLink.findMany({
+      where: { artistUserId: { in: userIds } },
+      select: { artistUserId: true, loginUserId: true },
+    });
+    const map = new Map<string, string>();
+    for (const l of links) map.set(l.artistUserId, l.loginUserId);
+
+    return rows.map((r) => {
+      const uid = (r as any).userId || (r as any).user?.id || '';
+      return { ...(r as any), artistGroupKey: map.get(uid) || uid };
+    });
+  }
+
   async listByBranch(branchId: string) {
-    return this.prisma.artist.findMany({ 
+    const rows = await this.prisma.artist.findMany({ 
       where: { branchId }, 
       include: { 
         user: {
@@ -25,6 +51,7 @@ export class ArtistsService {
         branch: { select: { id: true, name: true } },
       } 
     });
+    return this.attachArtistGroupKey(rows as any);
   }
 
   async availability(artistId: string, date: string, durationMinutes: number) {
@@ -79,13 +106,16 @@ export class ArtistsService {
   }
 
   async getArtistPublicByUserId(artistUserId: string) {
-    return this.prisma.artist.findFirst({
+    const row = await this.prisma.artist.findFirst({
       where: { userId: artistUserId },
       include: {
         user: { select: { id: true, name: true, email: true } },
         branch: { select: { id: true, name: true } },
       },
     });
+    if (!row) return row;
+    const [withKey] = await this.attachArtistGroupKey([row as any]);
+    return withKey;
   }
 
   // 管理功能方法
@@ -100,7 +130,7 @@ export class ArtistsService {
       where.branchId = userBranchId;
     }
 
-    return this.prisma.artist.findMany({
+    const rows = await this.prisma.artist.findMany({
       where,
       include: {
         user: { select: { id: true, name: true, email: true, isActive: true } },
@@ -108,6 +138,7 @@ export class ArtistsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return this.attachArtistGroupKey(rows as any);
   }
 
   async createArtist(data: { name: string; email?: string; phone?: string; branchId: string; speciality?: string; specialties?: string[] }) {
