@@ -6,6 +6,7 @@ import { Roles } from '../common/roles.decorator';
 import { BranchGuard } from '../common/guards/branch.guard';
 import { buildActorFromJwtUser } from '../common/access/access.types';
 import { AuthService } from '../auth/auth.service';
+import { AuditService } from '../audit/audit.service';
 
 interface UpdateUserDto {
   name?: string;
@@ -46,17 +47,12 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
+    private readonly audit: AuditService,
   ) {}
 
   @Get('me')
   async me(@Req() req: any) {
-    console.log('DEBUG req.user:', req.user);
-    console.log('DEBUG req.user.id:', req.user?.id);
-    console.log('DEBUG req.user type:', typeof req.user);
-    console.log('DEBUG req.user keys:', req.user ? Object.keys(req.user) : 'req.user is null/undefined');
-    
     if (!req.user || !req.user.id) {
-      console.log('ERROR: req.user or req.user.id is missing');
       throw new Error('User not authenticated or missing ID');
     }
     
@@ -71,12 +67,27 @@ export class UsersController {
 
   @Patch('me')
   async updateMe(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.updateMe(req.user.id, updateUserDto);
+    const actor = buildActorFromJwtUser({ id: req.user.id, role: req.user.role, branchId: req.user.branchId });
+    return this.usersService.updateMe(req.user.id, updateUserDto, {
+      actor,
+      ip: req?.ip ?? null,
+      userAgent: req?.headers?.['user-agent'] ?? null,
+    });
   }
 
   @Patch('me/password')
   async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
-    return this.authService.changePassword(req.user.id, dto.oldPassword, dto.newPassword);
+    const result = await this.authService.changePassword(req.user.id, dto.oldPassword, dto.newPassword);
+    const actor = buildActorFromJwtUser({ id: req.user.id, role: req.user.role, branchId: req.user.branchId });
+    await this.audit.log({
+      actor,
+      action: 'CHANGE_PASSWORD',
+      entityType: 'USER',
+      entityId: req.user.id,
+      metadata: { userId: req.user.id },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
+    return result;
   }
 
   @Get()

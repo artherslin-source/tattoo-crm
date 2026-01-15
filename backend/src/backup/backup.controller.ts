@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Query,
+  Req,
   Res,
   UseGuards,
   UseInterceptors,
@@ -18,6 +19,7 @@ import { Actor } from '../common/access/actor.decorator';
 import type { AccessActor } from '../common/access/access.types';
 import { isBoss } from '../common/access/access.types';
 import { BackupService } from './backup.service';
+import { AuditService } from '../audit/audit.service';
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -37,15 +39,28 @@ const RestoreSchema = z.object({
 @Controller('admin/backup')
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 export class BackupController {
-  constructor(private readonly backup: BackupService) {}
+  constructor(
+    private readonly backup: BackupService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Post('export')
-  async exportBackup(@Actor() actor: AccessActor, @Body() body: unknown, @Res() res: Response) {
+  async exportBackup(@Actor() actor: AccessActor, @Body() body: unknown, @Req() req: any, @Res() res: Response) {
     if (!isBoss(actor)) throw new BadRequestException('Only BOSS can export backups');
     const input = ExportSchema.parse(body);
     // Large backups can take minutes and will often time out if streamed directly.
     // Kick off an async job and let frontend poll status + use native browser download.
     const job = await this.backup.startExportJob({ actor, password: input.password });
+    const jobId = (job as any)?.jobId as string;
+    const full = jobId ? this.backup.getExportJob(jobId) : null;
+    await this.audit.log({
+      actor,
+      action: 'BACKUP_EXPORT_START',
+      entityType: 'BACKUP',
+      entityId: jobId || null,
+      metadata: { jobId: jobId || null, status: full?.status ?? null },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
     return res.json(job);
   }
 
@@ -116,11 +131,27 @@ export class BackupController {
 // Public download endpoint (no JWT header required). Protected by short-lived dlToken.
 @Controller('admin/backup')
 export class BackupDownloadController {
-  constructor(private readonly backup: BackupService) {}
+  constructor(
+    private readonly backup: BackupService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Get('export/:jobId/download')
-  async download(@Param('jobId') jobId: string, @Query('dlToken') dlToken: string | undefined, @Res() res: Response) {
+  async download(
+    @Param('jobId') jobId: string,
+    @Query('dlToken') dlToken: string | undefined,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
     if (!dlToken) throw new BadRequestException('dlToken is required');
+    await this.audit.log({
+      actor: null,
+      action: 'BACKUP_EXPORT_DOWNLOAD',
+      entityType: 'BACKUP',
+      entityId: jobId,
+      metadata: { jobId },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
     await this.backup.streamExportJobDownload({ jobId, dlToken, res });
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards, BadRequestException, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards, BadRequestException, Res, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 import { AccessGuard } from '../common/access/access.guard';
@@ -6,6 +6,7 @@ import { Actor } from '../common/access/actor.decorator';
 import type { AccessActor } from '../common/access/access.types';
 import { BillingService } from './billing.service';
 import type { Response } from 'express';
+import { AuditService } from '../audit/audit.service';
 import { normalizePhoneDigits } from '../common/utils/phone';
 import { isBoss, isArtist } from '../common/access/access.types';
 
@@ -137,7 +138,10 @@ const FullEditBillSchema = z.object({
 @Controller('admin/billing')
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminBillingController {
-  constructor(private readonly billing: BillingService) {}
+  constructor(
+    private readonly billing: BillingService,
+    private readonly audit: AuditService,
+  ) {}
 
   // List bills (with summary fields) for admin page (legacy path)
   @Get('appointments')
@@ -188,7 +192,7 @@ export class AdminBillingController {
 
   // Export bills as .xlsx (BOSS only)
   @Get('bills/export.xlsx')
-  async exportBillsXlsx(@Actor() actor: AccessActor, @Query() query: any, @Res() res: Response) {
+  async exportBillsXlsx(@Actor() actor: AccessActor, @Query() query: any, @Req() req: any, @Res() res: Response) {
     const buf = await this.billing.exportBillsXlsx(actor, {
       branchId: query.branchId,
       artistId: query.artistId,
@@ -212,6 +216,15 @@ export class AdminBillingController {
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
     const filename = `billing_${ts}.xlsx`;
+
+    await this.audit.log({
+      actor,
+      action: 'EXPORT_BILLING_XLSX',
+      entityType: 'BILLING',
+      entityId: null,
+      metadata: { filename, filters: { ...query } },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);

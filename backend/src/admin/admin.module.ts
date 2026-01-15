@@ -22,9 +22,11 @@ import { BranchesModule } from '../branches/branches.module';
 import { BillingModule } from '../billing/billing.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminNotificationsController } from './admin-notifications.controller';
+import { AuditModule } from '../audit/audit.module';
+import { AdminAuditLogsController } from './admin-audit-logs.controller';
 
 @Module({
-  imports: [PrismaModule, BillingModule, ServicesModule, BranchesModule, NotificationsModule],
+  imports: [PrismaModule, BillingModule, ServicesModule, BranchesModule, NotificationsModule, AuditModule],
   controllers: [
     AdminController, 
     AdminServicesController, 
@@ -38,6 +40,7 @@ import { AdminNotificationsController } from './admin-notifications.controller';
     AdminServiceVariantsController,
     AdminUsersController,
     AdminNotificationsController,
+    AdminAuditLogsController,
   ],
   providers: [
     AdminAppointmentsService,

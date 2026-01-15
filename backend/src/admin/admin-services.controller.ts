@@ -12,6 +12,7 @@ import { Actor } from '../common/access/actor.decorator';
 import type { AccessActor } from '../common/access/access.types';
 import { isBoss } from '../common/access/access.types';
 import type { Response } from 'express';
+import { AuditService } from '../audit/audit.service';
 
 // 嘗試將瀏覽器上傳時以 latin1/ISO-8859-1 編碼的檔名轉為 UTF-8（支援繁體中文）
 function normalizeFilename(name: string): string {
@@ -62,7 +63,10 @@ const RepriceApplySchema = z.object({
 @Controller('admin/services')
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminServicesController {
-  constructor(private readonly services: ServicesService) {}
+  constructor(
+    private readonly services: ServicesService,
+    private readonly audit: AuditService,
+  ) {}
 
   // 錯誤處理中間件：捕獲 Multer 上傳錯誤
   private handleMulterError(error: any): never {
@@ -129,7 +133,7 @@ export class AdminServicesController {
   }
 
   @Get('export.csv')
-  async exportCsv(@Actor() actor: AccessActor, @Res() res: Response) {
+  async exportCsv(@Actor() actor: AccessActor, @Req() req: any, @Res() res: Response) {
     if (!isBoss(actor)) throw new ForbiddenException('Boss only');
 
     const prisma = (this.services as any)['prisma'];
@@ -189,6 +193,14 @@ export class AdminServicesController {
     ];
 
     const filename = `services-base-prices-${new Date().toISOString().slice(0, 10)}.csv`;
+    await this.audit.log({
+      actor,
+      action: 'EXPORT_SERVICES_CSV',
+      entityType: 'SERVICE',
+      entityId: null,
+      metadata: { rowCount: rows.length, filename },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(bom + lines.join('\n'));

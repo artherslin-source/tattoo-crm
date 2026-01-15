@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { isBoss, type AccessActor } from '../common/access/access.types';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class AdminArtistsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findAll(actor: AccessActor, opts?: { includeInactive?: boolean }) {
     try {
@@ -143,7 +147,11 @@ export class AdminArtistsService {
     });
   }
 
-  async update(id: string, data: {
+  async update(
+    actor: AccessActor,
+    meta: { ip?: string | null; userAgent?: string | null },
+    id: string,
+    data: {
     name?: string;
     email?: string;
     phone?: string;
@@ -155,7 +163,25 @@ export class AdminArtistsService {
     active?: boolean;
   }) {
     console.log('🔧 AdminArtistsService.update called with:', { id, data });
-    return this.prisma.$transaction(async (tx) => {
+    const before = await this.prisma.artist.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            role: true,
+            branchId: true,
+            isActive: true,
+          },
+        },
+        branch: { select: { id: true, name: true } },
+      },
+    });
+
+    const updated = await this.prisma.$transaction(async (tx) => {
       const artist = await tx.artist.findUnique({
         where: { id },
         include: { 
@@ -227,6 +253,48 @@ export class AdminArtistsService {
 
       return updatedArtist;
     });
+
+    // best-effort audit
+    try {
+      const diff: Record<string, { from: unknown; to: unknown }> = {};
+      const set = (k: string, from: unknown, to: unknown) => {
+        if (from !== to) diff[k] = { from, to };
+      };
+      if (before) {
+        set('artist.bio', (before as any).bio ?? null, (updated as any).bio ?? null);
+        set('artist.speciality', (before as any).speciality ?? null, (updated as any).speciality ?? null);
+        set('artist.portfolioUrl', (before as any).portfolioUrl ?? null, (updated as any).portfolioUrl ?? null);
+        set('artist.photoUrl', (before as any).photoUrl ?? null, (updated as any).photoUrl ?? null);
+        set('artist.active', (before as any).active ?? null, (updated as any).active ?? null);
+        set('artist.displayName', (before as any).displayName ?? null, (updated as any).displayName ?? null);
+        set('artist.branchId', (before as any).branchId ?? null, (updated as any).branchId ?? null);
+        set('user.name', (before as any).user?.name ?? null, (updated as any).user?.name ?? null);
+        set('user.email', (before as any).user?.email ?? null, (updated as any).user?.email ?? null);
+        set('user.phone', (before as any).user?.phone ?? null, (updated as any).user?.phone ?? null);
+        set('user.branchId', (before as any).user?.branchId ?? null, (updated as any).user?.branchId ?? null);
+        set('user.isActive', (before as any).user?.isActive ?? null, (updated as any).user?.isActive ?? null);
+        set('branch.name', (before as any).branch?.name ?? null, (updated as any).branch?.name ?? null);
+      }
+
+      if (Object.keys(diff).length > 0) {
+        await this.audit.log({
+          actor,
+          action: 'ADMIN_ARTIST_UPDATE',
+          entityType: 'ARTIST',
+          entityId: id,
+          diff,
+          metadata: {
+            targetUserId: (updated as any).user?.id ?? null,
+            targetDisplayName: (updated as any).displayName ?? (updated as any).user?.name ?? null,
+          },
+          meta: { ip: meta?.ip ?? null, userAgent: meta?.userAgent ?? null },
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    return updated;
   }
 
   async delete(id: string) {

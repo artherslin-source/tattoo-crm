@@ -1,0 +1,94 @@
+import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { PrismaService } from '../prisma/prisma.service';
+import { AccessGuard } from '../common/access/access.guard';
+import { Actor } from '../common/access/actor.decorator';
+import type { AccessActor } from '../common/access/access.types';
+import { isBoss } from '../common/access/access.types';
+
+@Controller('admin/audit-logs')
+@UseGuards(AuthGuard('jwt'), AccessGuard)
+export class AdminAuditLogsController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Get()
+  async list(
+    @Actor() actor: AccessActor,
+    @Query('artistUserId') artistUserId?: string,
+    @Query('action') action?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('q') q?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    if (!isBoss(actor)) throw new BadRequestException('BOSS only');
+
+    const limit = Math.max(1, Math.min(100, Number(limitRaw || 50)));
+    const where: any = {};
+
+    if (action) where.action = action;
+    if (from || to) {
+      where.createdAt = {};
+      if (from) {
+        const d = new Date(from);
+        if (Number.isNaN(d.getTime())) throw new BadRequestException('Invalid from');
+        where.createdAt.gte = d;
+      }
+      if (to) {
+        const d = new Date(to);
+        if (Number.isNaN(d.getTime())) throw new BadRequestException('Invalid to');
+        where.createdAt.lte = d;
+      }
+    }
+
+    if (artistUserId) {
+      where.OR = [
+        { actorUserId: artistUserId },
+        // metadata.userId (self profile update) or metadata.targetUserId (admin update)
+        { metadata: { path: ['userId'], equals: artistUserId } },
+        { metadata: { path: ['targetUserId'], equals: artistUserId } },
+      ];
+    }
+
+    if (q && q.trim()) {
+      const qq = q.trim();
+      where.AND = where.AND ?? [];
+      where.AND.push({
+        OR: [
+          { action: { contains: qq, mode: 'insensitive' } },
+          { entityType: { contains: qq, mode: 'insensitive' } },
+          { entityId: { contains: qq, mode: 'insensitive' } },
+          { actorUserId: { contains: qq, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    const rows = await this.prisma.auditLog.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        createdAt: true,
+        actorUserId: true,
+        actorRole: true,
+        branchId: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        ip: true,
+        userAgent: true,
+        diff: true,
+        metadata: true,
+      },
+    });
+
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
+    return { items, nextCursor };
+  }
+}
+

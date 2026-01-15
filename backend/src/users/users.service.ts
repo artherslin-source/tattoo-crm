@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccessActor } from '../common/access/access.types';
 import { BillingService } from '../billing/billing.service';
+import { AuditService } from '../audit/audit.service';
 
 interface UpdateUserDto {
   name?: string;
@@ -25,6 +26,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billing: BillingService,
+    private readonly audit: AuditService,
   ) {}
 
   async listMyBills(userId: string) {
@@ -182,7 +184,11 @@ export class UsersService {
     };
   }
 
-  async updateMe(userId: string, updateUserDto: UpdateUserDto) {
+  async updateMe(
+    userId: string,
+    updateUserDto: UpdateUserDto,
+    opts?: { actor?: AccessActor | null; ip?: string | null; userAgent?: string | null },
+  ) {
     // 如果更新手機號碼，檢查唯一性
     if (updateUserDto.phone !== undefined && updateUserDto.phone !== null && updateUserDto.phone.trim() !== '') {
       // 驗證手機號碼格式（至少10位數字）
@@ -228,6 +234,18 @@ export class UsersService {
         updateData.bookingLatestStartTime = v;
       }
     }
+
+    const before = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        branchId: true,
+        artist: { select: { id: true, bio: true, photoUrl: true } },
+      },
+    });
 
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
@@ -284,6 +302,33 @@ export class UsersService {
           updatedUser.artist = artist;
         }
       }
+    }
+
+    // best-effort audit for artist profile changes
+    try {
+      if (updatedUser.role === 'ARTIST') {
+        const diff: Record<string, { from: unknown; to: unknown }> = {};
+        const set = (k: string, from: unknown, to: unknown) => {
+          if (from !== to) diff[k] = { from, to };
+        };
+        set('user.name', (before as any)?.name ?? null, (updatedUser as any)?.name ?? null);
+        set('user.phone', (before as any)?.phone ?? null, (updatedUser as any)?.phone ?? null);
+        set('artist.bio', (before as any)?.artist?.bio ?? null, (updatedUser as any)?.artist?.bio ?? null);
+        set('artist.photoUrl', (before as any)?.artist?.photoUrl ?? null, (updatedUser as any)?.artist?.photoUrl ?? null);
+        if (Object.keys(diff).length > 0) {
+          await this.audit.log({
+            actor: opts?.actor ?? ({ id: userId, role: updatedUser.role, branchId: updatedUser.branchId } as any),
+            action: 'ARTIST_PROFILE_UPDATE',
+            entityType: 'ARTIST',
+            entityId: (updatedUser as any).artist?.id ?? null,
+            diff,
+            metadata: { userId },
+            meta: { ip: opts?.ip ?? null, userAgent: opts?.userAgent ?? null },
+          });
+        }
+      }
+    } catch {
+      // ignore
     }
 
     return updatedUser;

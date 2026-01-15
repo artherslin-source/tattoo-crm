@@ -8,6 +8,8 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { existsSync, mkdirSync } from "fs";
 import { extname, join } from "path";
+import { AuditService } from "../audit/audit.service";
+import { buildActorFromJwtUser } from "../common/access/access.types";
 
 @Controller("artist")
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -16,6 +18,7 @@ export class ArtistController {
   constructor(
     private readonly artistService: ArtistService,
     private readonly adminAppointmentsService: AdminAppointmentsService,
+    private readonly audit: AuditService,
   ) {}
 
   // 1. 首頁 Dashboard
@@ -260,7 +263,16 @@ export class ArtistController {
     
     console.log('DEBUG addPortfolioItem data:', data);
     
-    return this.artistService.addPortfolioItem(artistId, data);
+    const created = await this.artistService.addPortfolioItem(artistId, data);
+    await this.audit.log({
+      actor: buildActorFromJwtUser({ id: req.user.id, role: req.user.role, branchId: req.user.branchId }),
+      action: 'PORTFOLIO_CREATE',
+      entityType: 'PORTFOLIO_ITEM',
+      entityId: (created as any)?.id ?? null,
+      metadata: { title: (created as any)?.title ?? data.title ?? null },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
+    return created;
   }
 
   @Post("portfolio/:id")
@@ -331,7 +343,16 @@ export class ArtistController {
     
     console.log('DEBUG updatePortfolioItemWithUpload data:', data);
     
-    return this.artistService.updatePortfolioItem(portfolioId, data, artistId);
+    const updated = await this.artistService.updatePortfolioItem(portfolioId, data, artistId);
+    await this.audit.log({
+      actor: buildActorFromJwtUser({ id: req.user.id, role: req.user.role, branchId: req.user.branchId }),
+      action: 'PORTFOLIO_UPDATE',
+      entityType: 'PORTFOLIO_ITEM',
+      entityId: portfolioId,
+      metadata: { title: (updated as any)?.title ?? data.title ?? null, hasNewImage: !!file },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
+    return updated;
   }
 
   @Patch("portfolio/:id")
@@ -346,7 +367,16 @@ export class ArtistController {
     @Req() req
   ) {
     const artistId = req.user.id;
-    return this.artistService.updatePortfolioItem(portfolioId, body, artistId);
+    const updated = await this.artistService.updatePortfolioItem(portfolioId, body, artistId);
+    await this.audit.log({
+      actor: buildActorFromJwtUser({ id: req.user.id, role: req.user.role, branchId: req.user.branchId }),
+      action: 'PORTFOLIO_UPDATE',
+      entityType: 'PORTFOLIO_ITEM',
+      entityId: portfolioId,
+      metadata: { patch: body ?? null },
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
+    return updated;
   }
 
   @Delete("portfolio/:id")
@@ -355,7 +385,16 @@ export class ArtistController {
     @Req() req
   ) {
     const artistId = req.user.id;
-    return this.artistService.deletePortfolioItem(portfolioId, artistId);
+    const deleted = await this.artistService.deletePortfolioItem(portfolioId, artistId);
+    await this.audit.log({
+      actor: buildActorFromJwtUser({ id: req.user.id, role: req.user.role, branchId: req.user.branchId }),
+      action: 'PORTFOLIO_DELETE',
+      entityType: 'PORTFOLIO_ITEM',
+      entityId: portfolioId,
+      metadata: {},
+      meta: { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+    });
+    return deleted;
   }
 
   // 5. 通知系統

@@ -3,9 +3,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { BackupController, BackupDownloadController } from './backup.controller';
 import { BackupService } from './backup.service';
 import { MaintenanceModule } from '../maintenance/maintenance.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [PrismaModule, MaintenanceModule],
+  imports: [PrismaModule, MaintenanceModule, AuditModule],
   controllers: [BackupController, BackupDownloadController],
   providers: [BackupService],
 })

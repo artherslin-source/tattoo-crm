@@ -159,12 +159,16 @@ export class AdminArtistsController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() body: unknown) {
+  async update(@Actor() actor: AccessActor, @Req() req: any, @Param('id') id: string, @Body() body: unknown) {
     console.log('🎯 AdminArtistsController.update called with:', { id, body });
     const input = UpdateArtistSchema.parse(body);
     console.log('🔍 Parsed input:', input);
 
-    const result = await this.adminArtistsService.update(id, {
+    const result = await this.adminArtistsService.update(
+      actor,
+      { ip: req?.ip ?? null, userAgent: req?.headers?.['user-agent'] ?? null },
+      id,
+      {
       name: input.name,
       email: input.email,
       phone: input.phone,
@@ -174,7 +178,8 @@ export class AdminArtistsController {
       portfolioUrl: input.portfolioUrl,
       photoUrl: input.photoUrl,
       active: input.active,
-    });
+      },
+    );
     
     console.log('✅ Update result:', result);
     return result;

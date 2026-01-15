@@ -394,6 +394,30 @@ model ServiceHistory {
   service   Service  @relation(fields: [serviceId], references: [id])
 }
 
+model AuditLog {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  actorUserId String?
+  actorRole   String?
+  branchId    String?
+
+  action      String
+  entityType  String?
+  entityId    String?
+
+  ip          String?
+  userAgent   String?
+
+  diff        Json?
+  metadata    Json?
+
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId, createdAt])
+}
+
 enum Role {
   BOSS
   BRANCH_MANAGER
