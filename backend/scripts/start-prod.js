@@ -99,87 +99,105 @@ console.log('📊 執行資料庫遷移（不會刪除任何資料）...');
 const autoResolveEnabledAtBoot = ['1', 'true', 'yes', 'y', 'on'].includes(
   String(process.env.AUTO_RESOLVE_FAILED_MIGRATION || '').trim().toLowerCase(),
 );
-const autoResolveTarget = '20251231010000_remove_orders_and_generalize_billing';
 console.log(
   `ℹ️ AUTO_RESOLVE_FAILED_MIGRATION: ${autoResolveEnabledAtBoot ? 'enabled' : 'disabled'}`,
 );
+
+const AUTO_RESOLVE_ALLOWLIST = {
+  // Legacy destructive migration: permanently skip in production (user chose option A).
+  '20251231010000_remove_orders_and_generalize_billing': { mode: 'rolled-back' },
+  // Non-destructive column-add migration: production DB already has the column; mark as applied.
+  '20260104000000_add_user_booking_latest_start_time': { mode: 'applied' },
+};
+
 if (autoResolveEnabledAtBoot) {
-  console.log(`ℹ️ Auto-resolve target (fixed): ${autoResolveTarget}`);
+  console.log('ℹ️ Auto-resolve allowlist:');
+  for (const [name, cfg] of Object.entries(AUTO_RESOLVE_ALLOWLIST)) {
+    console.log(`   - ${name} => ${cfg.mode}`);
+  }
 }
 
-try {
-  runWithCapture('npx prisma migrate deploy', '執行資料庫遷移');
-  console.log('✅ 資料庫遷移完成（未刪除任何資料）');
-} catch (error) {
-  // Policy A: if migration cannot be safely applied, FAIL FAST. Never attempt db push or accept-data-loss in production.
-  const msg = String(error?.message || '');
-  const combined = String(error?.combinedOutput || '');
-  const combinedLower = combined.toLowerCase();
+function extractFailedMigrationName(output) {
+  const m = String(output || '').match(/The `(\d{14}_[^`]+)` migration started at .* failed/i);
+  return m?.[1] || '';
+}
 
-  const isP3009 =
-    combined.includes('P3009') ||
-    combinedLower.includes('failed migrations') ||
-    combinedLower.includes('migrate found failed migrations');
+function isP3009FromOutput(output) {
+  const s = String(output || '');
+  const l = s.toLowerCase();
+  return s.includes('P3009') || l.includes('failed migrations') || l.includes('migrate found failed migrations');
+}
 
-  const failedMigrationMatch = combined.match(
-    /The `(\d{14}_[^`]+)` migration started at .* failed/i,
-  );
-  const failedMigrationName = failedMigrationMatch?.[1] || '';
+const maxAttempts = autoResolveEnabledAtBoot ? 4 : 1;
+let migrated = false;
+let lastErrorMsg = '';
+let lastCombined = '';
 
-  const autoResolveEnabled = autoResolveEnabledAtBoot;
+for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  try {
+    runWithCapture('npx prisma migrate deploy', attempt === 1 ? '執行資料庫遷移' : `重新嘗試執行資料庫遷移（第 ${attempt} 次）`);
+    console.log('✅ 資料庫遷移完成（未刪除任何資料）');
+    migrated = true;
+    break;
+  } catch (error) {
+    lastErrorMsg = String(error?.message || '');
+    lastCombined = String(error?.combinedOutput || '');
 
-  // One-time auto-remediation (requested): only when explicitly enabled AND we are sure it's the known failed migration.
-  if (isP3009 && autoResolveEnabled && failedMigrationName === autoResolveTarget) {
+    if (!autoResolveEnabledAtBoot) {
+      break;
+    }
+
+    if (!isP3009FromOutput(lastCombined)) {
+      break;
+    }
+
+    const failedMigrationName = extractFailedMigrationName(lastCombined);
+    const cfg = AUTO_RESOLVE_ALLOWLIST[failedMigrationName];
+    if (!cfg) {
+      console.log('');
+      console.log('⚠ AUTO_RESOLVE_FAILED_MIGRATION=true 已啟用，但偵測到的失敗 migration 不在 allowlist。');
+      console.log(`➡ failed migration: ${failedMigrationName || '(unknown)'}`);
+      console.log('➡ 為了保護資料，本次不會自動執行 migrate resolve。');
+      break;
+    }
+
     console.log('');
-    console.log('🛠️ AUTO_RESOLVE_FAILED_MIGRATION=true：啟用一次性自動修復（只處理已知失敗 migration）。');
-    console.log(`➡ 將失敗 migration 標記為 rolled-back: ${autoResolveTarget}`);
+    console.log('🛠️ AUTO_RESOLVE_FAILED_MIGRATION=true：啟用一次性自動修復（僅 allowlist）。');
+    console.log(`➡ 將失敗 migration 標記為 ${cfg.mode}: ${failedMigrationName}`);
     try {
       run(
-        `npx prisma migrate resolve --rolled-back ${autoResolveTarget}`,
-        '自動標記失敗 migration 為 rolled-back（不會刪除資料）',
+        `npx prisma migrate resolve --${cfg.mode} ${failedMigrationName}`,
+        `自動標記失敗 migration 為 ${cfg.mode}（不會刪除資料）`,
       );
-      runWithCapture('npx prisma migrate deploy', '重新嘗試執行資料庫遷移');
-      console.log('✅ 自動修復完成：已可繼續套用新的 migrations。');
-      console.log('⚠ 請立刻在 Railway Variables 移除/關閉 AUTO_RESOLVE_FAILED_MIGRATION，避免未來誤用。');
-      // Continue boot.
+      // continue loop to retry migrate deploy
     } catch (e2) {
       const msg2 = String(e2?.message || '');
       exitWithMessage([
         '❌ 自動修復失敗，已中止啟動（保護客戶資料）。',
-        `➡ 原始錯誤: ${msg}`,
+        `➡ 原始錯誤: ${lastErrorMsg}`,
         `➡ 自動修復錯誤: ${msg2}`,
         '',
-        '➡ 建議：請仍以 Railway Shell/Console 執行 migrate resolve（若有權限），或請管理員協助。',
-        `   npx prisma migrate resolve --rolled-back ${autoResolveTarget}`,
-        '   npx prisma migrate deploy',
+        '➡ 請確認 Railway Variables 已正確設定，並檢查資料庫狀態。',
       ]);
     }
-    // If we got here, migrate deploy succeeded after auto-resolve.
-    // Allow startup to proceed.
-  } else if (isP3009 && autoResolveEnabled) {
-    console.log('');
-    console.log('⚠ AUTO_RESOLVE_FAILED_MIGRATION=true 已啟用，但偵測到的失敗 migration 不是預期的那一個。');
-    console.log('➡ 為了保護資料，本次不會自動執行 migrate resolve。');
   }
+}
 
-  // If migrate deploy still failed (or auto-resolve was not applicable), exit with help.
+if (!migrated) {
+  const isP3009 = isP3009FromOutput(lastCombined);
   const extraHelp = isP3009
     ? [
         '',
         '🧩 Prisma 偵測到「目標資料庫有失敗的 migrations」，所以後續 migrations 會被拒絕套用（P3009）。',
-        '➡ 需要先在 Railway 的後端 Shell/Console 執行 migrate resolve 才能繼續 deploy。',
-        '',
-        '✅ 你已選擇「永久跳過」該破壞性 migration 的情況下，請執行：',
-        `   npx prisma migrate resolve --rolled-back ${autoResolveTarget}`,
-        '   npx prisma migrate deploy',
-        '',
-        '（這不會刪資料；只是把失敗 migration 標記為已處理，讓新 migration 可以繼續套用。）',
+        '➡ 目前 Railway 沒有 Shell/Console 的情況下：',
+        '   - 請確認已設定 AUTO_RESOLVE_FAILED_MIGRATION=true',
+        '   - 且失敗 migration 必須在 allowlist 才會自動處理',
       ]
     : [];
 
   exitWithMessage([
     '❌ 資料庫遷移失敗，已中止啟動（保護客戶資料）。',
-    `➡ 錯誤訊息: ${msg}`,
+    `➡ 錯誤訊息: ${lastErrorMsg}`,
     '',
     '➡ 請修正 migration 後重新部署（不要使用 prisma db push --accept-data-loss）。',
     ...extraHelp,
