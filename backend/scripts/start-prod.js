@@ -77,11 +77,32 @@ try {
   console.log('✅ 資料庫遷移完成（未刪除任何資料）');
 } catch (error) {
   // Policy A: if migration cannot be safely applied, FAIL FAST. Never attempt db push or accept-data-loss in production.
+  const msg = String(error?.message || '');
+  const isP3009 =
+    msg.includes('P3009') ||
+    msg.toLowerCase().includes('failed migrations') ||
+    msg.toLowerCase().includes('migrate found failed migrations');
+
+  const extraHelp = isP3009
+    ? [
+        '',
+        '🧩 Prisma 偵測到「目標資料庫有失敗的 migrations」，所以後續 migrations 會被拒絕套用（P3009）。',
+        '➡ 需要先在 Railway 的後端 Shell/Console 執行 migrate resolve 才能繼續 deploy。',
+        '',
+        '✅ 你已選擇「永久跳過」該破壞性 migration 的情況下，請執行：',
+        '   npx prisma migrate resolve --rolled-back 20251231010000_remove_orders_and_generalize_billing',
+        '   npx prisma migrate deploy',
+        '',
+        '（這不會刪資料；只是把失敗 migration 標記為已處理，讓新 migration 可以繼續套用。）',
+      ]
+    : [];
+
   exitWithMessage([
     '❌ 資料庫遷移失敗，已中止啟動（保護客戶資料）。',
-    `➡ 錯誤訊息: ${error.message}`,
+    `➡ 錯誤訊息: ${msg}`,
     '',
     '➡ 請修正 migration 後重新部署（不要使用 prisma db push --accept-data-loss）。',
+    ...extraHelp,
   ]);
 }
 
