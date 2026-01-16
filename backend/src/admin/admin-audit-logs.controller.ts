@@ -11,6 +11,12 @@ import { isBoss } from '../common/access/access.types';
 export class AdminAuditLogsController {
   constructor(private readonly prisma: PrismaService) {}
 
+  private getMetaString(meta: unknown, key: string): string | null {
+    if (!meta || typeof meta !== 'object') return null;
+    const v = (meta as any)[key];
+    return typeof v === 'string' && v.trim() ? v.trim() : null;
+  }
+
   @Get()
   async list(
     @Actor() actor: AccessActor,
@@ -88,7 +94,57 @@ export class AdminAuditLogsController {
     const hasMore = rows.length > limit;
     const items = hasMore ? rows.slice(0, limit) : rows;
     const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
-    return { items, nextCursor };
+
+    // Enrich for UI readability: actorName / branchName / targetName (best-effort, avoid N+1).
+    const userIds = new Set<string>();
+    const branchIds = new Set<string>();
+    for (const it of items) {
+      if (it.actorUserId) userIds.add(it.actorUserId);
+      if (it.branchId) branchIds.add(it.branchId);
+      const metaUserId = this.getMetaString(it.metadata, 'userId');
+      const metaTargetUserId = this.getMetaString(it.metadata, 'targetUserId');
+      if (metaUserId) userIds.add(metaUserId);
+      if (metaTargetUserId) userIds.add(metaTargetUserId);
+    }
+
+    const [users, branches] = await Promise.all([
+      userIds.size
+        ? this.prisma.user.findMany({
+            where: { id: { in: Array.from(userIds) } },
+            select: { id: true, name: true, phone: true, email: true },
+          })
+        : Promise.resolve([]),
+      branchIds.size
+        ? this.prisma.branch.findMany({
+            where: { id: { in: Array.from(branchIds) } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const userNameById = new Map(
+      users.map((u) => [
+        u.id,
+        (u.name || u.phone || u.email || '').trim() || null,
+      ]),
+    );
+    const branchNameById = new Map(branches.map((b) => [b.id, (b.name || '').trim() || null]));
+
+    const enriched = items.map((it) => {
+      const metaUserId = this.getMetaString(it.metadata, 'userId');
+      const metaTargetUserId = this.getMetaString(it.metadata, 'targetUserId');
+      const targetUserId = metaTargetUserId || metaUserId || null;
+
+      return {
+        ...it,
+        actorName: it.actorUserId ? userNameById.get(it.actorUserId) || null : null,
+        branchName: it.branchId ? branchNameById.get(it.branchId) || null : null,
+        targetUserId,
+        targetName: targetUserId ? userNameById.get(targetUserId) || null : null,
+      };
+    });
+
+    return { items: enriched, nextCursor };
   }
 }
 
