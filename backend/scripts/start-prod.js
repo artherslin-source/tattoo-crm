@@ -112,6 +112,8 @@ const AUTO_RESOLVE_ALLOWLIST = {
   '20260105000000_add_user_booking_24h_enabled': { mode: 'applied' },
   // SiteConfig table already exists in production; mark as applied to clear failed migration state.
   '20260108000000_add_site_config': { mode: 'applied' },
+  // ArtistBranchAccess table already exists in production; mark as applied to clear failed migration state.
+  '20260109000001_add_artist_branch_access': { mode: 'applied' },
 };
 
 if (autoResolveEnabledAtBoot) {
