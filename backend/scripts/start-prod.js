@@ -96,6 +96,17 @@ run('npx tsc -p tsconfig.build.json', '編譯 TypeScript 專案');
 console.log('🛡️ 生產模式：保護現有資料，只執行安全的遷移');
 console.log('📊 執行資料庫遷移（不會刪除任何資料）...');
 
+const autoResolveEnabledAtBoot = ['1', 'true', 'yes', 'y', 'on'].includes(
+  String(process.env.AUTO_RESOLVE_FAILED_MIGRATION || '').trim().toLowerCase(),
+);
+const autoResolveTarget = '20251231010000_remove_orders_and_generalize_billing';
+console.log(
+  `ℹ️ AUTO_RESOLVE_FAILED_MIGRATION: ${autoResolveEnabledAtBoot ? 'enabled' : 'disabled'}`,
+);
+if (autoResolveEnabledAtBoot) {
+  console.log(`ℹ️ Auto-resolve target (fixed): ${autoResolveTarget}`);
+}
+
 try {
   runWithCapture('npx prisma migrate deploy', '執行資料庫遷移');
   console.log('✅ 資料庫遷移完成（未刪除任何資料）');
@@ -115,10 +126,7 @@ try {
   );
   const failedMigrationName = failedMigrationMatch?.[1] || '';
 
-  const autoResolveEnabled = ['1', 'true', 'yes', 'y', 'on'].includes(
-    String(process.env.AUTO_RESOLVE_FAILED_MIGRATION || '').trim().toLowerCase(),
-  );
-  const autoResolveTarget = '20251231010000_remove_orders_and_generalize_billing';
+  const autoResolveEnabled = autoResolveEnabledAtBoot;
 
   // One-time auto-remediation (requested): only when explicitly enabled AND we are sure it's the known failed migration.
   if (isP3009 && autoResolveEnabled && failedMigrationName === autoResolveTarget) {
