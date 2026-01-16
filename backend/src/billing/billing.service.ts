@@ -5,6 +5,7 @@ import { isBoss, isArtist, type AccessActor } from '../common/access/access.type
 import { BILL_TYPE_STORED_VALUE_TOPUP } from './billing.constants';
 import * as ExcelJS from 'exceljs';
 import { resolveArtistScope } from '../common/access/artist-scope';
+import { AuditService } from '../audit/audit.service';
 
 type BillStatus = 'OPEN' | 'SETTLED' | 'VOID';
 
@@ -40,7 +41,10 @@ function sumAddonMoneyFromVariantsSnapshot(v: any): number {
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async lookupMemberByPhone(phoneDigits: string): Promise<{ userId: string; name: string | null; phone: string } | null> {
     const user = await this.prisma.user.findUnique({
@@ -285,7 +289,7 @@ export class BillingService {
     if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can delete bills');
     if (!input?.reason || input.reason.trim().length === 0) throw new BadRequestException('reason is required');
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const bill = await tx.appointmentBill.findUnique({
         where: { id: billId },
         include: {
@@ -325,6 +329,16 @@ export class BillingService {
         reversed: reverse,
       };
     });
+
+    await this.audit.log({
+      actor,
+      action: 'BILL_DELETE',
+      entityType: 'BILLING',
+      entityId: billId,
+      metadata: { billId, reason: input.reason },
+    });
+
+    return result;
   }
 
   async updateBillFull(
@@ -826,6 +840,14 @@ export class BillingService {
       });
 
       return { billId: bill.id };
+    });
+
+    await this.audit.log({
+      actor,
+      action: 'BILL_REFUND_TO_STORED_VALUE',
+      entityType: 'BILLING',
+      entityId: created.billId,
+      metadata: { sourceBillId: billId, createdBillId: created.billId, amount, notes: input.notes ?? null },
     });
 
     // Same reason as createStoredValueTopupBill(): fetch detail after commit.
@@ -1505,6 +1527,10 @@ export class BillingService {
     input: { discountTotal?: number; status?: BillStatus; voidReason?: string },
   ) {
     await this.ensureAppointmentReadable(actor, appointmentId);
+    const before = await this.prisma.appointmentBill.findUnique({
+      where: { appointmentId },
+      select: { id: true, discountTotal: true, status: true, voidReason: true },
+    });
 
     await this.prisma.$transaction(async (tx) => {
       const existing = await tx.appointmentBill.findUnique({ where: { appointmentId } });
@@ -1535,7 +1561,25 @@ export class BillingService {
 
       await tx.appointmentBill.update({ where: { appointmentId }, data });
     });
-    return this.getBillByAppointment(actor, appointmentId);
+
+    const after = await this.getBillByAppointment(actor, appointmentId);
+    const afterBill: any = after as any;
+
+    const diff: Record<string, { from: unknown; to: unknown }> = {};
+    if (input.discountTotal !== undefined) diff['bill.discountTotal'] = { from: before?.discountTotal ?? null, to: afterBill?.discountTotal ?? null };
+    if (input.status) diff['bill.status'] = { from: before?.status ?? null, to: afterBill?.status ?? null };
+    if (input.status) diff['bill.voidReason'] = { from: before?.voidReason ?? null, to: afterBill?.voidReason ?? null };
+
+    await this.audit.log({
+      actor,
+      action: 'BILL_UPDATE',
+      entityType: 'BILLING',
+      entityId: (afterBill?.id as string) || (before?.id as string) || null,
+      diff: Object.keys(diff).length ? diff : null,
+      metadata: { appointmentId, billId: afterBill?.id ?? before?.id ?? null },
+    });
+
+    return after;
   }
 
   async updateBillById(
@@ -1544,7 +1588,12 @@ export class BillingService {
     input: { discountTotal?: number; status?: BillStatus; voidReason?: string },
   ) {
     await this.ensureBillReadable(actor, billId);
-    return this.prisma.$transaction(async (tx) => {
+    const before = await this.prisma.appointmentBill.findUnique({
+      where: { id: billId },
+      select: { id: true, discountTotal: true, status: true, voidReason: true },
+    });
+
+    const updated = await this.prisma.$transaction(async (tx) => {
       const bill = await tx.appointmentBill.findUnique({ where: { id: billId } });
       if (!bill) throw new NotFoundException('帳務不存在');
 
@@ -1568,6 +1617,23 @@ export class BillingService {
       await tx.appointmentBill.update({ where: { id: billId }, data });
       return this.getBillById(actor, billId);
     });
+
+    const updatedBill: any = updated as any;
+    const diff: Record<string, { from: unknown; to: unknown }> = {};
+    if (input.discountTotal !== undefined) diff['bill.discountTotal'] = { from: before?.discountTotal ?? null, to: updatedBill?.discountTotal ?? null };
+    if (input.status) diff['bill.status'] = { from: before?.status ?? null, to: updatedBill?.status ?? null };
+    if (input.status) diff['bill.voidReason'] = { from: before?.voidReason ?? null, to: updatedBill?.voidReason ?? null };
+
+    await this.audit.log({
+      actor,
+      action: 'BILL_UPDATE',
+      entityType: 'BILLING',
+      entityId: billId,
+      diff: Object.keys(diff).length ? diff : null,
+      metadata: { billId },
+    });
+
+    return updated;
   }
 
   async createManualBill(
@@ -1651,6 +1717,14 @@ export class BillingService {
       },
     });
 
+    await this.audit.log({
+      actor,
+      action: 'BILL_CREATE',
+      entityType: 'BILLING',
+      entityId: bill.id,
+      metadata: { billId: bill.id, branchId, billType: input.billType || 'WALK_IN', billTotal },
+    });
+
     return this.getBillById(actor, bill.id);
   }
 
@@ -1661,7 +1735,7 @@ export class BillingService {
   ) {
     await this.ensureBillReadable(actor, billId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const bill = await tx.appointmentBill.findUnique({
         where: { id: billId },
         include: { payments: { include: { allocations: true } } },
@@ -1758,6 +1832,16 @@ export class BillingService {
 
       return this.getBillById(actor, billId);
     });
+
+    await this.audit.log({
+      actor,
+      action: 'BILL_RECORD_PAYMENT',
+      entityType: 'BILLING',
+      entityId: billId,
+      metadata: { billId, amount: Math.trunc(input.amount), method: String(input.method || '').toUpperCase() },
+    });
+
+    return result;
   }
 
   async recordPayment(
@@ -1767,7 +1851,7 @@ export class BillingService {
   ) {
     await this.ensureAppointmentReadable(actor, appointmentId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       let bill = await tx.appointmentBill.findUnique({
         where: { appointmentId },
         include: { payments: { include: { allocations: true } } },
@@ -1916,6 +2000,17 @@ export class BillingService {
 
       return this.getBillByAppointment(actor, appointmentId);
     });
+
+    const billId = (result as any)?.id ?? null;
+    await this.audit.log({
+      actor,
+      action: 'BILL_RECORD_PAYMENT',
+      entityType: 'BILLING',
+      entityId: billId,
+      metadata: { appointmentId, billId, amount: Math.trunc(input.amount), method: String(input.method || '').toUpperCase() },
+    });
+
+    return result;
   }
 
   async listSplitRules(actor: AccessActor, input: { artistId?: string; branchId?: string }) {

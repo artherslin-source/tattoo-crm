@@ -6,12 +6,14 @@ import { isBoss, type AccessActor } from '../common/access/access.types';
 import { NotificationsService } from '../notifications/notifications.service';
 import { formatContactMergeNote, normalizePhoneDigits } from '../common/utils/phone';
 import { resolveArtistScope } from '../common/access/artist-scope';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class ContactsService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private audit: AuditService,
   ) {}
 
   private async notifyOwnerAssigned(input: {
@@ -282,6 +284,20 @@ export class ContactsService {
             });
           }
 
+          await this.audit.log({
+            actor,
+            action: 'CONTACT_UPDATE',
+            entityType: 'CONTACT',
+            entityId: updated.id,
+            diff: {
+              ...(existing.ownerArtistId !== updated.ownerArtistId
+                ? { 'contact.ownerArtistId': { from: existing.ownerArtistId ?? null, to: updated.ownerArtistId ?? null } }
+                : {}),
+              ...(existing.notes !== updated.notes ? { 'contact.notes': { from: existing.notes ?? null, to: updated.notes ?? null } } : {}),
+            },
+            metadata: { contactId: updated.id, mergedByPhone: true },
+          });
+
           return updated;
         }
       }
@@ -310,6 +326,14 @@ export class ContactsService {
           newOwnerArtistId: created.ownerArtistId,
         });
       }
+
+      await this.audit.log({
+        actor,
+        action: 'CONTACT_CREATE',
+        entityType: 'CONTACT',
+        entityId: created.id,
+        metadata: { contactId: created.id, branchId: created.branchId ?? null, ownerArtistId: created.ownerArtistId ?? null },
+      });
 
       return created;
     } catch (error) {
@@ -431,6 +455,10 @@ export class ContactsService {
 
   async update(actor: AccessActor, id: string, updateContactDto: UpdateContactDto) {
     await this.ensureContactReadable(actor, id);
+    const beforeAny = await this.prisma.contact.findUnique({
+      where: { id },
+      select: { id: true, status: true, ownerArtistId: true, notes: true },
+    });
     const data: UpdateContactDto = { ...updateContactDto };
 
     // Artists can only update limited fields on their own contacts
@@ -492,14 +520,47 @@ export class ContactsService {
       });
     }
 
+    await this.audit.log({
+      actor,
+      action: 'CONTACT_UPDATE',
+      entityType: 'CONTACT',
+      entityId: id,
+      diff: beforeAny
+        ? {
+            ...(beforeAny.status !== (updated as any).status
+              ? { 'contact.status': { from: beforeAny.status, to: (updated as any).status } }
+              : {}),
+            ...(beforeAny.ownerArtistId !== updated.ownerArtistId
+              ? { 'contact.ownerArtistId': { from: beforeAny.ownerArtistId ?? null, to: updated.ownerArtistId ?? null } }
+              : {}),
+            ...(beforeAny.notes !== (updated as any).notes
+              ? { 'contact.notes': { from: beforeAny.notes ?? null, to: (updated as any).notes ?? null } }
+              : {}),
+          }
+        : null,
+      metadata: { contactId: id },
+    });
+
     return updated;
   }
 
   async remove(actor: AccessActor, id: string) {
     if (!isBoss(actor)) throw new ForbiddenException('Only BOSS can delete contacts');
-    return this.prisma.contact.delete({
+    const before = await this.prisma.contact.findUnique({
+      where: { id },
+      select: { id: true, branchId: true, ownerArtistId: true },
+    });
+    const deleted = await this.prisma.contact.delete({
       where: { id },
     });
+    await this.audit.log({
+      actor,
+      action: 'CONTACT_DELETE',
+      entityType: 'CONTACT',
+      entityId: id,
+      metadata: { contactId: id, branchId: before?.branchId ?? null, ownerArtistId: before?.ownerArtistId ?? null },
+    });
+    return deleted;
   }
 
   async getStats(actor: AccessActor, input?: { branchId?: string }) {
@@ -554,12 +615,16 @@ export class ContactsService {
   async convertToAppointment(actor: AccessActor, contactId: string) {
     // Mark converted; also ensure owner is assigned if possible
     await this.ensureContactReadable(actor, contactId);
-    return this.prisma.$transaction(async (tx) => {
+    let beforeStatus: string | null = null;
+    let beforeOwnerArtistId: string | null = null;
+    const updated = await this.prisma.$transaction(async (tx) => {
       const contact = await tx.contact.findUnique({
         where: { id: contactId },
         include: { appointments: { select: { id: true, artistId: true, createdAt: true } } },
       });
       if (!contact) throw new NotFoundException('聯絡不存在');
+      beforeStatus = (contact.status as any) ?? null;
+      beforeOwnerArtistId = (contact.ownerArtistId as any) ?? null;
 
       const existing = contact.appointments
         .slice()
@@ -598,5 +663,21 @@ export class ContactsService {
         },
       });
     });
+
+    await this.audit.log({
+      actor,
+      action: 'CONTACT_CONVERT_TO_APPOINTMENT',
+      entityType: 'CONTACT',
+      entityId: contactId,
+      diff: {
+        ...(beforeStatus !== null ? { 'contact.status': { from: beforeStatus, to: 'CONVERTED' } } : {}),
+        ...(beforeOwnerArtistId !== (updated as any).ownerArtistId
+          ? { 'contact.ownerArtistId': { from: beforeOwnerArtistId, to: (updated as any).ownerArtistId ?? null } }
+          : {}),
+      },
+      metadata: { contactId, ownerArtistId: (updated as any).ownerArtistId ?? null },
+    });
+
+    return updated;
   }
 }

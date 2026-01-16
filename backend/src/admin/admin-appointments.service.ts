@@ -5,12 +5,14 @@ import type { Prisma } from '@prisma/client';
 import { BillingService } from '../billing/billing.service';
 import { calculatePriceAndDuration, getAddonTotal } from '../cart/pricing';
 import { resolveArtistScope, getAllArtistUserIdsForLogin, resolveTargetArtistUserIdForBranch } from '../common/access/artist-scope';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class AdminAppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billing: BillingService,
+    private readonly audit: AuditService,
   ) {}
 
   // Policy: reschedule up to 2 times, no time restriction (removed 24h cutoff)
@@ -416,7 +418,7 @@ export class AdminAppointmentsService {
       }
 
       // Contact conversion guard + atomic conversion.
-      return this.prisma.$transaction(async (tx) => {
+      const created = await this.prisma.$transaction(async (tx) => {
         if (input.contactId) {
           const existing = await tx.appointment.findFirst({
             where: { contactId: input.contactId },
@@ -505,6 +507,23 @@ export class AdminAppointmentsService {
 
         return created;
       });
+
+      await this.audit.log({
+        actor: input.actor,
+        action: 'APPOINTMENT_CREATE',
+        entityType: 'APPOINTMENT',
+        entityId: created.id,
+        metadata: {
+          appointmentId: created.id,
+          userId: input.userId,
+          serviceId: input.serviceId,
+          artistId: created.artistId,
+          branchId: input.branchId,
+          contactId: input.contactId ?? null,
+        },
+      });
+
+      return created;
     } catch (error) {
       console.error('❌ CreateAppointment Error:', error);
       if (error instanceof BadRequestException || error instanceof ConflictException) {
@@ -553,6 +572,15 @@ export class AdminAppointmentsService {
       await this.billing.ensureBillForAppointment(input.actor, input.id);
     }
 
+    await this.audit.log({
+      actor: input.actor,
+      action: 'APPOINTMENT_UPDATE_STATUS',
+      entityType: 'APPOINTMENT',
+      entityId: input.id,
+      diff: { 'appointment.status': { from: appointment.status, to: input.status } },
+      metadata: { appointmentId: input.id },
+    });
+
     return updatedAppointment;
   }
 
@@ -564,12 +592,17 @@ export class AdminAppointmentsService {
 
   async confirmSchedule(input: { actor: AccessActor; id: string; startAt: Date; holdMin: number; reason?: string }) {
     const scope = await this.buildScopeWhere(input.actor);
+    let beforeStatus: string | null = null;
+    let beforeStartAt: Date | null = null;
+    let beforeEndAt: Date | null = null;
     const updatedAppointment = await this.prisma.$transaction(async (tx) => {
       const appointment = await tx.appointment.findFirst({
         where: { AND: [{ id: input.id }, scope] },
         select: {
           id: true,
           status: true,
+          startAt: true,
+          endAt: true,
           branchId: true,
           artistId: true,
           userId: true,
@@ -578,6 +611,9 @@ export class AdminAppointmentsService {
         },
       });
       if (!appointment) throw new NotFoundException('預約不存在');
+      beforeStatus = (appointment.status as any) ?? null;
+      beforeStartAt = (appointment.startAt as any) ?? null;
+      beforeEndAt = (appointment.endAt as any) ?? null;
       if (appointment.status !== 'INTENT') {
         throw new BadRequestException('只有意向預約可以排定正式時間');
       }
@@ -631,6 +667,20 @@ export class AdminAppointmentsService {
     });
 
     await this.billing.ensureBillForAppointment(input.actor, input.id);
+
+    await this.audit.log({
+      actor: input.actor,
+      action: 'APPOINTMENT_UPDATE_STATUS',
+      entityType: 'APPOINTMENT',
+      entityId: input.id,
+      diff: {
+        ...(beforeStatus !== null ? { 'appointment.status': { from: beforeStatus, to: 'CONFIRMED' } } : {}),
+        ...(beforeStartAt ? { 'appointment.startAt': { from: beforeStartAt, to: updatedAppointment.startAt } } : {}),
+        ...(beforeEndAt ? { 'appointment.endAt': { from: beforeEndAt, to: updatedAppointment.endAt } } : {}),
+      },
+      metadata: { appointmentId: input.id, reason: input.reason ?? null },
+    });
+
     return updatedAppointment;
   }
 
@@ -679,7 +729,7 @@ export class AdminAppointmentsService {
       if (conflict) throw new ConflictException('該時段已被預約');
     }
 
-    return this.prisma.appointment.update({
+    const updated = await this.prisma.appointment.update({
       where: { id: appointment.id },
       data: {
         startAt: input.startAt,
@@ -700,6 +750,20 @@ export class AdminAppointmentsService {
         bill: true,
       },
     });
+
+    await this.audit.log({
+      actor: input.actor,
+      action: 'APPOINTMENT_RESCHEDULE',
+      entityType: 'APPOINTMENT',
+      entityId: input.id,
+      diff: {
+        'appointment.startAt': { from: appointment.startAt, to: updated.startAt },
+        'appointment.endAt': { from: appointment.endAt, to: updated.endAt },
+      },
+      metadata: { appointmentId: input.id, reason: input.reason ?? null },
+    });
+
+    return updated;
   }
 
   async cancel(input: { actor: AccessActor; id: string; reason?: string }) {
@@ -726,6 +790,15 @@ export class AdminAppointmentsService {
         cancelReason: input.reason ?? null,
       },
     });
+
+    await this.audit.log({
+      actor: input.actor,
+      action: 'APPOINTMENT_CANCEL',
+      entityType: 'APPOINTMENT',
+      entityId: input.id,
+      diff: { 'appointment.status': { from: appointment.status, to: 'CANCELED' } },
+      metadata: { appointmentId: input.id, reason: input.reason ?? null },
+    });
     return { success: true };
   }
 
@@ -747,6 +820,15 @@ export class AdminAppointmentsService {
         noShowAt: new Date(),
         noShowReason: input.reason ?? null,
       },
+    });
+
+    await this.audit.log({
+      actor: input.actor,
+      action: 'APPOINTMENT_NO_SHOW',
+      entityType: 'APPOINTMENT',
+      entityId: input.id,
+      diff: { 'appointment.status': { from: appointment.status, to: 'NO_SHOW' } },
+      metadata: { appointmentId: input.id, reason: input.reason ?? null },
     });
     return { success: true };
   }
@@ -782,7 +864,7 @@ export class AdminAppointmentsService {
       }
     }
 
-    return this.prisma.appointment.update({
+    const updated = await this.prisma.appointment.update({
       where: { id: input.id },
       data: input.data,
       include: {
@@ -792,6 +874,23 @@ export class AdminAppointmentsService {
         branch: { select: { id: true, name: true } },
       },
     });
+
+    const diff: Record<string, { from: unknown; to: unknown }> = {};
+    if (input.data.startAt && appointment.startAt !== input.data.startAt) diff['appointment.startAt'] = { from: appointment.startAt, to: input.data.startAt };
+    if (input.data.endAt && appointment.endAt !== input.data.endAt) diff['appointment.endAt'] = { from: appointment.endAt, to: input.data.endAt };
+    if (input.data.notes !== undefined && appointment.notes !== input.data.notes) diff['appointment.notes'] = { from: appointment.notes ?? null, to: input.data.notes ?? null };
+    if (input.data.artistId && appointment.artistId !== input.data.artistId) diff['appointment.artistId'] = { from: appointment.artistId ?? null, to: input.data.artistId };
+
+    await this.audit.log({
+      actor: input.actor,
+      action: 'APPOINTMENT_UPDATE',
+      entityType: 'APPOINTMENT',
+      entityId: input.id,
+      diff: Object.keys(diff).length ? diff : null,
+      metadata: { appointmentId: input.id },
+    });
+
+    return updated;
   }
 
   async remove(input: { actor: AccessActor; id: string }) {
@@ -802,6 +901,14 @@ export class AdminAppointmentsService {
     }
 
     await this.prisma.appointment.delete({ where: { id: input.id } });
+
+    await this.audit.log({
+      actor: input.actor,
+      action: 'APPOINTMENT_DELETE',
+      entityType: 'APPOINTMENT',
+      entityId: input.id,
+      metadata: { appointmentId: input.id },
+    });
     return { message: '預約已刪除' };
   }
 }

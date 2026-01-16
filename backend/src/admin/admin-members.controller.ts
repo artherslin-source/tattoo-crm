@@ -5,13 +5,15 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AccessGuard } from "../common/access/access.guard";
 import { Actor } from "../common/access/actor.decorator";
 import type { AccessActor } from "../common/access/access.types";
+import { AuditService } from "../audit/audit.service";
 
 @Controller("admin/members")
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 export class AdminMembersController {
   constructor(
     private readonly service: AdminMembersService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
   ) {
     console.log('🏗️ AdminMembersController constructor called');
   }
@@ -193,22 +195,52 @@ export class AdminMembersController {
   }
 
   @Patch(':id/role')
-  updateRole(@Param('id') id: string, @Body('role') role: string) {
-    return this.service.updateRole(id, role);
+  updateRole(@Actor() actor: AccessActor, @Param('id') id: string, @Body('role') role: string) {
+    return (async () => {
+      const before = await this.prisma.member.findUnique({
+        where: { id },
+        include: { user: true },
+      });
+      const updated = await this.service.updateRole(id, role);
+      await this.audit.log({
+        actor,
+        action: 'MEMBER_UPDATE',
+        entityType: 'MEMBER',
+        entityId: id,
+        diff: before ? { 'user.role': { from: before.user.role ?? null, to: (updated as any).role ?? null } } : null,
+        metadata: { memberId: id, userId: before?.userId ?? null },
+      });
+      return updated;
+    })();
   }
 
   @Patch(':id/status')
-  updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.service.updateStatus(id, status);
+  updateStatus(@Actor() actor: AccessActor, @Param('id') id: string, @Body('status') status: string) {
+    return (async () => {
+      const before = await this.prisma.member.findUnique({
+        where: { id },
+        include: { user: true },
+      });
+      const updated = await this.service.updateStatus(id, status);
+      await this.audit.log({
+        actor,
+        action: 'MEMBER_UPDATE',
+        entityType: 'MEMBER',
+        entityId: id,
+        diff: before ? { 'user.status': { from: before.user.status ?? null, to: (updated as any).status ?? null } } : null,
+        metadata: { memberId: id, userId: before?.userId ?? null },
+      });
+      return updated;
+    })();
   }
 
   @Patch(':id/password')
-  resetPassword(@Param('id') id: string, @Body('password') password: string) {
-    return this.service.resetPassword(id, password);
+  resetPassword(@Actor() actor: AccessActor, @Param('id') id: string, @Body('password') password: string) {
+    return this.service.resetPassword(actor, id, password);
   }
 
   @Patch(':id')
-  updateMember(@Param('id') id: string, @Body() data: {
+  updateMember(@Actor() actor: AccessActor, @Param('id') id: string, @Body() data: {
     name?: string;
     email?: string;
     phone?: string;
@@ -216,11 +248,11 @@ export class AdminMembersController {
     balance?: number;
     membershipLevel?: string;
   }) {
-    return this.service.updateMember(id, data);
+    return this.service.updateMember(actor, id, data);
   }
 
   @Delete(':id')
-  deleteMember(@Param('id') id: string) {
-    return this.service.deleteMember(id);
+  deleteMember(@Actor() actor: AccessActor, @Param('id') id: string) {
+    return this.service.deleteMember(actor, id);
   }
 }

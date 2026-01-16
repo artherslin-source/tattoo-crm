@@ -45,31 +45,86 @@ function roleLabel(role?: string | null) {
   const s = (role || "").toUpperCase();
   const map: Record<string, string> = {
     BOSS: "BOSS",
-    ADMIN: "管理員",
     ARTIST: "刺青師",
-    USER: "使用者",
   };
   return map[s] || role || "";
 }
 
 function actionLabel(action: string) {
   const map: Record<string, string> = {
-    UPDATE_ME: "更新個人資料",
-    ARTIST_CREATE: "新增刺青師",
-    ARTIST_UPDATE: "更新刺青師",
-    ARTIST_PORTFOLIO_ADD: "新增作品",
-    ARTIST_PORTFOLIO_UPDATE: "更新作品",
-    ARTIST_PORTFOLIO_DELETE: "刪除作品",
+    ARTIST_PROFILE_UPDATE: "更新個人資料",
+    PORTFOLIO_CREATE: "新增作品",
+    PORTFOLIO_UPDATE: "更新作品",
+    PORTFOLIO_DELETE: "刪除作品",
+    CHANGE_PASSWORD: "修改密碼",
+    ADMIN_ARTIST_UPDATE: "後台更新刺青師資料",
 
-    ADMIN_SERVICE_SET_ACTIVE: "調整服務啟用狀態",
-    ADMIN_SERVICE_EXPORT_CSV: "匯出服務 CSV",
-    ADMIN_BILL_EXPORT_XLSX: "匯出帳單 XLSX",
-    ADMIN_BILL_CREATE_MANUAL: "建立手動帳單",
-
+    EXPORT_SERVICES_CSV: "匯出服務 CSV",
+    EXPORT_BILLING_XLSX: "匯出帳務報表",
     BACKUP_EXPORT_START: "開始匯出備份",
-    BACKUP_DOWNLOAD: "下載備份檔",
+    BACKUP_EXPORT_DOWNLOAD: "下載備份檔",
+
+    // Artist backoffice (write actions)
+    MEMBER_CREATE: "會員：新增",
+    MEMBER_TOPUP: "會員：儲值",
+    MEMBER_SPEND: "會員：扣款",
+    MEMBER_UPDATE: "會員：更新資料",
+    MEMBER_SET_PRIMARY_ARTIST: "會員：指派主刺青師",
+    MEMBER_RESET_PASSWORD: "會員：重設密碼",
+    MEMBER_DELETE: "會員：刪除",
+
+    CONTACT_CREATE: "聯絡單：新增",
+    CONTACT_UPDATE: "聯絡單：更新",
+    CONTACT_CONVERT_TO_APPOINTMENT: "聯絡單：轉成預約",
+    CONTACT_DELETE: "聯絡單：刪除",
+
+    APPOINTMENT_CREATE: "預約：建立",
+    APPOINTMENT_UPDATE: "預約：更新",
+    APPOINTMENT_UPDATE_STATUS: "預約：更改狀態",
+    APPOINTMENT_RESCHEDULE: "預約：改期",
+    APPOINTMENT_CANCEL: "預約：取消",
+    APPOINTMENT_NO_SHOW: "預約：未到",
+    APPOINTMENT_DELETE: "預約：刪除",
+
+    BILL_CREATE: "帳務：建立帳單",
+    BILL_UPDATE: "帳務：更新帳單",
+    BILL_RECORD_PAYMENT: "帳務：記錄付款",
+    BILL_REFUND_TO_STORED_VALUE: "帳務：退款到儲值",
+    BILL_DELETE: "帳務：刪除帳單",
+    BILL_REBUILD: "帳務：重建帳單",
+    BILL_RECOMPUTE_ALLOCATIONS: "帳務：重算拆帳",
   };
   return map[action] || action;
+}
+
+function bossSummary(it: AuditLogItem): string {
+  const action = (it.action || "").trim();
+  const diffObj = it.diff && typeof it.diff === "object" ? it.diff : null;
+  const diffKeys = diffObj ? Object.keys(diffObj) : [];
+
+  if (action === "ARTIST_PROFILE_UPDATE") {
+    const hasPhoto = diffKeys.some((k) => k.toLowerCase().includes("photourl"));
+    if (hasPhoto) return "更新個人資料：更換大頭照";
+    const hasBio = diffKeys.some((k) => k.toLowerCase().includes("bio"));
+    if (hasBio) return "更新個人資料：修改自我介紹";
+    return "更新個人資料";
+  }
+
+  if (action === "PORTFOLIO_CREATE") return "作品：新增";
+  if (action === "PORTFOLIO_UPDATE") return "作品：更新";
+  if (action === "PORTFOLIO_DELETE") return "作品：刪除";
+
+  if (action === "CHANGE_PASSWORD") return "修改密碼";
+
+  if (action.startsWith("MEMBER_")) return actionLabel(action);
+  if (action.startsWith("CONTACT_")) return actionLabel(action);
+  if (action.startsWith("APPOINTMENT_")) return actionLabel(action);
+  if (action.startsWith("BILL_")) return actionLabel(action);
+
+  if (action.startsWith("EXPORT_")) return actionLabel(action);
+  if (action.startsWith("BACKUP_")) return actionLabel(action);
+
+  return actionLabel(action);
 }
 
 function prettyValue(v: unknown) {
@@ -106,6 +161,7 @@ export default function AdminAuditLogsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [q, setQ] = useState("");
+  const [includeBoss, setIncludeBoss] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +171,8 @@ export default function AdminAuditLogsPage() {
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
+    // Default view: only ARTIST. Toggle can include BOSS (and only BOSS).
+    params.set("roles", includeBoss ? "ARTIST,BOSS" : "ARTIST");
     if (artistUserId.trim()) params.set("artistUserId", artistUserId.trim());
     if (action.trim()) params.set("action", action.trim());
     if (from.trim()) params.set("from", from.trim());
@@ -123,7 +181,7 @@ export default function AdminAuditLogsPage() {
     params.set("limit", "50");
     if (cursor) params.set("cursor", cursor);
     return params.toString();
-  }, [artistUserId, action, from, to, q, cursor]);
+  }, [includeBoss, artistUserId, action, from, to, q, cursor]);
 
   async function load(reset: boolean) {
     setLoading(true);
@@ -154,7 +212,7 @@ export default function AdminAuditLogsPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>🧾 操作歷史（刺青師帳號）</CardTitle>
+          <CardTitle>🧾 操作歷史（刺青師後台）</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -180,7 +238,11 @@ export default function AdminAuditLogsPage() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+              <input type="checkbox" checked={includeBoss} onChange={(e) => setIncludeBoss(e.target.checked)} />
+              包含 BOSS
+            </label>
             <Button
               onClick={() => {
                 setCursor(null);
@@ -215,53 +277,40 @@ export default function AdminAuditLogsPage() {
                 const whoRole = roleLabel(it.actorRole);
                 const branch = (it.branchName || "").trim() || shortId(it.branchId);
                 const whoParts = [whoName].filter(Boolean);
-                const whoSub = [whoRole, branch].filter(Boolean);
+                const whoSub = [whoRole].filter(Boolean);
                 const who = whoSub.length ? `${whoParts.join("")}（${whoSub.join(" / ")}）` : whoParts.join("");
-
-                const what = actionLabel(it.action);
-
-                const targetName = (it.targetName || "").trim();
-                const targetId = it.targetUserId ? shortId(it.targetUserId) : "";
-                const target =
-                  targetName ? `${targetName}${targetId ? `（${targetId}）` : ""}` : targetId || (it.entityId ? shortId(it.entityId) : "");
-
-                const lines = diffLines(it.diff);
+                const summary = bossSummary(it);
 
                 return (
                   <div key={it.id} className="rounded-lg border p-3 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <div className="text-sm text-gray-800">
                       <span className="font-mono">{fmt(it.createdAt)}</span>
+                      <span>｜</span>
+                      <span>{branch || "-"}</span>
+                      <span>｜</span>
                       <span className="font-semibold">{who || "-"}</span>
-                      <span className="text-gray-500">·</span>
-                      <span className="font-semibold">{what}</span>
-                      <span className="text-gray-500">·</span>
-                      <span className="text-gray-700">目標：{target || it.entityType || "-"}</span>
-
-                      <span className="px-2 py-0.5 rounded bg-gray-100">{it.action}</span>
-                      {it.branchName || it.branchId ? (
-                        <span className="px-2 py-0.5 rounded bg-yellow-50 text-yellow-700">分店：{branch}</span>
-                      ) : null}
-                      {it.entityType ? <span className="px-2 py-0.5 rounded bg-gray-50">實體：{it.entityType}</span> : null}
-                      <span className="px-2 py-0.5 rounded bg-gray-50">ID：{shortId(it.id)}</span>
+                      <span>｜</span>
+                      <span className="font-semibold">{summary || actionLabel(it.action)}</span>
                     </div>
 
-                    {lines.length ? (
-                      <div className="text-xs text-gray-700 space-y-1">
-                        {lines.map((l) => (
-                          <div key={l.field} className="flex flex-col md:flex-row md:gap-2">
-                            <div className="font-semibold md:w-56 break-words">{l.field}</div>
-                            <div className="text-gray-600 break-words">
-                              {prettyValue(l.from)} {" → "} {prettyValue(l.to)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-
                     <details className="text-xs">
-                      <summary className="cursor-pointer select-none text-gray-700">查看詳細（原始 diff / metadata）</summary>
+                      <summary className="cursor-pointer select-none text-gray-700">查看詳細</summary>
                       <pre className="mt-2 whitespace-pre-wrap break-words bg-gray-50 rounded p-2 overflow-auto">
-                        {JSON.stringify({ diff: it.diff, metadata: it.metadata, ip: it.ip, userAgent: it.userAgent }, null, 2)}
+                        {JSON.stringify(
+                          {
+                            action: it.action,
+                            actor: { id: it.actorUserId, name: it.actorName, role: it.actorRole },
+                            branch: { id: it.branchId, name: it.branchName },
+                            entity: { type: it.entityType, id: it.entityId },
+                            diff: it.diff,
+                            metadata: it.metadata,
+                            ip: it.ip,
+                            userAgent: it.userAgent,
+                            id: it.id,
+                          },
+                          null,
+                          2,
+                        )}
                       </pre>
                     </details>
                   </div>

@@ -20,6 +20,7 @@ export class AdminAuditLogsController {
   @Get()
   async list(
     @Actor() actor: AccessActor,
+    @Query('roles') rolesRaw?: string,
     @Query('artistUserId') artistUserId?: string,
     @Query('action') action?: string,
     @Query('from') from?: string,
@@ -32,6 +33,17 @@ export class AdminAuditLogsController {
 
     const limit = Math.max(1, Math.min(100, Number(limitRaw || 50)));
     const where: any = {};
+
+    if (rolesRaw && rolesRaw.trim()) {
+      const allowed = new Set(['ARTIST', 'BOSS']);
+      const roles = rolesRaw
+        .split(',')
+        .map((s) => s.trim().toUpperCase())
+        .filter((s) => !!s && allowed.has(s));
+      if (roles.length > 0) {
+        where.actorRole = { in: Array.from(new Set(roles)) };
+      }
+    }
 
     if (action) where.action = action;
     if (from || to) {

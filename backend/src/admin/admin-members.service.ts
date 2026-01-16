@@ -3,12 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { isBoss, type AccessActor } from '../common/access/access.types';
 import { BillingService } from '../billing/billing.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class AdminMembersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billing: BillingService,
+    private readonly audit: AuditService,
   ) {
     console.log('🏗️ AdminMembersService constructor called');
   }
@@ -498,7 +500,7 @@ export class AdminMembersService {
     });
   }
 
-  async resetPassword(id: string, password: string) {
+  async resetPassword(actor: AccessActor, id: string, password: string) {
     if (!password || password.length < 8) {
       throw new BadRequestException('密碼長度至少需要 8 個字符');
     }
@@ -513,7 +515,7 @@ export class AdminMembersService {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: member.userId },
       data: { hashedPassword },
       select: {
@@ -524,6 +526,16 @@ export class AdminMembersService {
         status: true,
       },
     });
+
+    await this.audit.log({
+      actor,
+      action: 'MEMBER_RESET_PASSWORD',
+      entityType: 'MEMBER',
+      entityId: id,
+      metadata: { memberId: id, userId: member.userId },
+    });
+
+    return updated;
   }
 
   async createMember(actor: AccessActor, data: {
@@ -550,7 +562,7 @@ export class AdminMembersService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       // 創建 User
       const user = await tx.user.create({
         data: {
@@ -594,6 +606,16 @@ export class AdminMembersService {
 
       return member;
     });
+
+    await this.audit.log({
+      actor,
+      action: 'MEMBER_CREATE',
+      entityType: 'MEMBER',
+      entityId: created.id,
+      metadata: { memberId: created.id, userId: created.userId },
+    });
+
+    return created;
   }
 
   async setPrimaryArtist(actor: AccessActor, memberId: string, primaryArtistId: string) {
@@ -614,10 +636,21 @@ export class AdminMembersService {
       data: { primaryArtistId },
     });
 
+    await this.audit.log({
+      actor,
+      action: 'MEMBER_SET_PRIMARY_ARTIST',
+      entityType: 'MEMBER',
+      entityId: memberId,
+      diff: {
+        'user.primaryArtistId': { from: member.user.primaryArtistId ?? null, to: primaryArtistId },
+      },
+      metadata: { memberId, userId: member.userId },
+    });
+
     return { success: true };
   }
 
-  async updateMember(id: string, data: {
+  async updateMember(actor: AccessActor, id: string, data: {
     name?: string;
     email?: string;
     phone?: string;
@@ -669,11 +702,28 @@ export class AdminMembersService {
         },
       });
 
+      const diff: Record<string, { from: unknown; to: unknown }> = {};
+      if (data.name !== undefined && data.name !== member.user.name) diff['user.name'] = { from: member.user.name ?? null, to: data.name };
+      if (data.email !== undefined && data.email !== member.user.email) diff['user.email'] = { from: member.user.email ?? null, to: data.email };
+      if (data.phone !== undefined && data.phone !== member.user.phone) diff['user.phone'] = { from: member.user.phone ?? null, to: data.phone };
+      if (data.totalSpent !== undefined && data.totalSpent !== member.totalSpent) diff['member.totalSpent'] = { from: member.totalSpent, to: data.totalSpent };
+      if (data.balance !== undefined && data.balance !== member.balance) diff['member.balance'] = { from: member.balance, to: data.balance };
+      if (data.membershipLevel !== undefined && data.membershipLevel !== member.membershipLevel) diff['member.membershipLevel'] = { from: member.membershipLevel ?? null, to: data.membershipLevel ?? null };
+
+      await this.audit.log({
+        actor,
+        action: 'MEMBER_UPDATE',
+        entityType: 'MEMBER',
+        entityId: id,
+        diff: Object.keys(diff).length ? diff : null,
+        metadata: { memberId: id, userId: member.userId },
+      });
+
       return updatedMember;
     });
   }
 
-  async deleteMember(id: string) {
+  async deleteMember(actor: AccessActor, id: string) {
     return this.prisma.$transaction(async (tx) => {
       const member = await tx.member.findUnique({
         where: { id },
@@ -692,6 +742,14 @@ export class AdminMembersService {
       // 刪除 User
       await tx.user.delete({
         where: { id: member.userId },
+      });
+
+      await this.audit.log({
+        actor,
+        action: 'MEMBER_DELETE',
+        entityType: 'MEMBER',
+        entityId: id,
+        metadata: { memberId: id, userId: member.userId },
       });
 
       return { message: '會員已刪除' };
@@ -745,6 +803,26 @@ export class AdminMembersService {
 
       // Return latest member snapshot for UI refresh (and bill id for traceability)
       const member = await this.prisma.member.findUnique({ where: { id: memberId } });
+
+      await this.audit.log({
+        actor,
+        action: 'MEMBER_TOPUP',
+        entityType: 'MEMBER',
+        entityId: memberId,
+        diff: member
+          ? {
+              'member.balance': { from: existingMember.balance, to: member.balance },
+            }
+          : null,
+        metadata: {
+          memberId,
+          userId: existingMember.userId,
+          amount,
+          method: input.method || 'CASH',
+          billId: bill?.id ?? null,
+        },
+      });
+
       return { member, bill };
     } catch (error) {
       console.error('💰 topupUser error:', error);
@@ -791,7 +869,7 @@ export class AdminMembersService {
       // If no operatorId, fallback to actor.id (safer than hardcoded)
       const finalOperatorId = operatorId || actor.id;
 
-      return await this.prisma.$transaction(async (tx) => {
+      const updated = await this.prisma.$transaction(async (tx) => {
         // 檢查會員餘額是否足夠
         const member = await tx.member.findUnique({
           where: { id: memberId },
@@ -898,6 +976,16 @@ export class AdminMembersService {
         console.log('💸 Updated member after spend:', updatedMember);
         return updatedMember;
       });
+
+      await this.audit.log({
+        actor,
+        action: 'MEMBER_SPEND',
+        entityType: 'MEMBER',
+        entityId: memberId,
+        metadata: { memberId, amount: Math.trunc(amount), operatorId: operatorId || actor.id },
+      });
+
+      return updated;
     } catch (error) {
       console.error('💸 spend error:', error);
       throw error;
