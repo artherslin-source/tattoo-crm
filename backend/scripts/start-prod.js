@@ -215,6 +215,9 @@ function resolveModeForFailure(output, migrationName) {
     return { ok: true, mode: 'rolled-back', reason: 'destructive migration is permanently skipped in production' };
   }
 
+  const outStr = String(output || '');
+  const isP3009 = outStr.includes('P3009') || outStr.toLowerCase().includes('failed migrations');
+
   // For schema-drift "already exists", we may mark as applied, but only if SQL is safe.
   if (shouldAutoApplyForAlreadyExists(output, migrationName)) {
     const loaded = loadMigrationSql(migrationName);
@@ -225,6 +228,20 @@ function resolveModeForFailure(output, migrationName) {
       return { ok: false, mode: '', reason: `migration SQL contains potentially destructive/data-writing statements (${loaded.path})` };
     }
     return { ok: true, mode: 'applied', reason: 'already-exists drift + verified safe migration SQL' };
+  }
+
+  // Special case: P3009 does not always include the underlying DB error code in output.
+  // If the migration SQL is verified safe, we can "probe" by rolling it back (state only),
+  // then retry migrate deploy to surface the real P3018 error (e.g. 42P07/42701).
+  if (isP3009) {
+    const loaded = loadMigrationSql(migrationName);
+    if (!loaded.ok) {
+      return { ok: false, mode: '', reason: `cannot read migration SQL at ${loaded.path}` };
+    }
+    if (!isMigrationSqlSafeForAutoApply(loaded.sql)) {
+      return { ok: false, mode: '', reason: `migration SQL contains potentially destructive/data-writing statements (${loaded.path})` };
+    }
+    return { ok: true, mode: 'rolled-back', reason: 'P3009 probe: safe migration, rerun once to surface real DB error code' };
   }
 
   return { ok: false, mode: '', reason: 'not an already-exists drift or not safe to auto-apply' };
