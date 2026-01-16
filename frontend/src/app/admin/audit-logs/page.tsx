@@ -155,6 +155,58 @@ function diffLines(diff: any): Array<{ field: string; from: unknown; to: unknown
   return lines;
 }
 
+function entityTypeLabel(t?: string | null) {
+  const s = (t || "").toUpperCase();
+  const map: Record<string, string> = {
+    ARTIST: "刺青師",
+    USER: "使用者",
+    MEMBER: "會員",
+    CONTACT: "聯絡單",
+    APPOINTMENT: "預約",
+    PORTFOLIO_ITEM: "作品",
+    BILLING: "帳務",
+    BACKUP: "備份",
+  };
+  return map[s] || t || "";
+}
+
+function fieldLabel(field: string) {
+  const map: Record<string, string> = {
+    "artist.photoUrl": "大頭照",
+    "artist.bio": "自我介紹",
+    "appointment.status": "預約狀態",
+    "appointment.startAt": "預約開始時間",
+    "appointment.endAt": "預約結束時間",
+    "appointment.notes": "預約備註",
+    "contact.status": "聯絡單狀態",
+    "contact.ownerArtistId": "負責刺青師",
+    "contact.notes": "聯絡備註",
+    "member.balance": "儲值餘額",
+    "member.totalSpent": "累計消費",
+    "member.membershipLevel": "會員等級",
+    "user.name": "姓名",
+    "user.phone": "手機",
+    "user.email": "Email",
+    "user.primaryArtistId": "主刺青師",
+    "user.status": "帳號狀態",
+    "user.role": "角色",
+    "bill.status": "帳單狀態",
+    "bill.discountTotal": "折扣金額",
+    "bill.voidReason": "作廢原因",
+  };
+  return map[field] || field;
+}
+
+function displayTarget(it: AuditLogItem) {
+  const name = (it.targetName || "").trim();
+  const id = it.targetUserId ? shortId(it.targetUserId) : it.entityId ? shortId(it.entityId) : "";
+  const type = entityTypeLabel(it.entityType);
+  if (name) return `${name}${type ? `（${type}${id ? `／${id}` : ""}）` : ""}`;
+  if (type && id) return `${type}（${id}）`;
+  if (type) return type;
+  return id || "—";
+}
+
 export default function AdminAuditLogsPage() {
   const [artistUserId, setArtistUserId] = useState("");
   const [action, setAction] = useState("");
@@ -280,6 +332,8 @@ export default function AdminAuditLogsPage() {
                 const whoSub = [whoRole].filter(Boolean);
                 const who = whoSub.length ? `${whoParts.join("")}（${whoSub.join(" / ")}）` : whoParts.join("");
                 const summary = bossSummary(it);
+                const lines = diffLines(it.diff);
+                const target = displayTarget(it);
 
                 return (
                   <div key={it.id} className="rounded-lg border p-3 space-y-2">
@@ -293,25 +347,67 @@ export default function AdminAuditLogsPage() {
                       <span className="font-semibold">{summary || actionLabel(it.action)}</span>
                     </div>
 
-                    <details className="text-xs">
+                    <details className="text-sm">
                       <summary className="cursor-pointer select-none text-gray-700">查看詳細</summary>
-                      <pre className="mt-2 whitespace-pre-wrap break-words bg-gray-50 rounded p-2 overflow-auto">
-                        {JSON.stringify(
-                          {
-                            action: it.action,
-                            actor: { id: it.actorUserId, name: it.actorName, role: it.actorRole },
-                            branch: { id: it.branchId, name: it.branchName },
-                            entity: { type: it.entityType, id: it.entityId },
-                            diff: it.diff,
-                            metadata: it.metadata,
-                            ip: it.ip,
-                            userAgent: it.userAgent,
-                            id: it.id,
-                          },
-                          null,
-                          2,
-                        )}
-                      </pre>
+
+                      <div className="mt-2 space-y-3 rounded bg-gray-50 p-3">
+                        <div className="text-gray-800">
+                          <div className="text-xs text-gray-500">摘要</div>
+                          <div className="font-semibold">{summary || actionLabel(it.action)}</div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-gray-800">
+                          <div>
+                            <div className="text-xs text-gray-500">時間</div>
+                            <div className="font-mono">{fmt(it.createdAt)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500">分店</div>
+                            <div>{branch || "—"}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500">操作者</div>
+                            <div>{who || "—"}</div>
+                          </div>
+                        </div>
+
+                        <div className="text-gray-800">
+                          <div className="text-xs text-gray-500">操作對象</div>
+                          <div>{target}</div>
+                        </div>
+
+                        <div className="text-gray-800">
+                          <div className="text-xs text-gray-500">變更內容</div>
+                          {lines.length === 0 ? (
+                            <div className="text-gray-600">（此操作沒有可顯示的變更欄位）</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {lines.map((l) => (
+                                <div key={l.field} className="flex flex-col md:flex-row md:gap-2">
+                                  <div className="font-semibold md:w-56 break-words">{fieldLabel(l.field)}</div>
+                                  <div className="text-gray-600 break-words">
+                                    {prettyValue(l.from)} {" → "} {prettyValue(l.to)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <details className="text-xs">
+                          <summary className="cursor-pointer select-none text-gray-600">進階資訊（IP / 裝置）</summary>
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-gray-700">
+                            <div>
+                              <div className="text-xs text-gray-500">IP</div>
+                              <div className="font-mono break-all">{it.ip || "—"}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500">裝置</div>
+                              <div className="font-mono break-all">{it.userAgent || "—"}</div>
+                            </div>
+                          </div>
+                        </details>
+                      </div>
                     </details>
                   </div>
                 );
