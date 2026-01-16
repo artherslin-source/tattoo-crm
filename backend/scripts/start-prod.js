@@ -108,6 +108,8 @@ const AUTO_RESOLVE_ALLOWLIST = {
   '20251231010000_remove_orders_and_generalize_billing': { mode: 'rolled-back' },
   // Non-destructive column-add migration: production DB already has the column; mark as applied.
   '20260104000000_add_user_booking_latest_start_time': { mode: 'applied' },
+  // Non-destructive column-add migration: production DB already has the column; mark as applied.
+  '20260105000000_add_user_booking_24h_enabled': { mode: 'applied' },
 };
 
 if (autoResolveEnabledAtBoot) {
