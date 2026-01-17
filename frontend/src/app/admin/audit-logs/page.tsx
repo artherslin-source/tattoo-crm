@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type AuditLogItem = {
   id: string;
@@ -28,6 +29,19 @@ type AuditLogItem = {
 
 type AuditLogResponse = { items: AuditLogItem[]; nextCursor: string | null };
 
+type ArtistRow = {
+  id: string;
+  user?: {
+    id: string;
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  } | null;
+  branch?: { id: string; name?: string | null } | null;
+};
+
+type BranchRow = { id: string; name?: string | null };
+
 function fmt(dt: string) {
   const d = new Date(dt);
   if (Number.isNaN(d.getTime())) return dt;
@@ -39,6 +53,28 @@ function shortId(id?: string | null, len = 6) {
   if (!s) return "";
   if (s.length <= len * 2 + 1) return s;
   return `${s.slice(0, len)}…${s.slice(-len)}`;
+}
+
+function safeName(parts: Array<string | null | undefined>) {
+  for (const p of parts) {
+    const s = (p || "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+function artistOptionLabel(a: ArtistRow): string {
+  const who = safeName([a.user?.name, a.user?.phone, a.user?.email]) || shortId(a.user?.id) || "—";
+  const branch = (a.branch?.name || "").trim();
+  return branch ? `${who}（${branch}）` : who;
+}
+
+function toIsoMaybe(local: string): string {
+  const s = (local || "").trim();
+  if (!s) return "";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString();
 }
 
 function roleLabel(role?: string | null) {
@@ -208,11 +244,10 @@ function displayTarget(it: AuditLogItem) {
 }
 
 export default function AdminAuditLogsPage() {
-  const [artistUserId, setArtistUserId] = useState("");
-  const [action, setAction] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [q, setQ] = useState("");
+  const [artistUserId, setArtistUserId] = useState("all");
+  const [branchId, setBranchId] = useState("all");
+  const [fromLocal, setFromLocal] = useState("");
+  const [toLocal, setToLocal] = useState("");
   const [includeBoss, setIncludeBoss] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -221,19 +256,23 @@ export default function AdminAuditLogsPage() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
 
+  const [artists, setArtists] = useState<ArtistRow[]>([]);
+  const [branches, setBranches] = useState<BranchRow[]>([]);
+
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     // Default view: only ARTIST. Toggle can include BOSS (and only BOSS).
     params.set("roles", includeBoss ? "ARTIST,BOSS" : "ARTIST");
-    if (artistUserId.trim()) params.set("artistUserId", artistUserId.trim());
-    if (action.trim()) params.set("action", action.trim());
-    if (from.trim()) params.set("from", from.trim());
-    if (to.trim()) params.set("to", to.trim());
-    if (q.trim()) params.set("q", q.trim());
+    if (artistUserId !== "all") params.set("artistUserId", artistUserId);
+    if (branchId !== "all") params.set("branchId", branchId);
+    const fromIso = toIsoMaybe(fromLocal);
+    const toIso = toIsoMaybe(toLocal);
+    if (fromIso) params.set("from", fromIso);
+    if (toIso) params.set("to", toIso);
     params.set("limit", "50");
     if (cursor) params.set("cursor", cursor);
     return params.toString();
-  }, [includeBoss, artistUserId, action, from, to, q, cursor]);
+  }, [includeBoss, artistUserId, branchId, fromLocal, toLocal, cursor]);
 
   async function load(reset: boolean) {
     setLoading(true);
@@ -260,6 +299,25 @@ export default function AdminAuditLogsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    async function loadArtistsAndBranches() {
+      try {
+        const [artistRows, branchRows] = await Promise.all([
+          getJsonWithAuth<ArtistRow[]>("/admin/artists"),
+          getJsonWithAuth<BranchRow[]>("/branches/accessible").catch(() =>
+            getJsonWithAuth<BranchRow[]>("/admin/artists/branches"),
+          ),
+        ]);
+        setArtists(Array.isArray(artistRows) ? artistRows : []);
+        setBranches(Array.isArray(branchRows) ? branchRows : []);
+      } catch (e) {
+        // 不阻止頁面使用：下拉選單可以顯示「全部」即可
+        console.error("Failed to load artists/branches", e);
+      }
+    }
+    void loadArtistsAndBranches();
+  }, []);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -267,26 +325,50 @@ export default function AdminAuditLogsPage() {
           <CardTitle>🧾 操作歷史（刺青師後台）</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label>刺青師 userId</Label>
-              <Input value={artistUserId} onChange={(e) => setArtistUserId(e.target.value)} placeholder="可留空" />
+              <Label>刺青師</Label>
+              <Select value={artistUserId} onValueChange={setArtistUserId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部刺青師" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">全部刺青師</SelectItem>
+                  {artists
+                    .filter((a) => !!a?.user?.id)
+                    .map((a) => (
+                      <SelectItem key={a.user!.id} value={a.user!.id}>
+                        {artistOptionLabel(a)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label>事件 action</Label>
-              <Input value={action} onChange={(e) => setAction(e.target.value)} placeholder="例：ARTIST_PROFILE_UPDATE" />
+              <Label>分店</Label>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="全部分店" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">全部分店</SelectItem>
+                  {branches
+                    .filter((b) => !!b?.id)
+                    .map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {(b.name || "").trim() || shortId(b.id) || "—"}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label>開始時間 from</Label>
-              <Input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="2026-01-01 或 ISO" />
+              <Label>開始時間</Label>
+              <Input type="datetime-local" value={fromLocal} onChange={(e) => setFromLocal(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>結束時間 to</Label>
-              <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="2026-01-31 或 ISO" />
-            </div>
-            <div className="space-y-2">
-              <Label>關鍵字 q</Label>
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="action/entityId/actorUserId…" />
+              <Label>結束時間</Label>
+              <Input type="datetime-local" value={toLocal} onChange={(e) => setToLocal(e.target.value)} />
             </div>
           </div>
 

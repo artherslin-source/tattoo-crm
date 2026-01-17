@@ -22,6 +22,7 @@ export class AdminAuditLogsController {
     @Actor() actor: AccessActor,
     @Query('roles') rolesRaw?: string,
     @Query('artistUserId') artistUserId?: string,
+    @Query('branchId') branchId?: string,
     @Query('action') action?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -46,6 +47,7 @@ export class AdminAuditLogsController {
     }
 
     if (action) where.action = action;
+    if (branchId) where.branchId = branchId;
     if (from || to) {
       where.createdAt = {};
       if (from) {
