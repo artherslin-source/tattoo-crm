@@ -40,10 +40,35 @@ async function bootstrap() {
   app.use(require('express').json({ limit: '50mb' }));
   app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
   
-  // 信任反向代理（Railway 使用代理）
-  if (process.env.NODE_ENV === 'production') {
-    app.set('trust proxy', 1); // Trust first proxy
+  // 信任反向代理（用於取得「真正的使用者 IP」）
+  //
+  // 目標：
+  // - 預設最安全：不信任任何代理（避免有人偽造 X-Forwarded-For）
+  // - Railway 這種「一定有代理」的環境：自動信任 1 層代理，讓 req.ip 變成使用者真 IP
+  // - 永遠允許手動覆蓋：用 TRUST_PROXY_HOPS=0/1/2... 控制（方便未來換主機/架構）
+  const trustProxyEnvRaw = process.env.TRUST_PROXY_HOPS;
+  const isRailway =
+    !!process.env.RAILWAY_ENVIRONMENT ||
+    !!process.env.RAILWAY_PROJECT_ID ||
+    !!process.env.RAILWAY_SERVICE_ID;
+
+  let trustProxySetting: false | number = false;
+  if (typeof trustProxyEnvRaw === 'string') {
+    const v = trustProxyEnvRaw.trim().toLowerCase();
+    if (v === '' || v === '0' || v === 'false' || v === 'off' || v === 'no') {
+      trustProxySetting = false;
+    } else {
+      const n = Number(v);
+      trustProxySetting = Number.isFinite(n) && n > 0 ? Math.floor(n) : 1; // 非法值就當成 1
+    }
+  } else if (process.env.NODE_ENV === 'production' && isRailway) {
+    trustProxySetting = 1;
   }
+
+  app.set('trust proxy', trustProxySetting);
+  console.log(
+    `🔐 trust proxy: ${trustProxySetting === false ? 'disabled' : trustProxySetting} (TRUST_PROXY_HOPS=${trustProxyEnvRaw ?? 'unset'}, railway=${isRailway})`,
+  );
   
   // 註冊全局異常過濾器（處理 Multer 錯誤等）
   app.useGlobalFilters(new HttpExceptionFilter());
