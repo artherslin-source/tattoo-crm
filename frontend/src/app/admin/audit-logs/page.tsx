@@ -77,6 +77,16 @@ function toIsoMaybe(local: string): string {
   return d.toISOString();
 }
 
+function toDatetimeLocalValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
 function roleLabel(role?: string | null) {
   const s = (role || "").toUpperCase();
   const map: Record<string, string> = {
@@ -298,6 +308,15 @@ export default function AdminAuditLogsPage() {
     void load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 預設時間：近 7 天（到現在）
+  useEffect(() => {
+    if (fromLocal.trim() || toLocal.trim()) return;
+    const now = new Date();
+    const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    setFromLocal(toDatetimeLocalValue(from));
+    setToLocal(toDatetimeLocalValue(now));
+  }, [fromLocal, toLocal]);
 
   useEffect(() => {
     async function loadArtistsAndBranches() {
