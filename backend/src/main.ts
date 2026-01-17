@@ -62,7 +62,10 @@ async function bootstrap() {
       trustProxySetting = Number.isFinite(n) && n > 0 ? Math.floor(n) : 1; // 非法值就當成 1
     }
   } else if (process.env.NODE_ENV === 'production' && isRailway) {
-    trustProxySetting = 1;
+    // Railway 常見會再經過 Cloudflare 等額外一層代理：
+    // client -> Cloudflare -> Railway -> app
+    // 若只信任 1 層，req.ip 很可能會停在 Cloudflare/邊緣節點，而不是使用者。
+    trustProxySetting = 2;
   }
 
   app.set('trust proxy', trustProxySetting);
