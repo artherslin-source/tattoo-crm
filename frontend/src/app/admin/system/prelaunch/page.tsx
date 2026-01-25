@@ -18,6 +18,8 @@ type DryRunResp = {
 
 export default function AdminSystemPrelaunchPage() {
   const router = useRouter();
+  // 交付前重置：前端入口已隱藏（避免誤觸），需要時再打開
+  const PRELAUNCH_RESET_ENABLED = false;
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +51,10 @@ export default function AdminSystemPrelaunchPage() {
   };
 
   useEffect(() => {
+    if (!PRELAUNCH_RESET_ENABLED) {
+      router.replace("/admin/dashboard");
+      return;
+    }
     const token = getAccessToken();
     const role = getUserRole();
     if (!token || !isBossRole(role)) {
@@ -57,8 +63,9 @@ export default function AdminSystemPrelaunchPage() {
     }
     setReady(true);
     void refresh();
-  }, [router]);
+  }, [router, PRELAUNCH_RESET_ENABLED]);
 
+  if (!PRELAUNCH_RESET_ENABLED) return null;
   if (!ready) return null;
 
   return (

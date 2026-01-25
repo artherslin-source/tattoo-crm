@@ -68,7 +68,6 @@ export default function Sidebar({ open, onClose }: Props) {
       { href: "/admin/notifications", label: "🔔 通知中心" },
       { href: "/admin/audit-logs", label: "🧾 操作歷史", bossOnly: true },
       { href: "/admin/system/backup", label: "🗄️ 備份管理", bossOnly: true },
-      { href: "/admin/system/prelaunch", label: "🚀 交付前重置", bossOnly: true },
     ];
     return items.filter((it) => !it.bossOnly || isBoss);
   }, [isBoss, isArtist]);
@@ -83,9 +82,7 @@ export default function Sidebar({ open, onClose }: Props) {
       pathname === "/admin/audit-logs" ||
       pathname.startsWith("/admin/audit-logs/") ||
       pathname === "/admin/system/backup" ||
-      pathname.startsWith("/admin/system/backup/") ||
-      pathname === "/admin/system/prelaunch" ||
-      pathname.startsWith("/admin/system/prelaunch/")
+      pathname.startsWith("/admin/system/backup/")
     );
   }, [pathname]);
 
