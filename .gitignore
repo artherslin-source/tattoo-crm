@@ -1,3 +1,10 @@
+.DS_Store
+
+# Delivery artifacts
+/.delivery-build/
+/tattoo-crm-customer-delivery-*.tar.gz
+/tattoo-crm-delivery-*.tar.gz
+
 # Logs
 logs
 *.log
