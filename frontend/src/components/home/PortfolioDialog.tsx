@@ -1,10 +1,10 @@
 "use client";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, getImageUrl } from "@/lib/api";
 import useMediaQuery from "@/hooks/useMediaQuery";
 
 interface Artist {
@@ -29,16 +29,16 @@ interface PortfolioDialogProps {
   onClose: () => void;
 }
 
-// 假的作品集數據（目前使用色塊暫時替代）
+// 佔位色塊標籤，與 AVAILABLE_TAGS 一致
 const MOCK_PORTFOLIO_COLORS = [
-  { id: 1, gradient: "from-amber-600 via-orange-600 to-red-600", title: "舊傳統" },
+  { id: 1, gradient: "from-amber-600 via-orange-600 to-red-600", title: "傳統" },
   { id: 2, gradient: "from-rose-500 via-pink-500 to-purple-500", title: "新傳統" },
-  { id: 3, gradient: "from-slate-600 via-gray-700 to-slate-900", title: "歐美圖" },
-  { id: 4, gradient: "from-neutral-700 via-gray-800 to-black", title: "寫實風格" },
-  { id: 5, gradient: "from-teal-600 via-emerald-500 to-lime-500", title: "水墨風格" },
-  { id: 6, gradient: "from-sky-400 via-indigo-400 to-purple-500", title: "小圖案" },
-  { id: 7, gradient: "from-amber-300 via-yellow-400 to-amber-500", title: "文字刺青" },
-  { id: 8, gradient: "from-indigo-500 via-violet-500 to-fuchsia-500", title: "畫作欣賞" },
+  { id: 3, gradient: "from-neutral-700 via-gray-800 to-black", title: "寫實" },
+  { id: 4, gradient: "from-teal-600 via-emerald-500 to-lime-500", title: "水彩" },
+  { id: 5, gradient: "from-sky-400 via-indigo-400 to-purple-500", title: "小圖" },
+  { id: 6, gradient: "from-amber-300 via-yellow-400 to-amber-500", title: "字體" },
+  { id: 7, gradient: "from-indigo-500 via-violet-500 to-fuchsia-500", title: "抽象" },
+  { id: 8, gradient: "from-slate-600 via-gray-700 to-slate-900", title: "圖騰" },
 ];
 
 export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps) {
@@ -243,7 +243,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
   if (!artist) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent
         disableTransform={isMobile}
         className={
@@ -279,13 +279,15 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
                 ))}
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="flex-shrink-0 p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
-              aria-label="關閉"
-            >
-              <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400" />
-            </button>
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="flex-shrink-0 p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
+                aria-label="關閉"
+              >
+                <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </DialogClose>
           </div>
         </DialogHeader>
 
@@ -331,7 +333,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={item.imageUrl || "https://placehold.co/800x800?text=Work"}
+                      src={getImageUrl(item.imageUrl) || "https://placehold.co/800x800?text=Work"}
                       alt={item.title}
                       className="w-full h-auto object-cover"
                       loading="lazy"
@@ -394,7 +396,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
               </div>
               <button
                 type="button"
-                onClick={() => setViewerOpen(false)}
+                onClick={() => { setViewerOpen(false); onClose(); }}
                 className="rounded-full bg-white/10 px-3 py-2 text-xs sm:text-sm text-white hover:bg-white/15"
               >
                 關閉
@@ -430,7 +432,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={displayed[viewerIndex]?.imageUrl || "https://placehold.co/1200x1200?text=Work"}
+                  src={getImageUrl(displayed[viewerIndex]?.imageUrl) || "https://placehold.co/1200x1200?text=Work"}
                   alt={displayed[viewerIndex]?.title || "作品"}
                   className="max-h-full max-w-full select-none"
                   style={{
