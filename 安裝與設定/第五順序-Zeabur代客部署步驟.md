@@ -43,6 +43,9 @@
    | `AUTO_RESOLVE_FAILED_MIGRATION` | `true` | 若曾出現 P3009（migrate found failed migrations），設為 true 可讓啟動時自動將已知安全失敗 migration 標記為已套用並繼續；啟動成功後可改回留空或刪除。 |
 
    - **PORT** 不用設，Zeabur 會自己給。
+
+   - ⚠️ **變數名稱必須一字不差**：例如 `JWT_ACCESS_SECRET`（結尾是 **SECRET**），若打成 `JWT_ACCESS_SECRE` 少一個 T，後端會讀不到而崩潰。
+   - 若 P3009 遷移失敗仍發生：請確認 GitHub 已是最新 commit，並在 Zeabur 對後端服務手動 **Redeploy**（重新部署），讓容器帶入修正後的 migration 與啟動腳本。
 6. （可選）在 Settings 找到 **Watch Paths**，設成 **`/backend`**，之後只有 backend 改動才會觸發後端重建。
 7. 儲存後等後端**建置並啟動成功**（綠勾或 Running）。
 8. 到這個後端服務的 **Domains** 或 **網址**，記下 Zeabur 給的網址，例如：  

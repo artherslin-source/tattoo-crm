@@ -171,12 +171,15 @@ function extractFailedMigrationName(output) {
   // P3018 path often has explicit name (14-digit prefix):
   const m1 = s.match(/Migration name:\s*(\d{14}_[^\s]+)/i);
   if (m1?.[1]) return m1[1];
-  // P3009: "The `20250105_remove_duration_modifier` migration started at ... failed" (8-digit or 14-digit)
+  // P3009: "The `20250928134123_add_operator_to_topup_history` migration started at ... failed"
   const m2 = s.match(/The `(\d+_[^`]+)` migration started at .* failed/i);
   if (m2?.[1]) return m2[1];
-  // As a fallback, use the first "Applying migration" entry
+  // "Applying migration `20250928134123_add_operator_to_topup_history`" then failure
   const m3 = s.match(/Applying migration `(\d+_[^`]+)`/i);
   if (m3?.[1]) return m3[1];
+  // Fallback: any "12345678901234_name" or "12345678_name" in the output (last one often is the failed)
+  const all = s.match(/\d{8,14}_[a-zA-Z0-9_]+/g);
+  if (all && all.length > 0) return all[all.length - 1];
   return '';
 }
 
