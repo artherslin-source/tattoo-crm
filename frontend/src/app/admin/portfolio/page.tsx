@@ -25,6 +25,7 @@ import { FloatingActions } from "@/components/toolbar/FloatingActions";
 import { FilterDrawer } from "@/components/filter-drawer/FilterDrawer";
 import { EmptyState, WorkCard, WorkCardSkeleton } from "@/components/work-card/WorkCard";
 import { Camera, Image as ImageIcon, Loader2, Save, X } from "lucide-react";
+import { AVAILABLE_TAGS } from "@/constants/portfolio-tags";
 
 interface PortfolioItem {
   id: string;
@@ -41,24 +42,6 @@ interface PortfolioItem {
 type PendingDelete =
   | { type: "single"; item: PortfolioItem }
   | { type: "bulk"; ids: string[]; referenceTitle: string };
-
-const AVAILABLE_TAGS = [
-  "傳統",
-  "水彩",
-  "黑白",
-  "寫實",
-  "幾何",
-  "日式",
-  "美式",
-  "點刺",
-  "線條",
-  "圖騰",
-  "小圖",
-  "字體",
-  "抽象",
-  "新傳統",
-  "黑工",
-];
 
 const createInitialFilters = () => ({
   dateRange: { from: null as string | null, to: null as string | null },
@@ -319,6 +302,8 @@ function AdminArtistPortfolioContent() {
 
       if (editingItem) {
         await postFormDataWithAuth(`/artist/portfolio/${editingItem.id}`, submitData);
+      } else if (artistId) {
+        await postFormDataWithAuth(`/admin/artists/${artistId}/portfolio`, submitData);
       } else {
         await postFormDataWithAuth("/artist/portfolio", submitData);
       }

@@ -390,14 +390,15 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
         {/* Fullscreen viewer overlay */}
         {viewerOpen && displayed.length > 0 ? (
           <div className="fixed inset-0 z-[120] bg-black/95">
-            <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-3 sm:p-4">
+            {/* 頂列：z-20 確保在圖片層之上，關閉鈕可點擊 */}
+            <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 p-3 sm:p-4">
               <div className="text-xs sm:text-sm text-white/80">
                 {viewerIndex + 1} / {displayed.length}
               </div>
               <button
                 type="button"
-                onClick={() => { setViewerOpen(false); onClose(); }}
-                className="rounded-full bg-white/10 px-3 py-2 text-xs sm:text-sm text-white hover:bg-white/15"
+                onClick={(e) => { e.stopPropagation(); setViewerOpen(false); onClose(); }}
+                className="relative z-20 rounded-full bg-white/10 px-3 py-2 text-xs sm:text-sm text-white hover:bg-white/15"
               >
                 關閉
               </button>
@@ -405,7 +406,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
 
             <button
               type="button"
-              className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/15"
+              className="hidden md:flex absolute left-3 top-1/2 z-10 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/15"
               onClick={() => setViewerIndex((i) => Math.max(0, i - 1))}
               disabled={viewerIndex === 0}
               aria-label="上一張"
@@ -414,7 +415,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
             </button>
             <button
               type="button"
-              className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/15"
+              className="hidden md:flex absolute right-3 top-1/2 z-10 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/15"
               onClick={() => setViewerIndex((i) => Math.min(displayed.length - 1, i + 1))}
               disabled={viewerIndex === displayed.length - 1}
               aria-label="下一張"
@@ -422,9 +423,9 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
               ›
             </button>
 
-            <div className="absolute inset-0 pt-14 sm:pt-16 pb-14 sm:pb-16 flex items-center justify-center">
+            <div className="absolute inset-0 z-0 pt-14 sm:pt-16 pb-14 sm:pb-16 flex items-center justify-center pointer-events-none">
               <div
-                className="h-full w-full flex items-center justify-center touch-none"
+                className="h-full w-full flex items-center justify-center touch-none pointer-events-auto"
                 onPointerDown={handleViewerPointerDown}
                 onPointerMove={handleViewerPointerMove}
                 onPointerUp={handleViewerPointerUp}
@@ -445,7 +446,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
               </div>
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 p-3">
+            <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-2 p-3">
               <button
                 type="button"
                 className="rounded-full bg-white/10 px-4 py-2 text-xs sm:text-sm text-white hover:bg-white/15"

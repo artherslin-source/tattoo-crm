@@ -49,7 +49,9 @@ for f in "${OUT_DIR}/backend"/fix-*.js "${OUT_DIR}/backend"/add-*.js "${OUT_DIR}
          "${OUT_DIR}/backend"/remove-*.js "${OUT_DIR}/backend"/init-*.js "${OUT_DIR}/backend"/update-*.js; do
   [ -f "$f" ] && rm -f "$f"
 done
-rm -rf "${OUT_DIR}/backend/scripts" "${OUT_DIR}/backend/test" 2>/dev/null || true
+# 後端 scripts：只保留生產啟動所需（start:prod 會呼叫），其餘刪除
+find "${OUT_DIR}/backend/scripts" -type f ! -name 'start-prod.js' ! -name 'assert-prod-safe.js' -delete 2>/dev/null || true
+rm -rf "${OUT_DIR}/backend/test" 2>/dev/null || true
 rm -f "${OUT_DIR}/backend/dev.db" "${OUT_DIR}/backend/.env.sqlite.backup" 2>/dev/null || true
 for f in "${OUT_DIR}/backend"/*.md; do
   [ -f "$f" ] && [ "$(basename "$f")" != "README.md" ] && rm -f "$f"

@@ -1,13 +1,32 @@
 import type { NextConfig } from "next";
 
+// 從環境變數解析後端 host，供 remotePatterns 使用（Zeabur / Railway / 自架皆可用）
+function getBackendHostname(): string | null {
+  const url =
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL;
+  if (!url) return null;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
+const backendHost = getBackendHostname();
+const imageRemotePatterns: { protocol: string; hostname: string; port: string; pathname: string }[] = [
+  { protocol: "https", hostname: "placehold.co", port: "", pathname: "/**" },
+  { protocol: "https", hostname: "images.unsplash.com", port: "", pathname: "/**" },
+  { protocol: "https", hostname: "tattoo-crm-production-413f.up.railway.app", port: "", pathname: "/uploads/**" },
+  { protocol: "https", hostname: "tattoo-crm-production.up.railway.app", port: "", pathname: "/uploads/**" },
+];
+if (backendHost && !imageRemotePatterns.some((p) => p.hostname === backendHost)) {
+  imageRemotePatterns.push({ protocol: "https", hostname: backendHost, port: "", pathname: "/uploads/**" });
+}
+
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "placehold.co", port: "", pathname: "/**" },
-      { protocol: "https", hostname: "images.unsplash.com", port: "", pathname: "/**" },
-      { protocol: "https", hostname: "tattoo-crm-production-413f.up.railway.app", port: "", pathname: "/uploads/**" },
-      { protocol: "https", hostname: "tattoo-crm-production.up.railway.app", port: "", pathname: "/uploads/**" },
-    ],
+    remotePatterns: imageRemotePatterns,
   },
   async rewrites() {
     // 開發環境：重寫到 localhost:4000
@@ -18,13 +37,10 @@ const nextConfig: NextConfig = {
       ];
     }
 
-    // 生產環境：重寫到 Railway 後端服務
-    // 注意：管理後台所有 /api 與 /uploads 都應該走同網域 rewrites，避免跨網域 CORS 與 host drift
-    // Railway 上不同專案/服務的 hostname 可能會變，優先用環境變數控制，避免寫死導致 Application not found
+    // 生產環境：重寫到後端（Zeabur / Railway / 自架皆以 NEXT_PUBLIC_API_URL 或 NEXT_PUBLIC_BACKEND_URL 為準）
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      // Fallback: current backend service hostname in this project (Railway assigns a suffix)
       "https://tattoo-crm-production-413f.up.railway.app";
     return [
       { source: "/api/:path*", destination: `${backendUrl}/:path*` },

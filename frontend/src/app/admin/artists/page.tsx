@@ -517,7 +517,7 @@ export default function AdminArtistsPage() {
                         </td>
                         <td className="py-3 px-4 text-text-muted-light dark:text-text-secondary-dark">
                           <button
-                            onClick={() => window.open(`/artist/portfolio?artistId=${artist.id}`, '_blank')}
+                            onClick={() => window.open(`/admin/portfolio?artistId=${artist.id}`, '_blank')}
                             className="text-blue-600 hover:text-blue-800 underline cursor-pointer"
                           >
                             查看作品集

@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-// This page is deprecated. Redirect to /admin/portfolio
-function ArtistPortfolioRedirect() {
+// This page is deprecated. Redirect to /admin/portfolio (preserve artistId)
+function ArtistPortfolioRedirectContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const artistId = searchParams.get("artistId");
 
   useEffect(() => {
-    router.replace("/admin/portfolio");
-  }, [router]);
+    const query = artistId ? `?artistId=${artistId}` : "";
+    router.replace(`/admin/portfolio${query}`);
+  }, [router, artistId]);
 
   return (
     <div className="flex items-center justify-center h-64">
@@ -21,7 +24,17 @@ function ArtistPortfolioRedirect() {
   );
 }
 
-export default ArtistPortfolioRedirect;
+export default function ArtistPortfolioRedirect() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <ArtistPortfolioRedirectContent />
+    </Suspense>
+  );
+}
 
 /* Original implementation below - moved to /admin/portfolio */
 /*

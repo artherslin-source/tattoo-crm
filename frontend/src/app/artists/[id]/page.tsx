@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getApiBase } from "../../../lib/api";
+import { getApiBase, getImageUrl } from "../../../lib/api";
 
 interface ArtistDetail {
   user: { id: string; name: string; email: string };
@@ -75,7 +75,7 @@ export default function ArtistPortfolioPage() {
               {items.map((it) => (
                 <div key={it.id} className="overflow-hidden rounded-xl border border-white/10 bg-black/40">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.imageUrl || "https://placehold.co/600x800?text=Work"} alt={it.title} className="h-64 w-full object-cover" />
+                  <img src={getImageUrl(it.imageUrl) || "https://placehold.co/600x800?text=Work"} alt={it.title} className="h-64 w-full object-cover" />
                   <div className="p-4">
                     <div className="font-medium">{it.title}</div>
                     {it.description && <div className="mt-1 text-sm text-neutral-400">{it.description}</div>}

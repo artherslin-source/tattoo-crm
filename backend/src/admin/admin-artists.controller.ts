@@ -4,6 +4,7 @@ import { AccessGuard } from '../common/access/access.guard';
 import { Actor } from '../common/access/actor.decorator';
 import type { AccessActor } from '../common/access/access.types';
 import { AdminArtistsService } from './admin-artists.service';
+import { ArtistService } from '../artist/artist.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BranchesService } from '../branches/branches.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -32,6 +33,7 @@ const UpdateArtistSchema = CreateArtistSchema.partial();
 export class AdminArtistsController {
   constructor(
     private readonly adminArtistsService: AdminArtistsService,
+    private readonly artistService: ArtistService,
     private readonly prisma: PrismaService,
     private readonly branchesService: BranchesService
   ) {}
@@ -129,10 +131,10 @@ export class AdminArtistsController {
 
   @Get(':id/portfolio')
   async getArtistPortfolio(@Param('id') id: string, @Req() req: any) {
-    // 驗證該刺青師是否存在
+    // id = Artist.id，PortfolioItem.artistId 存的是 User.id
     const artist = await this.prisma.artist.findUnique({
       where: { id },
-      select: { id: true, branchId: true }
+      select: { userId: true, branchId: true }
     });
 
     if (!artist) {
@@ -144,13 +146,66 @@ export class AdminArtistsController {
       throw new ForbiddenException('無權限查看此刺青師的作品');
     }
 
-    // 獲取作品列表
     return this.prisma.portfolioItem.findMany({
-      where: { artistId: id },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      where: { artistId: artist.userId },
+      orderBy: { createdAt: 'desc' },
     });
+  }
+
+  @Post(':artistId/portfolio')
+  @UseInterceptors(FileInterceptor('image', {
+    storage: diskStorage({
+      destination: (req, file, callback) => {
+        const uploadPath = join(process.cwd(), 'uploads', 'portfolio');
+        if (!existsSync(uploadPath)) {
+          mkdirSync(uploadPath, { recursive: true });
+        }
+        callback(null, uploadPath);
+      },
+      filename: (req, file, callback) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname || '');
+        const filename = `${uniqueSuffix}${ext}`;
+        callback(null, filename);
+      },
+    }),
+    fileFilter: (req, file, callback) => {
+      if (!file?.originalname?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        return callback(new Error('只允許上傳圖片文件 (JPG, JPEG, PNG, GIF, WebP)'), false);
+      }
+      callback(null, true);
+    },
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  async addArtistPortfolio(
+    @Param('artistId') artistId: string,
+    @Body() body: { title?: string; description?: string; tags?: string },
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    const artist = await this.prisma.artist.findUnique({
+      where: { id: artistId },
+      select: { userId: true, branchId: true },
+    });
+    if (!artist) {
+      throw new NotFoundException('刺青師不存在');
+    }
+    if (req.user?.role === 'BRANCH_MANAGER' && req.user?.branchId !== artist.branchId) {
+      throw new ForbiddenException('無權限為此刺青師上傳作品');
+    }
+    let tags: string[] = [];
+    try {
+      tags = JSON.parse(body.tags || '[]');
+    } catch {
+      tags = [];
+    }
+    const data = {
+      title: body.title || '',
+      description: body.description || '',
+      imageUrl: file ? `/uploads/portfolio/${file.filename}` : '',
+      tags,
+    };
+    return this.artistService.addPortfolioItem(artist.userId, data);
   }
 
   @Get(':id')

@@ -24,9 +24,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminNotificationsController } from './admin-notifications.controller';
 import { AuditModule } from '../audit/audit.module';
 import { AdminAuditLogsController } from './admin-audit-logs.controller';
+import { ArtistModule } from '../artist/artist.module';
 
 @Module({
-  imports: [PrismaModule, BillingModule, ServicesModule, BranchesModule, NotificationsModule, AuditModule],
+  imports: [PrismaModule, BillingModule, ServicesModule, BranchesModule, NotificationsModule, AuditModule, ArtistModule],
   controllers: [
     AdminController, 
     AdminServicesController, 

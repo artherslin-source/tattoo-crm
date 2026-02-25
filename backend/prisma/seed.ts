@@ -15,6 +15,111 @@ async function main() {
   const PROTECT_REAL_DATA = isTruthy(process.env.PROTECT_REAL_DATA);
   console.log(PROTECT_REAL_DATA ? '🛡️ 保護模式：保留分店/刺青師/服務/管理員' : 'ℹ️ 預設行為：仍保留分店/刺青師/服務/管理員');
 
+  const hashedPassword = await bcrypt.hash('12345678', 12);
+
+  // 0) 若資料庫為空（無分店或無刺青師），建立與 Railway 生產環境一致的完整資料（6 位刺青師、三重店、東港店、管理員、基本服務）
+  const branchesExisting = await prisma.branch.findMany({ orderBy: { name: 'asc' } });
+  const artistsExisting = await prisma.user.findMany({
+    where: { role: 'ARTIST', isActive: true },
+    select: { id: true, name: true, branchId: true },
+  });
+  const needBootstrap = branchesExisting.length === 0 || artistsExisting.length === 0;
+  if (needBootstrap) {
+    console.log('📦 偵測到空資料庫或缺少刺青師，執行初始建立（與 Railway 生產環境一致：6 位刺青師）...');
+    let branches = branchesExisting;
+    if (branches.length === 0) {
+      const businessHours = {
+        monday: '09:00-18:00',
+        tuesday: '09:00-18:00',
+        wednesday: '09:00-18:00',
+        thursday: '09:00-18:00',
+        friday: '09:00-18:00',
+        saturday: '10:00-16:00',
+        sunday: 'closed',
+      };
+      branches = [
+        await prisma.branch.create({
+          data: {
+            name: '三重店',
+            address: '新北市三重區重新路一段123號',
+            phone: '02-2975-1234',
+            businessHours,
+          },
+        }),
+        await prisma.branch.create({
+          data: {
+            name: '東港店',
+            address: '屏東縣東港鎮沿海路356號',
+            phone: '08-831-1615',
+            businessHours,
+          },
+        }),
+      ];
+      console.log('✅ 建立 2 個分店（三重店、東港店）');
+    }
+    const existingAdmin = await prisma.user.findFirst({ where: { role: { in: ['BOSS', 'SUPER_ADMIN', 'BRANCH_MANAGER'] } } });
+    if (!existingAdmin) {
+      await prisma.user.create({
+        data: {
+          email: 'admin@test.com',
+          hashedPassword,
+          name: 'Super Admin',
+          role: 'BOSS',
+          phone: '0988666888',
+        },
+      });
+      console.log('✅ 建立管理員帳號：admin@test.com / 0988666888 / 12345678');
+    }
+    if (artistsExisting.length === 0) {
+      // 與 Railway 生產環境一致：6 位刺青師（朱川進×2、陳翔男、黃晨洋、林承葉、陳震宇），email/手機/專長依後台實際資料
+      const sanchong = branches[0];
+      const donggang = branches[1];
+      const artistSpecs = [
+        { email: 'zhu-chuanjin-sanchong@tattoo.local', name: '朱川進', phone: null as string | null, branchId: sanchong.id, speciality: '寫實與線條' },
+        { email: 'zhu-chuanjin-donggang@tattoo.local', name: '朱川進', phone: '0981927959', branchId: donggang.id, speciality: '日式舊傳統、新傳統風格、歐美圖風格' },
+        { email: 'chen-xiangnan@tattoo.local', name: '陳翔男', phone: '0930828952', branchId: donggang.id, speciality: '日式與傳統風格' },
+        { email: 'artist2@test.com', name: '黃晨洋', phone: '0939098588', branchId: sanchong.id, speciality: '幾何圖騰設計' },
+        { email: 'artist3@test.com', name: '林承葉', phone: '0974320073', branchId: sanchong.id, speciality: '黑灰寫實風格' },
+        { email: 'artist1@test.com', name: '陳震宇', phone: '0937981900', branchId: donggang.id, speciality: '日式傳統刺青' },
+      ];
+      for (const a of artistSpecs) {
+        const user = await prisma.user.create({
+          data: {
+            email: a.email,
+            hashedPassword,
+            name: a.name,
+            role: 'ARTIST',
+            phone: a.phone,
+            branchId: a.branchId,
+          },
+        });
+        await prisma.artist.create({
+          data: {
+            userId: user.id,
+            displayName: a.name,
+            speciality: a.speciality,
+            branchId: a.branchId,
+            active: true,
+          },
+        });
+      }
+      console.log('✅ 建立 6 個刺青師（與 Railway 一致）：朱川進×2、陳翔男、黃晨洋、林承葉、陳震宇，密碼 12345678');
+    }
+    let services = await prisma.service.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } });
+    if (services.length === 0) {
+      await prisma.service.createMany({
+        data: [
+          { name: '小圖刺青', description: '簡單小圖', price: 2000, durationMin: 60, isActive: true },
+          { name: '中圖刺青', description: '中型圖案', price: 8000, durationMin: 120, isActive: true },
+          { name: '大圖刺青', description: '大型圖案', price: 20000, durationMin: 240, isActive: true },
+        ],
+      });
+      services = await prisma.service.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } });
+      console.log('✅ 建立 3 個基本服務項目');
+    }
+    console.log('📦 初始建立完成，繼續建立示範會員與預約資料...');
+  }
+
   // 1) Domain-only cleanup (contacts/appointments/billing + demo members)
   console.log('🧹 清理 domain data (Contact/Appointment/Billing/Members)...');
   await prisma.paymentAllocation.deleteMany();
@@ -22,22 +127,21 @@ async function main() {
   await prisma.appointmentBillItem.deleteMany();
   await prisma.appointmentBill.deleteMany();
   await prisma.completedService.deleteMany();
-    await prisma.appointment.deleteMany();
+  await prisma.appointment.deleteMany();
   await prisma.contact.deleteMany();
   await prisma.topupHistory.deleteMany();
-    await prisma.member.deleteMany();
+  await prisma.member.deleteMany();
   await prisma.user.deleteMany({ where: { role: 'MEMBER' } });
 
   // 2) Ensure at least one admin exists (for local dev convenience)
-  const hashedPassword = await bcrypt.hash('12345678', 12);
   const existingAdmin = await prisma.user.findFirst({ where: { role: { in: ['BOSS', 'SUPER_ADMIN', 'BRANCH_MANAGER'] } } });
   if (!existingAdmin && !PROTECT_REAL_DATA) {
     await prisma.user.create({
-    data: {
-      email: 'admin@test.com',
-      hashedPassword,
-      name: 'Super Admin',
-      role: 'BOSS',
+      data: {
+        email: 'admin@test.com',
+        hashedPassword,
+        name: 'Super Admin',
+        role: 'BOSS',
         phone: '0988666888',
       },
     });
