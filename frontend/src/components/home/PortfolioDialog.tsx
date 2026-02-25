@@ -29,18 +29,6 @@ interface PortfolioDialogProps {
   onClose: () => void;
 }
 
-// 佔位色塊標籤，與 AVAILABLE_TAGS 一致
-const MOCK_PORTFOLIO_COLORS = [
-  { id: 1, gradient: "from-amber-600 via-orange-600 to-red-600", title: "傳統" },
-  { id: 2, gradient: "from-rose-500 via-pink-500 to-purple-500", title: "新傳統" },
-  { id: 3, gradient: "from-neutral-700 via-gray-800 to-black", title: "寫實" },
-  { id: 4, gradient: "from-teal-600 via-emerald-500 to-lime-500", title: "水彩" },
-  { id: 5, gradient: "from-sky-400 via-indigo-400 to-purple-500", title: "小圖" },
-  { id: 6, gradient: "from-amber-300 via-yellow-400 to-amber-500", title: "字體" },
-  { id: 7, gradient: "from-indigo-500 via-violet-500 to-fuchsia-500", title: "抽象" },
-  { id: 8, gradient: "from-slate-600 via-gray-700 to-slate-900", title: "圖騰" },
-];
-
 export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps) {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,9 +60,6 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
       return !failedUrlsRef.current.has(url);
     });
   }, [items, assetVersion]);
-
-  // Placeholder-only mode until any real image successfully loads.
-  const showPlaceholdersOnly = !hasAnyRealLoaded;
 
   const displayed = useMemo(() => {
     // Viewer should only show real items (no placeholders)
@@ -109,7 +94,7 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
   }, [artist, open]);
 
   useEffect(() => {
-    // Background probe: keep UI pretty (placeholders) but still detect when real images become available.
+    // Background probe: detect when real images load so the grid can show them.
     if (!open) return;
     if (!items.length) return;
     if (typeof window === "undefined") return;
@@ -300,66 +285,27 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
             </p>
           </div>
 
-          {/* 作品集網格 - 完整響應式 */}
+          {/* 作品集網格 - 有作品才顯示，無作品則不呈現 */}
           <div className="columns-2 md:columns-3 gap-3 sm:gap-4">
-            {showPlaceholdersOnly ? (
-              <>
-                <div className="mb-3 sm:mb-4 break-inside-avoid rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:rounded-xl sm:text-sm">
-                  作品尚未上傳或圖片正在同步中，以下為版面示意；實際作品將以刺青師上傳內容為準。
+            {visibleRealItems.map((item, idx) => (
+              <button
+                key={item.id}
+                type="button"
+                className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
+                onClick={() => openViewer(idx)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={getImageUrl(item.imageUrl) || "https://placehold.co/800x800?text=Work"}
+                  alt={item.title}
+                  className="w-full h-auto object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
+                  <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title || "作品"}</p>
                 </div>
-                {MOCK_PORTFOLIO_COLORS.slice(0, 10).map((item) => (
-                  <div
-                    key={item.id}
-                    className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
-                  >
-                    <div
-                      className={`bg-gradient-to-br ${item.gradient} opacity-90`}
-                      style={{ height: 150 + (item.id % 4) * 45 }}
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
-                      <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title}</p>
-                    </div>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <>
-                {visibleRealItems.map((item, idx) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="group relative w-full break-inside-avoid mb-3 sm:mb-4 overflow-hidden rounded-lg sm:rounded-xl"
-                    onClick={() => openViewer(idx)}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={getImageUrl(item.imageUrl) || "https://placehold.co/800x800?text=Work"}
-                      alt={item.title}
-                      className="w-full h-auto object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 sm:p-4">
-                      <p className="text-white text-xs sm:text-sm font-medium truncate">{item.title || "作品"}</p>
-                    </div>
-                  </button>
-                ))}
-
-                {!loading && visibleRealItems.length === 0 ? (
-                  <>
-                    <div className="mb-3 sm:mb-4 break-inside-avoid rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:rounded-xl sm:text-sm">
-                      目前沒有可顯示的作品圖片（可能尚未上傳或同步中）。
-                    </div>
-                  </>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          {/* 提示訊息 - 響應式 */}
-          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 text-center leading-relaxed">
-              💡 提示：目前使用色塊暫時展示，實際作品圖片將由刺青師上傳後顯示
-            </p>
+              </button>
+            ))}
           </div>
 
           {/* 聯絡預約區 - 完整響應式 */}
