@@ -11,26 +11,14 @@ rm -rf dist
 echo "📦 生成 Prisma Client..."
 npx prisma generate
 
-# 檢查 NestJS CLI 是否可用
-echo "🔍 檢查 NestJS CLI..."
-if [ ! -f "node_modules/.bin/nest" ]; then
-    echo "❌ NestJS CLI 未找到，嘗試重新安裝..."
-    npm install @nestjs/cli
-fi
-
-# 構建 NestJS 應用
-echo "🔨 構建 NestJS 應用..."
-echo "嘗試使用 NestJS CLI 構建..."
-if npx nest build; then
+# 構建：有 nest 就用 nest build，否則直接用 tsc（Zeabur/CI 常未安裝 nest）
+echo "🔨 構建後端..."
+if [ -f "node_modules/.bin/nest" ] && npx nest build 2>/dev/null; then
     echo "✅ NestJS CLI 構建成功"
 else
-    echo "❌ NestJS CLI 構建失敗，嘗試使用 TypeScript 編譯器..."
-    if npx tsc -p tsconfig.build.json; then
-        echo "✅ TypeScript 編譯器構建成功"
-    else
-        echo "❌ TypeScript 編譯器構建也失敗"
-        exit 1
-    fi
+    echo "📦 使用 TypeScript 編譯器構建（tsconfig.build.json）..."
+    npx tsc -p tsconfig.build.json
+    echo "✅ TypeScript 編譯器構建成功"
 fi
 
 # 驗證構建結果
