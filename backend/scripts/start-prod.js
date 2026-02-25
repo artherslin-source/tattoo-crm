@@ -127,6 +127,11 @@ const DESTRUCTIVE_ALWAYS_SKIP = new Set([
   '20251231010000_remove_orders_and_generalize_billing', // user chose option A: never run in production
 ]);
 
+// 若這些 migration 處於 failed 狀態，標記為 rolled-back，讓同次啟動內 migrate deploy 重試並重新套用（已改寫為可重跑 SQL）
+const MIGRATIONS_ROLLBACK_THEN_RETRY = new Set([
+  '20250928134123_add_operator_to_topup_history', // 已改為用既有 User id、IF NOT EXISTS，可安全重跑
+]);
+
 // 若這些 migration 處於 failed 狀態，標記為已套用以解除 P3009 封鎖（僅 DROP COLUMN IF EXISTS 等低風險）
 const MIGRATIONS_MARK_APPLIED_WHEN_FAILED = new Set([
   '20250105_remove_duration_modifier', // DROP COLUMN IF EXISTS durationModifier；失敗時標記已套用即可繼續
@@ -225,6 +230,9 @@ function resolveModeForFailure(output, migrationName) {
   if (!migrationName) return { ok: false, mode: '', reason: 'missing migration name' };
   if (DESTRUCTIVE_ALWAYS_SKIP.has(migrationName)) {
     return { ok: true, mode: 'rolled-back', reason: 'destructive migration is permanently skipped in production' };
+  }
+  if (MIGRATIONS_ROLLBACK_THEN_RETRY.has(migrationName)) {
+    return { ok: true, mode: 'rolled-back', reason: 'mark rolled-back so migrate deploy can re-apply fixed migration' };
   }
   if (MIGRATIONS_MARK_APPLIED_WHEN_FAILED.has(migrationName)) {
     return { ok: true, mode: 'applied', reason: 'known safe migration; mark applied to unblock P3009' };
