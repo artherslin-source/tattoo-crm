@@ -127,6 +127,11 @@ const DESTRUCTIVE_ALWAYS_SKIP = new Set([
   '20251231010000_remove_orders_and_generalize_billing', // user chose option A: never run in production
 ]);
 
+// 若這些 migration 處於 failed 狀態，標記為已套用以解除 P3009 封鎖（僅 DROP COLUMN IF EXISTS 等低風險）
+const MIGRATIONS_MARK_APPLIED_WHEN_FAILED = new Set([
+  '20250105_remove_duration_modifier', // DROP COLUMN IF EXISTS durationModifier；失敗時標記已套用即可繼續
+]);
+
 // Common Postgres error codes for "already exists" / duplicates.
 // - 42P07: duplicate_table
 // - 42701: duplicate_column
@@ -158,14 +163,14 @@ function extractDbErrorCode(output) {
 
 function extractFailedMigrationName(output) {
   const s = String(output || '');
-  // P3018 path often has explicit name:
+  // P3018 path often has explicit name (14-digit prefix):
   const m1 = s.match(/Migration name:\s*(\d{14}_[^\s]+)/i);
   if (m1?.[1]) return m1[1];
-  // Sometimes it appears in P3009:
-  const m2 = s.match(/The `(\d{14}_[^`]+)` migration started at .* failed/i);
+  // P3009: "The `20250105_remove_duration_modifier` migration started at ... failed" (8-digit or 14-digit)
+  const m2 = s.match(/The `(\d+_[^`]+)` migration started at .* failed/i);
   if (m2?.[1]) return m2[1];
   // As a fallback, use the first "Applying migration" entry
-  const m3 = s.match(/Applying migration `(\d{14}_[^`]+)`/i);
+  const m3 = s.match(/Applying migration `(\d+_[^`]+)`/i);
   if (m3?.[1]) return m3[1];
   return '';
 }
@@ -220,6 +225,9 @@ function resolveModeForFailure(output, migrationName) {
   if (!migrationName) return { ok: false, mode: '', reason: 'missing migration name' };
   if (DESTRUCTIVE_ALWAYS_SKIP.has(migrationName)) {
     return { ok: true, mode: 'rolled-back', reason: 'destructive migration is permanently skipped in production' };
+  }
+  if (MIGRATIONS_MARK_APPLIED_WHEN_FAILED.has(migrationName)) {
+    return { ok: true, mode: 'applied', reason: 'known safe migration; mark applied to unblock P3009' };
   }
 
   const outStr = String(output || '');
