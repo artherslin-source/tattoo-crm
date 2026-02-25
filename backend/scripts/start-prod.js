@@ -132,9 +132,10 @@ const MIGRATIONS_ROLLBACK_THEN_RETRY = new Set([
   '20250928134123_add_operator_to_topup_history', // 已改為用既有 User id、IF NOT EXISTS，可安全重跑
 ]);
 
-// 若這些 migration 處於 failed 狀態，標記為已套用以解除 P3009 封鎖（僅 DROP COLUMN IF EXISTS 等低風險）
+// 若這些 migration 處於 failed 狀態，標記為已套用以解除 P3009 封鎖（低風險或後續已被其他 migration 取代）
 const MIGRATIONS_MARK_APPLIED_WHEN_FAILED = new Set([
   '20250105_remove_duration_modifier', // DROP COLUMN IF EXISTS durationModifier；失敗時標記已套用即可繼續
+  '20250929131201_update_order_status_enum', // Order.status 預設與 UNPAID→PENDING；Order 表之後可能已被移除或不再使用
 ]);
 
 // Common Postgres error codes for "already exists" / duplicates.
