@@ -25,6 +25,7 @@ if (backendHost && !imageRemotePatterns.some((p) => p.hostname === backendHost))
 }
 
 const nextConfig: NextConfig = {
+  output: "standalone", // Zeabur/Docker：產生獨立 server，依 PORT 啟動，部署更穩定
   images: {
     remotePatterns: imageRemotePatterns,
   },

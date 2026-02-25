@@ -84,9 +84,9 @@
    | `NEXT_PUBLIC_BACKEND_URL` | 與上同（部分功能會讀此變數） | 同上 |
 
 4. **Watch Paths**（可選）：設為 **`/frontend`**，僅 `frontend/` 變更時觸發前端重新部署。
-5. 建置／啟動通常會自動偵測為：
-   - 建置：`npm run build`
-   - 啟動：`npm run start`
+5. **建置與啟動**：
+   - 專案內已提供 **`frontend/Dockerfile`**，Zeabur 會自動偵測並使用 Docker 建置與執行，**無需**手動設定 Build / Start 指令。
+   - 使用 Dockerfile 時，服務會以 Next.js **standalone** 模式啟動，並自動依 Zeabur 指派的 `PORT` 監聽，部署較穩定。
 6. 部署完成後，記下 Zeabur 分配給**前端**的網址（例如 `https://yyy.zeabur.app`）。
 
 ---
