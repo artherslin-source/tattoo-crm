@@ -92,7 +92,14 @@ console.log('✅ DATABASE_URL 驗證通過');
 console.log(`📊 使用 PostgreSQL 資料庫`);
 
 run('npx prisma generate', '生成 Prisma Client');
-run('npx tsc -p tsconfig.build.json', '編譯 TypeScript 專案');
+
+// 若建置階段已產生 dist/main.js（Zeabur/Railway 等），略過編譯，避免依賴 nest/tsc
+const distMain = path.join(process.cwd(), 'dist', 'main.js');
+if (fs.existsSync(distMain)) {
+  console.log('✅ 使用既有 dist/，略過 TypeScript 編譯');
+} else {
+  run('npx tsc -p tsconfig.build.json', '編譯 TypeScript 專案');
+}
 
 // 🛡️ 生產環境保護：只執行安全的資料庫遷移，絕不重置資料庫
 console.log('🛡️ 生產模式：保護現有資料，只執行安全的遷移');
