@@ -1,5 +1,10 @@
 # Zeabur 服務規格：請依 Railway 對照表檢視後再部署
 
+**部署來源（請勿搞混）**  
+- **Zeabur**：從 `diaochuan8888/Tattoo`（git remote: **client**）部署。  
+- **Railway**：從 `artherslin-source/tattoo-crm`（git remote: **origin**）部署。  
+推送到 Zeabur 時請用 `git push client main`，不要 push 到 origin 以免觸發 Railway。
+
 以下為從 **Railway 目前正確環境**（[首頁](https://tattoo-crm-production.up.railway.app/home)）取得的規格結構整理，供您與目前 Zeabur 使用的種子比對。**請您確認此對照表無誤後，再通知我執行 Zeabur 規格種子／部署。**
 
 ---
