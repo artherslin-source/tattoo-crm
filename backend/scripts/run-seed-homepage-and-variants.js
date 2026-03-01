@@ -4,9 +4,16 @@
  * 使用方式（Zeabur 或本機）：
  *   node scripts/run-seed-homepage-and-variants.js
  * 若在 repo 根目錄執行：cd backend && node scripts/run-seed-homepage-and-variants.js
+ * ⚠️ 請勿在 Railway 上執行：會覆寫既有規格且可能造成格式不相容。
  */
 const path = require('path');
 const fs = require('fs');
+
+// 偵測 Railway：不在此環境執行種子，避免覆寫既有規格或造成崩潰
+if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_NAME) {
+  console.log('偵測到 Railway 環境，略過種子（此腳本僅供 Zeabur 使用，請勿在 Railway 執行）');
+  process.exit(0);
+}
 
 // 支援從 repo 根目錄或 backend 目錄執行
 const backendDir = fs.existsSync(path.join(__dirname, '../prisma')) ? path.join(__dirname, '..') : path.join(process.cwd(), 'backend');
@@ -60,18 +67,12 @@ async function main() {
     await prisma.$executeRawUnsafe(stripComments(sqlHomepage).trim());
     console.log('   ✅ 完成\n');
 
-    console.log('2️⃣ 執行規格種子 (seed-data-service-variants.sql) ...');
-    const sqlVariants = loadSql('seed-data-service-variants.sql');
-    const cleaned = stripComments(sqlVariants).trim();
-    const insertEnd = cleaned.indexOf(') sub');
-    if (insertEnd !== -1) {
-      const insertEndSemicolon = cleaned.indexOf(';', insertEnd);
-      const st1 = cleaned.slice(0, insertEndSemicolon + 1);
-      let st2 = cleaned.slice(insertEndSemicolon + 1).replace(/^\s*--[^\n]*\n?/gm, '').trim();
-      await prisma.$executeRawUnsafe(st1);
-      if (st2.toLowerCase().startsWith('update')) await prisma.$executeRawUnsafe(st2);
-    } else {
-      await prisma.$executeRawUnsafe(cleaned);
+    console.log('2️⃣ 執行規格種子（做法 A：對齊 Railway）...');
+    const { spawnSync } = require('child_process');
+    const scriptPath = path.join(backendDir, 'scripts', 'seed-zeabur-variants-railway-style.js');
+    const result = spawnSync(process.execPath, [scriptPath], { cwd: backendDir, stdio: 'inherit' });
+    if (result.status !== 0) {
+      throw new Error(`規格種子腳本結束代碼: ${result.status}`);
     }
     console.log('   ✅ 完成\n');
   } catch (e) {
