@@ -120,11 +120,11 @@
    ```bash
    psql "$DATABASE_URL" -f backend/prisma/seed-data-homepage.sql
    ```
-4. **服務規格**（尺寸、顏色、部位、設計費）：讓顧客能選規格並正確計價，請在執行過 `seed-data-homepage.sql` 後執行：
+4. **服務規格**（尺寸、顏色、部位、設計費）：讓顧客能選規格並正確計價。在 Zeabur 後端 **Execute Command** 執行（不需 psql，用 Node + Prisma）：
    ```bash
-   psql "$DATABASE_URL" -f backend/prisma/seed-data-service-variants.sql
+   node scripts/run-seed-homepage-and-variants.js
    ```
-   完成後，所有首頁服務都會有規格可選，不再出現「此服務尚未設定規格」。
+   此腳本會一併建立首頁 20 個服務與其規格。完成後，所有首頁服務都會有規格可選，不再出現「此服務尚未設定規格」。
 
 ---
 
