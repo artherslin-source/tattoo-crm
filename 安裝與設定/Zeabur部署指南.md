@@ -116,6 +116,15 @@
      psql "$DATABASE_URL" -f backend/prisma/seed-data.sql
      ```
    完成後即具備預設分店、管理員與刺青師帳號（密碼請依說明文件於上線後修改）。
+3. **首頁 20 個刺青分類服務**（可選）：若要首頁顯示 20 個服務卡片並可加入購物車，再執行：
+   ```bash
+   psql "$DATABASE_URL" -f backend/prisma/seed-data-homepage.sql
+   ```
+4. **服務規格**（尺寸、顏色、部位、設計費）：讓顧客能選規格並正確計價，請在執行過 `seed-data-homepage.sql` 後執行：
+   ```bash
+   psql "$DATABASE_URL" -f backend/prisma/seed-data-service-variants.sql
+   ```
+   完成後，所有首頁服務都會有規格可選，不再出現「此服務尚未設定規格」。
 
 ---
 
