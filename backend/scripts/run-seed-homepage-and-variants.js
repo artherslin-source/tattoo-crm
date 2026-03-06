@@ -5,6 +5,10 @@
  *   node scripts/run-seed-homepage-and-variants.js
  * 若在 repo 根目錄執行：cd backend && node scripts/run-seed-homepage-and-variants.js
  * ⚠️ 請勿在 Railway 上執行：會覆寫既有規格且可能造成格式不相容。
+ *
+ * 保護客戶資料：僅異動 Service（seed-hp-*）與 ServiceVariant、以及刪除 seed-svc-*，
+ * 不碰 User、Artist、PortfolioItem，也不讀寫 uploads/（刺青師照片與作品集）。
+ * 重新部署時若要不遺失客戶上傳檔案，請在 Zeabur 後端為 uploads 目錄掛載 Volume。
  */
 const path = require('path');
 const fs = require('fs');

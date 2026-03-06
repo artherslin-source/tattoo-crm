@@ -1,6 +1,7 @@
 -- 首頁「刺青分類」用服務項目（與 frontend SERVICE_DISPLAY_ORDER 一致，數值對齊 Railway）
 -- 執行時機：在 seed-data.sql 之後執行，讓 Zeabur 首頁顯示與 Railway 完全一致
 -- 使用方式：psql "$DATABASE_URL" -f backend/prisma/seed-data-homepage.sql
+-- 保護客戶資料：本檔僅 INSERT/UPDATE Service 表（id = seed-hp-1..20），不碰 User、Artist、PortfolioItem。
 
 INSERT INTO "Service" ("id", "name", "description", "durationMin", "price", "currency", "isActive", "hasVariants", "category", "createdAt", "updatedAt") VALUES
 ('seed-hp-1',  '半胛圖',     '半胛圖半胛圖半胛圖', 60, 5000, 'TWD', true, false, 'Torso', NOW(), NOW()),

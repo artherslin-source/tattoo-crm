@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getApiBase, getImageUrl } from "@/lib/api";
 import useMediaQuery from "@/hooks/useMediaQuery";
+import { AVAILABLE_TAGS } from "@/constants/portfolio-tags";
 
 interface Artist {
   id: string;
@@ -21,6 +22,7 @@ interface PortfolioItem {
   title: string;
   description?: string | null;
   imageUrl: string;
+  tags?: string[] | null;
 }
 
 interface PortfolioDialogProps {
@@ -38,6 +40,9 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
   const loadedUrlsRef = useRef(new Set<string>());
   const failedUrlsRef = useRef(new Set<string>());
   const [assetVersion, setAssetVersion] = useState(0);
+
+  // 風格篩選（方式一：Tab 點選後篩選）
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Viewer overlay state
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -61,12 +66,40 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
     });
   }, [items, assetVersion]);
 
+  const normalizeTags = (t: unknown): string[] => {
+    if (Array.isArray(t)) return t.filter((x): x is string => typeof x === "string");
+    if (typeof t === "string") {
+      try {
+        const parsed = JSON.parse(t) as unknown;
+        return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // 此刺青師作品裡有出現的風格（用於 Tab 只顯示有作品的）
+  const tagsInUse = useMemo(() => {
+    const set = new Set<string>();
+    for (const it of visibleRealItems) {
+      normalizeTags(it.tags).forEach((tag) => set.add(tag));
+    }
+    return AVAILABLE_TAGS.filter((tag) => set.has(tag));
+  }, [visibleRealItems]);
+
+  // 依選中的風格篩選（selectedTag === null 表示「全部」）
+  const filteredItems = useMemo(() => {
+    if (!selectedTag) return visibleRealItems;
+    return visibleRealItems.filter((it) => normalizeTags(it.tags).includes(selectedTag));
+  }, [visibleRealItems, selectedTag]);
+
   const displayed = useMemo(() => {
-    // Viewer should only show real items (no placeholders)
+    // Viewer 與網格一致：顯示篩選後的列表
     void assetVersion;
     if (!hasAnyRealLoaded) return [];
-    return visibleRealItems;
-  }, [assetVersion, hasAnyRealLoaded, visibleRealItems]);
+    return filteredItems;
+  }, [assetVersion, hasAnyRealLoaded, filteredItems]);
 
   useEffect(() => {
     const fetchPortfolio = async () => {
@@ -92,6 +125,11 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
     };
     fetchPortfolio();
   }, [artist, open]);
+
+  // 換刺青師或關閉彈窗時重置風格篩選
+  useEffect(() => {
+    if (!open || !artist) setSelectedTag(null);
+  }, [open, artist]);
 
   useEffect(() => {
     // Background probe: detect when real images load so the grid can show them.
@@ -247,9 +285,6 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
               <DialogDescription className="text-xs sm:text-sm text-text-secondary-light dark:text-text-secondary-dark truncate">
                 {artist.speciality}
               </DialogDescription>
-              <p className="text-xs sm:text-sm text-text-secondary-light dark:text-text-secondary-dark truncate">
-                {artist.speciality}
-              </p>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
                 {(artist.styles || [])
                   .filter((style) => {
@@ -285,9 +320,64 @@ export function PortfolioDialog({ artist, open, onClose }: PortfolioDialogProps)
             </p>
           </div>
 
-          {/* 作品集網格 - 有作品才顯示，無作品則不呈現 */}
+          {/* 載入中 */}
+          {loading && (
+            <div className="py-12 text-center text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              載入作品集中…
+            </div>
+          )}
+
+          {/* 空狀態：已載入但沒有作品或沒有可顯示的圖片 */}
+          {!loading && items.length === 0 && (
+            <div className="py-12 text-center text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              此刺青師尚無作品集
+            </div>
+          )}
+          {!loading && items.length > 0 && visibleRealItems.length === 0 && (
+            <div className="py-12 text-center text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              暫無可顯示的作品
+            </div>
+          )}
+
+          {/* 風格篩選 Tab（方式一：點選後篩選）— 有作品且至少有一種風格時才顯示 */}
+          {!loading && visibleRealItems.length > 0 && (
+            <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              <button
+                type="button"
+                onClick={() => setSelectedTag(null)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                  selectedTag === null
+                    ? "bg-gray-800 text-white dark:bg-neutral-200 dark:text-neutral-900"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
+                }`}
+              >
+                全部
+              </button>
+              {tagsInUse.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setSelectedTag(tag)}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    selectedTag === tag
+                      ? "bg-gray-800 text-white dark:bg-neutral-200 dark:text-neutral-900"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 作品集網格 - 依篩選結果顯示 */}
+          {!loading && visibleRealItems.length > 0 && filteredItems.length === 0 && selectedTag && (
+            <div className="py-8 text-center text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              目前沒有符合「{selectedTag}」風格的作品
+            </div>
+          )}
           <div className="columns-2 md:columns-3 gap-3 sm:gap-4">
-            {visibleRealItems.map((item, idx) => (
+            {filteredItems.map((item, idx) => (
               <button
                 key={item.id}
                 type="button"

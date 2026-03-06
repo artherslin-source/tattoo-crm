@@ -101,6 +101,9 @@ dist
 # Local dump artifacts
 *.dump
 
+# Zeabur 下載備份（本機備份用，不納入版控）
+backend/zeabur-uploads-backup/
+
 # Gatsby files
 .cache/
 # Comment in the public line in if your project uses Gatsby and not Next.js

@@ -5,6 +5,9 @@
  * - 圖騰小圖案：尺寸（Z, T-1～Y-2）+ 黑白/彩色（依尺寸 metadata）+ side + design_fee + custom_addon
  * 使用方式（Zeabur Execute Command）：node scripts/seed-zeabur-variants-railway-style.js
  * ⚠️ 偵測到 Railway 時會自動略過（僅供 Zeabur 使用）
+ *
+ * 保護客戶資料：本腳本僅異動 Service、ServiceVariant 及與 seed-svc-* 相關關聯，
+ * 不刪不改 User、Artist、PortfolioItem，也不讀寫 uploads/ 目錄（刺青師照片與作品集圖片）。
  */
 const path = require('path');
 const fs = require('fs');

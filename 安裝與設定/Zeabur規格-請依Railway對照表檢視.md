@@ -5,6 +5,8 @@
 - **Railway**：從 `artherslin-source/tattoo-crm`（git remote: **origin**）部署。  
 推送到 Zeabur 時請用 `git push client main`，不要 push 到 origin 以免觸發 Railway。
 
+**保護客戶上傳**：種子腳本僅異動首頁服務與規格，不刪不改刺青師、作品集。重新部署時若要保留客戶在 Zeabur 上傳的刺青師照片與作品，請在後端為 `uploads` 目錄掛載 Zeabur Volume。詳見 [Zeabur-保護客戶上傳的刺青師與作品.md](./Zeabur-保護客戶上傳的刺青師與作品.md)。
+
 以下為從 **Railway 目前正確環境**（[首頁](https://tattoo-crm-production.up.railway.app/home)）取得的規格結構整理，供您與目前 Zeabur 使用的種子比對。**請您確認此對照表無誤後，再通知我執行 Zeabur 規格種子／部署。**
 
 ---

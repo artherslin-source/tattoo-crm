@@ -424,19 +424,25 @@ export function VariantSelector({ service, onClose, onAddToCart, isAdmin: _isAdm
             }
           }
         } else if (!selectedSize) {
-          // 沒有尺寸選擇（如大腿全包），使用顏色變體的價格
-          if (selectedColorVariant.priceModifier >= 1000) {
-            // 固定價格
-            price = selectedColorVariant.priceModifier;
-            console.log(`💰 使用顏色固定價格（無尺寸） [${selectedColor}]: NT$ ${price}`);
-          } else if (selectedColorVariant.priceModifier > 0) {
-            // 加價
-            price = selectedColorVariant.priceModifier;
-            console.log(`💰 使用顏色加價（無尺寸） [${selectedColor}]: NT$ ${price}`);
+          // 有尺寸規格但尚未選擇尺寸：以服務底價為預估，避免只顯示顏色加價（如 NT$ 1,000）
+          if (variants.size && variants.size.length > 0) {
+            price = service.price || 0;
+            if (selectedColorVariant && selectedColorVariant.priceModifier > 0) {
+              price += selectedColorVariant.priceModifier;
+            }
+            console.log(`💰 未選尺寸，以服務底價預估 [${service.name}]: NT$ ${price}`);
           } else {
-            // priceModifier 為 0，價格為 0
-            price = 0;
-            console.log(`💰 顏色價格為 0 [${selectedColor}]: NT$ ${price}`);
+            // 沒有尺寸規格（如大腿全包），使用顏色變體的價格
+            if (selectedColorVariant.priceModifier >= 1000) {
+              price = selectedColorVariant.priceModifier;
+              console.log(`💰 使用顏色固定價格（無尺寸） [${selectedColor}]: NT$ ${price}`);
+            } else if (selectedColorVariant.priceModifier > 0) {
+              price = selectedColorVariant.priceModifier;
+              console.log(`💰 使用顏色加價（無尺寸） [${selectedColor}]: NT$ ${price}`);
+            } else {
+              price = 0;
+              console.log(`💰 顏色價格為 0 [${selectedColor}]: NT$ ${price}`);
+            }
           }
         } else {
           console.warn(`⚠️ 找不到尺寸「${selectedSize}」`);
