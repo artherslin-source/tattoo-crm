@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 /**
+ * 【僅供 Zeabur 使用，請勿在 Railway 上執行】
  * Zeabur 規格種子（做法 A）：依「服務名稱」對齊 Railway 正確規格
- * - 多數服務：顏色（割線/黑白/半彩/全彩 完整價）+ 左/右半邊（部分有）+ 設計費 + 增出範圍與細膩度加購
- * - 圖騰小圖案：尺寸（Z, T-1～Y-2）+ 黑白/彩色（依尺寸 metadata）+ side + design_fee + custom_addon
  * 使用方式（Zeabur Execute Command）：node scripts/seed-zeabur-variants-railway-style.js
- * ⚠️ 偵測到 Railway 時會自動略過（僅供 Zeabur 使用）
- *
- * 保護客戶資料：本腳本僅異動 Service、ServiceVariant 及與 seed-svc-* 相關關聯，
- * 不刪不改 User、Artist、PortfolioItem，也不讀寫 uploads/ 目錄（刺青師照片與作品集圖片）。
+ * 保護客戶資料：僅異動 Service、ServiceVariant 及 seed-svc-*，不碰 User、Artist、PortfolioItem、uploads/。
  */
-const path = require('path');
-const fs = require('fs');
-
+// 最先偵測 Railway：不載入任何模組即退出
 if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_NAME) {
-  console.log('偵測到 Railway 環境，略過（此腳本僅供 Zeabur 使用）');
+  console.log('[Zeabur-only] 偵測到 Railway 環境，略過（此腳本僅供 Zeabur 使用）');
   process.exit(0);
 }
+
+const path = require('path');
+const fs = require('fs');
 
 const backendDir = fs.existsSync(path.join(__dirname, '../prisma')) ? path.join(__dirname, '..') : path.join(process.cwd(), 'backend');
 try {

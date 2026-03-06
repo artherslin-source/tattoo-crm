@@ -1,13 +1,9 @@
 #!/usr/bin/env node
 /**
+ * 【僅供本機使用，勿在 Railway/Zeabur 部署流程中執行】
  * 從 Zeabur 下載刺青師個人照片與作品集圖片，存到本機 zeabur-uploads-backup/
- * 使用方式（擇一）：
- *   1. 用「前端」網址（推薦，較好取得）：
- *      node scripts/download-zeabur-uploads.js https://tattoo-frontend.zeabur.app
- *   2. 用「後端」網址：
- *      export ZEABUR_BACKEND_URL=https://tattoo-backend-xxxx.zeabur.app
- *      node scripts/download-zeabur-uploads.js
- * 執行位置：在 backend 目錄下執行（或從專案根目錄：cd backend && node scripts/download-zeabur-uploads.js ...）
+ * 使用方式：node scripts/download-zeabur-uploads.js <Zeabur 後端或前端網址>
+ * 或設定 ZEABUR_BACKEND_URL / ZEABUR_FRONTEND_URL 後執行。
  */
 const fs = require('fs');
 const path = require('path');

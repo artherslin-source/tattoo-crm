@@ -1,23 +1,19 @@
 #!/usr/bin/env node
 /**
+ * 【僅供 Zeabur 使用，請勿在 Railway 上執行】
  * 用 Prisma 執行首頁服務 + 規格種子（不需 psql，Zeabur 可用）
- * 使用方式（Zeabur 或本機）：
- *   node scripts/run-seed-homepage-and-variants.js
- * 若在 repo 根目錄執行：cd backend && node scripts/run-seed-homepage-and-variants.js
- * ⚠️ 請勿在 Railway 上執行：會覆寫既有規格且可能造成格式不相容。
- *
+ * 使用方式（Zeabur 或本機）：node scripts/run-seed-homepage-and-variants.js
  * 保護客戶資料：僅異動 Service（seed-hp-*）與 ServiceVariant、以及刪除 seed-svc-*，
- * 不碰 User、Artist、PortfolioItem，也不讀寫 uploads/（刺青師照片與作品集）。
- * 重新部署時若要不遺失客戶上傳檔案，請在 Zeabur 後端為 uploads 目錄掛載 Volume。
+ * 不碰 User、Artist、PortfolioItem，也不讀寫 uploads/。
  */
-const path = require('path');
-const fs = require('fs');
-
-// 偵測 Railway：不在此環境執行種子，避免覆寫既有規格或造成崩潰
+// 最先偵測 Railway：不載入任何模組即退出，避免在 Railway 部署環境被誤觸
 if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_NAME) {
-  console.log('偵測到 Railway 環境，略過種子（此腳本僅供 Zeabur 使用，請勿在 Railway 執行）');
+  console.log('[Zeabur-only] 偵測到 Railway 環境，略過（此腳本僅供 Zeabur 使用）');
   process.exit(0);
 }
+
+const path = require('path');
+const fs = require('fs');
 
 // 支援從 repo 根目錄或 backend 目錄執行
 const backendDir = fs.existsSync(path.join(__dirname, '../prisma')) ? path.join(__dirname, '..') : path.join(process.cwd(), 'backend');
