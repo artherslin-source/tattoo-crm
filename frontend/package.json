@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 4001",
-    "build": "next build",
-    "start": "next start -H 0.0.0.0 -p $PORT",
+    "build": "next build && (mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ 2>/dev/null; cp -r public .next/standalone/ 2>/dev/null; true)",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
+    "start:next": "next start -H 0.0.0.0 -p $PORT",
     "lint": "eslint"
   },
   "dependencies": {

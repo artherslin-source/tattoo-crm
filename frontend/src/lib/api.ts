@@ -163,6 +163,24 @@ export function getImageUrl(imagePath: string | null | undefined): string {
   return cleanPath;
 }
 
+/**
+ * 回傳圖片的「絕對後端 URL」，供後台 Next/Image 或需要從後端直接載入的場景使用。
+ * 後台作品管理使用此函式可避免同源 rewrite 在 Image 優化時失效（Zeabur 等）。
+ */
+export function getImageUrlAbsolute(imagePath: string | null | undefined): string {
+  if (!imagePath || imagePath.trim() === '') {
+    return '';
+  }
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  const base = typeof window !== 'undefined'
+    ? getApiBaseUrl()
+    : (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000');
+  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  return `${base.replace(/\/+$/, '')}${cleanPath}`;
+}
+
 export async function postJSON(path: string, body: Record<string, unknown> | unknown) {
   try {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;

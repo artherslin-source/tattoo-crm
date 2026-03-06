@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   deleteJsonWithAuth,
   getImageUrl,
+  getImageUrlAbsolute,
   getJsonWithAuth,
   postFormDataWithAuth,
 } from "@/lib/api";
@@ -267,6 +268,10 @@ function AdminArtistPortfolioContent() {
       setToast({ message: "圖片檔案大小不能超過 5MB", type: "error" });
       return;
     }
+    setImagePreviewUrl((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
     setFormData((prev) => ({ ...prev, image: file }));
   };
 
@@ -309,6 +314,7 @@ function AdminArtistPortfolioContent() {
       }
 
       setFormData({ title: "", description: "", tags: [], image: null });
+      setImagePreviewUrl(null);
       setShowUploadForm(false);
       setEditingItem(null);
       setToast({ message: "作品已儲存", type: "success" });
@@ -329,6 +335,7 @@ function AdminArtistPortfolioContent() {
       tags: item.tags,
       image: null,
     });
+    setImagePreviewUrl(getImageUrlAbsolute(item.imageUrl) || null);
     setShowUploadForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -354,6 +361,10 @@ function AdminArtistPortfolioContent() {
 
   const handleCancelForm = () => {
     setFormData({ title: "", description: "", tags: [], image: null });
+    setImagePreviewUrl((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return null;
+    });
     setShowUploadForm(false);
     setEditingItem(null);
   };
@@ -556,19 +567,21 @@ function AdminArtistPortfolioContent() {
                     <span className="text-sm font-medium text-[var(--text)]">{editingItem ? "更換圖片" : "上傳圖片 *"}</span>
                     <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-100 px-4 py-8 text-center transition hover:border-[var(--accent)]/40 sm:gap-4 sm:px-6 sm:py-10 cursor-pointer">
                       <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                      {formData.image && imagePreviewUrl ? (
+                      {(formData.image && imagePreviewUrl) || (editingItem && imagePreviewUrl && !formData.image) ? (
                         <div className="space-y-3 w-full">
                           <div className="relative w-full aspect-[4/5] max-w-xs mx-auto rounded-xl overflow-hidden">
-                            <img 
-                              src={imagePreviewUrl} 
-                              alt="預覽圖片" 
+                            <img
+                              src={imagePreviewUrl}
+                              alt={editingItem ? "目前作品圖片" : "預覽圖片"}
                               className="w-full h-full object-cover"
                             />
                           </div>
-                          <div className="space-y-1 text-sm">
-                            <p className="text-gray-900 break-words px-2 font-medium">{formData.image.name}</p>
-                            <p className="text-gray-600">檔案大小 {(formData.image.size / 1024 / 1024).toFixed(2)} MB</p>
-                          </div>
+                          {formData.image && (
+                            <div className="space-y-1 text-sm">
+                              <p className="text-gray-900 break-words px-2 font-medium">{formData.image.name}</p>
+                              <p className="text-gray-600">檔案大小 {(formData.image.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -652,7 +665,7 @@ function AdminArtistPortfolioContent() {
                   {filteredItems.map((item) => (
                     <WorkCard
                       key={item.id}
-                      item={item}
+                      item={{ ...item, imageUrl: getImageUrlAbsolute(item.imageUrl) || item.imageUrl }}
                       selectable={!isAdminView}
                       selected={selectedIds.has(item.id)}
                       onSelectToggle={isAdminView ? undefined : (checked) => handleSelectToggle(item.id, checked)}
